@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard - Next Gear Auto</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <header>
+        <nav class="nav-container">
+            <div class="logo">Next Gear Auto</div>
+            <ul class="nav-links">
+                <li><a href="index.html">Home</a></li>
+                <li><a href="index.html#fleet">Fleet</a></li>
+                <li><a href="index.html#book">Book</a></li>
+            </ul>
+        </nav>
+    </header>
+
+    <!-- Admin Login Section -->
+    <section id="admin-login-section" class="admin-login-section">
+        <div class="admin-login-card">
+            <h1>Sign In</h1>
+            <div class="auth-tabs">
+                <button class="auth-tab active" id="signin-tab">Sign In</button>
+                <button class="auth-tab" id="signup-tab">Sign Up</button>
+            </div>
+            
+            <form id="admin-login-form" novalidate>
+                <div id="admin-signin-form" class="auth-form-content active">
+                    <div class="form-group">
+                        <label for="admin-email">Email</label>
+                        <input type="email" id="admin-email" name="email" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="admin-password">Password</label>
+                        <input type="password" id="admin-password" name="password" required>
+                    </div>
+                    <button type="button" class="btn btn-primary btn-full" id="admin-login-btn">Sign In</button>
+                </div>
+                
+                <div id="admin-signup-form" class="auth-form-content">
+                    <div class="form-group">
+                        <label for="signup-name">Name</label>
+                        <input type="text" id="signup-name" name="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-email">Email</label>
+                        <input type="email" id="signup-email" name="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-password">Password</label>
+                        <input type="password" id="signup-password" name="password">
+                    </div>
+                    <div class="form-group">
+                        <label for="signup-confirm-password">Confirm Password</label>
+                        <input type="password" id="signup-confirm-password" name="confirm-password">
+                    </div>
+                    <button type="button" class="btn btn-primary btn-full" id="admin-signup-btn">Sign Up</button>
+                </div>
+            </form>
+        </div>
+    </section>
+
+    <!-- Admin Dashboard Section -->
+    <section id="admin-dashboard" class="admin-dashboard-section" style="display: none;">
+        <div class="admin-header">
+            <h1>Admin Dashboard</h1>
+            <button class="btn btn-secondary" id="admin-logout-btn">Log Out</button>
+        </div>
+        
+        <div class="admin-tabs">
+            <button class="admin-tab active" id="vehicles-tab">Vehicle Management</button>
+            <button class="admin-tab" id="bookings-tab">Booking Management</button>
+        </div>
+        
+        <!-- Vehicle Management Panel -->
+        <div id="vehicle-management-panel" class="admin-panel active">
+            <div class="admin-panel-header">
+                <h2>Vehicles</h2>
+                <button class="btn btn-primary" id="add-vehicle-btn">Add Vehicle</button>
+            </div>
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Image</th>
+                            <th>Name</th>
+                            <th>Type</th>
+                            <th>Seats</th>
+                            <th>Transmission</th>
+                            <th>Rate</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="vehicles-table-body">
+                        <!-- Vehicles will be rendered here -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <!-- Booking Management Panel -->
+        <div id="booking-management-panel" class="admin-panel">
+            <div class="admin-panel-header">
+                <h2>Bookings</h2>
+            </div>
+            
+            <!-- Booking Stats -->
+            <div class="booking-stats" id="booking-stats">
+                <!-- Stats will be rendered here -->
+            </div>
+            
+            <!-- Booking Filters -->
+            <div class="booking-filters">
+                <input type="text" id="booking-search" class="booking-search-input" placeholder="Search bookings...">
+                <input type="date" id="booking-date-from" class="booking-date-input" placeholder="From Date">
+                <input type="date" id="booking-date-to" class="booking-date-input" placeholder="To Date">
+                <select id="booking-status-filter" class="booking-sort-select">
+                    <option value="">All Statuses</option>
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                    <option value="cancelled">Cancelled</option>
+                    <option value="in-progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                </select>
+                <select id="booking-sort-by" class="booking-sort-select">
+                    <option value="createdAt">Sort By</option>
+                    <option value="createdAt">Date Created</option>
+                    <option value="pickupDate">Pickup Date</option>
+                    <option value="totalPrice">Total Price</option>
+                </select>
+                <select id="booking-sort-order" class="booking-sort-select">
+                    <option value="desc">Order</option>
+                    <option value="desc">Descending</option>
+                    <option value="asc">Ascending</option>
+                </select>
+            </div>
+            
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Booking ID</th>
+                            <th>Vehicle</th>
+                            <th>Customer</th>
+                            <th>Pickup Date</th>
+                            <th>Dropoff Date</th>
+                            <th>Total Price</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="bookings-table-body">
+                        <!-- Bookings will be rendered here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Pagination -->
+            <div class="pagination" id="booking-pagination">
+                <div class="pagination-info" id="pagination-info"></div>
+                <div>
+                    <button class="pagination-btn" id="prev-page-btn">Previous</button>
+                    <button class="pagination-btn" id="next-page-btn">Next</button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Vehicle Add/Edit Modal -->
+    <div id="vehicle-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="vehicle-modal-title">Add Vehicle</h2>
+                <button type="button" class="modal-close" id="vehicle-modal-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="vehicle-form">
+                    <div class="form-group">
+                        <label for="vehicle-name">Vehicle Name</label>
+                        <input type="text" id="vehicle-name" name="name" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle-type">Type</label>
+                        <input type="text" id="vehicle-type" name="type" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle-seats">Seats</label>
+                        <input type="number" id="vehicle-seats" name="seats" min="1" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle-transmission">Transmission</label>
+                        <div class="custom-dropdown-wrapper">
+                            <input type="text" id="vehicle-transmission" name="transmission" class="custom-dropdown-input" placeholder="Select transmission..." readonly required>
+                            <input type="hidden" id="vehicle-transmission-value" name="transmission-value">
+                            <div class="custom-dropdown-menu" id="vehicle-transmission-dropdown">
+                                <div class="dropdown-scroll-container">
+                                    <div class="dropdown-option" data-value="Automatic">Automatic</div>
+                                    <div class="dropdown-option" data-value="Manual">Manual</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle-rate">Daily Rate ($)</label>
+                        <input type="number" id="vehicle-rate" name="rate" min="0" step="0.01" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="vehicle-image">Vehicle Image</label>
+                        <input type="file" id="vehicle-image" name="image" accept="image/*">
+                        <div id="vehicle-image-preview"></div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="button" class="btn btn-secondary" id="cancel-vehicle-btn">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Save Vehicle</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Booking Details Modal -->
+    <div id="booking-details-modal" class="modal booking-details-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="booking-details-title">Booking Details</h2>
+                <button type="button" class="modal-close" id="booking-details-close">&times;</button>
+            </div>
+            <div class="modal-body" id="booking-details-content">
+                <!-- Booking details will be rendered here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Booking Modal -->
+    <div id="edit-booking-modal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Edit Booking</h2>
+                <button type="button" class="modal-close" id="edit-booking-close">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="edit-booking-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-pickup-date">Pickup Date</label>
+                            <input type="date" id="edit-pickup-date" name="pickup-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-pickup-time">Pickup Time</label>
+                            <input type="time" id="edit-pickup-time" name="pickup-time" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-dropoff-date">Dropoff Date</label>
+                            <input type="date" id="edit-dropoff-date" name="dropoff-date" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-dropoff-time">Dropoff Time</label>
+                            <input type="time" id="edit-dropoff-time" name="dropoff-time" required>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="edit-pickup-location">Pickup Location</label>
+                            <input type="text" id="edit-pickup-location" name="pickup-location" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="edit-dropoff-location">Dropoff Location</label>
+                            <input type="text" id="edit-dropoff-location" name="dropoff-location" required>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
+                        <button type="button" class="btn btn-secondary" id="cancel-edit-booking-btn">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Update Booking</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script src="utils.js"></script>
+    <script src="admin.js"></script>
+</body>
+</html>
+
