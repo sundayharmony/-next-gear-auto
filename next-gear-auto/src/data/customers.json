@@ -1,0 +1,38 @@
+[
+  {
+    "id": "c1",
+    "name": "Sarah Johnson",
+    "email": "sarah.johnson@example.com",
+    "phone": "(555) 123-4567",
+    "dob": "1990-05-15",
+    "driverLicense": { "imageUrl": "/uploads/licenses/c1.jpg", "verified": true, "verifiedAt": "2026-02-24T10:00:00Z", "verifiedBy": "admin" },
+    "paymentMethods": [{ "id": "pm1", "type": "visa", "last4": "4242", "expiryMonth": 12, "expiryYear": 2027, "isDefault": true }],
+    "bookings": ["bk1"],
+    "createdAt": "2026-01-10T08:00:00Z",
+    "role": "customer"
+  },
+  {
+    "id": "c2",
+    "name": "Michael Chen",
+    "email": "michael.chen@example.com",
+    "phone": "(555) 234-5678",
+    "dob": "1988-11-22",
+    "driverLicense": { "imageUrl": "/uploads/licenses/c2.jpg", "verified": true, "verifiedAt": "2026-02-19T14:00:00Z", "verifiedBy": "admin" },
+    "paymentMethods": [{ "id": "pm2", "type": "mastercard", "last4": "8888", "expiryMonth": 6, "expiryYear": 2028, "isDefault": true }],
+    "bookings": ["bk2"],
+    "createdAt": "2026-01-15T12:00:00Z",
+    "role": "customer"
+  },
+  {
+    "id": "admin1",
+    "name": "Admin User",
+    "email": "admin@nextgearauto.com",
+    "phone": "(555) 000-0000",
+    "dob": "1985-01-01",
+    "driverLicense": null,
+    "paymentMethods": [],
+    "bookings": [],
+    "createdAt": "2026-01-01T00:00:00Z",
+    "role": "admin"
+  }
+]
