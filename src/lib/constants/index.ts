@@ -2,15 +2,15 @@ import type { NavItem } from "@/lib/types";
 
 export const SITE_NAME = "NextGearAuto";
 export const SITE_DESCRIPTION = "Premium car rentals at competitive prices. Choose from our well-maintained fleet of compact cars, sedans, SUVs, and trucks.";
-export const SITE_URL = "https://nextgearauto.com";
+export const SITE_URL = "https://rentnextgearauto.com";
 
 export const CONTACT_INFO = {
-  phone: "(555) 123-RENT",
-  email: "info@nextgearauto.com",
-  address: "1234 Auto Drive, Suite 100",
-  city: "Los Angeles",
-  state: "CA",
-  zip: "90001",
+  phone: "(551) 429-3472",
+  email: "contact@rentnextgearauto.com",
+  address: "92 Forrest Street",
+  city: "Jersey City",
+  state: "NJ",
+  zip: "07304",
   hours: {
     weekday: "8:00 AM - 6:00 PM",
     saturday: "9:00 AM - 5:00 PM",

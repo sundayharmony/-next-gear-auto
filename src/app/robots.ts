@@ -2,13 +2,11 @@ import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: [
-      {
-        userAgent: "*",
-        allow: ["/", "/fleet", "/about", "/location", "/faq", "/blog", "/booking"],
-        disallow: ["/admin", "/account", "/api"],
-      },
-    ],
-    sitemap: "https://nextgearauto.com/sitemap.xml",
+    rules: {
+      userAgent: "*",
+      allow: "/",
+      disallow: ["/admin", "/account", "/api"],
+    },
+    sitemap: "https://rentnextgearauto.com/sitemap.xml",
   };
 }

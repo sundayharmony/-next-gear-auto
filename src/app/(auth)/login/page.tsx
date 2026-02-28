@@ -67,14 +67,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Demo notice */}
-              <div className="rounded-lg bg-purple-50 p-3 text-sm text-purple-700 border border-purple-200">
-                <strong>Demo Mode:</strong> Sign in as customer with{" "}
-                <code className="bg-purple-100 px-1 rounded">sarah.johnson@example.com</code>
-                {" "}or as admin with{" "}
-                <code className="bg-purple-100 px-1 rounded">admin@nextgearauto.com</code>
-                {" "}(any password).
-              </div>
+              {/* Welcome message */}
 
               {/* Email */}
               <div>
@@ -127,9 +120,9 @@ export default function LoginPage() {
                   <input type="checkbox" className="rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
                   <span className="text-gray-600">Remember me</span>
                 </label>
-                <Link href="/login" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                <button type="button" onClick={() => alert("A password reset link will be sent to your email address.")} className="text-sm text-purple-600 hover:text-purple-700 font-medium">
                   Forgot password?
-                </Link>
+                </button>
               </div>
 
               {/* Submit */}

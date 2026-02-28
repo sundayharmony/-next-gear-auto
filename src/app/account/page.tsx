@@ -2,9 +2,10 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Car, Calendar, Clock, MapPin, FileText, User, Settings,
-  CreditCard, ChevronRight, Download, XCircle, Star
+  CreditCard, ChevronRight, Download, XCircle, Star, LogOut, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { cn } from "@/lib/utils/cn";
+import { useAuth } from "@/lib/context/auth-context";
 import bookings from "@/data/bookings.json";
 import vehicles from "@/data/vehicles.json";
 
@@ -27,7 +29,32 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AccountPage() {
+  const { user, isAuthenticated, logout } = useAuth();
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("upcoming");
+
+  // Show sign-in prompt if not authenticated
+  if (!isAuthenticated || !user) {
+    return (
+      <PageContainer className="py-20">
+        <div className="mx-auto max-w-md text-center">
+          <User className="mx-auto h-16 w-16 text-gray-300 mb-4" />
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Sign In Required</h1>
+          <p className="text-gray-500 mb-6">Please sign in to access your account and manage your rentals.</p>
+          <Link href="/login">
+            <Button size="lg">Sign In</Button>
+          </Link>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  const initials = user.name
+    .split(" ")
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   const upcomingBookings = bookings.filter((b) =>
     ["pending", "confirmed"].includes(b.status)
@@ -45,17 +72,36 @@ export default function AccountPage() {
     { id: "payment" as Tab, label: "Payment", icon: CreditCard },
   ];
 
+  const handleLogout = () => {
+    logout();
+    router.push("/");
+  };
+
   return (
     <>
       <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-12 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-purple-500/30 text-xl font-bold">
-              JD
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-purple-500/30 text-xl font-bold">
+                {initials}
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Welcome back, {user.name.split(" ")[0]}</h1>
+                <p className="text-purple-200">Manage your rentals and account settings</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">Welcome back, John</h1>
-              <p className="text-purple-200">Manage your rentals and account settings</p>
+            <div className="flex items-center gap-3">
+              {user.role === "admin" && (
+                <Link href="/admin">
+                  <Button size="sm" variant="outline" className="border-purple-400 text-purple-200 hover:bg-purple-800">
+                    <Shield className="h-4 w-4 mr-1" /> Admin Dashboard
+                  </Button>
+                </Link>
+              )}
+              <Button size="sm" variant="outline" className="border-purple-400 text-purple-200 hover:bg-purple-800" onClick={handleLogout}>
+                <LogOut className="h-4 w-4 mr-1" /> Sign Out
+              </Button>
             </div>
           </div>
         </div>
@@ -195,21 +241,21 @@ export default function AccountPage() {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">Full Name</label>
-                        <Input defaultValue="John Doe" />
+                        <Input defaultValue={user.name} />
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">Email</label>
-                        <Input type="email" defaultValue="john@example.com" />
+                        <Input type="email" defaultValue={user.email} />
                       </div>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone</label>
-                        <Input type="tel" defaultValue="(555) 123-4567" />
+                        <Input type="tel" defaultValue={user.phone || ""} />
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">Date of Birth</label>
-                        <Input type="date" defaultValue="1990-05-15" />
+                        <Input type="date" defaultValue={user.dob || ""} />
                       </div>
                     </div>
                     <div className="border-t pt-4">
@@ -237,24 +283,34 @@ export default function AccountPage() {
             {activeTab === "payment" && (
               <>
                 <h2 className="text-xl font-semibold text-gray-900">Payment Methods</h2>
-                <Card>
-                  <CardContent className="p-5 flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-14 items-center justify-center rounded bg-blue-100 text-xs font-bold text-blue-700">VISA</div>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">Visa ending in 4242</p>
-                        <p className="text-xs text-gray-400">Expires 12/27</p>
-                      </div>
-                    </div>
-                    <Badge className="bg-green-100 text-green-700">Default</Badge>
-                  </CardContent>
-                </Card>
+                {user.paymentMethods && Array.isArray(user.paymentMethods) && user.paymentMethods.length > 0 ? (
+                  (user.paymentMethods as Array<{ id: string; type: string; last4: string; expiryMonth: number; expiryYear: number; isDefault: boolean }>).map((pm) => (
+                    <Card key={pm.id}>
+                      <CardContent className="p-5 flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="flex h-10 w-14 items-center justify-center rounded bg-blue-100 text-xs font-bold text-blue-700">
+                            {pm.type.toUpperCase()}
+                          </div>
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{pm.type.charAt(0).toUpperCase() + pm.type.slice(1)} ending in {pm.last4}</p>
+                            <p className="text-xs text-gray-400">Expires {pm.expiryMonth}/{pm.expiryYear}</p>
+                          </div>
+                        </div>
+                        {pm.isDefault && <Badge className="bg-green-100 text-green-700">Default</Badge>}
+                      </CardContent>
+                    </Card>
+                  ))
+                ) : (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <CreditCard className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                      <p className="text-gray-500 mb-4">No payment methods on file.</p>
+                    </CardContent>
+                  </Card>
+                )}
                 <Button variant="outline" className="mt-2">
                   <CreditCard className="h-4 w-4 mr-2" /> Add Payment Method
                 </Button>
-                <div className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-200">
-                  <strong>Prototype Mode:</strong> Payment methods are simulated. Stripe integration will be added in production.
-                </div>
               </>
             )}
           </div>

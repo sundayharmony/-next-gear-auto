@@ -1,52 +1,43 @@
 import type { MetadataRoute } from "next";
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = "https://nextgearauto.com";
+  const baseUrl = "https://rentnextgearauto.com";
 
   const staticPages = [
-    { url: baseUrl, changeFrequency: "weekly" as const, priority: 1.0 },
-    { url: `${baseUrl}/fleet`, changeFrequency: "daily" as const, priority: 0.9 },
-    { url: `${baseUrl}/about`, changeFrequency: "monthly" as const, priority: 0.7 },
-    { url: `${baseUrl}/location`, changeFrequency: "monthly" as const, priority: 0.7 },
-    { url: `${baseUrl}/faq`, changeFrequency: "monthly" as const, priority: 0.6 },
-    { url: `${baseUrl}/blog`, changeFrequency: "weekly" as const, priority: 0.8 },
-    { url: `${baseUrl}/booking`, changeFrequency: "weekly" as const, priority: 0.9 },
-    { url: `${baseUrl}/login`, changeFrequency: "monthly" as const, priority: 0.3 },
-    { url: `${baseUrl}/signup`, changeFrequency: "monthly" as const, priority: 0.3 },
+    "",
+    "/fleet",
+    "/about",
+    "/location",
+    "/blog",
+    "/faq",
+    "/booking",
+    "/login",
+    "/signup",
+    "/privacy",
+    "/terms",
   ];
 
-  // Vehicle detail pages
   const vehicleIds = ["v1", "v2", "v3", "v4", "v5", "v6"];
-  const vehiclePages = vehicleIds.map((id) => ({
-    url: `${baseUrl}/fleet/${id}`,
-    changeFrequency: "weekly" as const,
-    priority: 0.8,
-  }));
-
-  // Blog post pages
-  const blogSlugs = [
-    "top-road-trip-destinations",
-    "choose-right-rental-car",
-    "rental-car-insurance-guide",
-  ];
-  const blogPages = blogSlugs.map((slug) => ({
-    url: `${baseUrl}/blog/${slug}`,
-    changeFrequency: "monthly" as const,
-    priority: 0.6,
-  }));
+  const blogSlugs = ["road-trip-planning-guide", "how-to-choose-rental-car", "understanding-rental-insurance"];
 
   return [
-    ...staticPages.map((page) => ({
-      ...page,
+    ...staticPages.map((path) => ({
+      url: `${baseUrl}${path}`,
       lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: path === "" ? 1 : 0.8,
     })),
-    ...vehiclePages.map((page) => ({
-      ...page,
+    ...vehicleIds.map((id) => ({
+      url: `${baseUrl}/fleet/${id}`,
       lastModified: new Date(),
+      changeFrequency: "weekly" as const,
+      priority: 0.7,
     })),
-    ...blogPages.map((page) => ({
-      ...page,
+    ...blogSlugs.map((slug) => ({
+      url: `${baseUrl}/blog/${slug}`,
       lastModified: new Date(),
+      changeFrequency: "monthly" as const,
+      priority: 0.6,
     })),
   ];
 }

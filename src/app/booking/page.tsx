@@ -286,9 +286,7 @@ export default function BookingPage() {
                     Choose File
                   </Button>
                 </div>
-                <div className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-200">
-                  <strong>Prototype Mode:</strong> ID verification is simulated. Click Next to continue.
-                </div>
+                <p className="mt-4 text-xs text-gray-400">Your ID will be verified within 24 hours. You can proceed with your booking now.</p>
               </CardContent>
             </Card>
           )}
@@ -377,9 +375,6 @@ export default function BookingPage() {
                     <h2 className="text-xl font-semibold text-gray-900 mb-2">Process Payment</h2>
                     <p className="text-sm text-gray-500 mb-6">$50.00 non-refundable deposit will be charged.</p>
                     <div className="mx-auto max-w-sm rounded-lg border border-gray-200 p-4 mb-6">
-                      <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-200 mb-4">
-                        <strong>Prototype Mode:</strong> No real payment will be processed.
-                      </div>
                       <Button className="w-full" size="lg" onClick={() => booking.submitBooking()} disabled={booking.isSubmitting}>
                         {booking.isSubmitting ? "Processing..." : "Pay $50.00 Deposit"}
                       </Button>

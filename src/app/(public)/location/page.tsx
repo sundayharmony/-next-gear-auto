@@ -28,13 +28,19 @@ export default function LocationPage() {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Contact Info + Map */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Map placeholder */}
+            {/* Google Maps Embed */}
             <Card className="overflow-hidden">
-              <div className="aspect-[16/9] bg-gray-100 flex flex-col items-center justify-center text-gray-400">
-                <MapPin className="h-12 w-12 mb-2" />
-                <p className="text-sm font-medium">Google Maps Integration</p>
-                <p className="text-xs mt-1">Map will display here when API key is configured</p>
-              </div>
+              <iframe
+                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.6!2d-74.07!3d40.72!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x0%3A0x0!2s92+Forrest+Street%2C+Jersey+City%2C+NJ+07304!5e0!3m2!1sen!2sus!4v1"
+                width="100%"
+                height="400"
+                style={{ border: 0 }}
+                allowFullScreen
+                loading="lazy"
+                referrerPolicy="no-referrer-when-downgrade"
+                title="NextGearAuto Location - 92 Forrest Street, Jersey City, NJ"
+                className="aspect-[16/9] w-full"
+              />
             </Card>
 
             {/* Info Cards */}
@@ -112,11 +118,11 @@ export default function LocationPage() {
                 <div className="space-y-3 text-sm text-gray-600">
                   <div className="flex items-start gap-2">
                     <Navigation className="h-4 w-4 mt-0.5 text-purple-500 shrink-0" />
-                    <p><strong>From Downtown LA:</strong> Take the I-110 S, exit at Auto Drive. We are on the right side, next to the gas station.</p>
+                    <p><strong>From Manhattan:</strong> Take the Holland Tunnel to NJ-139 W. Merge onto US-1/9 S, then turn right onto Forrest Street. We are on the left.</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <Navigation className="h-4 w-4 mt-0.5 text-purple-500 shrink-0" />
-                    <p><strong>From LAX Airport:</strong> Take the I-105 E to I-110 S. About 20 minutes drive depending on traffic.</p>
+                    <p><strong>From Newark Airport (EWR):</strong> Take US-1/9 N toward Jersey City. Exit at Forrest Street. About 20 minutes depending on traffic.</p>
                   </div>
                   <div className="flex items-start gap-2">
                     <Car className="h-4 w-4 mt-0.5 text-purple-500 shrink-0" />

@@ -2,15 +2,18 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { Menu, X, Phone, Car } from "lucide-react";
+import { usePathname, useRouter } from "next/navigation";
+import { Menu, X, Phone, Car, User, LogOut, Shield } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { NAV_ITEMS, CONTACT_INFO } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/context/auth-context";
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
+  const router = useRouter();
+  const { user, isAuthenticated, logout } = useAuth();
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
@@ -61,9 +64,29 @@ export function Header() {
             <Link href="/booking" className="hidden sm:block">
               <Button size="sm">Book Now</Button>
             </Link>
-            <Link href="/login" className="hidden sm:block">
-              <Button variant="outline" size="sm">Sign In</Button>
-            </Link>
+            {isAuthenticated && user ? (
+              <div className="hidden sm:flex items-center gap-2">
+                {user.role === "admin" && (
+                  <Link href="/admin">
+                    <Button variant="outline" size="sm">
+                      <Shield className="h-3.5 w-3.5 mr-1" /> Admin
+                    </Button>
+                  </Link>
+                )}
+                <Link href="/account">
+                  <Button variant="outline" size="sm">
+                    <User className="h-3.5 w-3.5 mr-1" /> {user.name.split(" ")[0]}
+                  </Button>
+                </Link>
+                <Button variant="outline" size="sm" onClick={() => { logout(); router.push("/"); }}>
+                  <LogOut className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <Link href="/login" className="hidden sm:block">
+                <Button variant="outline" size="sm">Sign In</Button>
+              </Link>
+            )}
             <button
               className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
@@ -98,9 +121,24 @@ export function Header() {
               <Link href="/booking" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button className="w-full" size="sm">Book Now</Button>
               </Link>
-              <Link href="/login" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button variant="outline" className="w-full" size="sm">Sign In</Button>
-              </Link>
+              {isAuthenticated && user ? (
+                <>
+                  <Link href="/account" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full" size="sm">
+                      <User className="h-3.5 w-3.5 mr-1" /> Account
+                    </Button>
+                  </Link>
+                  {user.role === "admin" && (
+                    <Link href="/admin" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full" size="sm">Admin</Button>
+                    </Link>
+                  )}
+                </>
+              ) : (
+                <Link href="/login" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
+                  <Button variant="outline" className="w-full" size="sm">Sign In</Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>

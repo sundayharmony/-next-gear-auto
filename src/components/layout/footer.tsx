@@ -73,9 +73,9 @@ export function Footer() {
         <div className="mt-10 border-t border-gray-800 pt-6 text-center text-xs text-gray-500">
           <p>&copy; {currentYear} {SITE_NAME}. All rights reserved.</p>
           <div className="mt-2 flex justify-center gap-4">
-            <Link href="/faq" className="hover:text-purple-400">Privacy Policy</Link>
-            <Link href="/faq" className="hover:text-purple-400">Terms of Service</Link>
-            <Link href="/faq" className="hover:text-purple-400">Rental Agreement</Link>
+            <Link href="/privacy" className="hover:text-purple-400">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-purple-400">Terms of Service</Link>
+            <Link href="/faq#rental-agreement" className="hover:text-purple-400">Rental Agreement</Link>
           </div>
         </div>
       </div>

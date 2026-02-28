@@ -7,31 +7,27 @@ import { NotificationToasts } from "@/components/layout/notification-toasts";
 import { LayoutShell } from "@/components/layout/layout-shell";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://rentnextgearauto.com"),
   title: {
-    default: "NextGearAuto | Premium Car Rentals",
+    default: "NextGearAuto | Premium Car Rentals in Jersey City, NJ",
     template: "%s | NextGearAuto",
   },
   description:
-    "Premium car rentals at competitive prices. Choose from our well-maintained fleet of compact cars, sedans, SUVs, and trucks.",
-  keywords: ["car rental", "vehicle rental", "NextGearAuto", "rent a car", "SUV rental", "truck rental"],
+    "Premium car rentals in Jersey City, NJ at competitive prices. Choose from our well-maintained fleet of compact cars, sedans, SUVs, and trucks.",
+  keywords: ["car rental", "vehicle rental", "NextGearAuto", "rent a car", "SUV rental", "truck rental", "Jersey City car rental", "NJ car rental"],
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://nextgearauto.com",
+    url: "https://rentnextgearauto.com",
     siteName: "NextGearAuto",
-    title: "NextGearAuto | Premium Car Rentals",
-    description: "Premium car rentals at competitive prices. Choose from our well-maintained fleet.",
   },
   twitter: {
     card: "summary_large_image",
-    title: "NextGearAuto | Premium Car Rentals",
-    description: "Premium car rentals at competitive prices.",
   },
   robots: {
     index: true,
     follow: true,
   },
-  metadataBase: new URL("https://nextgearauto.com"),
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
