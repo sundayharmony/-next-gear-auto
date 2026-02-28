@@ -30,9 +30,17 @@ export default function LoginPage() {
       return;
     }
 
-    await login(email, password);
-    // In prototype, any valid email from mock data works
-    router.push("/account");
+    try {
+      await login(email, password);
+      // Redirect admin users to admin dashboard, customers to account page
+      if (email.toLowerCase() === "admin@nextgearauto.com") {
+        router.push("/admin");
+      } else {
+        router.push("/account");
+      }
+    } catch {
+      // Error is handled by the auth context
+    }
   };
 
   return (
@@ -61,7 +69,11 @@ export default function LoginPage() {
 
               {/* Demo notice */}
               <div className="rounded-lg bg-purple-50 p-3 text-sm text-purple-700 border border-purple-200">
-                <strong>Demo Mode:</strong> Use <code className="bg-purple-100 px-1 rounded">john@example.com</code> to sign in.
+                <strong>Demo Mode:</strong> Sign in as customer with{" "}
+                <code className="bg-purple-100 px-1 rounded">sarah.johnson@example.com</code>
+                {" "}or as admin with{" "}
+                <code className="bg-purple-100 px-1 rounded">admin@nextgearauto.com</code>
+                {" "}(any password).
               </div>
 
               {/* Email */}
