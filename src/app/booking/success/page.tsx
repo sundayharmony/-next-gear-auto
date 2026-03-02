@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Check, Car, Calendar, CreditCard, ArrowRight } from "lucide-react";
@@ -18,7 +18,7 @@ interface BookingDetails {
   customer_name: string;
 }
 
-export default function BookingSuccessPage() {
+function SuccessContent() {
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("booking_id");
   const sessionId = searchParams.get("session_id");
@@ -143,5 +143,19 @@ export default function BookingSuccessPage() {
         </div>
       </PageContainer>
     </>
+  );
+}
+
+export default function BookingSuccessPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-24">
+          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" />
+        </div>
+      }
+    >
+      <SuccessContent />
+    </Suspense>
   );
 }

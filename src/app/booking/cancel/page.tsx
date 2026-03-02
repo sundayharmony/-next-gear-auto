@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { XCircle, ArrowLeft, RefreshCw } from "lucide-react";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 
-export default function BookingCancelPage() {
+function CancelContent() {
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("booking_id");
 
@@ -63,5 +63,19 @@ export default function BookingCancelPage() {
         </div>
       </PageContainer>
     </>
+  );
+}
+
+export default function BookingCancelPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-24">
+          <div className="animate-spin h-8 w-8 border-4 border-gray-600 border-t-transparent rounded-full" />
+        </div>
+      }
+    >
+      <CancelContent />
+    </Suspense>
   );
 }
