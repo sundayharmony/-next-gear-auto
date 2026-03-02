@@ -1,5 +1,5 @@
 // Vehicle Types
-export type VehicleCategory = "compact" | "sedan" | "suv" | "truck";
+export type VehicleCategory = "compact" | "sedan" | "suv" | "truck" | "luxury" | "van";
 
 export interface VehicleSpecs {
   passengers: number;
@@ -12,16 +12,26 @@ export interface VehicleSpecs {
 
 export interface Vehicle {
   id: string;
-  name: string;
+  year: number;
+  make: string;
+  model: string;
   category: VehicleCategory;
   images: string[];
   specs: VehicleSpecs;
   dailyRate: number;
-  weeklyRate: number;
-  monthlyRate: number;
   features: string[];
   isAvailable: boolean;
   description: string;
+  color: string;
+  mileage: number;
+  licensePlate: string;
+  vin: string;
+  maintenanceStatus: "good" | "needs-service" | "in-maintenance";
+}
+
+/** Helper to get display name like "2024 Toyota Camry" */
+export function getVehicleDisplayName(v: { year: number; make: string; model: string }): string {
+  return `${v.year} ${v.make} ${v.model}`;
 }
 
 // Booking Types
@@ -215,4 +225,17 @@ export interface ActivityItem {
   type: "booking" | "cancellation" | "signup" | "review";
   message: string;
   timestamp: string;
+}
+
+// Expense Types
+export type ExpenseCategory = "maintenance" | "insurance" | "fuel" | "cleaning" | "parking" | "registration" | "other";
+
+export interface Expense {
+  id: string;
+  vehicleId: string | null;
+  category: ExpenseCategory;
+  amount: number;
+  description: string;
+  date: string;
+  createdAt: string;
 }

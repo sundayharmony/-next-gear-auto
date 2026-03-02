@@ -12,19 +12,23 @@ export async function GET() {
       .order("created_at", { ascending: true });
 
     if (!error && data && data.length > 0) {
-      // Map Supabase format to frontend format
       const vehicles = data.map((v) => ({
         id: v.id,
-        name: v.name,
+        year: v.year || 2024,
+        make: v.make || "",
+        model: v.model || "",
         category: v.category,
         images: v.images || [],
         specs: v.specs || {},
         dailyRate: v.daily_rate,
-        weeklyRate: v.weekly_rate,
-        monthlyRate: v.monthly_rate,
         features: v.features || [],
         isAvailable: v.is_available,
         description: v.description || "",
+        color: v.color || "",
+        mileage: v.mileage || 0,
+        licensePlate: v.license_plate || "",
+        vin: v.vin || "",
+        maintenanceStatus: v.maintenance_status || "good",
       }));
       return NextResponse.json({ success: true, data: vehicles, source: "supabase" });
     }
@@ -46,16 +50,21 @@ export async function POST(request: NextRequest) {
       .from("vehicles")
       .insert({
         id,
-        name: body.name,
+        year: body.year || 2024,
+        make: body.make || "",
+        model: body.model || "",
         category: body.category,
         images: body.images || [],
         specs: body.specs || { passengers: 5, luggage: 2, transmission: "Automatic", fuelType: "Gasoline", mpg: 30, doors: 4 },
         daily_rate: body.dailyRate,
-        weekly_rate: body.weeklyRate,
-        monthly_rate: body.monthlyRate,
         features: body.features || [],
         is_available: body.isAvailable !== false,
         description: body.description || "",
+        color: body.color || "",
+        mileage: body.mileage || 0,
+        license_plate: body.licensePlate || "",
+        vin: body.vin || "",
+        maintenance_status: body.maintenanceStatus || "good",
       })
       .select()
       .single();
@@ -82,18 +91,22 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Vehicle ID required" }, { status: 400 });
     }
 
-    // Map frontend field names to DB column names
     const dbUpdates: Record<string, unknown> = {};
-    if (updates.name !== undefined) dbUpdates.name = updates.name;
+    if (updates.year !== undefined) dbUpdates.year = updates.year;
+    if (updates.make !== undefined) dbUpdates.make = updates.make;
+    if (updates.model !== undefined) dbUpdates.model = updates.model;
     if (updates.category !== undefined) dbUpdates.category = updates.category;
     if (updates.dailyRate !== undefined) dbUpdates.daily_rate = updates.dailyRate;
-    if (updates.weeklyRate !== undefined) dbUpdates.weekly_rate = updates.weeklyRate;
-    if (updates.monthlyRate !== undefined) dbUpdates.monthly_rate = updates.monthlyRate;
     if (updates.isAvailable !== undefined) dbUpdates.is_available = updates.isAvailable;
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.features !== undefined) dbUpdates.features = updates.features;
     if (updates.specs !== undefined) dbUpdates.specs = updates.specs;
     if (updates.images !== undefined) dbUpdates.images = updates.images;
+    if (updates.color !== undefined) dbUpdates.color = updates.color;
+    if (updates.mileage !== undefined) dbUpdates.mileage = updates.mileage;
+    if (updates.licensePlate !== undefined) dbUpdates.license_plate = updates.licensePlate;
+    if (updates.vin !== undefined) dbUpdates.vin = updates.vin;
+    if (updates.maintenanceStatus !== undefined) dbUpdates.maintenance_status = updates.maintenanceStatus;
 
     const { error } = await supabase
       .from("vehicles")

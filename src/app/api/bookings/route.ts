@@ -30,10 +30,10 @@ export async function GET(request: NextRequest) {
       if (booking.vehicle_id) {
         const { data: vehicle } = await supabase
           .from("vehicles")
-          .select("name")
+          .select("year, make, model")
           .eq("id", booking.vehicle_id)
           .single();
-        if (vehicle) vehicleName = vehicle.name;
+        if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
       }
 
       return NextResponse.json({
@@ -78,11 +78,11 @@ export async function GET(request: NextRequest) {
     if (vehicleIds.length > 0) {
       const { data: vehicles } = await supabase
         .from("vehicles")
-        .select("id, name")
+        .select("id, year, make, model")
         .in("id", vehicleIds);
 
       if (vehicles) {
-        vehicleMap = Object.fromEntries(vehicles.map((v) => [v.id, v.name]));
+        vehicleMap = Object.fromEntries(vehicles.map((v) => [v.id, `${v.year} ${v.make} ${v.model}`]));
       }
     }
 

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Car, DollarSign, Calendar, Users, TrendingUp, Clock, ArrowRight, Tag, Star } from "lucide-react";
+import { Car, DollarSign, Calendar, CalendarDays, Users, TrendingUp, Clock, ArrowRight, Tag, Star, BarChart3 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -149,9 +149,11 @@ export default function AdminDashboardPage() {
 
             {/* Management Quick Links */}
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Manage</h2>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-8">
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 mb-8">
               {[
+                { label: "Calendar", desc: "View trip timeline", icon: CalendarDays, href: "/admin/calendar", color: "bg-indigo-100 text-indigo-700" },
                 { label: "Vehicles", desc: "Manage fleet", icon: Car, href: "/admin/vehicles", color: "bg-purple-100 text-purple-700" },
+                { label: "Finances", desc: "Revenue & expenses", icon: BarChart3, href: "/admin/finances", color: "bg-emerald-100 text-emerald-700" },
                 { label: "Promo Codes", desc: "Discounts & coupons", icon: Tag, href: "/admin/promo-codes", color: "bg-green-100 text-green-700" },
                 { label: "Reviews", desc: "Moderate feedback", icon: Star, href: "/admin/reviews", color: "bg-amber-100 text-amber-700" },
                 { label: "Customers", desc: "View all users", icon: Users, href: "/admin/customers", color: "bg-blue-100 text-blue-700" },

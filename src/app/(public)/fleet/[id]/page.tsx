@@ -35,15 +35,16 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     ? (vehicleReviews.reduce((sum, r) => sum + r.rating, 0) / vehicleReviews.length).toFixed(1)
     : null;
 
+  const displayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
   return {
-    title: `${vehicle.name} Rental - $${vehicle.dailyRate}/day`,
-    description: `Rent a ${vehicle.name} in Jersey City, NJ. ${vehicle.specs.passengers} passengers, ${vehicle.specs.luggage} bags, ${vehicle.specs.mpg} MPG. Starting at $${vehicle.dailyRate}/day.${avgRating ? ` Rated ${avgRating}/5.` : ""}`,
+    title: `${displayName} Rental - $${vehicle.dailyRate}/day`,
+    description: `Rent a ${displayName} in Jersey City, NJ. ${vehicle.specs.passengers} passengers, ${vehicle.specs.luggage} bags, ${vehicle.specs.mpg} MPG. Starting at $${vehicle.dailyRate}/day.${avgRating ? ` Rated ${avgRating}/5.` : ""}`,
     alternates: {
       canonical: `${SITE_URL}/fleet/${vehicle.id}`,
     },
     openGraph: {
-      title: `${vehicle.name} Rental - $${vehicle.dailyRate}/day | NextGearAuto`,
-      description: `Rent a ${vehicle.name} in Jersey City. ${vehicle.description}`,
+      title: `${displayName} Rental - $${vehicle.dailyRate}/day | NextGearAuto`,
+      description: `Rent a ${displayName} in Jersey City. ${vehicle.description}`,
       url: `${SITE_URL}/fleet/${vehicle.id}`,
       type: "website",
     },
@@ -77,9 +78,10 @@ export default async function VehicleDetailPage({ params }: PageProps) {
     { icon: DoorOpen, label: "Doors", value: `${vehicle.specs.doors} doors` },
   ];
 
+  const vehicleDisplayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
   const productSchema = generateProductSchema({
     id: vehicle.id,
-    name: vehicle.name,
+    name: vehicleDisplayName,
     description: vehicle.description,
     category: vehicle.category,
     dailyRate: vehicle.dailyRate,
@@ -101,13 +103,13 @@ export default async function VehicleDetailPage({ params }: PageProps) {
           <Breadcrumbs
             items={[
               { label: "Fleet", href: "/fleet" },
-              { label: vehicle.name },
+              { label: vehicleDisplayName },
             ]}
           />
           <div className="flex items-start justify-between">
             <div>
               <Badge className="mb-2 bg-purple-500/20 text-purple-200 border border-purple-400/30">{vehicle.category}</Badge>
-              <h1 className="text-3xl font-bold sm:text-4xl">{vehicle.name}</h1>
+              <h1 className="text-3xl font-bold sm:text-4xl">{vehicleDisplayName}</h1>
               {avgRating && (
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex gap-0.5">
@@ -225,18 +227,10 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                     <span className="text-sm text-gray-600">Daily Rate</span>
                     <span className="text-lg font-bold text-purple-600">${vehicle.dailyRate}</span>
                   </div>
-                  <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-                    <span className="text-sm text-gray-600">Weekly Rate</span>
-                    <span className="font-semibold text-gray-900">${vehicle.weeklyRate}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3">
-                    <span className="text-sm text-gray-600">Monthly Rate</span>
-                    <span className="font-semibold text-gray-900">${vehicle.monthlyRate}</span>
-                  </div>
                 </div>
 
                 <div className="mt-4 rounded-lg border border-dashed border-gray-200 p-3 text-xs text-gray-500">
-                  $50 non-refundable deposit at booking. Best rate automatically applied based on rental duration.
+                  $50 non-refundable deposit at booking. Tax (8%) calculated at checkout.
                 </div>
 
                 <Link href={`/booking?vehicleId=${vehicle.id}`} className="mt-6 block">
@@ -287,7 +281,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                       <Car className="h-16 w-16 text-purple-200 group-hover:text-purple-400 transition-colors" />
                     </div>
                     <CardContent className="p-5">
-                      <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{sv.name}</h3>
+                      <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{sv.year} {sv.make} {sv.model}</h3>
                       <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
                         <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {sv.specs.passengers}</span>
                         <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {sv.specs.mpg} mpg</span>

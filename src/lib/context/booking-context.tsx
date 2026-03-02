@@ -90,8 +90,6 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
       let pricing: PricingBreakdown & { discount?: PromoDiscount } = calculatePricing(
         days,
         state.selectedVehicle.dailyRate,
-        state.selectedVehicle.weeklyRate,
-        state.selectedVehicle.monthlyRate,
         state.extras
       );
       // Apply promo discount if set
@@ -205,7 +203,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           vehicleId: state.selectedVehicle?.id,
-          vehicleName: state.selectedVehicle?.name,
+          vehicleName: state.selectedVehicle ? `${state.selectedVehicle.year} ${state.selectedVehicle.make} ${state.selectedVehicle.model}` : "",
           pickupDate: state.pickupDate,
           returnDate: state.returnDate,
           extras: state.extras.filter((e) => e.selected),

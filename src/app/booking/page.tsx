@@ -235,7 +235,7 @@ function BookingPageInner() {
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-900">{vehicle.name}</h3>
+                          <h3 className="font-semibold text-gray-900">{vehicle.year} {vehicle.make} {vehicle.model}</h3>
                           <Badge variant="secondary">{vehicle.category}</Badge>
                         </div>
                         <div className="mt-1 flex gap-3 text-xs text-gray-500">
@@ -409,7 +409,7 @@ function BookingPageInner() {
                     <div className="space-y-3">
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Vehicle</span>
-                        <span className="font-medium text-gray-900">{booking.selectedVehicle.name}</span>
+                        <span className="font-medium text-gray-900">{booking.selectedVehicle.year} {booking.selectedVehicle.make} {booking.selectedVehicle.model}</span>
                       </div>
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Pick-up</span>

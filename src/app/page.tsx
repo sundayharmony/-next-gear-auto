@@ -88,7 +88,7 @@ export default function HomePage() {
                   </Badge>
                 </div>
                 <CardContent className="p-4">
-                  <h3 className="font-semibold text-gray-900">{vehicle.name}</h3>
+                  <h3 className="font-semibold text-gray-900">{vehicle.year} {vehicle.make} {vehicle.model}</h3>
                   <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
                     <span className="flex items-center gap-1">
                       <Users className="h-3 w-3" /> {vehicle.specs.passengers}

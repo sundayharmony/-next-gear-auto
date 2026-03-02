@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         // Get vehicle name
         const { data: vehicle } = await supabase
           .from("vehicles")
-          .select("name")
+          .select("year, make, model")
           .eq("id", booking.vehicle_id)
           .single();
 
@@ -45,7 +45,7 @@ export async function GET(request: Request) {
           bookingId: booking.id,
           customerName: booking.customer_name || "Customer",
           customerEmail: booking.customer_email || "",
-          vehicleName: vehicle?.name || "Vehicle",
+          vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
           pickupDate: booking.pickup_date,
           returnDate: booking.return_date,
           totalPrice: booking.total_price,
@@ -66,7 +66,7 @@ export async function GET(request: Request) {
       for (const booking of returnBookings) {
         const { data: vehicle } = await supabase
           .from("vehicles")
-          .select("name")
+          .select("year, make, model")
           .eq("id", booking.vehicle_id)
           .single();
 
@@ -74,7 +74,7 @@ export async function GET(request: Request) {
           bookingId: booking.id,
           customerName: booking.customer_name || "Customer",
           customerEmail: booking.customer_email || "",
-          vehicleName: vehicle?.name || "Vehicle",
+          vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
           pickupDate: booking.pickup_date,
           returnDate: booking.return_date,
           totalPrice: booking.total_price,

@@ -95,7 +95,9 @@ export function generateLocalBusinessSchema() {
 // Product schema - used on vehicle detail pages
 export function generateProductSchema(vehicle: {
   id: string;
-  name: string;
+  year: number;
+  make: string;
+  model: string;
   description: string;
   category: string;
   dailyRate: number;
@@ -103,10 +105,11 @@ export function generateProductSchema(vehicle: {
   avgRating?: string | null;
   reviewCount?: number;
 }) {
+  const displayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
   const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "Product",
-    name: `${vehicle.name} Rental`,
+    name: `${displayName} Rental`,
     description: vehicle.description,
     url: `${SITE_URL}/fleet/${vehicle.id}`,
     category: `${vehicle.category} car rental`,

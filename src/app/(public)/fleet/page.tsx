@@ -46,10 +46,14 @@ function FleetContent() {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        (v) =>
-          v.name.toLowerCase().includes(query) ||
-          v.category.toLowerCase().includes(query) ||
-          v.description.toLowerCase().includes(query)
+        (v) => {
+          const displayName = `${v.year} ${v.make} ${v.model}`.toLowerCase();
+          return displayName.includes(query) ||
+            v.make.toLowerCase().includes(query) ||
+            v.model.toLowerCase().includes(query) ||
+            v.category.toLowerCase().includes(query) ||
+            v.description.toLowerCase().includes(query);
+        }
       );
     }
 
@@ -61,7 +65,7 @@ function FleetContent() {
         result = [...result].sort((a, b) => b.dailyRate - a.dailyRate);
         break;
       case "name":
-        result = [...result].sort((a, b) => a.name.localeCompare(b.name));
+        result = [...result].sort((a, b) => `${a.year} ${a.make} ${a.model}`.localeCompare(`${b.year} ${b.make} ${b.model}`));
         break;
     }
 
@@ -180,7 +184,7 @@ function FleetContent() {
 
                     <CardContent className="p-5">
                       <h3 className="text-lg font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
-                        {vehicle.name}
+                        {vehicle.year} {vehicle.make} {vehicle.model}
                       </h3>
                       <p className="mt-1 text-sm text-gray-500 line-clamp-2">{vehicle.description}</p>
 
@@ -231,7 +235,7 @@ function FleetContent() {
                       key={id}
                       className="inline-flex items-center gap-1 rounded-full bg-purple-100 px-2.5 py-0.5 text-xs font-medium text-purple-700"
                     >
-                      {v.name}
+                      {v.year} {v.make} {v.model}
                       <button
                         onClick={() => comparison.removeFromCompare(id)}
                         className="hover:text-purple-900"

@@ -62,8 +62,6 @@ function ComparisonContent() {
 
   const priceRows = [
     { label: "Daily Rate", getValue: (v: typeof vehicles[0]) => `$${v.dailyRate}` },
-    { label: "Weekly Rate", getValue: (v: typeof vehicles[0]) => `$${v.weeklyRate}` },
-    { label: "Monthly Rate", getValue: (v: typeof vehicles[0]) => `$${v.monthlyRate}` },
   ];
 
   // Collect all unique features
@@ -104,7 +102,7 @@ function ComparisonContent() {
                         <Car className="h-10 w-10 text-purple-400" />
                       </div>
                       <p className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
-                        {v!.name}
+                        {v!.year} {v!.make} {v!.model}
                       </p>
                       <Badge className="mt-1">{v!.category}</Badge>
                     </Link>
@@ -205,7 +203,7 @@ function ComparisonContent() {
           {selectedVehicles.map((v) => (
             <Card key={v!.id}>
               <CardContent className="p-4 text-center">
-                <p className="font-semibold text-gray-900">{v!.name}</p>
+                <p className="font-semibold text-gray-900">{v!.year} {v!.make} {v!.model}</p>
                 <p className="text-2xl font-bold text-purple-600 mt-1">
                   ${v!.dailyRate}<span className="text-sm text-gray-400">/day</span>
                 </p>

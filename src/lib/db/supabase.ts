@@ -31,7 +31,9 @@ export interface DbCustomer {
 
 export interface DbVehicle {
   id: string;
-  name: string;
+  year: number;
+  make: string;
+  model: string;
   category: string;
   images: string[];
   specs: {
@@ -43,11 +45,14 @@ export interface DbVehicle {
     doors: number;
   };
   daily_rate: number;
-  weekly_rate: number;
-  monthly_rate: number;
   features: string[];
   is_available: boolean;
   description: string | null;
+  color: string | null;
+  mileage: number;
+  license_plate: string | null;
+  vin: string | null;
+  maintenance_status: string;
   created_at: string;
 }
 

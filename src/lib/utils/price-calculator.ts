@@ -11,24 +11,7 @@ export function calculateRentalDays(pickupDate: string, returnDate: string): num
   return Math.max(diffDays, 1);
 }
 
-export function calculateBaseRate(
-  days: number,
-  dailyRate: number,
-  weeklyRate: number,
-  monthlyRate: number
-): number {
-  if (days >= 30) {
-    const months = Math.floor(days / 30);
-    const remainingDays = days % 30;
-    const remainingWeeks = Math.floor(remainingDays / 7);
-    const remainingDaysAfterWeeks = remainingDays % 7;
-    return months * monthlyRate + remainingWeeks * weeklyRate + remainingDaysAfterWeeks * dailyRate;
-  }
-  if (days >= 7) {
-    const weeks = Math.floor(days / 7);
-    const remainingDays = days % 7;
-    return weeks * weeklyRate + remainingDays * dailyRate;
-  }
+export function calculateBaseRate(days: number, dailyRate: number): number {
   return days * dailyRate;
 }
 
@@ -51,11 +34,9 @@ export function calculateExtrasTotal(extras: BookingExtra[], days: number): { na
 export function calculatePricing(
   days: number,
   dailyRate: number,
-  weeklyRate: number,
-  monthlyRate: number,
   extras: BookingExtra[]
 ): PricingBreakdown {
-  const baseTotal = calculateBaseRate(days, dailyRate, weeklyRate, monthlyRate);
+  const baseTotal = calculateBaseRate(days, dailyRate);
   const extrasBreakdown = calculateExtrasTotal(extras, days);
   const extrasTotal = extrasBreakdown.reduce((sum, e) => sum + e.total, 0);
   const subtotal = baseTotal + extrasTotal;
