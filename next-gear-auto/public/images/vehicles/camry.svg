@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bgGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1F1335;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2D1B4E;stop-opacity:1" />
+    </linearGradient>
+    <pattern id="grid3" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#4C2B7F" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bgGradient3)"/>
+
+  <!-- Grid Pattern -->
+  <rect width="800" height="500" fill="url(#grid3)"/>
+
+  <!-- Sedan Silhouette -->
+  <g transform="translate(400, 240)">
+    <!-- Car body - longer wheelbase -->
+    <path d="M -95 -18 L -70 -48 L 70 -48 L 95 -18 L 95 28 Q 95 42 80 42 L -80 42 Q -95 42 -95 28 Z" fill="#7C3AED" opacity="0.7"/>
+    <!-- Car windows - sedan style -->
+    <ellipse cx="-50" cy="-30" rx="18" ry="16" fill="#9F7AEA" opacity="0.6"/>
+    <ellipse cx="50" cy="-30" rx="18" ry="16" fill="#9F7AEA" opacity="0.6"/>
+    <!-- Side accent line -->
+    <line x1="-85" y1="8" x2="85" y2="8" stroke="#9F7AEA" stroke-width="2" opacity="0.5"/>
+    <!-- Wheels -->
+    <circle cx="-58" cy="48" r="19" fill="#4C2B7F" stroke="#7C3AED" stroke-width="3"/>
+    <circle cx="58" cy="48" r="19" fill="#4C2B7F" stroke="#7C3AED" stroke-width="3"/>
+    <!-- Wheel details -->
+    <circle cx="-58" cy="48" r="11" fill="none" stroke="#7C3AED" stroke-width="2"/>
+    <circle cx="58" cy="48" r="11" fill="none" stroke="#7C3AED" stroke-width="2"/>
+  </g>
+
+  <!-- Vehicle Name -->
+  <text x="400" y="130" font-size="64" font-weight="bold" text-anchor="middle" fill="white" font-family="Arial, sans-serif">Toyota Camry</text>
+
+  <!-- Category Badge -->
+  <g>
+    <rect x="280" y="160" width="240" height="50" rx="25" fill="none" stroke="#7C3AED" stroke-width="2"/>
+    <text x="400" y="193" font-size="24" text-anchor="middle" fill="#7C3AED" font-family="Arial, sans-serif">Sedan • $50/day</text>
+  </g>
+
+  <!-- Photo Coming Soon -->
+  <text x="400" y="460" font-size="18" text-anchor="middle" fill="#A0AEC0" font-family="Arial, sans-serif">Photo Coming Soon</text>
+</svg>

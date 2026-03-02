@@ -1,0 +1,44 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400">
+  <defs>
+    <linearGradient id="blogGradient2" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1F1335;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2D1B4E;stop-opacity:1" />
+    </linearGradient>
+    <pattern id="blogGrid2" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#4C2B7F" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="400" fill="url(#blogGradient2)"/>
+
+  <!-- Grid Pattern -->
+  <rect width="800" height="400" fill="url(#blogGrid2)"/>
+
+  <!-- Car with Checkmark Icon -->
+  <g transform="translate(150, 150)">
+    <!-- Car body -->
+    <path d="M -40 -15 L -25 -35 L 35 -35 L 50 -15 L 50 15 Q 50 25 40 25 L -40 25 Q -50 25 -50 15 Z" fill="#7C3AED" opacity="0.8"/>
+    <!-- Car windows -->
+    <ellipse cx="-20" cy="-20" rx="12" ry="10" fill="#9F7AEA" opacity="0.6"/>
+    <ellipse cx="20" cy="-20" rx="12" ry="10" fill="#9F7AEA" opacity="0.6"/>
+    <!-- Wheels -->
+    <circle cx="-30" cy="28" r="10" fill="#4C2B7F" stroke="#7C3AED" stroke-width="2"/>
+    <circle cx="30" cy="28" r="10" fill="#4C2B7F" stroke="#7C3AED" stroke-width="2"/>
+
+    <!-- Large checkmark -->
+    <g transform="translate(70, -10)">
+      <path d="M -15 10 L 0 25 L 25 0" stroke="#10B981" stroke-width="6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+  </g>
+
+  <!-- Title -->
+  <text x="400" y="200" font-size="52" font-weight="bold" text-anchor="middle" fill="white" font-family="Arial, sans-serif">Choosing Your Car</text>
+
+  <!-- Subtitle -->
+  <text x="400" y="250" font-size="20" text-anchor="middle" fill="#A0AEC0" font-family="Arial, sans-serif">Selection Guide</text>
+
+  <!-- Decorative elements -->
+  <rect x="650" y="80" width="60" height="60" rx="10" fill="#7C3AED" opacity="0.2"/>
+  <circle cx="120" cy="320" r="40" fill="#10B981" opacity="0.2"/>
+</svg>

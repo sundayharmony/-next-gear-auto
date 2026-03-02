@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="800" height="500">
+  <defs>
+    <linearGradient id="bgGradient4" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1F1335;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2D1B4E;stop-opacity:1" />
+    </linearGradient>
+    <pattern id="grid4" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#4C2B7F" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" fill="url(#bgGradient4)"/>
+
+  <!-- Grid Pattern -->
+  <rect width="800" height="500" fill="url(#grid4)"/>
+
+  <!-- SUV Silhouette - Taller -->
+  <g transform="translate(400, 230)">
+    <!-- Car body - SUV shape, higher ground clearance -->
+    <path d="M -90 -35 L -65 -60 L 65 -60 L 90 -35 L 90 20 Q 90 40 75 40 L -75 40 Q -90 40 -90 20 Z" fill="#7C3AED" opacity="0.7"/>
+    <!-- Larger windows for SUV -->
+    <rect x="-60" y="-50" width="35" height="28" rx="4" fill="#9F7AEA" opacity="0.6"/>
+    <rect x="25" y="-50" width="35" height="28" rx="4" fill="#9F7AEA" opacity="0.6"/>
+    <!-- Roof rack -->
+    <line x1="-65" y1="-60" x2="65" y2="-60" stroke="#9F7AEA" stroke-width="3" opacity="0.6"/>
+    <line x1="-55" y1="-65" x2="-55" y2="-58" stroke="#9F7AEA" stroke-width="2" opacity="0.6"/>
+    <line x1="0" y1="-65" x2="0" y2="-58" stroke="#9F7AEA" stroke-width="2" opacity="0.6"/>
+    <line x1="55" y1="-65" x2="55" y2="-58" stroke="#9F7AEA" stroke-width="2" opacity="0.6"/>
+    <!-- Wheels - larger -->
+    <circle cx="-55" cy="48" r="20" fill="#4C2B7F" stroke="#7C3AED" stroke-width="3"/>
+    <circle cx="55" cy="48" r="20" fill="#4C2B7F" stroke="#7C3AED" stroke-width="3"/>
+    <!-- Wheel details -->
+    <circle cx="-55" cy="48" r="12" fill="none" stroke="#7C3AED" stroke-width="2"/>
+    <circle cx="55" cy="48" r="12" fill="none" stroke="#7C3AED" stroke-width="2"/>
+  </g>
+
+  <!-- Vehicle Name -->
+  <text x="400" y="130" font-size="64" font-weight="bold" text-anchor="middle" fill="white" font-family="Arial, sans-serif">Toyota RAV4</text>
+
+  <!-- Category Badge -->
+  <g>
+    <rect x="280" y="160" width="240" height="50" rx="25" fill="none" stroke="#7C3AED" stroke-width="2"/>
+    <text x="400" y="193" font-size="24" text-anchor="middle" fill="#7C3AED" font-family="Arial, sans-serif">SUV • $65/day</text>
+  </g>
+
+  <!-- Photo Coming Soon -->
+  <text x="400" y="460" font-size="18" text-anchor="middle" fill="#A0AEC0" font-family="Arial, sans-serif">Photo Coming Soon</text>
+</svg>

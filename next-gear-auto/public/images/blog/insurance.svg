@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" width="800" height="400">
+  <defs>
+    <linearGradient id="blogGradient3" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1F1335;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2D1B4E;stop-opacity:1" />
+    </linearGradient>
+    <pattern id="blogGrid3" width="40" height="40" patternUnits="userSpaceOnUse">
+      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#4C2B7F" stroke-width="0.5" opacity="0.3"/>
+    </pattern>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="400" fill="url(#blogGradient3)"/>
+
+  <!-- Grid Pattern -->
+  <rect width="800" height="400" fill="url(#blogGrid3)"/>
+
+  <!-- Shield Icon -->
+  <g transform="translate(150, 150)">
+    <!-- Shield outline -->
+    <path d="M 0 -35 L -35 -15 L -35 15 Q 0 45 0 45 Q 0 45 35 15 L 35 -15 Z" fill="none" stroke="#7C3AED" stroke-width="4" opacity="0.9"/>
+    <path d="M 0 -35 L -35 -15 L -35 15 Q 0 45 0 45 Q 0 45 35 15 L 35 -15 Z" fill="#7C3AED" opacity="0.3"/>
+
+    <!-- Checkmark inside shield -->
+    <g transform="translate(0, 8)">
+      <path d="M -12 8 L 0 18 L 16 -5" stroke="#10B981" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Lock symbol detail -->
+    <circle cx="0" cy="-8" r="6" fill="none" stroke="#10B981" stroke-width="2" opacity="0.7"/>
+  </g>
+
+  <!-- Title -->
+  <text x="400" y="200" font-size="48" font-weight="bold" text-anchor="middle" fill="white" font-family="Arial, sans-serif">Rental Insurance</text>
+
+  <!-- Subtitle -->
+  <text x="400" y="250" font-size="20" text-anchor="middle" fill="#A0AEC0" font-family="Arial, sans-serif">Protection & Coverage</text>
+
+  <!-- Decorative elements -->
+  <g transform="translate(650, 100)">
+    <circle cx="0" cy="0" r="40" fill="none" stroke="#10B981" stroke-width="2" opacity="0.3"/>
+    <circle cx="0" cy="0" r="32" fill="none" stroke="#10B981" stroke-width="2" opacity="0.3"/>
+  </g>
+  <path d="M 80 320 L 120 340 L 140 310 L 160 330 L 180 310 L 200 340" stroke="#7C3AED" stroke-width="3" fill="none" opacity="0.3" stroke-linecap="round"/>
+</svg>

@@ -30,9 +30,17 @@ export default function LoginPage() {
       return;
     }
 
-    await login(email, password);
-    // In prototype, any valid email from mock data works
-    router.push("/account");
+    try {
+      await login(email, password);
+      // Redirect admin users to admin dashboard, customers to account page
+      if (email.toLowerCase() === "admin@nextgearauto.com") {
+        router.push("/admin");
+      } else {
+        router.push("/account");
+      }
+    } catch {
+      // Error is handled by the auth context
+    }
   };
 
   return (
@@ -59,10 +67,7 @@ export default function LoginPage() {
                 </div>
               )}
 
-              {/* Demo notice */}
-              <div className="rounded-lg bg-purple-50 p-3 text-sm text-purple-700 border border-purple-200">
-                <strong>Demo Mode:</strong> Use <code className="bg-purple-100 px-1 rounded">john@example.com</code> to sign in.
-              </div>
+              {/* Welcome message */}
 
               {/* Email */}
               <div>
@@ -115,9 +120,9 @@ export default function LoginPage() {
                   <input type="checkbox" className="rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
                   <span className="text-gray-600">Remember me</span>
                 </label>
-                <Link href="/login" className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                <button type="button" onClick={() => alert("A password reset link will be sent to your email address.")} className="text-sm text-purple-600 hover:text-purple-700 font-medium">
                   Forgot password?
-                </Link>
+                </button>
               </div>
 
               {/* Submit */}

@@ -1,38 +1,48 @@
 import type { Metadata } from "next";
 import "./globals.css";
-import { Header } from "@/components/layout/header";
-import { Footer } from "@/components/layout/footer";
 import { AuthProvider } from "@/lib/context/auth-context";
 import { BookingProvider } from "@/lib/context/booking-context";
 import { NotificationProvider } from "@/lib/context/notification-context";
-import { ToastContainer, ToastNotification } from "@/components/ui/toast";
 import { NotificationToasts } from "@/components/layout/notification-toasts";
+import { LayoutShell } from "@/components/layout/layout-shell";
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://rentnextgearauto.com"),
   title: {
-    default: "NextGearAuto | Premium Car Rentals",
+    default: "NextGearAuto | Premium Car Rentals in Jersey City, NJ",
     template: "%s | NextGearAuto",
   },
   description:
-    "Premium car rentals at competitive prices. Choose from our well-maintained fleet of compact cars, sedans, SUVs, and trucks.",
-  keywords: ["car rental", "vehicle rental", "NextGearAuto", "rent a car", "SUV rental", "truck rental"],
+    "Premium car rentals in Jersey City, NJ at competitive prices. Choose from our well-maintained fleet of compact cars, sedans, SUVs, and trucks.",
+  keywords: ["car rental", "vehicle rental", "NextGearAuto", "rent a car", "SUV rental", "truck rental", "Jersey City car rental", "NJ car rental"],
   openGraph: {
     type: "website",
     locale: "en_US",
+    url: "https://rentnextgearauto.com",
     siteName: "NextGearAuto",
+  },
+  twitter: {
+    card: "summary_large_image",
+  },
+  robots: {
+    index: true,
+    follow: true,
   },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
+      <head>
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+      </head>
       <body className="min-h-screen flex flex-col">
         <AuthProvider>
           <BookingProvider>
             <NotificationProvider>
-              <Header />
-              <div className="flex-1">{children}</div>
-              <Footer />
+              <LayoutShell>{children}</LayoutShell>
               <NotificationToasts />
             </NotificationProvider>
           </BookingProvider>

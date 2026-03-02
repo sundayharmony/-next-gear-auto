@@ -130,11 +130,11 @@ export default function FleetPage() {
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredVehicles.map((vehicle) => (
               <Link key={vehicle.id} href={`/fleet/${vehicle.id}`}>
-                <Card className="group h-full transition-all hover:shadow-lg hover:-translate-y-0.5">
+                <Card className="group h-full card-hover">
                   {/* Image placeholder */}
-                  <div className="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-gray-100 to-gray-50">
+                  <div className="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100">
                     <div className="flex h-full items-center justify-center">
-                      <Car className="h-20 w-20 text-gray-200 transition-colors group-hover:text-purple-300" />
+                      <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
                     </div>
                     <Badge className="absolute top-3 left-3">{vehicle.category}</Badge>
                     {vehicle.isAvailable ? (

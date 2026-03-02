@@ -55,7 +55,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl font-bold sm:text-5xl">About {SITE_NAME}</h1>
           <p className="mt-3 max-w-2xl text-lg text-purple-200">
-            Your trusted local car rental partner. Quality vehicles, honest pricing, and exceptional service since 2020.
+            Your trusted local car rental partner in Jersey City. Quality vehicles, honest pricing, and exceptional service.
           </p>
         </div>
       </section>
@@ -81,19 +81,19 @@ export default function AboutPage() {
           <h2 className="text-3xl font-bold text-gray-900">Our Story</h2>
           <div className="mt-6 space-y-4 text-gray-600 leading-relaxed">
             <p>
-              NextGearAuto was born from a simple idea: car rentals should be easy, affordable, and stress-free. 
-              Founded in 2020 in Los Angeles, we started with just two vehicles and a passion for helping 
-              people get where they need to go.
+              NextGearAuto was born from a simple idea: car rentals should be easy, affordable, and stress-free.
+              Based in Jersey City, New Jersey, we started with a passion for helping people get where they
+              need to go without the hassle of big-chain rental companies.
             </p>
             <p>
-              Today, we operate a carefully curated fleet of 6 vehicles spanning compact cars, sedans, SUVs, 
-              and trucks. Every vehicle is hand-selected for reliability, comfort, and value. We may not be the 
+              Today, we operate a carefully curated fleet of 6 vehicles spanning compact cars, sedans, SUVs,
+              and trucks. Every vehicle is hand-selected for reliability, comfort, and value. We may not be the
               biggest rental company in town, but we pride ourselves on being the most trusted.
             </p>
             <p>
-              As a locally owned and operated business, we understand the needs of our community. Whether you 
-              need a fuel-efficient compact for your daily commute, a spacious SUV for a family trip, or a 
-              rugged truck for moving day, we have you covered at prices that make sense.
+              As a locally owned and operated business in the heart of Jersey City, we understand the needs of
+              our community. Whether you need a fuel-efficient compact for your daily commute, a spacious SUV
+              for a family trip, or a rugged truck for moving day, we have you covered at prices that make sense.
             </p>
           </div>
         </div>
@@ -108,7 +108,7 @@ export default function AboutPage() {
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {values.map((value) => (
-              <Card key={value.title} className="border-0 bg-white p-6 text-center shadow-sm">
+              <Card key={value.title} className="border-0 bg-white p-6 text-center shadow-sm card-hover">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
                   <value.icon className="h-6 w-6 text-purple-600" />
                 </div>
@@ -128,7 +128,7 @@ export default function AboutPage() {
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-4xl mx-auto">
           {team.map((member) => (
-            <Card key={member.name} className="p-6 text-center">
+            <Card key={member.name} className="p-6 text-center card-hover">
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-purple-100">
                 <span className="text-2xl font-bold text-purple-600">
                   {member.name.split(" ").map((n) => n[0]).join("")}

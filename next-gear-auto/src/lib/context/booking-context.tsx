@@ -17,8 +17,10 @@ interface BookingState {
     phone: string;
     dob: string;
   };
+  signedName: string;
   isSubmitting: boolean;
   bookingId: string | null;
+  error: string | null;
 }
 
 type BookingAction =
@@ -27,12 +29,14 @@ type BookingAction =
   | { type: "SET_EXTRAS"; payload: BookingExtra[] }
   | { type: "TOGGLE_EXTRA"; payload: string }
   | { type: "SET_CUSTOMER_DETAILS"; payload: BookingState["customerDetails"] }
+  | { type: "SET_SIGNED_NAME"; payload: string }
   | { type: "SET_STEP"; payload: BookingStep }
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
   | { type: "CALCULATE_PRICING" }
   | { type: "SUBMIT_START" }
   | { type: "SUBMIT_SUCCESS"; payload: string }
+  | { type: "SUBMIT_ERROR"; payload: string }
   | { type: "RESET" };
 
 const initialState: BookingState = {
@@ -43,8 +47,10 @@ const initialState: BookingState = {
   extras: [],
   pricing: null,
   customerDetails: { name: "", email: "", phone: "", dob: "" },
+  signedName: "",
   isSubmitting: false,
   bookingId: null,
+  error: null,
 };
 
 function bookingReducer(state: BookingState, action: BookingAction): BookingState {
@@ -64,6 +70,8 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
       };
     case "SET_CUSTOMER_DETAILS":
       return { ...state, customerDetails: action.payload };
+    case "SET_SIGNED_NAME":
+      return { ...state, signedName: action.payload };
     case "SET_STEP":
       return { ...state, currentStep: action.payload };
     case "NEXT_STEP":
@@ -83,9 +91,11 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
       return { ...state, pricing };
     }
     case "SUBMIT_START":
-      return { ...state, isSubmitting: true };
+      return { ...state, isSubmitting: true, error: null };
     case "SUBMIT_SUCCESS":
       return { ...state, isSubmitting: false, bookingId: action.payload };
+    case "SUBMIT_ERROR":
+      return { ...state, isSubmitting: false, error: action.payload };
     case "RESET":
       return { ...initialState };
     default:
@@ -99,6 +109,7 @@ interface BookingContextType extends BookingState {
   setExtras: (extras: BookingExtra[]) => void;
   toggleExtra: (extraId: string) => void;
   setCustomerDetails: (details: BookingState["customerDetails"]) => void;
+  setSignedName: (name: string) => void;
   setStep: (step: BookingStep) => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -132,6 +143,10 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "SET_CUSTOMER_DETAILS", payload: details });
   }, []);
 
+  const setSignedName = useCallback((name: string) => {
+    dispatch({ type: "SET_SIGNED_NAME", payload: name });
+  }, []);
+
   const setStep = useCallback((step: BookingStep) => {
     dispatch({ type: "SET_STEP", payload: step });
   }, []);
@@ -143,24 +158,40 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   const submitBooking = useCallback(async () => {
     dispatch({ type: "SUBMIT_START" });
     try {
-      const res = await fetch("/api/bookings", {
+      // Call our checkout API which creates booking in Supabase + Stripe Checkout session
+      const res = await fetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           vehicleId: state.selectedVehicle?.id,
+          vehicleName: state.selectedVehicle?.name,
           pickupDate: state.pickupDate,
           returnDate: state.returnDate,
           extras: state.extras.filter((e) => e.selected),
           customerDetails: state.customerDetails,
-          totalPrice: state.pricing?.total,
+          totalPrice: state.pricing?.total || 0,
+          deposit: state.pricing?.deposit || 50,
+          signedName: state.signedName,
         }),
       });
+
       const data = await res.json();
-      if (data.success) {
-        dispatch({ type: "SUBMIT_SUCCESS", payload: data.data.id });
+
+      if (data.success && data.data?.sessionUrl) {
+        // Redirect to Stripe Checkout hosted page
+        dispatch({ type: "SUBMIT_SUCCESS", payload: data.data.bookingId });
+        window.location.href = data.data.sessionUrl;
+      } else {
+        dispatch({
+          type: "SUBMIT_ERROR",
+          payload: data.message || "Checkout failed. Please try again.",
+        });
       }
     } catch {
-      // handle error
+      dispatch({
+        type: "SUBMIT_ERROR",
+        payload: "An error occurred. Please try again.",
+      });
     }
   }, [state]);
 
@@ -175,6 +206,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         setExtras,
         toggleExtra,
         setCustomerDetails,
+        setSignedName,
         setStep,
         nextStep,
         prevStep,

@@ -286,9 +286,7 @@ export default function BookingPage() {
                     Choose File
                   </Button>
                 </div>
-                <div className="mt-4 rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-200">
-                  <strong>Prototype Mode:</strong> ID verification is simulated. Click Next to continue.
-                </div>
+                <p className="mt-4 text-xs text-gray-400">Your ID will be verified within 24 hours. You can proceed with your booking now.</p>
               </CardContent>
             </Card>
           )}
@@ -367,50 +365,75 @@ export default function BookingPage() {
             </div>
           )}
 
-          {/* Step 7: Payment / Confirmation */}
+          {/* Step 7: Secure Payment via Stripe */}
           {booking.currentStep === 7 && (
             <Card>
               <CardContent className="p-6 text-center">
-                {!booking.bookingId ? (
-                  <>
-                    <CreditCard className="mx-auto h-12 w-12 text-purple-600 mb-4" />
-                    <h2 className="text-xl font-semibold text-gray-900 mb-2">Process Payment</h2>
-                    <p className="text-sm text-gray-500 mb-6">$50.00 non-refundable deposit will be charged.</p>
-                    <div className="mx-auto max-w-sm rounded-lg border border-gray-200 p-4 mb-6">
-                      <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-700 border border-blue-200 mb-4">
-                        <strong>Prototype Mode:</strong> No real payment will be processed.
-                      </div>
-                      <Button className="w-full" size="lg" onClick={() => booking.submitBooking()} disabled={booking.isSubmitting}>
-                        {booking.isSubmitting ? "Processing..." : "Pay $50.00 Deposit"}
-                      </Button>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-green-100">
-                      <Check className="h-8 w-8 text-green-600" />
-                    </div>
-                    <h2 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
-                    <p className="text-gray-500 mb-2">Your booking ID is:</p>
-                    <p className="text-lg font-mono font-semibold text-purple-600 mb-6">{booking.bookingId}</p>
-                    <p className="text-sm text-gray-500 mb-6">A confirmation email has been sent (simulated). Your ID will be verified and the booking confirmed shortly.</p>
-                    <div className="flex justify-center gap-3">
-                      <Link href="/account"><Button>View My Bookings</Button></Link>
-                      <Link href="/fleet"><Button variant="outline">Browse More Vehicles</Button></Link>
-                    </div>
-                  </>
+                <CreditCard className="mx-auto h-12 w-12 text-purple-600 mb-4" />
+                <h2 className="text-xl font-semibold text-gray-900 mb-2">Secure Payment</h2>
+                <p className="text-sm text-gray-500 mb-2">
+                  You&apos;ll be redirected to Stripe&apos;s secure checkout to pay the $50.00 deposit.
+                </p>
+                <p className="text-xs text-gray-400 mb-6">
+                  Your card details are handled entirely by Stripe — they never touch our servers.
+                </p>
+
+                {booking.error && (
+                  <div className="mx-auto max-w-sm rounded-lg bg-red-50 border border-red-200 p-3 mb-4 text-sm text-red-700">
+                    {booking.error}
+                  </div>
                 )}
+
+                <div className="mx-auto max-w-sm space-y-3">
+                  {booking.pricing && (
+                    <div className="rounded-lg bg-gray-50 p-4 text-left text-sm space-y-2">
+                      <div className="flex justify-between">
+                        <span className="text-gray-500">Rental Total</span>
+                        <span className="font-semibold">${booking.pricing.total.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span className="text-gray-500">Deposit (due now)</span>
+                        <span className="font-bold text-purple-600">${booking.pricing.deposit.toFixed(2)}</span>
+                      </div>
+                      <div className="flex justify-between text-xs text-gray-400">
+                        <span>Remaining (due at pickup)</span>
+                        <span>${(booking.pricing.total - booking.pricing.deposit).toFixed(2)}</span>
+                      </div>
+                    </div>
+                  )}
+
+                  <Button
+                    className="w-full"
+                    size="lg"
+                    onClick={() => booking.submitBooking()}
+                    disabled={booking.isSubmitting}
+                  >
+                    {booking.isSubmitting ? (
+                      <>
+                        <span className="animate-spin mr-2 inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
+                        Redirecting to Stripe...
+                      </>
+                    ) : (
+                      "Proceed to Secure Payment"
+                    )}
+                  </Button>
+
+                  <div className="flex items-center justify-center gap-2 text-xs text-gray-400">
+                    <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4z"/></svg>
+                    <span>Secured by Stripe</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}
 
           {/* Navigation buttons */}
-          {booking.currentStep < 7 || !booking.bookingId ? (
+          {booking.currentStep <= 7 && (
             <div className="mt-6 flex items-center justify-between">
               <Button
                 variant="outline"
                 onClick={booking.currentStep === 1 ? undefined : () => booking.prevStep()}
-                disabled={booking.currentStep === 1}
+                disabled={booking.currentStep === 1 || booking.isSubmitting}
               >
                 <ArrowLeft className="h-4 w-4 mr-1" /> Back
               </Button>
@@ -421,7 +444,7 @@ export default function BookingPage() {
                 </Button>
               )}
             </div>
-          ) : null}
+          )}
         </div>
       </PageContainer>
     </>

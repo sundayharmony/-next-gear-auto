@@ -70,10 +70,10 @@ export default function HomePage() {
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {featuredVehicles.map((vehicle) => (
             <Link key={vehicle.id} href={`/fleet/${vehicle.id}`}>
-              <Card className="group h-full transition-shadow hover:shadow-lg">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gray-100">
+              <Card className="group h-full card-hover">
+                <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100">
                   <div className="flex h-full items-center justify-center">
-                    <Car className="h-16 w-16 text-gray-300 transition-colors group-hover:text-purple-400" />
+                    <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
                   </div>
                   <Badge className="absolute top-3 left-3" variant="default">
                     {vehicle.category}
@@ -127,7 +127,7 @@ export default function HomePage() {
               { icon: Clock, title: "Easy Booking", desc: "Book online in minutes with our simple 7-step process. Instant confirmation." },
               { icon: Star, title: "Local Expertise", desc: "Friendly, knowledgeable staff ready to help you find the perfect vehicle." },
             ].map((item) => (
-              <Card key={item.title} className="border-0 bg-white p-6 text-center shadow-sm">
+              <Card key={item.title} className="border-0 bg-white p-6 text-center shadow-sm card-hover">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
                   <item.icon className="h-6 w-6 text-purple-600" />
                 </div>
@@ -147,7 +147,7 @@ export default function HomePage() {
         </div>
         <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
           {reviews.slice(0, 3).map((review) => (
-            <Card key={review.id} className="p-6">
+            <Card key={review.id} className="p-6 card-hover">
               <div className="flex gap-1 mb-3">
                 {Array.from({ length: review.rating }).map((_, i) => (
                   <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
