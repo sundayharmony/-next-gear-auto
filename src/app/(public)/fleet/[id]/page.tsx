@@ -63,6 +63,11 @@ export default async function VehicleDetailPage({ params }: PageProps) {
     ? (vehicleReviews.reduce((sum, r) => sum + r.rating, 0) / vehicleReviews.length).toFixed(1)
     : null;
 
+  // Similar vehicles: same category, excluding current
+  const similarVehicles = vehicles
+    .filter((v) => v.category === vehicle.category && v.id !== vehicle.id)
+    .slice(0, 3);
+
   const specs = [
     { icon: Users, label: "Passengers", value: `${vehicle.specs.passengers} seats` },
     { icon: Briefcase, label: "Luggage", value: `${vehicle.specs.luggage} bags` },
@@ -268,6 +273,37 @@ export default async function VehicleDetailPage({ params }: PageProps) {
           </div>
         </div>
       </PageContainer>
+
+      {/* Similar Vehicles */}
+      {similarVehicles.length > 0 && (
+        <section className="border-t border-gray-100 bg-gray-50">
+          <PageContainer className="py-12">
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">Similar Vehicles</h2>
+            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+              {similarVehicles.map((sv) => (
+                <Link key={sv.id} href={`/fleet/${sv.id}`}>
+                  <Card className="group h-full transition-shadow hover:shadow-md">
+                    <div className="aspect-[16/10] rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100 flex items-center justify-center">
+                      <Car className="h-16 w-16 text-purple-200 group-hover:text-purple-400 transition-colors" />
+                    </div>
+                    <CardContent className="p-5">
+                      <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{sv.name}</h3>
+                      <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {sv.specs.passengers}</span>
+                        <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {sv.specs.mpg} mpg</span>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                        <span className="text-xl font-bold text-purple-600">${sv.dailyRate}<span className="text-sm text-gray-400 font-normal">/day</span></span>
+                        <Button size="sm" variant="outline">View</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </PageContainer>
+        </section>
+      )}
     </>
   );
 }

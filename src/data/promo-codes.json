@@ -1,0 +1,42 @@
+[
+  {
+    "code": "WELCOME10",
+    "discountType": "percentage",
+    "discountValue": 10,
+    "maxUses": 100,
+    "usedCount": 12,
+    "expiryDate": "2026-12-31",
+    "minBookingAmount": 50,
+    "description": "10% off for new customers"
+  },
+  {
+    "code": "SUMMER25",
+    "discountType": "fixed",
+    "discountValue": 25,
+    "maxUses": 50,
+    "usedCount": 8,
+    "expiryDate": "2026-09-30",
+    "minBookingAmount": 100,
+    "description": "$25 off summer rentals"
+  },
+  {
+    "code": "LONGTERM15",
+    "discountType": "percentage",
+    "discountValue": 15,
+    "maxUses": 30,
+    "usedCount": 3,
+    "expiryDate": "2026-12-31",
+    "minBookingAmount": 200,
+    "description": "15% off rentals over $200"
+  },
+  {
+    "code": "WEEKEND50",
+    "discountType": "fixed",
+    "discountValue": 50,
+    "maxUses": 20,
+    "usedCount": 5,
+    "expiryDate": "2026-06-30",
+    "minBookingAmount": 150,
+    "description": "$50 off weekend rentals"
+  }
+]

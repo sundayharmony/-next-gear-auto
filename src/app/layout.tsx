@@ -5,6 +5,7 @@ import { BookingProvider } from "@/lib/context/booking-context";
 import { NotificationProvider } from "@/lib/context/notification-context";
 import { NotificationToasts } from "@/components/layout/notification-toasts";
 import { LayoutShell } from "@/components/layout/layout-shell";
+import { Analytics } from "@vercel/analytics/next";
 import { generateOrganizationSchema } from "@/lib/utils/schema-generators";
 
 export const metadata: Metadata = {
@@ -54,6 +55,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </NotificationProvider>
           </BookingProvider>
         </AuthProvider>
+        <Analytics />
       </body>
     </html>
   );

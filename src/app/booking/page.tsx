@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import {
   Search, Car, Package, UserCheck, ShieldCheck, FileText, CreditCard,
-  Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight
+  Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight, Tag, X, Upload
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -44,6 +44,12 @@ export default function BookingPage() {
   const [signedName, setSignedName] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [searchDates, setSearchDates] = useState({ pickup: "", return: "" });
+  const [promoInput, setPromoInput] = useState("");
+  const [promoLoading, setPromoLoading] = useState(false);
+  const [promoError, setPromoError] = useState("");
+  const [uploadedFile, setUploadedFile] = useState<File | null>(null);
+  const [uploadError, setUploadError] = useState("");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Recalculate pricing when vehicle or extras change
   useEffect(() => {
@@ -57,6 +63,37 @@ export default function BookingPage() {
     setLocalExtras((prev) =>
       prev.map((e) => (e.id === id ? { ...e, selected: !e.selected } : e))
     );
+  };
+
+  const handleApplyPromo = async () => {
+    if (!promoInput.trim()) return;
+    setPromoLoading(true);
+    setPromoError("");
+    const result = await booking.applyPromoCode(promoInput.trim().toUpperCase());
+    if (!result.success) {
+      setPromoError(result.error || "Invalid promo code");
+    }
+    setPromoLoading(false);
+  };
+
+  const handleFileUpload = (file: File) => {
+    setUploadError("");
+    const validTypes = ["image/jpeg", "image/png", "application/pdf"];
+    if (!validTypes.includes(file.type)) {
+      setUploadError("Please upload a JPG, PNG, or PDF file.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      setUploadError("File must be under 5MB.");
+      return;
+    }
+    setUploadedFile(file);
+  };
+
+  const handleRemovePromo = () => {
+    booking.clearPromoCode();
+    setPromoInput("");
+    setPromoError("");
   };
 
   const availableVehicles = vehicles.filter((v) => v.isAvailable);
@@ -84,6 +121,9 @@ export default function BookingPage() {
     if (booking.currentStep === 3) {
       booking.setExtras(localExtras);
       booking.recalculatePrice();
+    }
+    if (booking.currentStep === 6) {
+      booking.setSignedName(signedName);
     }
     booking.nextStep();
   };
@@ -278,14 +318,66 @@ export default function BookingPage() {
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">ID Verification</h2>
                 <p className="text-sm text-gray-500 mb-6">Upload your driver&apos;s license for verification.</p>
-                <div className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-purple-400">
-                  <ShieldCheck className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                  <p className="text-sm font-medium text-gray-700">Upload Driver&apos;s License</p>
-                  <p className="mt-1 text-xs text-gray-400">JPG, PNG, or PDF up to 5MB</p>
-                  <Button variant="outline" size="sm" className="mt-4">
-                    Choose File
-                  </Button>
-                </div>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleFileUpload(file);
+                  }}
+                />
+
+                {uploadedFile ? (
+                  <div className="rounded-xl border-2 border-green-300 bg-green-50 p-6 text-center">
+                    <Check className="mx-auto h-10 w-10 text-green-500 mb-3" />
+                    <p className="text-sm font-medium text-green-700">File uploaded successfully</p>
+                    <p className="mt-1 text-xs text-gray-500">{uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(0)} KB)</p>
+                    <div className="mt-4 flex justify-center gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => { setUploadedFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                      >
+                        <X className="h-3.5 w-3.5 mr-1" /> Remove
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        Replace File
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div
+                    className="rounded-xl border-2 border-dashed border-gray-300 p-8 text-center transition-colors hover:border-purple-400 cursor-pointer"
+                    onClick={() => fileInputRef.current?.click()}
+                    onDragOver={(e) => { e.preventDefault(); e.currentTarget.classList.add("border-purple-500", "bg-purple-50"); }}
+                    onDragLeave={(e) => { e.currentTarget.classList.remove("border-purple-500", "bg-purple-50"); }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.currentTarget.classList.remove("border-purple-500", "bg-purple-50");
+                      const file = e.dataTransfer.files?.[0];
+                      if (file) handleFileUpload(file);
+                    }}
+                  >
+                    <Upload className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                    <p className="text-sm font-medium text-gray-700">Upload Driver&apos;s License</p>
+                    <p className="mt-1 text-xs text-gray-400">Drag & drop or click to browse — JPG, PNG, or PDF up to 5MB</p>
+                    <Button variant="outline" size="sm" className="mt-4" onClick={(e) => { e.stopPropagation(); fileInputRef.current?.click(); }}>
+                      Choose File
+                    </Button>
+                  </div>
+                )}
+
+                {uploadError && (
+                  <p className="mt-3 text-sm text-red-600">{uploadError}</p>
+                )}
+
                 <p className="mt-4 text-xs text-gray-400">Your ID will be verified within 24 hours. You can proceed with your booking now.</p>
               </CardContent>
             </Card>
@@ -324,6 +416,15 @@ export default function BookingPage() {
                                 <span>${e.total.toFixed(2)}</span>
                               </div>
                             ))}
+                            {booking.promoDiscount && (
+                              <div className="flex justify-between text-sm text-green-600">
+                                <span className="flex items-center gap-1">
+                                  <Tag className="h-3 w-3" />
+                                  Promo: {booking.promoCode}
+                                </span>
+                                <span>-${booking.promoDiscount.discountAmount.toFixed(2)}</span>
+                              </div>
+                            )}
                             <div className="flex justify-between text-sm">
                               <span className="text-gray-500">Tax</span>
                               <span>${booking.pricing.tax.toFixed(2)}</span>
@@ -338,6 +439,50 @@ export default function BookingPage() {
                             <span>$50.00</span>
                           </div>
                         </>
+                      )}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Promo Code */}
+              <Card>
+                <CardContent className="p-6">
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <Tag className="h-4 w-4 text-purple-600" />
+                    Promo Code
+                  </h3>
+                  {booking.promoCode ? (
+                    <div className="flex items-center justify-between rounded-lg bg-green-50 border border-green-200 p-3">
+                      <div>
+                        <span className="font-medium text-green-700">{booking.promoCode}</span>
+                        <span className="ml-2 text-sm text-green-600">
+                          — {booking.promoDiscount?.description || "Discount applied"}
+                        </span>
+                      </div>
+                      <button onClick={handleRemovePromo} className="text-green-600 hover:text-green-800">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ) : (
+                    <div>
+                      <div className="flex gap-2">
+                        <Input
+                          placeholder="Enter promo code"
+                          value={promoInput}
+                          onChange={(e) => { setPromoInput(e.target.value); setPromoError(""); }}
+                          className="uppercase"
+                        />
+                        <Button
+                          variant="outline"
+                          onClick={handleApplyPromo}
+                          disabled={promoLoading || !promoInput.trim()}
+                        >
+                          {promoLoading ? "..." : "Apply"}
+                        </Button>
+                      </div>
+                      {promoError && (
+                        <p className="mt-2 text-sm text-red-600">{promoError}</p>
                       )}
                     </div>
                   )}

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -12,12 +12,24 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
+import { ReviewForm } from "@/components/review-form";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/context/auth-context";
-import bookings from "@/data/bookings.json";
 import vehicles from "@/data/vehicles.json";
 
 type Tab = "upcoming" | "past" | "profile" | "payment";
+
+interface BookingData {
+  id: string;
+  vehicle_id: string;
+  vehicle_name?: string;
+  pickup_date: string;
+  return_date: string;
+  total_price: number;
+  deposit: number;
+  status: string;
+  created_at: string;
+}
 
 const statusColors: Record<string, string> = {
   pending: "bg-yellow-100 text-yellow-700 border-yellow-200",
@@ -32,8 +44,31 @@ export default function AccountPage() {
   const { user, isAuthenticated, logout } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("upcoming");
+  const [bookings, setBookings] = useState<BookingData[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [reviewTarget, setReviewTarget] = useState<{ vehicleId: string; vehicleName: string; bookingId: string } | null>(null);
 
-  // Show sign-in prompt if not authenticated
+  const fetchBookings = useCallback(async () => {
+    if (!user?.email) return;
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/bookings?customer_email=${encodeURIComponent(user.email)}`);
+      const data = await res.json();
+      if (data.success && Array.isArray(data.data)) {
+        setBookings(data.data);
+      }
+    } catch (err) {
+      console.error("Failed to fetch bookings:", err);
+    }
+    setLoading(false);
+  }, [user?.email]);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchBookings();
+    }
+  }, [isAuthenticated, user, fetchBookings]);
+
   if (!isAuthenticated || !user) {
     return (
       <PageContainer className="py-20">
@@ -57,13 +92,16 @@ export default function AccountPage() {
     .slice(0, 2);
 
   const upcomingBookings = bookings.filter((b) =>
-    ["pending", "confirmed"].includes(b.status)
+    ["pending", "confirmed", "active"].includes(b.status)
   );
   const pastBookings = bookings.filter((b) =>
     ["completed", "cancelled", "no-show"].includes(b.status)
   );
 
-  const getVehicle = (vehicleId: string) => vehicles.find((v) => v.id === vehicleId);
+  const getVehicleName = (vehicleId: string, vehicleName?: string) => {
+    if (vehicleName) return vehicleName;
+    return vehicles.find((v) => v.id === vehicleId)?.name || "Vehicle";
+  };
 
   const tabs = [
     { id: "upcoming" as Tab, label: "Upcoming", icon: Calendar, count: upcomingBookings.length },
@@ -76,6 +114,28 @@ export default function AccountPage() {
     logout();
     router.push("/");
   };
+
+  const LoadingSkeleton = () => (
+    <div className="space-y-4">
+      {[1, 2].map((i) => (
+        <Card key={i}>
+          <CardContent className="p-5">
+            <div className="animate-pulse space-y-3">
+              <div className="flex justify-between">
+                <div className="h-5 w-40 rounded bg-gray-200" />
+                <div className="h-5 w-20 rounded bg-gray-200" />
+              </div>
+              <div className="h-4 w-64 rounded bg-gray-100" />
+              <div className="flex gap-2">
+                <div className="h-8 w-24 rounded bg-gray-100" />
+                <div className="h-8 w-24 rounded bg-gray-100" />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
 
   return (
     <>
@@ -141,7 +201,9 @@ export default function AccountPage() {
             {activeTab === "upcoming" && (
               <>
                 <h2 className="text-xl font-semibold text-gray-900">Upcoming Rentals</h2>
-                {upcomingBookings.length === 0 ? (
+                {loading ? (
+                  <LoadingSkeleton />
+                ) : upcomingBookings.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
                       <Calendar className="mx-auto h-12 w-12 text-gray-300 mb-3" />
@@ -150,40 +212,41 @@ export default function AccountPage() {
                     </CardContent>
                   </Card>
                 ) : (
-                  upcomingBookings.map((booking) => {
-                    const vehicle = getVehicle(booking.vehicleId);
-                    return (
-                      <Card key={booking.id} className="transition-shadow hover:shadow-md">
-                        <CardContent className="p-5">
-                          <div className="flex items-start justify-between mb-3">
-                            <div>
-                              <h3 className="font-semibold text-gray-900">{vehicle?.name || "Vehicle"}</h3>
-                              <p className="text-xs text-gray-400 mt-0.5">Booking #{booking.id}</p>
-                            </div>
-                            <Badge className={statusColors[booking.status]}>{booking.status}</Badge>
+                  upcomingBookings.map((booking) => (
+                    <Card key={booking.id} className="transition-shadow hover:shadow-md">
+                      <CardContent className="p-5">
+                        <div className="flex items-start justify-between mb-3">
+                          <div>
+                            <h3 className="font-semibold text-gray-900">
+                              {getVehicleName(booking.vehicle_id, booking.vehicle_name)}
+                            </h3>
+                            <p className="text-xs text-gray-400 mt-0.5">Booking #{booking.id}</p>
                           </div>
-                          <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <Calendar className="h-4 w-4" />
-                              <span>{booking.pickupDate} - {booking.returnDate}</span>
-                            </div>
-                            <div className="flex items-center gap-2 text-gray-500">
-                              <CreditCard className="h-4 w-4" />
-                              <span className="font-medium text-gray-900">${booking.totalPrice}</span>
-                            </div>
+                          <Badge className={statusColors[booking.status] || statusColors.pending}>
+                            {booking.status}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 text-sm mb-4">
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <Calendar className="h-4 w-4" />
+                            <span>{booking.pickup_date} - {booking.return_date}</span>
                           </div>
-                          <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
-                              <FileText className="h-3.5 w-3.5 mr-1" /> View Details
-                            </Button>
-                            <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
-                              <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel
-                            </Button>
+                          <div className="flex items-center gap-2 text-gray-500">
+                            <CreditCard className="h-4 w-4" />
+                            <span className="font-medium text-gray-900">${booking.total_price}</span>
                           </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })
+                        </div>
+                        <div className="flex gap-2">
+                          <Button size="sm" variant="outline">
+                            <FileText className="h-3.5 w-3.5 mr-1" /> View Details
+                          </Button>
+                          <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
+                            <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))
                 )}
               </>
             )}
@@ -192,7 +255,9 @@ export default function AccountPage() {
             {activeTab === "past" && (
               <>
                 <h2 className="text-xl font-semibold text-gray-900">Past Rentals</h2>
-                {pastBookings.length === 0 ? (
+                {loading ? (
+                  <LoadingSkeleton />
+                ) : pastBookings.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
                       <Clock className="mx-auto h-12 w-12 text-gray-300 mb-3" />
@@ -201,33 +266,61 @@ export default function AccountPage() {
                   </Card>
                 ) : (
                   pastBookings.map((booking) => {
-                    const vehicle = getVehicle(booking.vehicleId);
+                    const vehicleName = getVehicleName(booking.vehicle_id, booking.vehicle_name);
                     return (
                       <Card key={booking.id}>
                         <CardContent className="p-5">
                           <div className="flex items-start justify-between mb-3">
                             <div>
-                              <h3 className="font-semibold text-gray-900">{vehicle?.name || "Vehicle"}</h3>
+                              <h3 className="font-semibold text-gray-900">{vehicleName}</h3>
                               <p className="text-xs text-gray-400">Booking #{booking.id}</p>
                             </div>
-                            <Badge className={statusColors[booking.status]}>{booking.status}</Badge>
+                            <Badge className={statusColors[booking.status] || statusColors.completed}>
+                              {booking.status}
+                            </Badge>
                           </div>
                           <div className="flex items-center gap-3 text-sm text-gray-500 mb-3">
-                            <span>{booking.pickupDate} - {booking.returnDate}</span>
-                            <span className="font-medium text-gray-900">${booking.totalPrice}</span>
+                            <span>{booking.pickup_date} - {booking.return_date}</span>
+                            <span className="font-medium text-gray-900">${booking.total_price}</span>
                           </div>
                           <div className="flex gap-2">
                             <Button size="sm" variant="outline">
                               <Download className="h-3.5 w-3.5 mr-1" /> Receipt
                             </Button>
-                            <Button size="sm" variant="outline">
-                              <Star className="h-3.5 w-3.5 mr-1" /> Leave Review
-                            </Button>
+                            {booking.status === "completed" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() =>
+                                  setReviewTarget({
+                                    vehicleId: booking.vehicle_id,
+                                    vehicleName,
+                                    bookingId: booking.id,
+                                  })
+                                }
+                              >
+                                <Star className="h-3.5 w-3.5 mr-1" /> Leave Review
+                              </Button>
+                            )}
                           </div>
                         </CardContent>
                       </Card>
                     );
                   })
+                )}
+
+                {/* Review form */}
+                {reviewTarget && (
+                  <div className="mt-4">
+                    <ReviewForm
+                      vehicleId={reviewTarget.vehicleId}
+                      vehicleName={reviewTarget.vehicleName}
+                      bookingId={reviewTarget.bookingId}
+                      customerId={user.id}
+                      customerName={user.name}
+                      onClose={() => setReviewTarget(null)}
+                    />
+                  </div>
                 )}
               </>
             )}
@@ -283,34 +376,13 @@ export default function AccountPage() {
             {activeTab === "payment" && (
               <>
                 <h2 className="text-xl font-semibold text-gray-900">Payment Methods</h2>
-                {user.paymentMethods && Array.isArray(user.paymentMethods) && user.paymentMethods.length > 0 ? (
-                  (user.paymentMethods as Array<{ id: string; type: string; last4: string; expiryMonth: number; expiryYear: number; isDefault: boolean }>).map((pm) => (
-                    <Card key={pm.id}>
-                      <CardContent className="p-5 flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-14 items-center justify-center rounded bg-blue-100 text-xs font-bold text-blue-700">
-                            {pm.type.toUpperCase()}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{pm.type.charAt(0).toUpperCase() + pm.type.slice(1)} ending in {pm.last4}</p>
-                            <p className="text-xs text-gray-400">Expires {pm.expiryMonth}/{pm.expiryYear}</p>
-                          </div>
-                        </div>
-                        {pm.isDefault && <Badge className="bg-green-100 text-green-700">Default</Badge>}
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <Card>
-                    <CardContent className="py-12 text-center">
-                      <CreditCard className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                      <p className="text-gray-500 mb-4">No payment methods on file.</p>
-                    </CardContent>
-                  </Card>
-                )}
-                <Button variant="outline" className="mt-2">
-                  <CreditCard className="h-4 w-4 mr-2" /> Add Payment Method
-                </Button>
+                <Card>
+                  <CardContent className="py-12 text-center">
+                    <CreditCard className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+                    <p className="text-gray-500 mb-2">Payment methods are managed through Stripe.</p>
+                    <p className="text-sm text-gray-400">Your card details are securely stored by Stripe and never touch our servers.</p>
+                  </CardContent>
+                </Card>
               </>
             )}
           </div>

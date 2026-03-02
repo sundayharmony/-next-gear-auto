@@ -1,11 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/db/supabase";
+import { getServiceSupabase } from "@/lib/db/supabase";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const bookingId = searchParams.get("id");
   const customerId = searchParams.get("customer_id");
+  const customerEmail = searchParams.get("customer_email");
   const status = searchParams.get("status");
+  const supabase = getServiceSupabase();
 
   try {
     // Single booking lookup (used by success page)
@@ -52,6 +54,9 @@ export async function GET(request: NextRequest) {
     if (customerId) {
       query = query.eq("customer_id", customerId);
     }
+    if (customerEmail) {
+      query = query.eq("customer_email", customerEmail);
+    }
     if (status) {
       query = query.eq("status", status);
     }
@@ -97,6 +102,7 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: Request) {
+  const supabase = getServiceSupabase();
   try {
     const body = await request.json();
     const bookingId = "bk" + Date.now() + Math.floor(Math.random() * 1000);
@@ -140,6 +146,7 @@ export async function POST(request: Request) {
 
 // PATCH - Update booking status
 export async function PATCH(request: Request) {
+  const supabase = getServiceSupabase();
   try {
     const body = await request.json();
     const { bookingId, status } = body;

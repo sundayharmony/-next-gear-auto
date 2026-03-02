@@ -76,3 +76,36 @@ export function calculatePricing(
     dueAtPickup: total - DEPOSIT_AMOUNT,
   };
 }
+
+export interface PromoDiscount {
+  code: string;
+  discountType: "percentage" | "fixed";
+  discountValue: number;
+  discountAmount: number;
+  description: string;
+}
+
+export function applyDiscount(
+  pricing: PricingBreakdown,
+  discount: PromoDiscount
+): PricingBreakdown & { discount: PromoDiscount } {
+  const discountAmount = discount.discountType === "percentage"
+    ? Math.round(pricing.subtotal * (discount.discountValue / 100) * 100) / 100
+    : Math.min(discount.discountValue, pricing.subtotal);
+
+  const discountedSubtotal = pricing.subtotal - discountAmount;
+  const tax = Math.round(discountedSubtotal * TAX_RATE * 100) / 100;
+  const total = discountedSubtotal + tax;
+
+  return {
+    ...pricing,
+    subtotal: discountedSubtotal,
+    tax,
+    total,
+    dueAtPickup: total - DEPOSIT_AMOUNT,
+    discount: {
+      ...discount,
+      discountAmount,
+    },
+  };
+}

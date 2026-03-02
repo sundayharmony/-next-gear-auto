@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/db/supabase";
+import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendPickupReminder, sendReturnReminder } from "@/lib/email/mailer";
 
 // This endpoint runs daily via Vercel Cron
 // Sends pickup reminders (24h before) and return reminders (day of return)
 
 export async function GET(request: Request) {
+  const supabase = getServiceSupabase();
   // Verify cron secret (optional security)
   const authHeader = request.headers.get("authorization");
   const cronSecret = process.env.CRON_SECRET;

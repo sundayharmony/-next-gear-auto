@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/db/supabase";
+import { getServiceSupabase } from "@/lib/db/supabase";
 import reviewsData from "@/data/reviews.json";
 
 // GET: Return all reviews (from JSON fallback + Supabase)
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const vehicleId = searchParams.get("vehicleId");
+  const supabase = getServiceSupabase();
 
   // Try to fetch from Supabase first
   try {
@@ -56,6 +57,7 @@ export async function GET(req: NextRequest) {
 
 // POST: Submit a new review
 export async function POST(req: NextRequest) {
+  const supabase = getServiceSupabase();
   try {
     const body = await req.json();
     const { customerId, customerName, vehicleId, bookingId, rating, text } = body;

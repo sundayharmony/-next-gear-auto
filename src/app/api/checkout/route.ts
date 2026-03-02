@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { supabase } from "@/lib/db/supabase";
+import { getServiceSupabase } from "@/lib/db/supabase";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: Request) {
+  const supabase = getServiceSupabase();
   try {
     const body = await request.json();
     const {
@@ -17,6 +18,8 @@ export async function POST(request: Request) {
       totalPrice,
       deposit,
       signedName,
+      promoCode,
+      discountAmount,
     } = body;
 
     if (!vehicleId || !pickupDate || !returnDate || !customerDetails?.email) {
@@ -107,6 +110,8 @@ export async function POST(request: Request) {
         customer_id: customerId || "",
         vehicle_id: vehicleId,
         total_price: totalPrice.toString(),
+        promo_code: promoCode || "",
+        discount_amount: (discountAmount || 0).toString(),
       },
       success_url: `${siteUrl}/booking/success?session_id={CHECKOUT_SESSION_ID}&booking_id=${bookingId}`,
       cancel_url: `${siteUrl}/booking/cancel?booking_id=${bookingId}`,

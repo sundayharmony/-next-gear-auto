@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback } from "react";
 import type { Vehicle, BookingExtra, BookingStep, PricingBreakdown } from "@/lib/types";
-import { calculatePricing, calculateRentalDays } from "@/lib/utils/price-calculator";
+import { calculatePricing, calculateRentalDays, applyDiscount, type PromoDiscount } from "@/lib/utils/price-calculator";
 
 interface BookingState {
   currentStep: BookingStep;
@@ -18,6 +18,8 @@ interface BookingState {
     dob: string;
   };
   signedName: string;
+  promoCode: string | null;
+  promoDiscount: PromoDiscount | null;
   isSubmitting: boolean;
   bookingId: string | null;
   error: string | null;
@@ -37,6 +39,8 @@ type BookingAction =
   | { type: "SUBMIT_START" }
   | { type: "SUBMIT_SUCCESS"; payload: string }
   | { type: "SUBMIT_ERROR"; payload: string }
+  | { type: "SET_PROMO"; payload: { code: string; discount: PromoDiscount } }
+  | { type: "CLEAR_PROMO" }
   | { type: "RESET" };
 
 const initialState: BookingState = {
@@ -48,6 +52,8 @@ const initialState: BookingState = {
   pricing: null,
   customerDetails: { name: "", email: "", phone: "", dob: "" },
   signedName: "",
+  promoCode: null,
+  promoDiscount: null,
   isSubmitting: false,
   bookingId: null,
   error: null,
@@ -81,15 +87,23 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
     case "CALCULATE_PRICING": {
       if (!state.selectedVehicle || !state.pickupDate || !state.returnDate) return state;
       const days = calculateRentalDays(state.pickupDate, state.returnDate);
-      const pricing = calculatePricing(
+      let pricing: PricingBreakdown & { discount?: PromoDiscount } = calculatePricing(
         days,
         state.selectedVehicle.dailyRate,
         state.selectedVehicle.weeklyRate,
         state.selectedVehicle.monthlyRate,
         state.extras
       );
+      // Apply promo discount if set
+      if (state.promoDiscount) {
+        pricing = applyDiscount(pricing, state.promoDiscount);
+      }
       return { ...state, pricing };
     }
+    case "SET_PROMO":
+      return { ...state, promoCode: action.payload.code, promoDiscount: action.payload.discount };
+    case "CLEAR_PROMO":
+      return { ...state, promoCode: null, promoDiscount: null };
     case "SUBMIT_START":
       return { ...state, isSubmitting: true, error: null };
     case "SUBMIT_SUCCESS":
@@ -114,6 +128,8 @@ interface BookingContextType extends BookingState {
   nextStep: () => void;
   prevStep: () => void;
   recalculatePrice: () => void;
+  applyPromoCode: (code: string) => Promise<{ success: boolean; error?: string }>;
+  clearPromoCode: () => void;
   submitBooking: () => Promise<void>;
   resetBooking: () => void;
 }
@@ -155,6 +171,31 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   const prevStep = useCallback(() => dispatch({ type: "PREV_STEP" }), []);
   const recalculatePrice = useCallback(() => dispatch({ type: "CALCULATE_PRICING" }), []);
 
+  const applyPromoCode = useCallback(async (code: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+      const res = await fetch("/api/promo-codes/validate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, bookingAmount: state.pricing?.subtotal || 0 }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        dispatch({ type: "SET_PROMO", payload: { code: data.data.code, discount: data.data } });
+        // Recalculate pricing with discount applied
+        setTimeout(() => dispatch({ type: "CALCULATE_PRICING" }), 0);
+        return { success: true };
+      }
+      return { success: false, error: data.error || "Invalid promo code" };
+    } catch {
+      return { success: false, error: "Failed to validate promo code" };
+    }
+  }, [state.pricing?.subtotal]);
+
+  const clearPromoCode = useCallback(() => {
+    dispatch({ type: "CLEAR_PROMO" });
+    setTimeout(() => dispatch({ type: "CALCULATE_PRICING" }), 0);
+  }, []);
+
   const submitBooking = useCallback(async () => {
     dispatch({ type: "SUBMIT_START" });
     try {
@@ -172,6 +213,8 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           totalPrice: state.pricing?.total || 0,
           deposit: state.pricing?.deposit || 50,
           signedName: state.signedName,
+          promoCode: state.promoCode || undefined,
+          discountAmount: state.promoDiscount?.discountAmount || 0,
         }),
       });
 
@@ -211,6 +254,8 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         nextStep,
         prevStep,
         recalculatePrice,
+        applyPromoCode,
+        clearPromoCode,
         submitBooking,
         resetBooking,
       }}

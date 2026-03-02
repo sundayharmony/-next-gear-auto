@@ -1,13 +1,16 @@
 import { NextResponse } from "next/server";
-import { supabase } from "@/lib/db/supabase";
+import { supabase, getServiceSupabase } from "@/lib/db/supabase";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
     const { email, action } = body;
 
+    // Use service role for server-side operations (bypasses RLS)
+    const adminDb = getServiceSupabase();
+
     if (action === "login") {
-      const { data: customer, error } = await supabase
+      const { data: customer, error } = await adminDb
         .from("customers")
         .select("*")
         .eq("email", email)
@@ -15,7 +18,7 @@ export async function POST(request: Request) {
 
       if (error || !customer) {
         return NextResponse.json(
-          { success: false, message: "Invalid credentials" },
+          { success: false, message: "No account found with that email. Please sign up first." },
           { status: 401 }
         );
       }
@@ -39,7 +42,7 @@ export async function POST(request: Request) {
 
     if (action === "signup") {
       // Check if email already exists
-      const { data: existing } = await supabase
+      const { data: existing } = await adminDb
         .from("customers")
         .select("id")
         .eq("email", body.email)
@@ -47,13 +50,13 @@ export async function POST(request: Request) {
 
       if (existing) {
         return NextResponse.json(
-          { success: false, message: "Email already registered" },
+          { success: false, message: "Email already registered. Please sign in instead." },
           { status: 409 }
         );
       }
 
       const newId = "c" + Date.now();
-      const { data: newCustomer, error } = await supabase
+      const { data: newCustomer, error } = await adminDb
         .from("customers")
         .insert({
           id: newId,
@@ -67,9 +70,9 @@ export async function POST(request: Request) {
         .single();
 
       if (error) {
-        console.error("Signup error:", error);
+        console.error("Signup error:", error.message, error.details, error.hint);
         return NextResponse.json(
-          { success: false, message: "Failed to create account" },
+          { success: false, message: `Failed to create account: ${error.message}` },
           { status: 500 }
         );
       }
@@ -94,7 +97,8 @@ export async function POST(request: Request) {
       { success: false, message: "Invalid action" },
       { status: 400 }
     );
-  } catch {
+  } catch (err) {
+    console.error("Auth API error:", err);
     return NextResponse.json(
       { success: false, message: "Invalid request" },
       { status: 400 }

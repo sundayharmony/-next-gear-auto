@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { supabase } from "@/lib/db/supabase";
+import { getServiceSupabase } from "@/lib/db/supabase";
 
 export async function GET(req: NextRequest) {
+  const supabase = getServiceSupabase();
   try {
     const { searchParams } = new URL(req.url);
     const vehicleId = searchParams.get("vehicleId");

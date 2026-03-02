@@ -2,7 +2,7 @@ import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeft, Calendar, User, Tag, ArrowRight } from "lucide-react";
+import { ArrowLeft, Calendar, User, Tag, ArrowRight, Car } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -91,6 +91,32 @@ export default async function BlogPostPage({ params }: PageProps) {
             {post.content}
           </div>
         </article>
+
+        {/* Browse Fleet by Category */}
+        <div className="mt-10 rounded-xl border border-purple-100 bg-purple-50/50 p-6">
+          <div className="flex items-center gap-2 mb-3">
+            <Car className="h-5 w-5 text-purple-600" />
+            <h3 className="font-semibold text-gray-900">Browse Our Fleet</h3>
+          </div>
+          <p className="text-sm text-gray-600 mb-4">Find the perfect vehicle for your needs:</p>
+          <div className="flex flex-wrap gap-2">
+            <Link href="/fleet?category=compact">
+              <Badge className="cursor-pointer bg-white text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors">Compact Cars</Badge>
+            </Link>
+            <Link href="/fleet?category=sedan">
+              <Badge className="cursor-pointer bg-white text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors">Sedans</Badge>
+            </Link>
+            <Link href="/fleet?category=suv">
+              <Badge className="cursor-pointer bg-white text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors">SUVs</Badge>
+            </Link>
+            <Link href="/fleet?category=truck">
+              <Badge className="cursor-pointer bg-white text-purple-700 border border-purple-200 hover:bg-purple-100 transition-colors">Trucks</Badge>
+            </Link>
+            <Link href="/fleet">
+              <Badge className="cursor-pointer bg-purple-600 text-white hover:bg-purple-700 transition-colors">View All</Badge>
+            </Link>
+          </div>
+        </div>
 
         {/* Related posts */}
         {relatedPosts.length > 0 && (

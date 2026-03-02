@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
-import { supabase } from "@/lib/db/supabase";
+import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendBookingConfirmation, sendAdminNewBooking } from "@/lib/email/mailer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
 export async function POST(request: Request) {
+  const supabase = getServiceSupabase();
   const body = await request.text();
   const sig = request.headers.get("stripe-signature");
 
