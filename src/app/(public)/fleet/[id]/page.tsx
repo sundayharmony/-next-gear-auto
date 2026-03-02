@@ -81,7 +81,9 @@ export default async function VehicleDetailPage({ params }: PageProps) {
   const vehicleDisplayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
   const productSchema = generateProductSchema({
     id: vehicle.id,
-    name: vehicleDisplayName,
+    year: vehicle.year,
+    make: vehicle.make,
+    model: vehicle.model,
     description: vehicle.description,
     category: vehicle.category,
     dailyRate: vehicle.dailyRate,
