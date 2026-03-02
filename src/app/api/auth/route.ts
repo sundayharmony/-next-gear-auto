@@ -1,24 +1,48 @@
 import { NextResponse } from "next/server";
-import { supabase, getServiceSupabase } from "@/lib/db/supabase";
+import { getServiceSupabase } from "@/lib/db/supabase";
+import bcrypt from "bcryptjs";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { email, action } = body;
+    const { email, password, action } = body;
 
     // Use service role for server-side operations (bypasses RLS)
     const adminDb = getServiceSupabase();
 
     if (action === "login") {
+      if (!email || !password) {
+        return NextResponse.json(
+          { success: false, message: "Email and password are required." },
+          { status: 400 }
+        );
+      }
+
       const { data: customer, error } = await adminDb
         .from("customers")
         .select("*")
-        .eq("email", email)
+        .eq("email", email.toLowerCase().trim())
         .single();
 
       if (error || !customer) {
         return NextResponse.json(
           { success: false, message: "No account found with that email. Please sign up first." },
+          { status: 401 }
+        );
+      }
+
+      // Verify password
+      if (!customer.password_hash) {
+        return NextResponse.json(
+          { success: false, message: "Account has no password set. Please contact support." },
+          { status: 401 }
+        );
+      }
+
+      const passwordMatch = await bcrypt.compare(password, customer.password_hash);
+      if (!passwordMatch) {
+        return NextResponse.json(
+          { success: false, message: "Incorrect password. Please try again." },
           { status: 401 }
         );
       }
@@ -41,11 +65,25 @@ export async function POST(request: Request) {
     }
 
     if (action === "signup") {
+      if (!body.name || !body.email || !body.password) {
+        return NextResponse.json(
+          { success: false, message: "Name, email, and password are required." },
+          { status: 400 }
+        );
+      }
+
+      if (body.password.length < 6) {
+        return NextResponse.json(
+          { success: false, message: "Password must be at least 6 characters." },
+          { status: 400 }
+        );
+      }
+
       // Check if email already exists
       const { data: existing } = await adminDb
         .from("customers")
         .select("id")
-        .eq("email", body.email)
+        .eq("email", body.email.toLowerCase().trim())
         .single();
 
       if (existing) {
@@ -55,15 +93,19 @@ export async function POST(request: Request) {
         );
       }
 
+      // Hash the password
+      const passwordHash = await bcrypt.hash(body.password, 12);
+
       const newId = "c" + Date.now();
       const { data: newCustomer, error } = await adminDb
         .from("customers")
         .insert({
           id: newId,
           name: body.name,
-          email: body.email,
+          email: body.email.toLowerCase().trim(),
           phone: body.phone || "",
           dob: "",
+          password_hash: passwordHash,
           role: "customer",
         })
         .select("*")

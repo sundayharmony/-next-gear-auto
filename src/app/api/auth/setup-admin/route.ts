@@ -1,0 +1,85 @@
+import { NextResponse } from "next/server";
+import { getServiceSupabase } from "@/lib/db/supabase";
+import bcrypt from "bcryptjs";
+
+// One-time setup: creates or updates the admin account with a hashed password
+// Call this once via: POST /api/auth/setup-admin with { "secret": "SUPABASE_SERVICE_KEY first 20 chars" }
+export async function POST(request: Request) {
+  try {
+    const body = await request.json();
+
+    // Simple security: require a secret to run this
+    const serviceKey = process.env.SUPABASE_SERVICE_KEY || "";
+    const expectedSecret = serviceKey.substring(0, 20);
+
+    if (!body.secret || body.secret !== expectedSecret) {
+      return NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    const adminDb = getServiceSupabase();
+    const adminEmail = "admin@nextgearauto.com";
+    const adminPassword = "N1c3trides1!";
+    const passwordHash = await bcrypt.hash(adminPassword, 12);
+
+    // Check if admin exists
+    const { data: existing } = await adminDb
+      .from("customers")
+      .select("id")
+      .eq("email", adminEmail)
+      .single();
+
+    if (existing) {
+      // Update existing admin with hashed password
+      const { error } = await adminDb
+        .from("customers")
+        .update({ password_hash: passwordHash })
+        .eq("email", adminEmail);
+
+      if (error) {
+        return NextResponse.json(
+          { success: false, message: `Failed to update admin: ${error.message}` },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Admin password updated successfully.",
+      });
+    } else {
+      // Create admin account
+      const { error } = await adminDb
+        .from("customers")
+        .insert({
+          id: "admin_001",
+          name: "Admin",
+          email: adminEmail,
+          phone: "(551) 429-3472",
+          dob: "",
+          password_hash: passwordHash,
+          role: "admin",
+        });
+
+      if (error) {
+        return NextResponse.json(
+          { success: false, message: `Failed to create admin: ${error.message}` },
+          { status: 500 }
+        );
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Admin account created successfully.",
+      });
+    }
+  } catch (err) {
+    console.error("Setup admin error:", err);
+    return NextResponse.json(
+      { success: false, message: "Setup failed" },
+      { status: 500 }
+    );
+  }
+}

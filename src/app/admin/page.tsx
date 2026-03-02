@@ -2,12 +2,11 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Car, DollarSign, Calendar, Users, TrendingUp, Clock, ArrowRight } from "lucide-react";
+import { Car, DollarSign, Calendar, Users, TrendingUp, Clock, ArrowRight, Tag, Star } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
-import { useAuth } from "@/lib/context/auth-context";
 
 interface DashboardData {
   totalBookings: number;
@@ -38,7 +37,6 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AdminDashboardPage() {
-  const { user, isAuthenticated } = useAuth();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -77,22 +75,12 @@ export default function AdminDashboardPage() {
     fetchData();
   }, []);
 
-  if (!isAuthenticated || user?.role !== "admin") {
-    return (
-      <PageContainer className="py-16 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-        <p className="text-gray-500 mb-4">You need admin privileges to view this page.</p>
-        <Link href="/login"><Button>Sign In</Button></Link>
-      </PageContainer>
-    );
-  }
-
   return (
     <>
       <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="mt-1 text-purple-200">Manage bookings, vehicles, and customers.</p>
+          <p className="mt-1 text-purple-200">Overview of your rental business.</p>
         </div>
       </section>
 
@@ -157,6 +145,29 @@ export default function AdminDashboardPage() {
                   </div>
                 </CardContent>
               </Card>
+            </div>
+
+            {/* Management Quick Links */}
+            <h2 className="text-xl font-semibold text-gray-900 mb-4">Manage</h2>
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-8">
+              {[
+                { label: "Vehicles", desc: "Manage fleet", icon: Car, href: "/admin/vehicles", color: "bg-purple-100 text-purple-700" },
+                { label: "Promo Codes", desc: "Discounts & coupons", icon: Tag, href: "/admin/promo-codes", color: "bg-green-100 text-green-700" },
+                { label: "Reviews", desc: "Moderate feedback", icon: Star, href: "/admin/reviews", color: "bg-amber-100 text-amber-700" },
+                { label: "Customers", desc: "View all users", icon: Users, href: "/admin/customers", color: "bg-blue-100 text-blue-700" },
+              ].map((item) => (
+                <Link key={item.href} href={item.href}>
+                  <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-purple-200">
+                    <CardContent className="p-5">
+                      <div className={`inline-flex rounded-lg p-2.5 mb-3 ${item.color}`}>
+                        <item.icon className="h-5 w-5" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{item.label}</h3>
+                      <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
             </div>
 
             {/* Recent Bookings */}

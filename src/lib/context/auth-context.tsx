@@ -57,14 +57,13 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  const login = useCallback(async (email: string, _password: string) => {
+  const login = useCallback(async (email: string, password: string) => {
     dispatch({ type: "LOGIN_START" });
     try {
-      // Simulated login - replace with real API call in production
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, action: "login" }),
+        body: JSON.stringify({ email, password, action: "login" }),
       });
       const data = await res.json();
       if (data.success) {

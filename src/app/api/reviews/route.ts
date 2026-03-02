@@ -2,10 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import reviewsData from "@/data/reviews.json";
 
-// GET: Return all reviews (from JSON fallback + Supabase)
+// GET: Return reviews — admin=true returns all statuses, otherwise only approved
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const vehicleId = searchParams.get("vehicleId");
+  const admin = searchParams.get("admin") === "true";
+  const statusFilter = searchParams.get("status"); // all, pending, approved, rejected
   const supabase = getServiceSupabase();
 
   // Try to fetch from Supabase first
@@ -13,8 +15,14 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from("reviews")
       .select("*")
-      .eq("status", "approved")
       .order("created_at", { ascending: false });
+
+    // For public API, only show approved. For admin, optionally filter by status
+    if (!admin) {
+      query = query.eq("status", "approved");
+    } else if (statusFilter && statusFilter !== "all") {
+      query = query.eq("status", statusFilter);
+    }
 
     if (vehicleId) {
       query = query.eq("vehicle_id", vehicleId);
@@ -31,28 +39,35 @@ export async function GET(req: NextRequest) {
         vehicleId: r.vehicle_id,
         rating: r.rating,
         text: r.text,
+        status: r.status,
         createdAt: r.created_at,
         isVerified: true,
       }));
 
-      // Merge with JSON fallback reviews
-      const jsonReviews = vehicleId
-        ? reviewsData.filter((r) => r.vehicleId === vehicleId)
-        : reviewsData;
+      // For public API, merge with JSON fallback reviews
+      if (!admin) {
+        const jsonReviews = vehicleId
+          ? reviewsData.filter((r) => r.vehicleId === vehicleId)
+          : reviewsData;
+        const allReviews = [...reviews, ...jsonReviews];
+        return NextResponse.json({ data: allReviews, success: true });
+      }
 
-      const allReviews = [...reviews, ...jsonReviews];
-      return NextResponse.json({ data: allReviews, success: true });
+      return NextResponse.json({ data: reviews, success: true });
     }
   } catch {
     // Fall through to JSON fallback
   }
 
-  // Fallback to static JSON
-  const filtered = vehicleId
-    ? reviewsData.filter((r) => r.vehicleId === vehicleId)
-    : reviewsData;
+  // Fallback to static JSON (public only)
+  if (!admin) {
+    const filtered = vehicleId
+      ? reviewsData.filter((r) => r.vehicleId === vehicleId)
+      : reviewsData;
+    return NextResponse.json({ data: filtered, success: true });
+  }
 
-  return NextResponse.json({ data: filtered, success: true });
+  return NextResponse.json({ data: [], success: true });
 }
 
 // POST: Submit a new review
@@ -119,5 +134,62 @@ export async function POST(req: NextRequest) {
       { success: false, error: "Failed to submit review" },
       { status: 500 }
     );
+  }
+}
+
+// PATCH: Approve or reject a review (admin)
+export async function PATCH(req: NextRequest) {
+  const supabase = getServiceSupabase();
+  try {
+    const body = await req.json();
+    const { id, status } = body;
+
+    if (!id || !status) {
+      return NextResponse.json({ success: false, error: "id and status are required" }, { status: 400 });
+    }
+
+    if (!["approved", "rejected", "pending"].includes(status)) {
+      return NextResponse.json({ success: false, error: "Invalid status" }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from("reviews")
+      .update({ status })
+      .eq("id", id);
+
+    if (error) {
+      console.error("Review PATCH error:", error);
+      return NextResponse.json({ success: false, error: "Failed to update review" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("Review PATCH error:", err);
+    return NextResponse.json({ success: false, error: "Failed to update review" }, { status: 500 });
+  }
+}
+
+// DELETE: Remove a review (admin)
+export async function DELETE(req: NextRequest) {
+  const supabase = getServiceSupabase();
+  const { searchParams } = new URL(req.url);
+  const id = searchParams.get("id");
+
+  if (!id) {
+    return NextResponse.json({ success: false, error: "id is required" }, { status: 400 });
+  }
+
+  try {
+    const { error } = await supabase.from("reviews").delete().eq("id", id);
+
+    if (error) {
+      console.error("Review DELETE error:", error);
+      return NextResponse.json({ success: false, error: "Failed to delete review" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (err) {
+    console.error("Review DELETE error:", err);
+    return NextResponse.json({ success: false, error: "Failed to delete review" }, { status: 500 });
   }
 }

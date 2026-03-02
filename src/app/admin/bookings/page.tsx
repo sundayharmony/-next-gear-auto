@@ -32,7 +32,6 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AdminBookingsPage() {
-  const { user, isAuthenticated } = useAuth();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
@@ -76,15 +75,6 @@ export default function AdminBookingsPage() {
     }
     setUpdating(null);
   };
-
-  if (!isAuthenticated || user?.role !== "admin") {
-    return (
-      <PageContainer className="py-16 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
-        <Link href="/login"><Button>Sign In</Button></Link>
-      </PageContainer>
-    );
-  }
 
   return (
     <>
