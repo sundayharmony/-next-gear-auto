@@ -27,6 +27,7 @@ export default function AdminPromoCodesPage() {
   const [saving, setSaving] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<PromoCode>>({});
+  const [error, setError] = useState<string | null>(null);
   const [newCode, setNewCode] = useState<Partial<PromoCode>>({
     code: "",
     discountType: "percentage",
@@ -36,6 +37,14 @@ export default function AdminPromoCodesPage() {
     description: "",
     expiresAt: "",
   });
+
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
 
   const fetchCodes = async () => {
     setLoading(true);
@@ -54,18 +63,22 @@ export default function AdminPromoCodesPage() {
   const addCode = async () => {
     if (!newCode.code) return;
     setSaving(true);
-    const res = await fetch("/api/admin/promo-codes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newCode),
-    });
-    const data = await res.json();
-    if (data.success) {
-      await fetchCodes();
-      setShowAddForm(false);
-      setNewCode({ code: "", discountType: "percentage", discountValue: 10, minBookingAmount: 0, maxUses: 100, description: "", expiresAt: "" });
-    } else {
-      alert(data.message || "Failed to create code");
+    try {
+      const res = await fetch("/api/admin/promo-codes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newCode),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchCodes();
+        setShowAddForm(false);
+        setNewCode({ code: "", discountType: "percentage", discountValue: 10, minBookingAmount: 0, maxUses: 100, description: "", expiresAt: "" });
+      } else {
+        setError(data.message || "Failed to create code");
+      }
+    } catch {
+      setError("Network error — could not create promo code");
     }
     setSaving(false);
   };
@@ -73,24 +86,38 @@ export default function AdminPromoCodesPage() {
   const saveEdit = async () => {
     if (!editingCode) return;
     setSaving(true);
-    const res = await fetch("/api/admin/promo-codes", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ code: editingCode, ...editForm }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setCodes((prev) => prev.map((c) => c.code === editingCode ? { ...c, ...editForm } : c));
-      setEditingCode(null);
+    try {
+      const res = await fetch("/api/admin/promo-codes", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code: editingCode, ...editForm }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCodes((prev) => prev.map((c) => c.code === editingCode ? { ...c, ...editForm } : c));
+        setEditingCode(null);
+      } else {
+        setError(data.message || "Failed to update promo code");
+      }
+    } catch {
+      setError("Network error — could not update promo code");
     }
     setSaving(false);
   };
 
   const deleteCode = async (code: string) => {
     if (!confirm(`Delete promo code "${code}"?`)) return;
-    const res = await fetch(`/api/admin/promo-codes?code=${code}`, { method: "DELETE" });
-    const data = await res.json();
-    if (data.success) setCodes((prev) => prev.filter((c) => c.code !== code));
+    try {
+      const res = await fetch(`/api/admin/promo-codes?code=${code}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        setCodes((prev) => prev.filter((c) => c.code !== code));
+      } else {
+        setError(data.message || "Failed to delete promo code");
+      }
+    } catch {
+      setError("Network error — could not delete promo code");
+    }
   };
 
   return (
@@ -110,6 +137,14 @@ export default function AdminPromoCodesPage() {
       </section>
 
       <PageContainer className="py-8">
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 ml-3">&times;</button>
+          </div>
+        )}
+
         {/* Add Form */}
         {showAddForm && (
           <Card className="mb-6 border-green-200">

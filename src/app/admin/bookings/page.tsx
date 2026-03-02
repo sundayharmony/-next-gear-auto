@@ -36,6 +36,15 @@ export default function AdminBookingsPage() {
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState("all");
   const [updating, setUpdating] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -69,9 +78,11 @@ export default function AdminBookingsPage() {
         setBookings((prev) =>
           prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b))
         );
+      } else {
+        setError(data.message || `Failed to update booking to "${newStatus}"`);
       }
-    } catch (err) {
-      console.error("Failed to update:", err);
+    } catch {
+      setError("Network error — could not update booking status");
     }
     setUpdating(null);
   };
@@ -93,6 +104,14 @@ export default function AdminBookingsPage() {
       </section>
 
       <PageContainer className="py-8">
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 ml-3">&times;</button>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-2">
@@ -167,6 +186,17 @@ export default function AdminBookingsPage() {
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex gap-1">
+                          {b.status === "pending" && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-xs h-7 text-green-600 hover:text-green-700"
+                              onClick={() => updateStatus(b.id, "confirmed")}
+                              disabled={updating === b.id}
+                            >
+                              Confirm
+                            </Button>
+                          )}
                           {b.status === "confirmed" && (
                             <Button
                               size="sm"

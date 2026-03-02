@@ -44,6 +44,15 @@ export default function AdminVehiclesPage() {
   const [newVehicle, setNewVehicle] = useState(emptyVehicle);
   const [saving, setSaving] = useState(false);
   const [source, setSource] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
 
   const fetchVehicles = async () => {
     setLoading(true);
@@ -63,14 +72,20 @@ export default function AdminVehiclesPage() {
   useEffect(() => { fetchVehicles(); }, []);
 
   const toggleAvailability = async (vehicle: Vehicle) => {
-    const res = await fetch("/api/admin/vehicles", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: vehicle.id, isAvailable: !vehicle.isAvailable }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setVehicles((prev) => prev.map((v) => v.id === vehicle.id ? { ...v, isAvailable: !v.isAvailable } : v));
+    try {
+      const res = await fetch("/api/admin/vehicles", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: vehicle.id, isAvailable: !vehicle.isAvailable }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVehicles((prev) => prev.map((v) => v.id === vehicle.id ? { ...v, isAvailable: !v.isAvailable } : v));
+      } else {
+        setError(data.message || "Failed to update availability");
+      }
+    } catch {
+      setError("Network error — could not update availability");
     }
   };
 
@@ -82,15 +97,21 @@ export default function AdminVehiclesPage() {
   const saveEdit = async () => {
     if (!editingId || !editForm) return;
     setSaving(true);
-    const res = await fetch("/api/admin/vehicles", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: editingId, ...editForm }),
-    });
-    const data = await res.json();
-    if (data.success) {
-      setVehicles((prev) => prev.map((v) => v.id === editingId ? { ...v, ...editForm } : v));
-      setEditingId(null);
+    try {
+      const res = await fetch("/api/admin/vehicles", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: editingId, ...editForm }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setVehicles((prev) => prev.map((v) => v.id === editingId ? { ...v, ...editForm } : v));
+        setEditingId(null);
+      } else {
+        setError(data.message || "Failed to save changes");
+      }
+    } catch {
+      setError("Network error — could not save changes");
     }
     setSaving(false);
   };
@@ -98,26 +119,38 @@ export default function AdminVehiclesPage() {
   const addVehicle = async () => {
     if (!newVehicle.name) return;
     setSaving(true);
-    const res = await fetch("/api/admin/vehicles", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(newVehicle),
-    });
-    const data = await res.json();
-    if (data.success) {
-      await fetchVehicles();
-      setShowAddForm(false);
-      setNewVehicle(emptyVehicle);
+    try {
+      const res = await fetch("/api/admin/vehicles", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(newVehicle),
+      });
+      const data = await res.json();
+      if (data.success) {
+        await fetchVehicles();
+        setShowAddForm(false);
+        setNewVehicle(emptyVehicle);
+      } else {
+        setError(data.message || "Failed to add vehicle");
+      }
+    } catch {
+      setError("Network error — could not add vehicle");
     }
     setSaving(false);
   };
 
   const deleteVehicle = async (id: string) => {
     if (!confirm("Are you sure you want to delete this vehicle?")) return;
-    const res = await fetch(`/api/admin/vehicles?id=${id}`, { method: "DELETE" });
-    const data = await res.json();
-    if (data.success) {
-      setVehicles((prev) => prev.filter((v) => v.id !== id));
+    try {
+      const res = await fetch(`/api/admin/vehicles?id=${id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        setVehicles((prev) => prev.filter((v) => v.id !== id));
+      } else {
+        setError(data.message || "Failed to delete vehicle");
+      }
+    } catch {
+      setError("Network error — could not delete vehicle");
     }
   };
 
@@ -138,6 +171,14 @@ export default function AdminVehiclesPage() {
       </section>
 
       <PageContainer className="py-8">
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 ml-3">&times;</button>
+          </div>
+        )}
+
         {/* Add Vehicle Form */}
         {showAddForm && (
           <Card className="mb-6 border-purple-200">

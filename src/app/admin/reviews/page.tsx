@@ -25,6 +25,15 @@ export default function AdminReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [updating, setUpdating] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Auto-clear error after 5 seconds
+  useEffect(() => {
+    if (error) {
+      const t = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(t);
+    }
+  }, [error]);
 
   const fetchReviews = async () => {
     setLoading(true);
@@ -51,9 +60,11 @@ export default function AdminReviewsPage() {
       const data = await res.json();
       if (data.success) {
         setReviews((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
+      } else {
+        setError(data.error || "Failed to update review");
       }
-    } catch (err) {
-      console.error("Failed to update review:", err);
+    } catch {
+      setError("Network error — could not update review");
     }
     setUpdating(null);
   };
@@ -63,9 +74,13 @@ export default function AdminReviewsPage() {
     try {
       const res = await fetch(`/api/reviews?id=${id}`, { method: "DELETE" });
       const data = await res.json();
-      if (data.success) setReviews((prev) => prev.filter((r) => r.id !== id));
-    } catch (err) {
-      console.error("Failed to delete review:", err);
+      if (data.success) {
+        setReviews((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        setError(data.error || "Failed to delete review");
+      }
+    } catch {
+      setError("Network error — could not delete review");
     }
   };
 
@@ -104,6 +119,14 @@ export default function AdminReviewsPage() {
       </section>
 
       <PageContainer className="py-8">
+        {/* Error Banner */}
+        {error && (
+          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+            <span>{error}</span>
+            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 ml-3">&times;</button>
+          </div>
+        )}
+
         {/* Filters */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
           <div className="flex items-center gap-2">
