@@ -108,7 +108,7 @@ export default function AboutPage() {
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {values.map((value) => (
-              <Card key={value.title} className="border-0 bg-white p-6 text-center shadow-sm">
+              <Card key={value.title} className="card-hover border-0 bg-white p-6 text-center shadow-sm">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
                   <value.icon className="h-6 w-6 text-purple-600" />
                 </div>
@@ -128,7 +128,7 @@ export default function AboutPage() {
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-4xl mx-auto">
           {team.map((member) => (
-            <Card key={member.name} className="p-6 text-center">
+            <Card key={member.name} className="card-hover p-6 text-center">
               <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-purple-100">
                 <span className="text-2xl font-bold text-purple-600">
                   {member.name.split(" ").map((n) => n[0]).join("")}

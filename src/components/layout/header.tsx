@@ -22,7 +22,9 @@ export function Header() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-1.5 text-xs sm:px-6 lg:px-8">
           <div className="flex items-center gap-2">
             <Phone className="h-3 w-3" />
-            <span>{CONTACT_INFO.phone}</span>
+            <a href="tel:5514293472" className="hover:text-purple-200 transition-colors">
+              {CONTACT_INFO.phone}
+            </a>
           </div>
           <div className="hidden sm:block">
             {CONTACT_INFO.hours.weekday} Mon-Fri
@@ -100,7 +102,7 @@ export function Header() {
 
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="border-t border-gray-200 bg-white md:hidden">
+        <div className="mobile-menu-enter border-t border-gray-200 bg-white md:hidden">
           <div className="space-y-1 px-4 py-3">
             {NAV_ITEMS.map((item) => (
               <Link
