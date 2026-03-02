@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   Search, Car, Package, UserCheck, ShieldCheck, FileText, CreditCard,
   Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight, Tag, X, Upload
@@ -27,11 +28,26 @@ const STEPS = [
   { num: 7, label: "Payment", icon: CreditCard },
 ];
 
-export default function BookingPage() {
+function BookingPageInner() {
   const booking = useBooking();
+  const searchParams = useSearchParams();
   const [localExtras, setLocalExtras] = useState<BookingExtra[]>(
     extras.map((e) => ({ ...e, selected: false, billingType: e.billingType as BookingExtra["billingType"] }))
   );
+
+  // Pre-select vehicle from URL query param (e.g. /booking?vehicleId=v1)
+  const [preSelected, setPreSelected] = useState(false);
+  useEffect(() => {
+    if (preSelected) return;
+    const vehicleId = searchParams.get("vehicleId");
+    if (vehicleId && !booking.selectedVehicle) {
+      const vehicle = vehicles.find((v) => v.id === vehicleId);
+      if (vehicle) {
+        booking.selectVehicle(vehicle as any);
+        setPreSelected(true);
+      }
+    }
+  }, [searchParams, booking.selectedVehicle, preSelected]);
 
   // Customer details local state
   const [details, setDetails] = useState({
@@ -593,5 +609,13 @@ export default function BookingPage() {
         </div>
       </PageContainer>
     </>
+  );
+}
+
+export default function BookingPage() {
+  return (
+    <Suspense fallback={<div className="py-20 text-center text-gray-400">Loading...</div>}>
+      <BookingPageInner />
+    </Suspense>
   );
 }

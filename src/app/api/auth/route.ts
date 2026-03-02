@@ -18,10 +18,45 @@ export async function POST(request: Request) {
         );
       }
 
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Check admins table first
+      const { data: admin } = await adminDb
+        .from("admins")
+        .select("*")
+        .eq("email", normalizedEmail)
+        .single();
+
+      if (admin) {
+        const passwordMatch = await bcrypt.compare(password, admin.password_hash);
+        if (!passwordMatch) {
+          return NextResponse.json(
+            { success: false, message: "Incorrect password. Please try again." },
+            { status: 401 }
+          );
+        }
+        return NextResponse.json({
+          data: {
+            id: admin.id,
+            name: admin.name,
+            email: admin.email,
+            phone: admin.phone || "",
+            dob: "",
+            driverLicense: null,
+            paymentMethods: [],
+            bookings: [],
+            createdAt: admin.created_at,
+            role: "admin",
+          },
+          success: true,
+        });
+      }
+
+      // Then check customers table
       const { data: customer, error } = await adminDb
         .from("customers")
         .select("*")
-        .eq("email", email.toLowerCase().trim())
+        .eq("email", normalizedEmail)
         .single();
 
       if (error || !customer) {
@@ -58,7 +93,7 @@ export async function POST(request: Request) {
         paymentMethods: [],
         bookings: [],
         createdAt: customer.created_at,
-        role: customer.role,
+        role: customer.role || "customer",
       };
 
       return NextResponse.json({ data: mapped, success: true });

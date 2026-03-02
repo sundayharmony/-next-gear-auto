@@ -24,9 +24,9 @@ export async function POST(request: Request) {
     const adminPassword = "N1c3trides1!";
     const passwordHash = await bcrypt.hash(adminPassword, 12);
 
-    // Check if admin exists
+    // Check if admin exists in admins table
     const { data: existing } = await adminDb
-      .from("customers")
+      .from("admins")
       .select("id")
       .eq("email", adminEmail)
       .single();
@@ -34,7 +34,7 @@ export async function POST(request: Request) {
     if (existing) {
       // Update existing admin with hashed password
       const { error } = await adminDb
-        .from("customers")
+        .from("admins")
         .update({ password_hash: passwordHash })
         .eq("email", adminEmail);
 
@@ -50,15 +50,14 @@ export async function POST(request: Request) {
         message: "Admin password updated successfully.",
       });
     } else {
-      // Create admin account
+      // Create admin account in admins table
       const { error } = await adminDb
-        .from("customers")
+        .from("admins")
         .insert({
           id: "admin_001",
           name: "Admin",
           email: adminEmail,
           phone: "(551) 429-3472",
-          dob: "",
           password_hash: passwordHash,
           role: "admin",
         });
@@ -70,9 +69,12 @@ export async function POST(request: Request) {
         );
       }
 
+      // Also clean up admin from customers table if it exists there
+      await adminDb.from("customers").delete().eq("email", adminEmail);
+
       return NextResponse.json({
         success: true,
-        message: "Admin account created successfully.",
+        message: "Admin account created successfully in admins table.",
       });
     }
   } catch (err) {

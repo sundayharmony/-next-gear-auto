@@ -239,7 +239,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                   $50 non-refundable deposit at booking. Best rate automatically applied based on rental duration.
                 </div>
 
-                <Link href="/booking" className="mt-6 block">
+                <Link href={`/booking?vehicleId=${vehicle.id}`} className="mt-6 block">
                   <Button className="w-full" size="lg">
                     <Calendar className="h-4 w-4 mr-2" />
                     Reserve This Vehicle
