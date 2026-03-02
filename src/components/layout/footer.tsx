@@ -41,10 +41,10 @@ export function Footer() {
           <div>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white">Services</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/fleet" className="text-gray-400 transition-colors hover:text-purple-400">Economy Rentals</Link></li>
-              <li><Link href="/fleet" className="text-gray-400 transition-colors hover:text-purple-400">Sedan Rentals</Link></li>
-              <li><Link href="/fleet" className="text-gray-400 transition-colors hover:text-purple-400">SUV Rentals</Link></li>
-              <li><Link href="/fleet" className="text-gray-400 transition-colors hover:text-purple-400">Truck Rentals</Link></li>
+              <li><Link href="/fleet?category=compact" className="text-gray-400 transition-colors hover:text-purple-400">Economy Rentals</Link></li>
+              <li><Link href="/fleet?category=sedan" className="text-gray-400 transition-colors hover:text-purple-400">Sedan Rentals</Link></li>
+              <li><Link href="/fleet?category=suv" className="text-gray-400 transition-colors hover:text-purple-400">SUV Rentals</Link></li>
+              <li><Link href="/fleet?category=truck" className="text-gray-400 transition-colors hover:text-purple-400">Truck Rentals</Link></li>
               <li><Link href="/fleet" className="text-gray-400 transition-colors hover:text-purple-400">Long-Term Rentals</Link></li>
             </ul>
           </div>

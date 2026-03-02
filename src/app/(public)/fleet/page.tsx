@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { Car, Users, Briefcase, Fuel, SlidersHorizontal, ArrowUpDown, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -13,10 +14,24 @@ import { VEHICLE_CATEGORIES } from "@/lib/constants";
 
 type SortOption = "price-low" | "price-high" | "name";
 
-export default function FleetPage() {
-  const [activeCategory, setActiveCategory] = useState("all");
+function FleetContent() {
+  const searchParams = useSearchParams();
+  const categoryParam = searchParams.get("category");
+
+  const [activeCategory, setActiveCategory] = useState(
+    categoryParam && VEHICLE_CATEGORIES.some((c) => c.value === categoryParam)
+      ? categoryParam
+      : "all"
+  );
   const [sortBy, setSortBy] = useState<SortOption>("price-low");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Sync category when URL param changes
+  useEffect(() => {
+    if (categoryParam && VEHICLE_CATEGORIES.some((c) => c.value === categoryParam)) {
+      setActiveCategory(categoryParam);
+    }
+  }, [categoryParam]);
 
   const filteredVehicles = useMemo(() => {
     let result = vehicles;
@@ -179,5 +194,19 @@ export default function FleetPage() {
         )}
       </PageContainer>
     </>
+  );
+}
+
+export default function FleetPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center justify-center py-24">
+          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" />
+        </div>
+      }
+    >
+      <FleetContent />
+    </Suspense>
   );
 }
