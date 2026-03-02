@@ -72,7 +72,7 @@ export default function AdminVehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<FormState>({});
+  const [editForm, setEditForm] = useState<FormState>({} as FormState);
   const [showAddForm, setShowAddForm] = useState(false);
   const [newVehicle, setNewVehicle] = useState<FormState>(emptyVehicle);
   const [saving, setSaving] = useState(false);
