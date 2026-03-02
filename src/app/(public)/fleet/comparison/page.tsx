@@ -18,7 +18,7 @@ function ComparisonContent() {
   const ids = searchParams.get("ids")?.split(",").filter(Boolean) || [];
 
   const selectedVehicles = useMemo(
-    () => ids.map((id) => vehicles.find((v) => v.id === id)).filter(Boolean),
+    () => ids.map((id) => vehicles.find((v) => v.id === id)).filter((v): v is typeof vehicles[number] => Boolean(v)),
     [ids]
   );
 

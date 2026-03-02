@@ -100,8 +100,8 @@ export default function AccountPage() {
 
   const getVehicleName = (vehicleId: string, vehicleName?: string) => {
     if (vehicleName) return vehicleName;
-    const v = vehicles.find((v) => v.id === vehicleId);
-    return v ? `${v.year} ${v.make} ${v.model}` : "Vehicle";
+    const found = vehicles.find((veh) => veh.id === vehicleId);
+    return found ? `${found.year} ${found.make} ${found.model}` : "Vehicle";
   };
 
   const tabs = [
