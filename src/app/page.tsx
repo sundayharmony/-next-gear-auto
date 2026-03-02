@@ -6,12 +6,20 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import vehicles from "@/data/vehicles.json";
 import reviews from "@/data/reviews.json";
+import { generateLocalBusinessSchema } from "@/lib/utils/schema-generators";
 
 export default function HomePage() {
   const featuredVehicles = vehicles.slice(0, 4);
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(generateLocalBusinessSchema()),
+        }}
+      />
+
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-purple-900 via-purple-800 to-gray-900 text-white">
         <div className="absolute inset-0 bg-[url('/images/hero-pattern.svg')] opacity-10" />

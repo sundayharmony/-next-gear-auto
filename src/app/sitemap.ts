@@ -3,41 +3,80 @@ import type { MetadataRoute } from "next";
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://rentnextgearauto.com";
 
-  const staticPages = [
-    "",
-    "/fleet",
-    "/about",
-    "/location",
-    "/blog",
-    "/faq",
-    "/booking",
-    "/login",
-    "/signup",
-    "/privacy",
-    "/terms",
-  ];
-
-  const vehicleIds = ["v1", "v2", "v3", "v4", "v5", "v6"];
-  const blogSlugs = ["road-trip-planning-guide", "how-to-choose-rental-car", "understanding-rental-insurance"];
-
-  return [
-    ...staticPages.map((path) => ({
-      url: `${baseUrl}${path}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
-      priority: path === "" ? 1 : 0.8,
-    })),
-    ...vehicleIds.map((id) => ({
-      url: `${baseUrl}/fleet/${id}`,
-      lastModified: new Date(),
-      changeFrequency: "weekly" as const,
+  const staticPages: MetadataRoute.Sitemap = [
+    {
+      url: baseUrl,
+      lastModified: new Date("2026-03-01"),
+      changeFrequency: "weekly",
+      priority: 1.0,
+    },
+    {
+      url: `${baseUrl}/fleet`,
+      lastModified: new Date("2026-03-01"),
+      changeFrequency: "weekly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/booking`,
+      lastModified: new Date("2026-03-01"),
+      changeFrequency: "monthly",
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/about`,
+      lastModified: new Date("2026-02-15"),
+      changeFrequency: "monthly",
       priority: 0.7,
-    })),
-    ...blogSlugs.map((slug) => ({
-      url: `${baseUrl}/blog/${slug}`,
-      lastModified: new Date(),
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
-    })),
+    },
+    {
+      url: `${baseUrl}/location`,
+      lastModified: new Date("2026-02-15"),
+      changeFrequency: "monthly",
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/blog`,
+      lastModified: new Date("2026-02-20"),
+      changeFrequency: "weekly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/faq`,
+      lastModified: new Date("2026-02-15"),
+      changeFrequency: "monthly",
+      priority: 0.7,
+    },
+    {
+      url: `${baseUrl}/privacy`,
+      lastModified: new Date("2026-01-01"),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: new Date("2026-01-01"),
+      changeFrequency: "yearly",
+      priority: 0.3,
+    },
   ];
+
+  const vehiclePages: MetadataRoute.Sitemap = ["v1", "v2", "v3", "v4", "v5", "v6"].map((id) => ({
+    url: `${baseUrl}/fleet/${id}`,
+    lastModified: new Date("2026-03-01"),
+    changeFrequency: "weekly" as const,
+    priority: 0.8,
+  }));
+
+  const blogPages: MetadataRoute.Sitemap = [
+    { slug: "top-road-trip-destinations", published: "2026-02-01" },
+    { slug: "choose-right-rental-car", published: "2026-02-10" },
+    { slug: "rental-car-insurance-guide", published: "2026-02-20" },
+  ].map((p) => ({
+    url: `${baseUrl}/blog/${p.slug}`,
+    lastModified: new Date(p.published),
+    changeFrequency: "monthly" as const,
+    priority: 0.6,
+  }));
+
+  return [...staticPages, ...vehiclePages, ...blogPages];
 }

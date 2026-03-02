@@ -5,6 +5,7 @@ import { BookingProvider } from "@/lib/context/booking-context";
 import { NotificationProvider } from "@/lib/context/notification-context";
 import { NotificationToasts } from "@/components/layout/notification-toasts";
 import { LayoutShell } from "@/components/layout/layout-shell";
+import { generateOrganizationSchema } from "@/lib/utils/schema-generators";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://rentnextgearauto.com"),
@@ -39,6 +40,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="min-h-screen flex flex-col">
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(generateOrganizationSchema()),
+          }}
+        />
         <AuthProvider>
           <BookingProvider>
             <NotificationProvider>

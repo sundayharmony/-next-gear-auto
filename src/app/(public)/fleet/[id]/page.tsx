@@ -1,6 +1,7 @@
 import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import {
   Car, Users, Briefcase, Fuel, Gauge, DoorOpen, Settings,
   Calendar, Shield, ArrowLeft, Check, Star
@@ -9,6 +10,9 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { Breadcrumbs } from "@/components/breadcrumbs";
+import { generateProductSchema } from "@/lib/utils/schema-generators";
+import { SITE_URL } from "@/lib/constants";
 import vehicles from "@/data/vehicles.json";
 import extras from "@/data/extras.json";
 import reviews from "@/data/reviews.json";
@@ -19,6 +23,31 @@ interface PageProps {
 
 export function generateStaticParams() {
   return vehicles.map((v) => ({ id: v.id }));
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const vehicle = vehicles.find((v) => v.id === id);
+  if (!vehicle) return {};
+
+  const vehicleReviews = reviews.filter((r) => r.vehicleId === vehicle.id);
+  const avgRating = vehicleReviews.length
+    ? (vehicleReviews.reduce((sum, r) => sum + r.rating, 0) / vehicleReviews.length).toFixed(1)
+    : null;
+
+  return {
+    title: `${vehicle.name} Rental - $${vehicle.dailyRate}/day`,
+    description: `Rent a ${vehicle.name} in Jersey City, NJ. ${vehicle.specs.passengers} passengers, ${vehicle.specs.luggage} bags, ${vehicle.specs.mpg} MPG. Starting at $${vehicle.dailyRate}/day.${avgRating ? ` Rated ${avgRating}/5.` : ""}`,
+    alternates: {
+      canonical: `${SITE_URL}/fleet/${vehicle.id}`,
+    },
+    openGraph: {
+      title: `${vehicle.name} Rental - $${vehicle.dailyRate}/day | NextGearAuto`,
+      description: `Rent a ${vehicle.name} in Jersey City. ${vehicle.description}`,
+      url: `${SITE_URL}/fleet/${vehicle.id}`,
+      type: "website",
+    },
+  };
 }
 
 export default async function VehicleDetailPage({ params }: PageProps) {
@@ -43,14 +72,33 @@ export default async function VehicleDetailPage({ params }: PageProps) {
     { icon: DoorOpen, label: "Doors", value: `${vehicle.specs.doors} doors` },
   ];
 
+  const productSchema = generateProductSchema({
+    id: vehicle.id,
+    name: vehicle.name,
+    description: vehicle.description,
+    category: vehicle.category,
+    dailyRate: vehicle.dailyRate,
+    isAvailable: vehicle.isAvailable,
+    avgRating,
+    reviewCount: vehicleReviews.length,
+  });
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
+
       {/* Breadcrumb header */}
       <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <Link href="/fleet" className="inline-flex items-center gap-1.5 text-sm text-purple-300 hover:text-white transition-colors mb-4">
-            <ArrowLeft className="h-4 w-4" /> Back to Fleet
-          </Link>
+          <Breadcrumbs
+            items={[
+              { label: "Fleet", href: "/fleet" },
+              { label: vehicle.name },
+            ]}
+          />
           <div className="flex items-start justify-between">
             <div>
               <Badge className="mb-2 bg-purple-500/20 text-purple-200 border border-purple-400/30">{vehicle.category}</Badge>

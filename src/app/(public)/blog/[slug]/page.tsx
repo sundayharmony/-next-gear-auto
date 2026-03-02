@@ -1,11 +1,15 @@
 import React from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { Metadata } from "next";
 import { ArrowLeft, Calendar, User, Tag, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { Breadcrumbs } from "@/components/breadcrumbs";
+import { generateArticleSchema } from "@/lib/utils/schema-generators";
+import { SITE_URL } from "@/lib/constants";
 import posts from "@/data/blog.json";
 
 interface PageProps {
@@ -16,6 +20,28 @@ export function generateStaticParams() {
   return posts.map((p) => ({ slug: p.slug }));
 }
 
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const post = posts.find((p) => p.slug === slug);
+  if (!post) return {};
+
+  return {
+    title: post.title,
+    description: post.excerpt,
+    alternates: {
+      canonical: `${SITE_URL}/blog/${post.slug}`,
+    },
+    openGraph: {
+      title: `${post.title} | NextGearAuto Blog`,
+      description: post.excerpt,
+      url: `${SITE_URL}/blog/${post.slug}`,
+      type: "article",
+      publishedTime: post.publishedAt,
+      authors: [post.author],
+    },
+  };
+}
+
 export default async function BlogPostPage({ params }: PageProps) {
   const { slug } = await params;
   const post = posts.find((p) => p.slug === slug);
@@ -24,14 +50,33 @@ export default async function BlogPostPage({ params }: PageProps) {
 
   const relatedPosts = posts.filter((p) => p.category === post.category && p.id !== post.id).slice(0, 2);
 
+  const articleSchema = generateArticleSchema({
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt,
+    content: post.content,
+    author: post.author,
+    publishedAt: post.publishedAt,
+    category: post.category,
+    featuredImage: post.featuredImage,
+  });
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(articleSchema) }}
+      />
+
       <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-12 text-white">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <Link href="/blog" className="inline-flex items-center gap-1.5 text-sm text-purple-300 hover:text-white transition-colors mb-4">
-            <ArrowLeft className="h-4 w-4" /> Back to Blog
-          </Link>
-          <Badge className="mb-3 bg-purple-500/20 text-purple-200 border border-purple-400/30">{post.category}</Badge>
+          <Breadcrumbs
+            items={[
+              { label: "Blog", href: "/blog" },
+              { label: post.title },
+            ]}
+          />
+          <Badge className="mt-4 mb-3 bg-purple-500/20 text-purple-200 border border-purple-400/30">{post.category}</Badge>
           <h1 className="text-3xl font-bold sm:text-4xl">{post.title}</h1>
           <div className="mt-4 flex items-center gap-4 text-sm text-purple-200">
             <span className="flex items-center gap-1"><User className="h-4 w-4" /> {post.author}</span>

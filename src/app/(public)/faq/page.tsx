@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 import { FAQAccordion } from "@/components/sections/faq-accordion";
+import { generateFAQSchema } from "@/lib/utils/schema-generators";
 
 export const metadata = {
   title: "FAQ & Policies",
@@ -84,8 +85,17 @@ const insuranceFaqs = [
 ];
 
 export default function FAQPage() {
+  const allFaqs = [...generalFaqs, ...pricingFaqs, ...cancellationFaqs, ...insuranceFaqs];
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(generateFAQSchema(allFaqs)),
+        }}
+      />
+
       {/* Hero */}
       <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-16 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
