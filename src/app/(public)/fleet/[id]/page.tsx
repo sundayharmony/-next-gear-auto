@@ -232,7 +232,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                 </div>
 
                 <div className="mt-4 rounded-lg border border-dashed border-gray-200 p-3 text-xs text-gray-500">
-                  $50 non-refundable deposit at booking. Tax (8%) calculated at checkout.
+                  Full payment required at booking. Tax (8%) calculated at checkout.
                 </div>
 
                 <Link href={`/booking?vehicleId=${vehicle.id}`} className="mt-6 block">

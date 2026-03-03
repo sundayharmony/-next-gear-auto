@@ -390,7 +390,7 @@ export default function AdminBookingsPage() {
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Vehicle</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Dates</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Total</th>
-                  <th className="px-4 py-3 text-left font-medium text-gray-500">Deposit</th>
+                  <th className="px-4 py-3 text-left font-medium text-gray-500">Paid</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Actions</th>
                 </tr>

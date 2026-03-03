@@ -100,7 +100,7 @@ export default function AdminDashboardPage() {
                 { label: "Total Bookings", value: data.totalBookings, icon: Calendar, color: "text-purple-600" },
                 { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600" },
                 { label: "Revenue", value: `$${data.totalRevenue.toFixed(0)}`, icon: DollarSign, color: "text-green-600" },
-                { label: "Deposits Collected", value: `$${data.totalDeposits.toFixed(0)}`, icon: TrendingUp, color: "text-emerald-600" },
+                { label: "Payments Collected", value: `$${data.totalDeposits.toFixed(0)}`, icon: TrendingUp, color: "text-emerald-600" },
               ].map((stat) => (
                 <Card key={stat.label}>
                   <CardContent className="p-5">

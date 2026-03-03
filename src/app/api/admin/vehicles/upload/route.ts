@@ -17,13 +17,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!vehicleId) {
-      return NextResponse.json(
-        { success: false, error: "Vehicle ID is required" },
-        { status: 400 }
-      );
-    }
-
     // Validate file type
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
     if (!allowedTypes.includes(file.type)) {
@@ -45,7 +38,8 @@ export async function POST(request: NextRequest) {
 
     // Generate unique filename
     const ext = file.name.split(".").pop() || "jpg";
-    const fileName = `${vehicleId}/${Date.now()}.${ext}`;
+    const folder = vehicleId || "temp";
+    const fileName = `${folder}/${Date.now()}.${ext}`;
 
     // Convert File to ArrayBuffer then to Buffer for upload
     const arrayBuffer = await file.arrayBuffer();
@@ -74,44 +68,51 @@ export async function POST(request: NextRequest) {
 
     const publicUrl = urlData.publicUrl;
 
-    // Update vehicle images array in DB
-    const { data: vehicle, error: fetchError } = await supabase
-      .from("vehicles")
-      .select("images")
-      .eq("id", vehicleId)
-      .single();
+    // If vehicleId provided, update vehicle images array in DB
+    if (vehicleId) {
+      const { data: vehicle, error: fetchError } = await supabase
+        .from("vehicles")
+        .select("images")
+        .eq("id", vehicleId)
+        .single();
 
-    if (fetchError) {
-      console.error("Error fetching vehicle:", fetchError);
-      // Still return success with the URL even if DB update fails
+      if (fetchError) {
+        console.error("Error fetching vehicle:", fetchError);
+        return NextResponse.json({
+          success: true,
+          url: publicUrl,
+          warning: "Image uploaded but could not update vehicle record",
+        });
+      }
+
+      const currentImages = vehicle?.images || [];
+      const updatedImages = [...currentImages, publicUrl];
+
+      const { error: updateError } = await supabase
+        .from("vehicles")
+        .update({ images: updatedImages })
+        .eq("id", vehicleId);
+
+      if (updateError) {
+        console.error("Error updating vehicle images:", updateError);
+        return NextResponse.json({
+          success: true,
+          url: publicUrl,
+          warning: "Image uploaded but could not update vehicle record",
+        });
+      }
+
       return NextResponse.json({
         success: true,
         url: publicUrl,
-        warning: "Image uploaded but could not update vehicle record",
+        images: updatedImages,
       });
     }
 
-    const currentImages = vehicle?.images || [];
-    const updatedImages = [...currentImages, publicUrl];
-
-    const { error: updateError } = await supabase
-      .from("vehicles")
-      .update({ images: updatedImages })
-      .eq("id", vehicleId);
-
-    if (updateError) {
-      console.error("Error updating vehicle images:", updateError);
-      return NextResponse.json({
-        success: true,
-        url: publicUrl,
-        warning: "Image uploaded but could not update vehicle record",
-      });
-    }
-
+    // No vehicleId — just return the uploaded URL (for new vehicles)
     return NextResponse.json({
       success: true,
       url: publicUrl,
-      images: updatedImages,
     });
   } catch (error) {
     console.error("Unexpected error in POST /api/admin/vehicles/upload:", error);

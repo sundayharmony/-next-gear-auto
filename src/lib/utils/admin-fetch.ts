@@ -1,8 +1,9 @@
 /**
  * Wrapper around fetch that adds admin authentication headers.
  * Reads the user ID from localStorage (set during login).
+ * Redirects to admin login if authentication fails.
  */
-export function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
+export async function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
   // Get admin ID from localStorage
   let adminId = "";
   if (typeof window !== "undefined") {
@@ -22,5 +23,13 @@ export function adminFetch(url: string, options: RequestInit = {}): Promise<Resp
     headers.set("x-admin-id", adminId);
   }
 
-  return fetch(url, { ...options, headers });
+  const res = await fetch(url, { ...options, headers });
+
+  // If unauthorized, redirect to admin login
+  if (res.status === 401 && typeof window !== "undefined") {
+    localStorage.removeItem("nga_user");
+    window.location.href = "/admin";
+  }
+
+  return res;
 }

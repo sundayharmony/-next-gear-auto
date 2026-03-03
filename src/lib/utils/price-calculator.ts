@@ -1,7 +1,6 @@
 import type { BookingExtra, PricingBreakdown } from "@/lib/types";
 
 const TAX_RATE = 0.08;
-const DEPOSIT_AMOUNT = 50;
 
 export function calculateRentalDays(pickupDate: string, returnDate: string): number {
   const pickup = new Date(pickupDate);
@@ -53,8 +52,8 @@ export function calculatePricing(
     tax,
     taxRate: TAX_RATE,
     total,
-    deposit: DEPOSIT_AMOUNT,
-    dueAtPickup: total - DEPOSIT_AMOUNT,
+    deposit: total,
+    dueAtPickup: 0,
   };
 }
 
@@ -83,7 +82,7 @@ export function applyDiscount(
     subtotal: discountedSubtotal,
     tax,
     total,
-    dueAtPickup: total - DEPOSIT_AMOUNT,
+    dueAtPickup: 0,
     discount: {
       ...discount,
       discountAmount,

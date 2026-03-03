@@ -107,18 +107,12 @@ export default function TermsPage() {
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Deposit Requirement</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">Payment Requirement</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  A non-refundable $50 booking deposit is required at the time of reservation. This deposit reserves your vehicle and is separate from the damage deposit held at pickup.
+                  Full payment for your rental is required at the time of reservation. This payment secures your vehicle reservation and confirms your booking. This payment is separate from the damage deposit held at pickup.
                 </p>
               </div>
 
-              <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Payment at Pickup</h3>
-                <p className="text-gray-600 leading-relaxed">
-                  The remaining rental balance must be paid in full at the time of vehicle pickup. Payment is accepted via credit card, debit card, or other methods specified at checkout.
-                </p>
-              </div>
 
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Damage Deposit</h3>
@@ -148,25 +142,21 @@ export default function TermsPage() {
                     <thead>
                       <tr className="border-b border-purple-200">
                         <th className="pb-3 text-left font-semibold text-gray-700">Timing</th>
-                        <th className="pb-3 text-left font-semibold text-gray-700">$50 Deposit</th>
-                        <th className="pb-3 text-left font-semibold text-gray-700">Remaining Balance</th>
+                        <th className="pb-3 text-left font-semibold text-gray-700">Refund Status</th>
                       </tr>
                     </thead>
                     <tbody className="text-gray-600">
                       <tr className="border-b border-purple-100">
                         <td className="py-3">24+ hours before pickup</td>
-                        <td className="py-3">Non-refundable</td>
-                        <td className="py-3 text-green-600 font-medium">Fully refunded</td>
+                        <td className="py-3 text-green-600 font-medium">Full refund</td>
                       </tr>
                       <tr className="border-b border-purple-100">
                         <td className="py-3">Less than 24 hours before pickup</td>
-                        <td className="py-3">Non-refundable</td>
                         <td className="py-3 text-red-600 font-medium">No refund</td>
                       </tr>
                       <tr>
                         <td className="py-3">No-show</td>
-                        <td className="py-3">Non-refundable</td>
-                        <td className="py-3 text-red-600 font-medium">Full rental charged</td>
+                        <td className="py-3 text-red-600 font-medium">No refund</td>
                       </tr>
                     </tbody>
                   </table>

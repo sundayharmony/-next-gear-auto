@@ -451,8 +451,8 @@ function BookingPageInner() {
                             <span className="text-purple-600">${booking.pricing.total.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between text-sm text-gray-500">
-                            <span>Deposit (due now)</span>
-                            <span>$50.00</span>
+                            <span>Total Due</span>
+                            <span className="text-purple-600">${booking.pricing.total.toFixed(2)}</span>
                           </div>
                         </>
                       )}
@@ -510,8 +510,8 @@ function BookingPageInner() {
                   <h3 className="font-semibold text-gray-900 mb-3">Rental Agreement</h3>
                   <div className="max-h-40 overflow-y-auto rounded-lg bg-gray-50 p-4 text-xs text-gray-600 leading-relaxed mb-4">
                     <p className="mb-2">By signing this rental agreement, you agree to the terms and conditions set forth by NextGearAuto. You acknowledge that you are renting the vehicle described above for the dates specified. You agree to return the vehicle in the same condition, normal wear and tear excepted.</p>
-                    <p className="mb-2">The $50 booking deposit is non-refundable. Free cancellation is available up to 24 hours before the scheduled pickup time. Cancellations less than 24 hours before pickup will be charged in full.</p>
-                    <p>A damage deposit will be held on your credit card and released upon satisfactory vehicle return inspection. You are responsible for any damage, loss, or theft of the vehicle during the rental period.</p>
+                    <p className="mb-2">Full payment is required at the time of booking. Free cancellation with a full refund is available up to 24 hours before the scheduled pickup time. Cancellations less than 24 hours before pickup are non-refundable.</p>
+                    <p>A security hold may be placed on your credit card for incidentals and released upon satisfactory vehicle return inspection. You are responsible for any damage, loss, or theft of the vehicle during the rental period.</p>
                   </div>
                   <label className="flex items-start gap-2 text-sm mb-4">
                     <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
@@ -533,7 +533,7 @@ function BookingPageInner() {
                 <CreditCard className="mx-auto h-12 w-12 text-purple-600 mb-4" />
                 <h2 className="text-xl font-semibold text-gray-900 mb-2">Secure Payment</h2>
                 <p className="text-sm text-gray-500 mb-2">
-                  You&apos;ll be redirected to Stripe&apos;s secure checkout to pay the $50.00 deposit.
+                  You&apos;ll be redirected to Stripe&apos;s secure checkout to complete your payment.
                 </p>
                 <p className="text-xs text-gray-400 mb-6">
                   Your card details are handled entirely by Stripe — they never touch our servers.
@@ -548,17 +548,13 @@ function BookingPageInner() {
                 <div className="mx-auto max-w-sm space-y-3">
                   {booking.pricing && (
                     <div className="rounded-lg bg-gray-50 p-4 text-left text-sm space-y-2">
-                      <div className="flex justify-between">
+                      <div className="flex justify-between border-b pb-2">
                         <span className="text-gray-500">Rental Total</span>
                         <span className="font-semibold">${booking.pricing.total.toFixed(2)}</span>
                       </div>
-                      <div className="flex justify-between border-t pt-2">
-                        <span className="text-gray-500">Deposit (due now)</span>
-                        <span className="font-bold text-purple-600">${booking.pricing.deposit.toFixed(2)}</span>
-                      </div>
-                      <div className="flex justify-between text-xs text-gray-400">
-                        <span>Remaining (due at pickup)</span>
-                        <span>${(booking.pricing.total - booking.pricing.deposit).toFixed(2)}</span>
+                      <div className="flex justify-between pt-1">
+                        <span className="font-medium text-gray-700">Amount Due Now</span>
+                        <span className="font-bold text-purple-600">${booking.pricing.total.toFixed(2)}</span>
                       </div>
                     </div>
                   )}

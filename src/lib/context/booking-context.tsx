@@ -209,7 +209,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           extras: state.extras.filter((e) => e.selected),
           customerDetails: state.customerDetails,
           totalPrice: state.pricing?.total || 0,
-          deposit: state.pricing?.deposit || 50,
+          deposit: state.pricing?.deposit || 0,
           signedName: state.signedName,
           promoCode: state.promoCode || undefined,
           discountAmount: state.promoDiscount?.discountAmount || 0,

@@ -155,6 +155,9 @@ export default function AdminVehiclesPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      if (formKey !== "new") {
+        formData.append("vehicleId", formKey);
+      }
 
       const res = await adminFetch("/api/admin/vehicles/upload", {
         method: "POST",

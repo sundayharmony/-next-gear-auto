@@ -23,7 +23,7 @@ const generalFaqs = [
   },
   {
     question: "How do I make a reservation?",
-    answer: "You can book online through our website using our simple 7-step booking process. Select your dates, choose a vehicle, add any extras, provide your details, verify your ID, review your booking, and pay the deposit. It takes just a few minutes!",
+    answer: "You can book online through our website using our simple 7-step booking process. Select your dates, choose a vehicle, add any extras, provide your details, verify your ID, review your booking, and complete your payment. It takes just a few minutes!",
   },
   {
     question: "Can someone else drive the rental vehicle?",
@@ -41,8 +41,8 @@ const pricingFaqs = [
     answer: "Our pricing engine automatically applies the best rate based on your rental duration. Rentals of 30+ days get the monthly rate, 7-29 days get the weekly rate for full weeks plus daily for remaining days, and 1-6 days get the daily rate. Extras, taxes, and fees are added to the base rate.",
   },
   {
-    question: "What is the $50 deposit?",
-    answer: "A $50 non-refundable deposit is required at the time of booking to secure your vehicle reservation. The remaining balance is charged at pickup. This deposit is separate from the damage deposit.",
+    question: "What payment is required at booking?",
+    answer: "Full payment for your rental is required at the time of booking to secure your vehicle reservation. This ensures your reservation is confirmed and you can pick up your vehicle on your scheduled date. This payment is separate from the damage deposit.",
   },
   {
     question: "What is the damage deposit?",
@@ -57,11 +57,11 @@ const pricingFaqs = [
 const cancellationFaqs = [
   {
     question: "What is the cancellation policy?",
-    answer: "Free cancellation is available up to 24 hours before your scheduled pickup time. The $50 booking deposit is always non-refundable, but the remaining balance will be fully refunded. Cancellations less than 24 hours before pickup are charged in full with no refund.",
+    answer: "Free cancellation with a full refund is available up to 24 hours before your scheduled pickup time. Cancellations less than 24 hours before pickup are charged in full with no refund.",
   },
   {
     question: "What happens if I don't show up?",
-    answer: "No-shows are charged the full rental amount with no refund. If you cannot make your reservation, please cancel at least 24 hours in advance to receive a refund of the remaining balance (minus the deposit).",
+    answer: "No-shows are charged the full rental amount with no refund. If you cannot make your reservation, please cancel at least 24 hours in advance to receive a full refund.",
   },
   {
     question: "Can I modify my reservation?",
@@ -169,24 +169,20 @@ export default function FAQPage() {
                     <thead>
                       <tr className="border-b border-purple-200">
                         <th className="pb-2 text-left font-medium text-gray-700">Timing</th>
-                        <th className="pb-2 text-left font-medium text-gray-700">Deposit ($50)</th>
-                        <th className="pb-2 text-left font-medium text-gray-700">Remaining</th>
+                        <th className="pb-2 text-left font-medium text-gray-700">Refund Status</th>
                       </tr>
                     </thead>
                     <tbody className="text-gray-600">
                       <tr className="border-b border-purple-100">
                         <td className="py-2">24+ hours before</td>
-                        <td className="py-2">Non-refundable</td>
-                        <td className="py-2 text-green-600 font-medium">Fully refunded</td>
+                        <td className="py-2 text-green-600 font-medium">Full refund</td>
                       </tr>
                       <tr className="border-b border-purple-100">
                         <td className="py-2">Less than 24 hours</td>
-                        <td className="py-2">Non-refundable</td>
                         <td className="py-2 text-red-600 font-medium">No refund</td>
                       </tr>
                       <tr>
                         <td className="py-2">No-show</td>
-                        <td className="py-2">Non-refundable</td>
                         <td className="py-2 text-red-600 font-medium">No refund</td>
                       </tr>
                     </tbody>

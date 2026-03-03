@@ -97,10 +97,10 @@ function SuccessContent() {
                       </div>
                       <div className="flex items-center justify-between py-3 border-b border-gray-100">
                         <span className="flex items-center gap-2 text-sm text-gray-500">
-                          <CreditCard className="h-4 w-4" /> Deposit Paid
+                          <CreditCard className="h-4 w-4" /> Amount Paid
                         </span>
                         <span className="text-sm font-semibold text-green-600">
-                          ${booking.deposit?.toFixed(2) || "50.00"}
+                          ${booking.total_price?.toFixed(2) || "—"}
                         </span>
                       </div>
                       <div className="flex items-center justify-between py-3">
@@ -115,12 +115,7 @@ function SuccessContent() {
                   <div className="mt-6 rounded-lg bg-purple-50 p-4">
                     <p className="text-sm text-purple-800">
                       <strong>What&apos;s next?</strong> A confirmation email has been sent to your email address.
-                      The remaining balance of{" "}
-                      <strong>
-                        ${booking ? (booking.total_price - booking.deposit).toFixed(2) : "—"}
-                      </strong>{" "}
-                      is due at vehicle pickup. Please bring a valid driver&apos;s license and the credit
-                      card used for the deposit.
+                      Please bring a valid driver&apos;s license and the credit card used for payment at vehicle pickup.
                     </p>
                   </div>
                 </CardContent>

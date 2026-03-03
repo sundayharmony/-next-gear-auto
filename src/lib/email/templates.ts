@@ -46,7 +46,7 @@ export function bookingConfirmationTemplate(data: EmailData): string {
     <div style="padding: 32px 24px;">
       <p style="color: #374151; font-size: 16px;">Hi ${data.customerName},</p>
       <p style="color: #6B7280; font-size: 14px; line-height: 1.6;">
-        Your booking has been confirmed! We've received your $${data.deposit.toFixed(2)} deposit. Here are your booking details:
+        Your booking has been confirmed and your payment of $${data.totalPrice.toFixed(2)} has been received. Here are your booking details:
       </p>
 
       <div style="background: #F3F0FF; border-radius: 8px; padding: 20px; margin: 20px 0;">
@@ -58,13 +58,11 @@ export function bookingConfirmationTemplate(data: EmailData): string {
         <tr><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Vehicle</td><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.vehicleName}</td></tr>
         <tr><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Pick-up</td><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.pickupDate}</td></tr>
         <tr><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Return</td><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.returnDate}</td></tr>
-        <tr><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Deposit Paid</td><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #10B981; font-size: 14px; font-weight: 600; text-align: right;">$${data.deposit.toFixed(2)}</td></tr>
-        <tr><td style="padding: 12px 0; color: #6B7280; font-size: 14px;">Total</td><td style="padding: 12px 0; color: #7C3AED; font-size: 18px; font-weight: 700; text-align: right;">$${data.totalPrice.toFixed(2)}</td></tr>
+        <tr><td style="padding: 12px 0; color: #6B7280; font-size: 14px;">Total Paid</td><td style="padding: 12px 0; color: #10B981; font-size: 18px; font-weight: 700; text-align: right;">$${data.totalPrice.toFixed(2)}</td></tr>
       </table>
 
       <p style="color: #6B7280; font-size: 14px; line-height: 1.6; margin-top: 24px;">
-        The remaining balance of <strong>$${(data.totalPrice - data.deposit).toFixed(2)}</strong> is due at vehicle pickup.
-        Please bring a valid driver's license and the credit card used for the deposit.
+        Your rental has been paid in full. Please bring a valid driver's license and the credit card used for payment at pickup.
       </p>
 
       <div style="text-align: center; margin: 24px 0;">
@@ -94,8 +92,7 @@ export function adminNewBookingTemplate(data: EmailData): string {
         <tr><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Email</td><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; text-align: right;">${data.customerEmail}</td></tr>
         <tr><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Vehicle</td><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.vehicleName}</td></tr>
         <tr><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Dates</td><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; text-align: right;">${data.pickupDate} → ${data.returnDate}</td></tr>
-        <tr><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Deposit</td><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #10B981; font-size: 14px; font-weight: 600; text-align: right;">$${data.deposit.toFixed(2)}</td></tr>
-        <tr><td style="padding: 10px 0; color: #6B7280; font-size: 14px;">Total</td><td style="padding: 10px 0; color: #111827; font-size: 16px; font-weight: 700; text-align: right;">$${data.totalPrice.toFixed(2)}</td></tr>
+        <tr><td style="padding: 10px 0; color: #6B7280; font-size: 14px;">Total Paid</td><td style="padding: 10px 0; color: #10B981; font-size: 16px; font-weight: 700; text-align: right;">$${data.totalPrice.toFixed(2)}</td></tr>
       </table>
       <div style="text-align: center; margin: 24px 0;">
         <a href="https://rentnextgearauto.com/admin/bookings" style="display: inline-block; background: #059669; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View in Admin Dashboard</a>
@@ -141,7 +138,7 @@ export function pickupReminderTemplate(data: EmailData): string {
         <p style="margin: 0 0 8px; color: #5B21B6; font-weight: 600; font-size: 14px;">Please bring:</p>
         <ul style="margin: 0; padding-left: 20px; color: #6B7280; font-size: 14px; line-height: 1.8;">
           <li>Valid driver's license</li>
-          <li>Credit card used for deposit</li>
+          <li>Credit card used for payment</li>
           <li>Booking ID: <strong style="color: #7C3AED;">${data.bookingId}</strong></li>
         </ul>
       </div>

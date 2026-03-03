@@ -67,7 +67,8 @@ export async function POST(request: Request) {
     // Sanitize customer name
     const safeName = (customerDetails.name || "").replace(/<[^>]*>/g, "").trim().slice(0, 100);
 
-    const depositAmount = deposit || 50;
+    // Charge full rental amount upfront
+    const chargeAmount = totalPrice || deposit || 0;
 
     // 1. Find or create customer in Supabase
     let customerId: string | null = null;
@@ -109,7 +110,7 @@ export async function POST(request: Request) {
       return_date: returnDate,
       extras: extras || [],
       total_price: totalPrice,
-      deposit: depositAmount,
+      deposit: chargeAmount,
       status: "pending",
       signed_name: signedName,
       agreement_signed_at: signedName ? new Date().toISOString() : null,
@@ -135,10 +136,10 @@ export async function POST(request: Request) {
           price_data: {
             currency: "usd",
             product_data: {
-              name: `NextGearAuto - Booking Deposit`,
+              name: `NextGearAuto - Vehicle Rental`,
               description: `${vehicleName || "Vehicle"} rental: ${pickupDate} to ${returnDate}`,
             },
-            unit_amount: Math.round(depositAmount * 100), // Stripe uses cents
+            unit_amount: Math.round(chargeAmount * 100), // Stripe uses cents
           },
           quantity: 1,
         },
