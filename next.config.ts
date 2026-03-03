@@ -5,6 +5,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "via.placeholder.com" },
+      { protocol: "https", hostname: "sslpstfgwtuyempuwzvh.supabase.co" },
     ],
   },
   async headers() {
@@ -23,7 +24,7 @@ const nextConfig: NextConfig = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://images.unsplash.com https://via.placeholder.com https://maps.googleapis.com https://*.stripe.com; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://*.supabase.co https://maps.googleapis.com; frame-src https://js.stripe.com https://checkout.stripe.com https://www.google.com https://maps.google.com;",
+              "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https://images.unsplash.com https://via.placeholder.com https://maps.googleapis.com https://*.stripe.com https://*.supabase.co; font-src 'self' https://fonts.gstatic.com; connect-src 'self' https://api.stripe.com https://checkout.stripe.com https://*.supabase.co https://maps.googleapis.com; frame-src https://js.stripe.com https://checkout.stripe.com https://www.google.com https://maps.google.com;",
           },
         ],
       },
