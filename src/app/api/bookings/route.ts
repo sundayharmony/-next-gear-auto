@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import {
+  sendBookingConfirmation,
+  sendAdminNewBooking,
+  sendCancellationEmail,
+} from "@/lib/email/mailer";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -132,6 +137,33 @@ export async function POST(request: Request) {
       );
     }
 
+    // Send confirmation emails for admin-created bookings
+    if (body.customerDetails?.email) {
+      let vehicleName = "Vehicle";
+      if (body.vehicleId) {
+        const { data: vehicle } = await supabase
+          .from("vehicles")
+          .select("year, make, model")
+          .eq("id", body.vehicleId)
+          .single();
+        if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+      }
+
+      const emailData = {
+        bookingId,
+        customerName: body.customerDetails.name || "Customer",
+        customerEmail: body.customerDetails.email,
+        vehicleName,
+        pickupDate: body.pickupDate,
+        returnDate: body.returnDate,
+        totalPrice: body.totalPrice || 0,
+        deposit: 50,
+      };
+
+      sendBookingConfirmation(emailData).catch(console.error);
+      sendAdminNewBooking(emailData).catch(console.error);
+    }
+
     return NextResponse.json(
       { data: { id: bookingId }, success: true },
       { status: 201 }
@@ -158,6 +190,13 @@ export async function PATCH(request: Request) {
       );
     }
 
+    // Fetch booking details before updating (for emails)
+    const { data: booking } = await supabase
+      .from("bookings")
+      .select("*")
+      .eq("id", bookingId)
+      .single();
+
     const { error } = await supabase
       .from("bookings")
       .update({ status })
@@ -168,6 +207,37 @@ export async function PATCH(request: Request) {
         { success: false, message: "Failed to update booking" },
         { status: 500 }
       );
+    }
+
+    // Send emails based on status change
+    if (booking && booking.customer_email) {
+      let vehicleName = "Vehicle";
+      if (booking.vehicle_id) {
+        const { data: vehicle } = await supabase
+          .from("vehicles")
+          .select("year, make, model")
+          .eq("id", booking.vehicle_id)
+          .single();
+        if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+      }
+
+      const emailData = {
+        bookingId: booking.id,
+        customerName: booking.customer_name || "Customer",
+        customerEmail: booking.customer_email,
+        vehicleName,
+        pickupDate: booking.pickup_date,
+        returnDate: booking.return_date,
+        totalPrice: booking.total_price || 0,
+        deposit: booking.deposit || 0,
+      };
+
+      if (status === "cancelled") {
+        sendCancellationEmail(emailData).catch(console.error);
+      } else if (status === "confirmed" && booking.status === "pending") {
+        // Admin confirming a manual/pending booking
+        sendBookingConfirmation(emailData).catch(console.error);
+      }
     }
 
     return NextResponse.json({ success: true, message: "Booking updated" });

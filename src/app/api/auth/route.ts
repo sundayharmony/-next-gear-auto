@@ -31,7 +31,7 @@ export async function POST(request: Request) {
         const passwordMatch = await bcrypt.compare(password, admin.password_hash);
         if (!passwordMatch) {
           return NextResponse.json(
-            { success: false, message: "Incorrect password. Please try again." },
+            { success: false, message: "Invalid email or password." },
             { status: 401 }
           );
         }
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
 
       if (error || !customer) {
         return NextResponse.json(
-          { success: false, message: "No account found with that email. Please sign up first." },
+          { success: false, message: "Invalid email or password." },
           { status: 401 }
         );
       }
@@ -77,7 +77,7 @@ export async function POST(request: Request) {
       const passwordMatch = await bcrypt.compare(password, customer.password_hash);
       if (!passwordMatch) {
         return NextResponse.json(
-          { success: false, message: "Incorrect password. Please try again." },
+          { success: false, message: "Invalid email or password." },
           { status: 401 }
         );
       }
@@ -147,9 +147,9 @@ export async function POST(request: Request) {
         .single();
 
       if (error) {
-        console.error("Signup error:", error.message, error.details, error.hint);
+        console.error("Signup error:", error);
         return NextResponse.json(
-          { success: false, message: `Failed to create account: ${error.message}` },
+          { success: false, message: "Failed to create account. Please try again." },
           { status: 500 }
         );
       }
@@ -178,6 +178,57 @@ export async function POST(request: Request) {
     console.error("Auth API error:", err);
     return NextResponse.json(
       { success: false, message: "Invalid request" },
+      { status: 400 }
+    );
+  }
+}
+
+// PATCH: Update user profile
+export async function PATCH(request: Request) {
+  try {
+    const body = await request.json();
+    const { id, name, phone, dob } = body;
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, message: "User ID is required." },
+        { status: 400 }
+      );
+    }
+
+    const adminDb = getServiceSupabase();
+
+    // Check if it's an admin
+    const { data: admin } = await adminDb.from("admins").select("id").eq("id", id).single();
+    const table = admin ? "admins" : "customers";
+
+    const updates: Record<string, string> = {};
+    if (name) updates.name = name.trim().slice(0, 100);
+    if (phone !== undefined) updates.phone = phone.trim().slice(0, 20);
+    if (dob !== undefined && table === "customers") updates.dob = dob;
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json(
+        { success: false, message: "No fields to update." },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await adminDb.from(table).update(updates).eq("id", id);
+
+    if (error) {
+      console.error("Profile update error:", error);
+      return NextResponse.json(
+        { success: false, message: "Failed to update profile." },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, message: "Profile updated." });
+  } catch (err) {
+    console.error("Profile PATCH error:", err);
+    return NextResponse.json(
+      { success: false, message: "Invalid request." },
       { status: 400 }
     );
   }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from "react";
 import type { Customer } from "@/lib/types";
 
 interface AuthState {
@@ -57,6 +57,30 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
+  // Restore session from localStorage on mount
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem("nga_user");
+      if (stored) {
+        const user = JSON.parse(stored);
+        if (user?.id && user?.email) {
+          dispatch({ type: "LOGIN_SUCCESS", payload: user });
+        }
+      }
+    } catch {
+      localStorage.removeItem("nga_user");
+    }
+  }, []);
+
+  // Persist user to localStorage on changes
+  useEffect(() => {
+    if (state.user) {
+      localStorage.setItem("nga_user", JSON.stringify(state.user));
+    } else {
+      localStorage.removeItem("nga_user");
+    }
+  }, [state.user]);
+
   const login = useCallback(async (email: string, password: string) => {
     dispatch({ type: "LOGIN_START" });
     try {
@@ -77,6 +101,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const logout = useCallback(() => {
+    localStorage.removeItem("nga_user");
     dispatch({ type: "LOGOUT" });
   }, []);
 

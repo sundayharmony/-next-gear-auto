@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { verifyAdmin } from "@/lib/auth/admin-check";
 
 const VALID_CATEGORIES = [
   "maintenance",
@@ -12,6 +13,8 @@ const VALID_CATEGORIES = [
 ];
 
 export async function GET(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
   try {
     const supabase = getServiceSupabase();
     const { searchParams } = new URL(request.url);
@@ -63,6 +66,8 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
   try {
     const body = await request.json();
     const { vehicleId, category, amount, description, date } = body;
@@ -133,6 +138,8 @@ export async function POST(request: NextRequest) {
 }
 
 export async function PUT(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
   try {
     const body = await request.json();
     const { id, vehicleId, category, amount, description, date } = body;
@@ -196,6 +203,8 @@ export async function PUT(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
   try {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get("id");

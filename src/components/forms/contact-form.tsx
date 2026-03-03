@@ -23,9 +23,14 @@ export function ContactForm() {
       phone: { ...phoneRule, required: false },
       message: { required: true, minLength: 10, message: "Please enter at least 10 characters" },
     },
-    onSubmit: async () => {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    onSubmit: async (values) => {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(values),
+      });
+      const data = await res.json();
+      if (!data.success) throw new Error(data.message || "Failed to send");
       setSubmitted(true);
     },
   });

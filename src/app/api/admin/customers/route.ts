@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { verifyAdmin } from "@/lib/auth/admin-check";
 
 // GET: Return all customers with optional search
 export async function GET(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   const { searchParams } = new URL(req.url);
   const search = searchParams.get("search")?.toLowerCase() || "";

@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { verifyAdmin } from "@/lib/auth/admin-check";
 
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;

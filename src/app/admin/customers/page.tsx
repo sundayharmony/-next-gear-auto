@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 import { Users, Search, RefreshCw, ChevronDown, ChevronUp } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,7 @@ export default function AdminCustomersPage() {
     setLoading(true);
     try {
       const url = query ? `/api/admin/customers?search=${encodeURIComponent(query)}` : "/api/admin/customers";
-      const res = await fetch(url);
+      const res = await adminFetch(url);
       const data = await res.json();
       if (data.success) setCustomers(data.data);
     } catch (err) {

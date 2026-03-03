@@ -29,6 +29,44 @@ export async function POST(request: Request) {
       );
     }
 
+    // Validate dates
+    const pickup = new Date(pickupDate);
+    const returnDt = new Date(returnDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (isNaN(pickup.getTime()) || isNaN(returnDt.getTime())) {
+      return NextResponse.json(
+        { success: false, message: "Invalid date format" },
+        { status: 400 }
+      );
+    }
+
+    if (pickup < today) {
+      return NextResponse.json(
+        { success: false, message: "Pickup date must be today or later" },
+        { status: 400 }
+      );
+    }
+
+    if (returnDt <= pickup) {
+      return NextResponse.json(
+        { success: false, message: "Return date must be after pickup date" },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerDetails.email)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid email address" },
+        { status: 400 }
+      );
+    }
+
+    // Sanitize customer name
+    const safeName = (customerDetails.name || "").replace(/<[^>]*>/g, "").trim().slice(0, 100);
+
     const depositAmount = deposit || 50;
 
     // 1. Find or create customer in Supabase
@@ -47,10 +85,10 @@ export async function POST(request: Request) {
         .from("customers")
         .insert({
           id: newId,
-          name: customerDetails.name,
-          email: customerDetails.email,
-          phone: customerDetails.phone,
-          dob: customerDetails.dob,
+          name: safeName,
+          email: customerDetails.email.toLowerCase().trim(),
+          phone: (customerDetails.phone || "").slice(0, 20),
+          dob: customerDetails.dob || "",
           role: "customer",
         })
         .select("id")
@@ -64,9 +102,9 @@ export async function POST(request: Request) {
       id: bookingId,
       customer_id: customerId,
       vehicle_id: vehicleId,
-      customer_name: customerDetails.name,
-      customer_email: customerDetails.email,
-      customer_phone: customerDetails.phone,
+      customer_name: safeName,
+      customer_email: customerDetails.email.toLowerCase().trim(),
+      customer_phone: (customerDetails.phone || "").slice(0, 20),
       pickup_date: pickupDate,
       return_date: returnDate,
       extras: extras || [],

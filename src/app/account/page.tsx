@@ -4,8 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Car, Calendar, Clock, MapPin, FileText, User, Settings,
-  CreditCard, ChevronRight, Download, XCircle, Star, LogOut, Shield
+  Calendar, Clock, User,
+  CreditCard, Download, XCircle, Star, LogOut, Shield
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -41,12 +41,16 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AccountPage() {
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, logout, updateProfile } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("upcoming");
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [reviewTarget, setReviewTarget] = useState<{ vehicleId: string; vehicleName: string; bookingId: string } | null>(null);
+  const [cancelling, setCancelling] = useState<string | null>(null);
+  const [profileForm, setProfileForm] = useState({ name: "", phone: "", dob: "" });
+  const [profileSaving, setProfileSaving] = useState(false);
+  const [profileMsg, setProfileMsg] = useState("");
 
   const fetchBookings = useCallback(async () => {
     if (!user?.email) return;
@@ -114,6 +118,55 @@ export default function AccountPage() {
   const handleLogout = () => {
     logout();
     router.push("/");
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm("Are you sure you want to cancel this booking? This action cannot be undone.")) return;
+    setCancelling(bookingId);
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, status: "cancelled" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, status: "cancelled" } : b));
+      }
+    } catch (err) {
+      console.error("Cancel error:", err);
+    }
+    setCancelling(null);
+  };
+
+  // Initialize profile form when user loads
+  useEffect(() => {
+    if (user) {
+      setProfileForm({ name: user.name || "", phone: user.phone || "", dob: user.dob || "" });
+    }
+  }, [user]);
+
+  const handleSaveProfile = async () => {
+    if (!user) return;
+    setProfileSaving(true);
+    setProfileMsg("");
+    try {
+      const res = await fetch("/api/auth", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: user.id, ...profileForm }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProfileMsg("Profile updated successfully!");
+        updateProfile(profileForm);
+      } else {
+        setProfileMsg(data.message || "Failed to update profile.");
+      }
+    } catch {
+      setProfileMsg("Network error. Please try again.");
+    }
+    setProfileSaving(false);
   };
 
   const LoadingSkeleton = () => (
@@ -238,12 +291,18 @@ export default function AccountPage() {
                           </div>
                         </div>
                         <div className="flex gap-2">
-                          <Button size="sm" variant="outline">
-                            <FileText className="h-3.5 w-3.5 mr-1" /> View Details
-                          </Button>
-                          <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50">
-                            <XCircle className="h-3.5 w-3.5 mr-1" /> Cancel
-                          </Button>
+                          {(booking.status === "pending" || booking.status === "confirmed") && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-red-600 hover:bg-red-50"
+                              disabled={cancelling === booking.id}
+                              onClick={() => handleCancelBooking(booking.id)}
+                            >
+                              <XCircle className="h-3.5 w-3.5 mr-1" />
+                              {cancelling === booking.id ? "Cancelling..." : "Cancel Booking"}
+                            </Button>
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -335,38 +394,44 @@ export default function AccountPage() {
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">Full Name</label>
-                        <Input defaultValue={user.name} />
+                        <Input
+                          value={profileForm.name}
+                          onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))}
+                        />
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">Email</label>
-                        <Input type="email" defaultValue={user.email} />
+                        <Input type="email" value={user.email} disabled className="bg-gray-50" />
+                        <p className="mt-1 text-xs text-gray-400">Email cannot be changed</p>
                       </div>
                     </div>
                     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone</label>
-                        <Input type="tel" defaultValue={user.phone || ""} />
+                        <Input
+                          type="tel"
+                          value={profileForm.phone}
+                          onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
+                        />
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">Date of Birth</label>
-                        <Input type="date" defaultValue={user.dob || ""} />
+                        <Input
+                          type="date"
+                          value={profileForm.dob}
+                          onChange={(e) => setProfileForm((p) => ({ ...p, dob: e.target.value }))}
+                        />
                       </div>
                     </div>
-                    <div className="border-t pt-4">
-                      <h3 className="font-medium text-gray-900 mb-3">Change Password</h3>
-                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium text-gray-700">Current Password</label>
-                          <Input type="password" placeholder="Current password" />
-                        </div>
-                        <div>
-                          <label className="mb-1.5 block text-sm font-medium text-gray-700">New Password</label>
-                          <Input type="password" placeholder="New password" />
-                        </div>
-                      </div>
-                    </div>
+                    {profileMsg && (
+                      <p className={`text-sm ${profileMsg.includes("success") ? "text-green-600" : "text-red-600"}`}>
+                        {profileMsg}
+                      </p>
+                    )}
                     <div className="flex justify-end">
-                      <Button>Save Changes</Button>
+                      <Button onClick={handleSaveProfile} disabled={profileSaving}>
+                        {profileSaving ? "Saving..." : "Save Changes"}
+                      </Button>
                     </div>
                   </div>
                 </CardContent>

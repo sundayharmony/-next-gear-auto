@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 import {
   Car,
   Plus,
@@ -95,7 +96,7 @@ export default function AdminVehiclesPage() {
   const fetchVehicles = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/vehicles");
+      const res = await adminFetch("/api/admin/vehicles");
       const data = await res.json();
       if (data.success) {
         setVehicles(data.data);
@@ -155,7 +156,7 @@ export default function AdminVehiclesPage() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/admin/vehicles/upload", {
+      const res = await adminFetch("/api/admin/vehicles/upload", {
         method: "POST",
         body: formData,
       });
@@ -188,7 +189,7 @@ export default function AdminVehiclesPage() {
 
   const toggleAvailability = async (vehicle: Vehicle) => {
     try {
-      const res = await fetch("/api/admin/vehicles", {
+      const res = await adminFetch("/api/admin/vehicles", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -222,7 +223,7 @@ export default function AdminVehiclesPage() {
     if (!editingId || !editForm) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/vehicles", {
+      const res = await adminFetch("/api/admin/vehicles", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -287,7 +288,7 @@ export default function AdminVehiclesPage() {
     }
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/vehicles", {
+      const res = await adminFetch("/api/admin/vehicles", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -325,7 +326,7 @@ export default function AdminVehiclesPage() {
   const deleteVehicle = async (id: string) => {
     if (!confirm("Are you sure you want to delete this vehicle?")) return;
     try {
-      const res = await fetch(`/api/admin/vehicles?id=${id}`, {
+      const res = await adminFetch(`/api/admin/vehicles?id=${id}`, {
         method: "DELETE",
       });
       const data = await res.json();

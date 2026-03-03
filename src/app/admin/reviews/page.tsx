@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 import { Star, Trash2, CheckCircle, XCircle, RefreshCw, Filter } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ export default function AdminReviewsPage() {
   const updateStatus = async (id: string, status: string) => {
     setUpdating(id);
     try {
-      const res = await fetch("/api/reviews", {
+      const res = await adminFetch("/api/reviews", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status }),
@@ -72,7 +73,7 @@ export default function AdminReviewsPage() {
   const deleteReview = async (id: string) => {
     if (!confirm("Are you sure you want to delete this review?")) return;
     try {
-      const res = await fetch(`/api/reviews?id=${id}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/reviews?id=${id}`, { method: "DELETE" });
       const data = await res.json();
       if (data.success) {
         setReviews((prev) => prev.filter((r) => r.id !== id));

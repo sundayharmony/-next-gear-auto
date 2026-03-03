@@ -1,9 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { verifyAdmin } from "@/lib/auth/admin-check";
 import promoCodes from "@/data/promo-codes.json";
 
 // GET: List all promo codes (Supabase with JSON fallback)
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
     const { data, error } = await supabase
@@ -46,6 +49,8 @@ export async function GET() {
 
 // POST: Create a new promo code
 export async function POST(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
     const body = await request.json();
@@ -94,6 +99,8 @@ export async function POST(request: NextRequest) {
 
 // PUT: Update a promo code
 export async function PUT(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
     const body = await request.json();
@@ -129,6 +136,8 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: Remove a promo code
 export async function DELETE(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
     const { searchParams } = new URL(request.url);

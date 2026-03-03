@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 import {
   DollarSign,
   TrendingUp,
@@ -197,10 +198,10 @@ export default function AdminFinancesPage() {
     try {
       const [bookingsRes, expensesRes, vehiclesRes] = await Promise.all([
         fetch("/api/bookings"),
-        fetch(
+        adminFetch(
           `/api/admin/expenses?from=${dateRange.from}&to=${dateRange.to}`
         ),
-        fetch("/api/admin/vehicles"),
+        adminFetch("/api/admin/vehicles"),
       ]);
 
       if (!bookingsRes.ok || !expensesRes.ok || !vehiclesRes.ok) {
@@ -389,7 +390,7 @@ export default function AdminFinancesPage() {
     }
 
     try {
-      const response = await fetch("/api/admin/expenses", {
+      const response = await adminFetch("/api/admin/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -425,7 +426,7 @@ export default function AdminFinancesPage() {
     }
 
     try {
-      const response = await fetch("/api/admin/expenses", {
+      const response = await adminFetch("/api/admin/expenses", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -450,7 +451,7 @@ export default function AdminFinancesPage() {
 
   const handleDeleteExpense = async (id: string) => {
     try {
-      const response = await fetch(`/api/admin/expenses?id=${id}`, {
+      const response = await adminFetch(`/api/admin/expenses?id=${id}`, {
         method: "DELETE",
       });
 

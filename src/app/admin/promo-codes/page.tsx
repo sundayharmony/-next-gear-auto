@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 import { Tag, Plus, Pencil, Trash2, Check, X, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -49,7 +50,7 @@ export default function AdminPromoCodesPage() {
   const fetchCodes = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/promo-codes");
+      const res = await adminFetch("/api/admin/promo-codes");
       const data = await res.json();
       if (data.success) setCodes(data.data);
     } catch (err) {
@@ -64,7 +65,7 @@ export default function AdminPromoCodesPage() {
     if (!newCode.code) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/promo-codes", {
+      const res = await adminFetch("/api/admin/promo-codes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newCode),
@@ -87,7 +88,7 @@ export default function AdminPromoCodesPage() {
     if (!editingCode) return;
     setSaving(true);
     try {
-      const res = await fetch("/api/admin/promo-codes", {
+      const res = await adminFetch("/api/admin/promo-codes", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: editingCode, ...editForm }),
@@ -108,7 +109,7 @@ export default function AdminPromoCodesPage() {
   const deleteCode = async (code: string) => {
     if (!confirm(`Delete promo code "${code}"?`)) return;
     try {
-      const res = await fetch(`/api/admin/promo-codes?code=${code}`, { method: "DELETE" });
+      const res = await adminFetch(`/api/admin/promo-codes?code=${code}`, { method: "DELETE" });
       const data = await res.json();
       if (data.success) {
         setCodes((prev) => prev.filter((c) => c.code !== code));

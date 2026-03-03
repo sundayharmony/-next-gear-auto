@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { verifyAdmin } from "@/lib/auth/admin-check";
 
 // GET: Return reviews — admin=true returns all statuses, otherwise only approved
 export async function GET(req: NextRequest) {
@@ -123,6 +124,8 @@ export async function POST(req: NextRequest) {
 
 // PATCH: Approve or reject a review (admin)
 export async function PATCH(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
     const body = await req.json();
@@ -155,6 +158,8 @@ export async function PATCH(req: NextRequest) {
 
 // DELETE: Remove a review (admin)
 export async function DELETE(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   const { searchParams } = new URL(req.url);
   const id = searchParams.get("id");
