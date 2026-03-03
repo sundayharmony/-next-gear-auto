@@ -46,7 +46,9 @@ export default function AdminDashboardPage() {
         const res = await fetch("/api/bookings");
         const result = await res.json();
         if (result.success) {
-          const bookings = result.data || [];
+          const allBookings = result.data || [];
+          // Exclude cancelled bookings from dashboard
+          const bookings = allBookings.filter((b: { status: string }) => b.status !== "cancelled");
           const confirmed = bookings.filter((b: { status: string }) => b.status === "confirmed");
           const pending = bookings.filter((b: { status: string }) => b.status === "pending");
           const active = bookings.filter((b: { status: string }) => b.status === "active");

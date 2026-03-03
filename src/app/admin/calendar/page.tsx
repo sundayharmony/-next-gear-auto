@@ -97,7 +97,8 @@ export default function AdminCalendarPage() {
 
         if (bookingsRes.ok) {
           const data = await bookingsRes.json();
-          setBookings(data.data || []);
+          // Exclude cancelled bookings from calendar
+          setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
         }
 
         if (vehiclesRes.ok) {
@@ -199,7 +200,7 @@ export default function AdminCalendarPage() {
           <div className="flex flex-wrap gap-2 items-center">
             <span className="text-sm font-medium text-gray-700">Status:</span>
             <div className="flex flex-wrap gap-2">
-              {["all", "pending", "confirmed", "active", "completed", "cancelled"].map(
+              {["all", "pending", "confirmed", "active", "completed"].map(
                 (status) => (
                   <Button
                     key={status}
