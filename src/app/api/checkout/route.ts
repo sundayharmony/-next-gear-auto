@@ -89,7 +89,7 @@ export async function POST(request: Request) {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://rentnextgearauto.com";
 
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      payment_method_types: ["card", "cashapp", "link"],
       mode: "payment",
       customer_email: customerDetails.email,
       line_items: [
