@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import reviewsData from "@/data/reviews.json";
 
 // GET: Return reviews — admin=true returns all statuses, otherwise only approved
 export async function GET(req: NextRequest) {
@@ -30,44 +29,29 @@ export async function GET(req: NextRequest) {
 
     const { data: dbReviews, error } = await query;
 
-    if (!error && dbReviews && dbReviews.length > 0) {
-      // Map Supabase reviews to frontend format
-      const reviews = dbReviews.map((r) => ({
-        id: r.id,
-        customerId: r.customer_id,
-        customerName: r.customer_name,
-        vehicleId: r.vehicle_id,
-        rating: r.rating,
-        text: r.text,
-        status: r.status,
-        createdAt: r.created_at,
-        isVerified: true,
-      }));
-
-      // For public API, merge with JSON fallback reviews
-      if (!admin) {
-        const jsonReviews = vehicleId
-          ? reviewsData.filter((r) => r.vehicleId === vehicleId)
-          : reviewsData;
-        const allReviews = [...reviews, ...jsonReviews];
-        return NextResponse.json({ data: allReviews, success: true });
-      }
-
-      return NextResponse.json({ data: reviews, success: true });
+    if (error) {
+      console.error("Reviews fetch error:", error);
+      return NextResponse.json({ data: [], success: true });
     }
-  } catch {
-    // Fall through to JSON fallback
-  }
 
-  // Fallback to static JSON (public only)
-  if (!admin) {
-    const filtered = vehicleId
-      ? reviewsData.filter((r) => r.vehicleId === vehicleId)
-      : reviewsData;
-    return NextResponse.json({ data: filtered, success: true });
-  }
+    // Map Supabase reviews to frontend format
+    const reviews = (dbReviews || []).map((r) => ({
+      id: r.id,
+      customerId: r.customer_id,
+      customerName: r.customer_name,
+      vehicleId: r.vehicle_id,
+      rating: r.rating,
+      text: r.text,
+      status: r.status,
+      createdAt: r.created_at,
+      isVerified: true,
+    }));
 
-  return NextResponse.json({ data: [], success: true });
+    return NextResponse.json({ data: reviews, success: true });
+  } catch (err) {
+    console.error("Reviews GET error:", err);
+    return NextResponse.json({ data: [], success: true });
+  }
 }
 
 // POST: Submit a new review
