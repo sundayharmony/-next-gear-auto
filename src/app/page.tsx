@@ -90,8 +90,8 @@ export default async function HomePage() {
           <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-4">
             {[
               { label: "Vehicles", value: "6+", icon: Car },
-              { label: "Happy Customers", value: "500+", icon: Users },
-              { label: "Years in Business", value: "5+", icon: Shield },
+              { label: "Happy Customers", value: "100+", icon: Users },
+              { label: "Years in Business", value: "1.5", icon: Shield },
               { label: "Starting at", value: "$35/day", icon: DollarSign },
             ].map((stat) => (
               <div key={stat.label} className="rounded-xl bg-white/10 p-4 backdrop-blur-sm">

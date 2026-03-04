@@ -13,9 +13,9 @@ export const metadata = {
 
 export default function AboutPage() {
   const stats = [
-    { value: "500+", label: "Happy Customers", icon: Users },
+    { value: "100+", label: "Happy Customers", icon: Users },
     { value: "6", label: "Quality Vehicles", icon: Car },
-    { value: "5+", label: "Years in Business", icon: Clock },
+    { value: "1.5", label: "Years in Business", icon: Clock },
     { value: "4.8", label: "Average Rating", icon: Award },
   ];
 
@@ -147,7 +147,7 @@ export default function AboutPage() {
         <div className="mx-auto max-w-4xl px-4 text-center">
           <h2 className="text-3xl font-bold">Ready to Experience the Difference?</h2>
           <p className="mt-3 text-lg text-purple-100">
-            Browse our fleet and see why hundreds of customers trust NextGearAuto.
+            Browse our fleet and see why our customers trust NextGearAuto.
           </p>
           <div className="mt-8 flex justify-center gap-4">
             <Link href="/fleet">
