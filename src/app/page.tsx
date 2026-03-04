@@ -118,9 +118,17 @@ export default async function HomePage() {
                 <Link key={vehicle.id} href={`/fleet/${vehicle.id}`}>
                   <Card className="group h-full card-hover">
                     <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100">
-                      <div className="flex h-full items-center justify-center">
-                        <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
-                      </div>
+                      {vehicle.images && vehicle.images.length > 0 ? (
+                        <img
+                          src={vehicle.images[0]}
+                          alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
+                          <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
+                        </div>
+                      )}
                       <Badge className="absolute top-3 left-3" variant="default">
                         {vehicle.category}
                       </Badge>

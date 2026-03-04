@@ -202,18 +202,46 @@ export default async function VehicleDetailPage({ params }: PageProps) {
         <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
           {/* Main content */}
           <div className="lg:col-span-2 space-y-8">
-            {/* Image gallery placeholder */}
+            {/* Image gallery */}
             <Card>
               <div className="grid grid-cols-2 gap-2 p-2">
-                <div className="col-span-2 aspect-[16/9] rounded-lg bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
-                  <Car className="h-24 w-24 text-gray-200" />
-                </div>
-                <div className="aspect-[16/9] rounded-lg bg-gray-100 flex items-center justify-center">
-                  <Car className="h-12 w-12 text-gray-200" />
-                </div>
-                <div className="aspect-[16/9] rounded-lg bg-gray-100 flex items-center justify-center">
-                  <Car className="h-12 w-12 text-gray-200" />
-                </div>
+                {vehicle.images && vehicle.images.length > 0 ? (
+                  <>
+                    <div className="col-span-2 aspect-[16/9] rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50">
+                      <img
+                        src={vehicle.images[0]}
+                        alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    {vehicle.images.slice(1, 3).map((img: string, i: number) => (
+                      <div key={i} className="aspect-[16/9] rounded-lg overflow-hidden bg-gray-100">
+                        <img
+                          src={img}
+                          alt={`${vehicle.year} ${vehicle.make} ${vehicle.model} - ${i + 2}`}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    ))}
+                    {vehicle.images.length < 3 && Array.from({ length: Math.max(0, 2 - (vehicle.images.length - 1)) }).map((_, i) => (
+                      <div key={`placeholder-${i}`} className="aspect-[16/9] rounded-lg bg-gray-100 flex items-center justify-center">
+                        <Car className="h-12 w-12 text-gray-200" />
+                      </div>
+                    ))}
+                  </>
+                ) : (
+                  <>
+                    <div className="col-span-2 aspect-[16/9] rounded-lg bg-gradient-to-br from-gray-100 to-gray-50 flex items-center justify-center">
+                      <Car className="h-24 w-24 text-gray-200" />
+                    </div>
+                    <div className="aspect-[16/9] rounded-lg bg-gray-100 flex items-center justify-center">
+                      <Car className="h-12 w-12 text-gray-200" />
+                    </div>
+                    <div className="aspect-[16/9] rounded-lg bg-gray-100 flex items-center justify-center">
+                      <Car className="h-12 w-12 text-gray-200" />
+                    </div>
+                  </>
+                )}
               </div>
             </Card>
 
