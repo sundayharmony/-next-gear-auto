@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload } from "lucide-react";
+import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -58,6 +58,13 @@ const formatTime = (t?: string) => {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
+const AVAILABLE_EXTRAS = [
+  { id: "e1", name: "Insurance Coverage", pricePerDay: 15, maxPrice: null, billingType: "per-day" as const, description: "Basic collision damage waiver" },
+  { id: "e2", name: "Child Seat", pricePerDay: 10, maxPrice: 50, billingType: "per-day-capped" as const, description: "Infant and toddler car seat" },
+  { id: "e3", name: "Roadside Assistance", pricePerDay: 8, maxPrice: null, billingType: "per-day" as const, description: "24/7 emergency roadside assistance" },
+  { id: "e4", name: "Fuel Pre-Pay", pricePerDay: 45, maxPrice: null, billingType: "one-time" as const, description: "Pre-pay for a full tank" },
+];
+
 const emptyNewBooking = {
   customerName: "",
   customerEmail: "",
@@ -69,6 +76,7 @@ const emptyNewBooking = {
   returnTime: "10:00",
   totalPrice: 0,
   status: "confirmed" as string,
+  selectedExtras: ["e1"] as string[], // Insurance selected by default
 };
 
 export default function AdminBookingsPage() {
@@ -159,7 +167,7 @@ export default function AdminBookingsPage() {
     setUpdating(null);
   };
 
-  // Calculate price when vehicle or dates change
+  // Calculate price when vehicle, dates, or extras change
   useEffect(() => {
     if (newBooking.vehicleId && newBooking.pickupDate && newBooking.returnDate) {
       const vehicle = vehicles.find((v) => v.id === newBooking.vehicleId);
@@ -167,10 +175,30 @@ export default function AdminBookingsPage() {
         const start = new Date(newBooking.pickupDate);
         const end = new Date(newBooking.returnDate);
         const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-        setNewBooking((prev) => ({ ...prev, totalPrice: days * vehicle.dailyRate }));
+        let baseTotal = days * vehicle.dailyRate;
+
+        // Add extras cost
+        let extrasTotal = 0;
+        for (const extraId of newBooking.selectedExtras) {
+          const extra = AVAILABLE_EXTRAS.find((e) => e.id === extraId);
+          if (extra) {
+            if (extra.billingType === "one-time") {
+              extrasTotal += extra.pricePerDay;
+            } else if (extra.billingType === "per-day-capped" && extra.maxPrice) {
+              extrasTotal += Math.min(days * extra.pricePerDay, extra.maxPrice);
+            } else {
+              extrasTotal += days * extra.pricePerDay;
+            }
+          }
+        }
+
+        const subtotal = baseTotal + extrasTotal;
+        const tax = subtotal * 0.08; // 8% tax
+        const total = subtotal + tax;
+        setNewBooking((prev) => ({ ...prev, totalPrice: parseFloat(total.toFixed(2)) }));
       }
     }
-  }, [newBooking.vehicleId, newBooking.pickupDate, newBooking.returnDate, vehicles]);
+  }, [newBooking.vehicleId, newBooking.pickupDate, newBooking.returnDate, newBooking.selectedExtras, vehicles]);
 
   const handleCreateBooking = async () => {
     if (!newBooking.customerName || !newBooking.vehicleId || !newBooking.pickupDate || !newBooking.returnDate) {
@@ -180,6 +208,14 @@ export default function AdminBookingsPage() {
 
     setCreating(true);
     try {
+      // Build selected extras array for the booking
+      const selectedExtrasData = newBooking.selectedExtras
+        .map((id) => AVAILABLE_EXTRAS.find((e) => e.id === id))
+        .filter(Boolean)
+        .map((e) => ({ ...e, selected: true }));
+
+      const hasInsurance = newBooking.selectedExtras.includes("e1");
+
       const res = await fetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -195,6 +231,8 @@ export default function AdminBookingsPage() {
           pickupTime: newBooking.pickupTime,
           returnTime: newBooking.returnTime,
           totalPrice: newBooking.totalPrice,
+          extras: selectedExtrasData,
+          insuranceOptedOut: !hasInsurance,
         }),
       });
 
@@ -431,6 +469,56 @@ export default function AdminBookingsPage() {
                       );
                     })}
                   </select>
+                </div>
+
+                {/* Extras / Insurance */}
+                <div className="md:col-span-2 lg:col-span-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Shield className="inline h-4 w-4 mr-1 text-purple-600" />
+                    Add-Ons & Insurance
+                  </label>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    {AVAILABLE_EXTRAS.map((extra) => {
+                      const isSelected = newBooking.selectedExtras.includes(extra.id);
+                      return (
+                        <button
+                          key={extra.id}
+                          type="button"
+                          onClick={() => {
+                            setNewBooking((prev) => ({
+                              ...prev,
+                              selectedExtras: isSelected
+                                ? prev.selectedExtras.filter((id) => id !== extra.id)
+                                : [...prev.selectedExtras, extra.id],
+                            }));
+                          }}
+                          className={`flex items-center gap-3 rounded-lg border p-3 text-left transition-all ${
+                            isSelected
+                              ? "border-purple-500 bg-purple-50 ring-1 ring-purple-500"
+                              : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                          }`}
+                        >
+                          <div className={`flex h-5 w-5 items-center justify-center rounded border-2 shrink-0 ${
+                            isSelected ? "border-purple-600 bg-purple-600" : "border-gray-300"
+                          }`}>
+                            {isSelected && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium text-gray-900">{extra.name}</span>
+                              {extra.id === "e1" && (
+                                <span className="text-[10px] bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded-full font-medium">Recommended</span>
+                              )}
+                            </div>
+                            <span className="text-xs text-gray-500">{extra.description}</span>
+                          </div>
+                          <span className="text-sm font-semibold text-gray-700 shrink-0">
+                            ${extra.pricePerDay}{extra.billingType === "one-time" ? "" : "/day"}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
                 </div>
 
                 {/* Price + Status */}

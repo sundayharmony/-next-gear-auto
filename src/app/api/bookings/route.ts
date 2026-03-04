@@ -110,6 +110,24 @@ export async function POST(request: Request) {
   const supabase = getServiceSupabase();
   try {
     const body = await request.json();
+    // Double-booking check
+    if (body.vehicleId && body.pickupDate && body.returnDate) {
+      const { data: conflicting } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("vehicle_id", body.vehicleId)
+        .in("status", ["confirmed", "active", "pending"])
+        .lte("pickup_date", body.returnDate)
+        .gte("return_date", body.pickupDate);
+
+      if (conflicting && conflicting.length > 0) {
+        return NextResponse.json(
+          { success: false, message: "This vehicle is already booked for the selected dates." },
+          { status: 409 }
+        );
+      }
+    }
+
     const bookingId = "bk" + Date.now() + Math.floor(Math.random() * 1000);
 
     const { error } = await supabase.from("bookings").insert({
@@ -125,10 +143,12 @@ export async function POST(request: Request) {
       return_time: body.returnTime || null,
       extras: body.extras || [],
       total_price: body.totalPrice || 0,
-      deposit: 50,
+      deposit: body.totalPrice || 0,
       status: "pending",
       signed_name: body.signedName || null,
       agreement_signed_at: body.signedName ? new Date().toISOString() : null,
+      insurance_proof_url: body.insuranceProofUrl || null,
+      insurance_opted_out: body.insuranceOptedOut || false,
     });
 
     if (error) {
@@ -161,7 +181,7 @@ export async function POST(request: Request) {
         pickupTime: body.pickupTime || null,
         returnTime: body.returnTime || null,
         totalPrice: body.totalPrice || 0,
-        deposit: 50,
+        deposit: body.totalPrice || 0,
       };
 
       sendBookingConfirmation(emailData).catch(console.error);

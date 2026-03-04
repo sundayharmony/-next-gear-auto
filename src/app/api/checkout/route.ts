@@ -71,6 +71,28 @@ export async function POST(request: Request) {
     // Sanitize customer name
     const safeName = (customerDetails.name || "").replace(/<[^>]*>/g, "").trim().slice(0, 100);
 
+    // Double-booking check with 12-hour buffer
+    const BUFFER_HOURS = 12;
+    const bufferPickup = new Date(pickup);
+    bufferPickup.setHours(bufferPickup.getHours() - BUFFER_HOURS);
+    const bufferReturn = new Date(returnDt);
+    bufferReturn.setHours(bufferReturn.getHours() + BUFFER_HOURS);
+
+    const { data: conflicting } = await supabase
+      .from("bookings")
+      .select("id, pickup_date, return_date")
+      .eq("vehicle_id", vehicleId)
+      .in("status", ["confirmed", "active", "pending"])
+      .lte("pickup_date", returnDate)
+      .gte("return_date", pickupDate);
+
+    if (conflicting && conflicting.length > 0) {
+      return NextResponse.json(
+        { success: false, message: "This vehicle is already booked for the selected dates. Please choose different dates or another vehicle." },
+        { status: 409 }
+      );
+    }
+
     // Charge full rental amount upfront
     const chargeAmount = totalPrice || deposit || 0;
 

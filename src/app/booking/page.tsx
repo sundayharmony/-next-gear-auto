@@ -85,6 +85,18 @@ function BookingPageInner() {
   const [uploadingInsuranceProof, setUploadingInsuranceProof] = useState(false);
   const [showInsuranceWarning, setShowInsuranceWarning] = useState(false);
 
+  // Booked dates for vehicle availability
+  interface BookedRange {
+    id: string;
+    pickupDate: string;
+    returnDate: string;
+    pickupTime: string;
+    returnTime: string;
+    status: string;
+  }
+  const [vehicleBookedDates, setVehicleBookedDates] = useState<Record<string, BookedRange[]>>({});
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
+
   // Fetch vehicles from API
   useEffect(() => {
     const fetchVehicles = async () => {
@@ -117,6 +129,68 @@ function BookingPageInner() {
       }
     }
   }, [searchParams, booking.selectedVehicle, preSelected, vehicles, vehiclesLoading]);
+
+  // Fetch booked dates for all vehicles when dates are set (Step 1 → Step 2 transition)
+  useEffect(() => {
+    if (!booking.pickupDate || !booking.returnDate) return;
+
+    const fetchAllBookedDates = async () => {
+      setCheckingAvailability(true);
+      const dateMap: Record<string, BookedRange[]> = {};
+      try {
+        await Promise.all(
+          vehicles.map(async (v) => {
+            try {
+              const res = await fetch(`/api/vehicles/booked-dates?vehicleId=${v.id}`);
+              const data = await res.json();
+              if (data.success) {
+                dateMap[v.id] = data.data || [];
+              }
+            } catch {
+              dateMap[v.id] = [];
+            }
+          })
+        );
+      } catch {
+        // If fetching fails, don't block anything
+      }
+      setVehicleBookedDates(dateMap);
+      setCheckingAvailability(false);
+    };
+
+    if (vehicles.length > 0) {
+      fetchAllBookedDates();
+    }
+  }, [booking.pickupDate, booking.returnDate, vehicles]);
+
+  // Check if a vehicle has a date conflict with selected dates (includes 12-hour buffer)
+  const isVehicleBooked = (vehicleId: string): boolean => {
+    const ranges = vehicleBookedDates[vehicleId];
+    if (!ranges || ranges.length === 0) return false;
+    if (!booking.pickupDate || !booking.returnDate) return false;
+
+    const BUFFER_MS = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+
+    // Convert selected dates + times to timestamps
+    const selectedPickup = new Date(`${booking.pickupDate}T${booking.pickupTime || "10:00"}:00`).getTime();
+    const selectedReturn = new Date(`${booking.returnDate}T${booking.returnTime || "10:00"}:00`).getTime();
+
+    for (const range of ranges) {
+      // Convert existing booking dates + times to timestamps
+      const existingPickup = new Date(`${range.pickupDate}T${range.pickupTime || "10:00"}:00`).getTime();
+      const existingReturn = new Date(`${range.returnDate}T${range.returnTime || "10:00"}:00`).getTime();
+
+      // Add 12-hour buffer: existing booking blocks from (pickup - 12h) to (return + 12h)
+      const bufferedStart = existingPickup - BUFFER_MS;
+      const bufferedEnd = existingReturn + BUFFER_MS;
+
+      // Check overlap: selected range overlaps with buffered existing range
+      if (selectedPickup < bufferedEnd && selectedReturn > bufferedStart) {
+        return true;
+      }
+    }
+    return false;
+  };
 
   // Customer details local state
   const [details, setDetails] = useState({
@@ -190,7 +264,7 @@ function BookingPageInner() {
     setPromoError("");
   };
 
-  const availableVehicles = vehicles.filter((v) => v.isAvailable);
+  const availableVehicles = vehicles.filter((v) => v.isAvailable && !isVehicleBooked(v.id));
 
   const canProceed = (): boolean => {
     switch (booking.currentStep) {
@@ -312,41 +386,56 @@ function BookingPageInner() {
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-900">Choose Your Vehicle</h2>
               <p className="text-sm text-gray-500">Select from our available fleet for your dates.</p>
+              {checkingAvailability && (
+                <div className="rounded-lg bg-purple-50 p-3 text-sm text-purple-600 flex items-center gap-2">
+                  <span className="animate-spin inline-block h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full" />
+                  Checking vehicle availability...
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-4">
-                {availableVehicles.map((vehicle) => (
-                  <Card
-                    key={vehicle.id}
-                    className={cn(
-                      "cursor-pointer transition-all hover:shadow-md",
-                      booking.selectedVehicle?.id === vehicle.id && "ring-2 ring-purple-600 shadow-md"
-                    )}
-                    onClick={() => booking.selectVehicle(vehicle as any)}
-                  >
-                    <CardContent className="flex items-center gap-4 p-4">
-                      <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg bg-gray-100">
-                        <Car className="h-10 w-10 text-gray-300" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-gray-900">{vehicle.year} {vehicle.make} {vehicle.model}</h3>
-                          <Badge variant="secondary">{vehicle.category}</Badge>
-                        </div>
-                        <div className="mt-1 flex gap-3 text-xs text-gray-500">
-                          <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {vehicle.specs.passengers}</span>
-                          <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> {vehicle.specs.luggage}</span>
-                          <span className="flex items-center gap-1"><Fuel className="h-3 w-3" /> {vehicle.specs.mpg} mpg</span>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0">
-                        <div className="text-xl font-bold text-purple-600">${vehicle.dailyRate}</div>
-                        <div className="text-xs text-gray-400">/day</div>
-                      </div>
-                      {booking.selectedVehicle?.id === vehicle.id && (
-                        <Check className="h-5 w-5 shrink-0 text-purple-600" />
+                {vehicles.filter((v) => v.isAvailable).map((vehicle) => {
+                  const booked = isVehicleBooked(vehicle.id);
+                  return (
+                    <Card
+                      key={vehicle.id}
+                      className={cn(
+                        "transition-all",
+                        booked
+                          ? "opacity-50 cursor-not-allowed"
+                          : "cursor-pointer hover:shadow-md",
+                        !booked && booking.selectedVehicle?.id === vehicle.id && "ring-2 ring-purple-600 shadow-md"
                       )}
-                    </CardContent>
-                  </Card>
-                ))}
+                      onClick={() => !booked && booking.selectVehicle(vehicle as any)}
+                    >
+                      <CardContent className="flex items-center gap-4 p-4">
+                        <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                          <Car className="h-10 w-10 text-gray-300" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2">
+                            <h3 className={cn("font-semibold", booked ? "text-gray-400" : "text-gray-900")}>{vehicle.year} {vehicle.make} {vehicle.model}</h3>
+                            <Badge variant="secondary">{vehicle.category}</Badge>
+                            {booked && (
+                              <Badge className="bg-red-100 text-red-600 text-xs">Booked for these dates</Badge>
+                            )}
+                          </div>
+                          <div className="mt-1 flex gap-3 text-xs text-gray-500">
+                            <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {vehicle.specs.passengers}</span>
+                            <span className="flex items-center gap-1"><Briefcase className="h-3 w-3" /> {vehicle.specs.luggage}</span>
+                            <span className="flex items-center gap-1"><Fuel className="h-3 w-3" /> {vehicle.specs.mpg} mpg</span>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <div className={cn("text-xl font-bold", booked ? "text-gray-400" : "text-purple-600")}>${vehicle.dailyRate}</div>
+                          <div className="text-xs text-gray-400">/day</div>
+                        </div>
+                        {!booked && booking.selectedVehicle?.id === vehicle.id && (
+                          <Check className="h-5 w-5 shrink-0 text-purple-600" />
+                        )}
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}
