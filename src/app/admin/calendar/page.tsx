@@ -16,6 +16,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 
 interface BookingRow {
   id: string;
@@ -92,7 +93,7 @@ export default function AdminCalendarPage() {
       try {
         const [bookingsRes, vehiclesRes] = await Promise.all([
           fetch("/api/bookings"),
-          fetch("/api/admin/vehicles"),
+          adminFetch("/api/admin/vehicles"),
         ]);
 
         if (bookingsRes.ok) {
@@ -131,7 +132,7 @@ export default function AdminCalendarPage() {
     try {
       const [bookingsRes, vehiclesRes] = await Promise.all([
         fetch("/api/bookings"),
-        fetch("/api/admin/vehicles"),
+        adminFetch("/api/admin/vehicles"),
       ]);
 
       if (bookingsRes.ok) {

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 
 interface BookingRow {
   id: string;
@@ -104,7 +105,7 @@ export default function AdminBookingsPage() {
 
   const fetchVehicles = async () => {
     try {
-      const res = await fetch("/api/admin/vehicles");
+      const res = await adminFetch("/api/admin/vehicles");
       const data = await res.json();
       if (data.success) setVehicles(data.data || []);
     } catch (err) {
