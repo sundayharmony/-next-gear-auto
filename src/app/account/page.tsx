@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -73,6 +73,7 @@ export default function AccountPage() {
 
   // Fetch vehicles for vehicle name lookup
   useEffect(() => {
+    if (!isAuthenticated) return;
     const fetchVehicles = async () => {
       try {
         const response = await fetch("/api/vehicles");
@@ -86,7 +87,7 @@ export default function AccountPage() {
     };
 
     fetchVehicles();
-  }, []);
+  }, [isAuthenticated]);
 
   const fetchBookings = useCallback(async () => {
     if (!user?.email) return;
@@ -109,6 +110,77 @@ export default function AccountPage() {
     }
   }, [isAuthenticated, user, fetchBookings]);
 
+  // Initialize profile form when user loads
+  useEffect(() => {
+    if (user) {
+      setProfileForm({ name: user.name || "", phone: user.phone || "", dob: user.dob || "" });
+    }
+  }, [user]);
+
+  // Derived data — all hooks are above this line
+  const upcomingBookings = useMemo(() =>
+    bookings.filter((b) => ["pending", "confirmed", "active"].includes(b.status)),
+    [bookings]
+  );
+  const pastBookings = useMemo(() =>
+    bookings.filter((b) => ["completed", "cancelled", "no-show"].includes(b.status)),
+    [bookings]
+  );
+
+  const getVehicleName = useCallback((vehicleId: string, vehicleName?: string) => {
+    if (vehicleName) return vehicleName;
+    const found = vehicles.find((veh) => veh.id === vehicleId);
+    return found ? `${found.year} ${found.make} ${found.model}` : `Vehicle ${vehicleId}`;
+  }, [vehicles]);
+
+  const handleLogout = useCallback(() => {
+    logout();
+    router.push("/");
+  }, [logout, router]);
+
+  const handleCancelBooking = useCallback(async (bookingId: string) => {
+    if (!confirm("Are you sure you want to cancel this booking? This action cannot be undone.")) return;
+    setCancelling(bookingId);
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, status: "cancelled" }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, status: "cancelled" } : b));
+      }
+    } catch (err) {
+      console.error("Cancel error:", err);
+    }
+    setCancelling(null);
+  }, []);
+
+  const handleSaveProfile = useCallback(async () => {
+    if (!user) return;
+    setProfileSaving(true);
+    setProfileMsg("");
+    try {
+      const res = await fetch("/api/auth", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: user.id, ...profileForm }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setProfileMsg("Profile updated successfully!");
+        updateProfile(profileForm);
+      } else {
+        setProfileMsg(data.message || "Failed to update profile.");
+      }
+    } catch {
+      setProfileMsg("Network error. Please try again.");
+    }
+    setProfileSaving(false);
+  }, [user, profileForm, updateProfile]);
+
+  // ---- EARLY RETURN (all hooks are above) ----
   if (!isAuthenticated || !user) {
     return (
       <PageContainer className="py-20">
@@ -131,79 +203,12 @@ export default function AccountPage() {
     .toUpperCase()
     .slice(0, 2);
 
-  const upcomingBookings = bookings.filter((b) =>
-    ["pending", "confirmed", "active"].includes(b.status)
-  );
-  const pastBookings = bookings.filter((b) =>
-    ["completed", "cancelled", "no-show"].includes(b.status)
-  );
-
-  const getVehicleName = (vehicleId: string, vehicleName?: string) => {
-    if (vehicleName) return vehicleName;
-    const found = vehicles.find((veh) => veh.id === vehicleId);
-    return found ? `${found.year} ${found.make} ${found.model}` : `Vehicle ${vehicleId}`;
-  };
-
   const tabs = [
     { id: "upcoming" as Tab, label: "Upcoming", icon: Calendar, count: upcomingBookings.length },
     { id: "past" as Tab, label: "Past Rentals", icon: Clock, count: pastBookings.length },
     { id: "profile" as Tab, label: "Profile", icon: User },
     { id: "payment" as Tab, label: "Payment", icon: CreditCard },
   ];
-
-  const handleLogout = () => {
-    logout();
-    router.push("/");
-  };
-
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm("Are you sure you want to cancel this booking? This action cannot be undone.")) return;
-    setCancelling(bookingId);
-    try {
-      const res = await fetch("/api/bookings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, status: "cancelled" }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, status: "cancelled" } : b));
-      }
-    } catch (err) {
-      console.error("Cancel error:", err);
-    }
-    setCancelling(null);
-  };
-
-  // Initialize profile form when user loads
-  useEffect(() => {
-    if (user) {
-      setProfileForm({ name: user.name || "", phone: user.phone || "", dob: user.dob || "" });
-    }
-  }, [user]);
-
-  const handleSaveProfile = async () => {
-    if (!user) return;
-    setProfileSaving(true);
-    setProfileMsg("");
-    try {
-      const res = await fetch("/api/auth", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: user.id, ...profileForm }),
-      });
-      const data = await res.json();
-      if (data.success) {
-        setProfileMsg("Profile updated successfully!");
-        updateProfile(profileForm);
-      } else {
-        setProfileMsg(data.message || "Failed to update profile.");
-      }
-    } catch {
-      setProfileMsg("Network error. Please try again.");
-    }
-    setProfileSaving(false);
-  };
 
   const LoadingSkeleton = () => (
     <div className="space-y-4">
