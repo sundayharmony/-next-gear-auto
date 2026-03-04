@@ -313,6 +313,22 @@ function TimelineView({
     return date;
   });
 
+  // Helper: parse "YYYY-MM-DD" as local date (no timezone shift)
+  const parseLocalDate = (dateStr: string) => {
+    const [y, m, d] = dateStr.split("-").map(Number);
+    return new Date(y, m - 1, d);
+  };
+
+  // Helper: format date as "YYYY-MM-DD" in local time
+  const toDateKey = (date: Date) => {
+    const y = date.getFullYear();
+    const m = String(date.getMonth() + 1).padStart(2, "0");
+    const d = String(date.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
+  };
+
+  const dateKeys = dateRange.map(toDateKey);
+
   // Group bookings by vehicle
   const bookingsByVehicle = useMemo(() => {
     const map: Record<string, BookingRow[]> = {};
@@ -328,39 +344,35 @@ function TimelineView({
     return map;
   }, [bookings, vehicles]);
 
-  const getBookingBarPosition = (
-    booking: BookingRow,
-    vehicleId: string
-  ): { startCol: number; endCol: number } => {
-    const pickupDate = new Date(booking.pickup_date);
-    const returnDate = new Date(booking.return_date);
+  // Get visible bookings for a vehicle (only those overlapping the visible range)
+  const getVisibleBookings = (vehicleId: string) => {
+    const vehicleBookings = bookingsByVehicle[vehicleId] || [];
+    const rangeStart = dateKeys[0];
+    const rangeEnd = dateKeys[days - 1];
 
-    let startCol = dateRange.findIndex((date) => {
-      const dateOnly = new Date(date);
-      dateOnly.setHours(0, 0, 0, 0);
-      return (
-        dateOnly.getTime() ===
-        new Date(pickupDate.toISOString().split("T")[0]).getTime()
-      );
-    });
+    return vehicleBookings
+      .map((booking) => {
+        const pickupKey = booking.pickup_date.split("T")[0];
+        const returnKey = booking.return_date.split("T")[0];
 
-    let endCol = dateRange.findIndex((date) => {
-      const dateOnly = new Date(date);
-      dateOnly.setHours(0, 0, 0, 0);
-      return (
-        dateOnly.getTime() ===
-        new Date(returnDate.toISOString().split("T")[0]).getTime()
-      );
-    });
+        // Skip bookings entirely outside the visible range
+        if (returnKey < rangeStart || pickupKey > rangeEnd) return null;
 
-    if (startCol === -1) startCol = 0;
-    if (endCol === -1) endCol = days - 1;
+        // Clamp to visible range
+        const clampedStart = pickupKey < rangeStart ? rangeStart : pickupKey;
+        const clampedEnd = returnKey > rangeEnd ? rangeEnd : returnKey;
 
-    return {
-      startCol: Math.max(0, startCol),
-      endCol: Math.min(days - 1, endCol),
-    };
+        const startIdx = dateKeys.indexOf(clampedStart);
+        const endIdx = dateKeys.indexOf(clampedEnd);
+
+        if (startIdx === -1 || endIdx === -1) return null;
+
+        return { booking, startIdx, endIdx };
+      })
+      .filter(Boolean) as { booking: BookingRow; startIdx: number; endIdx: number }[];
   };
+
+  const today = toDateKey(new Date());
 
   return (
     <Card>
@@ -393,102 +405,111 @@ function TimelineView({
           </div>
         </div>
 
-        {/* Timeline Grid */}
-        <div className="overflow-x-auto">
-          <div
-            className="inline-block min-w-full"
-            style={{
-              display: "grid",
-              gridTemplateColumns: `200px repeat(${days}, 1fr)`,
-              gap: "0",
-              minWidth: "100%",
-            }}
-          >
-            {/* Header - Vehicle Names + Dates */}
-            <div className="sticky left-0 z-10 bg-purple-50 border-r border-gray-200 p-3 font-semibold text-sm text-gray-900">
-              Vehicles
-            </div>
-            {dateRange.map((date, i) => (
-              <div
-                key={i}
-                className="bg-purple-50 border-b border-gray-200 p-2 text-center font-medium text-xs text-gray-700"
-              >
-                <div>{date.toLocaleDateString("en-US", { weekday: "short" })}</div>
-                <div>{date.getDate()}</div>
-              </div>
-            ))}
-
-            {/* Rows - Vehicles + Booking Bars */}
-            {vehicles.map((vehicle) => (
-              <React.Fragment key={vehicle.id}>
-                <div className="sticky left-0 z-10 bg-white border-r border-gray-200 p-3 text-sm font-medium text-gray-900 border-b border-gray-200 flex items-center">
-                  {vehicle.year} {vehicle.make} {vehicle.model}
-                </div>
-                {dateRange.map((_, dateIdx) => (
-                  <div
-                    key={dateIdx}
-                    className="bg-white border-b border-r border-gray-200 p-1 relative min-h-20"
+        {/* Timeline Table */}
+        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+          <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+            <colgroup>
+              <col style={{ width: "180px", minWidth: "180px" }} />
+              {dateRange.map((_, i) => (
+                <col key={i} style={{ minWidth: "70px" }} />
+              ))}
+            </colgroup>
+            <thead>
+              <tr>
+                <th className="sticky left-0 z-10 bg-purple-50 border-b border-r border-gray-200 p-3 text-left text-sm font-semibold text-gray-900">
+                  Vehicles
+                </th>
+                {dateRange.map((date, i) => (
+                  <th
+                    key={i}
+                    className={`border-b border-r border-gray-200 p-2 text-center text-xs font-medium ${
+                      toDateKey(date) === today
+                        ? "bg-purple-100 text-purple-800"
+                        : "bg-purple-50 text-gray-700"
+                    }`}
                   >
-                    {/* Render bookings that span this date */}
-                    {bookingsByVehicle[vehicle.id]
-                      ?.filter((booking) => {
-                        const { startCol, endCol } = getBookingBarPosition(
-                          booking,
-                          vehicle.id
-                        );
-                        return dateIdx >= startCol && dateIdx <= endCol;
-                      })
-                      .map((booking) => {
-                        const { startCol, endCol } = getBookingBarPosition(
-                          booking,
-                          vehicle.id
-                        );
-                        const isStart = dateIdx === startCol;
-                        const isEnd = dateIdx === endCol;
-
-                        return (
-                          <div
-                            key={booking.id}
-                            className={`absolute top-1 bottom-1 ${statusBgColors[booking.status]} border-2 ${statusBorderColors[booking.status]} rounded px-1 py-0.5 flex items-center justify-start overflow-hidden group cursor-pointer hover:shadow-md transition-shadow`}
-                            style={{
-                              left: `${(dateIdx - startCol) * (100 / (endCol - startCol + 1))}%`,
-                              width: `${(1 / (endCol - startCol + 1)) * 100}%`,
-                              minWidth: "30px",
-                            }}
-                            title={`${booking.customer_name} - $${booking.total_price}`}
-                          >
-                            <span className="text-xs font-semibold text-gray-800 truncate">
-                              {booking.customer_name.split(" ")[0]}
-                            </span>
-
-                            {/* Tooltip */}
-                            <div className="absolute bottom-full left-0 mb-2 hidden group-hover:block z-20 bg-gray-900 text-white text-xs rounded p-2 whitespace-nowrap">
-                              <div className="font-semibold">{booking.customer_name}</div>
-                              <div>{booking.vehicleName}</div>
-                              <div>
-                                {new Date(booking.pickup_date).toLocaleDateString()} -{" "}
-                                {new Date(booking.return_date).toLocaleDateString()}
-                              </div>
-                              <div className="font-semibold">
-                                ${booking.total_price.toFixed(2)}
-                              </div>
-                              <div className="capitalize text-xs">
-                                {booking.status}
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      })}
-                  </div>
+                    <div>{date.toLocaleDateString("en-US", { weekday: "short" })}</div>
+                    <div className="font-semibold">{date.getDate()}</div>
+                  </th>
                 ))}
-              </React.Fragment>
-            ))}
-          </div>
+              </tr>
+            </thead>
+            <tbody>
+              {vehicles.map((vehicle) => {
+                const visibleBookings = getVisibleBookings(vehicle.id);
+                return (
+                  <tr key={vehicle.id} className="group">
+                    <td className="sticky left-0 z-10 bg-white border-b border-r border-gray-200 p-3 text-sm font-medium text-gray-900 whitespace-nowrap">
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </td>
+                    {/* Render cells with booking bars */}
+                    {dateRange.map((date, dateIdx) => {
+                      const isToday = toDateKey(date) === today;
+
+                      // Check if any booking starts on this cell
+                      const bookingStartingHere = visibleBookings.filter(
+                        (vb) => vb.startIdx === dateIdx
+                      );
+
+                      // Check if this cell is covered by a booking (but not the start)
+                      const coveredByBooking = visibleBookings.some(
+                        (vb) => dateIdx > vb.startIdx && dateIdx <= vb.endIdx
+                      );
+
+                      // If covered by a booking bar (not start), skip rendering (colSpan handles it)
+                      // We can't use colSpan in a simple way, so use relative positioning instead
+                      return (
+                        <td
+                          key={dateIdx}
+                          className={`border-b border-r border-gray-200 p-0 h-14 relative ${
+                            isToday ? "bg-purple-50/50" : "bg-white"
+                          }`}
+                        >
+                          {bookingStartingHere.map(({ booking, startIdx, endIdx }) => {
+                            const span = endIdx - startIdx + 1;
+                            return (
+                              <div
+                                key={booking.id}
+                                className={`absolute top-1 bottom-1 left-0.5 ${statusBgColors[booking.status]} border-2 ${statusBorderColors[booking.status]} rounded-md px-2 flex items-center overflow-hidden cursor-pointer hover:shadow-lg hover:brightness-95 transition-all z-[5]`}
+                                style={{
+                                  width: `calc(${span * 100}% - 4px)`,
+                                }}
+                                title={`${booking.customer_name}\n${booking.pickup_date} → ${booking.return_date}\n$${booking.total_price.toFixed(2)} • ${booking.status}`}
+                              >
+                                <span className="text-xs font-bold text-gray-800 truncate">
+                                  {booking.customer_name}
+                                </span>
+                                {span >= 3 && (
+                                  <span className="text-xs text-gray-600 ml-1 truncate hidden sm:inline">
+                                    · ${booking.total_price.toFixed(0)}
+                                  </span>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
+              {vehicles.length === 0 && (
+                <tr>
+                  <td
+                    colSpan={days + 1}
+                    className="text-center text-gray-500 py-12 text-sm"
+                  >
+                    No vehicles found. Add vehicles in the Fleet Management page.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
         {/* Legend */}
         <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-4 text-xs">
-          {Object.entries(statusColors).map(([status, colors]) => (
+          {Object.entries(statusColors).map(([status]) => (
             <div key={status} className="flex items-center gap-2">
               <div
                 className={`w-4 h-4 rounded ${statusBgColors[status]} border-2 ${statusBorderColors[status]}`}
