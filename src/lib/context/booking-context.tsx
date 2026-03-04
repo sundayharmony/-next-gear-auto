@@ -8,6 +8,8 @@ interface BookingState {
   currentStep: BookingStep;
   pickupDate: string;
   returnDate: string;
+  pickupTime: string;
+  returnTime: string;
   selectedVehicle: Vehicle | null;
   extras: BookingExtra[];
   pricing: PricingBreakdown | null;
@@ -28,7 +30,7 @@ interface BookingState {
 }
 
 type BookingAction =
-  | { type: "SET_DATES"; payload: { pickupDate: string; returnDate: string } }
+  | { type: "SET_DATES"; payload: { pickupDate: string; returnDate: string; pickupTime?: string; returnTime?: string } }
   | { type: "SELECT_VEHICLE"; payload: Vehicle }
   | { type: "SET_EXTRAS"; payload: BookingExtra[] }
   | { type: "TOGGLE_EXTRA"; payload: string }
@@ -50,6 +52,8 @@ const initialState: BookingState = {
   currentStep: 1,
   pickupDate: "",
   returnDate: "",
+  pickupTime: "10:00",
+  returnTime: "10:00",
   selectedVehicle: null,
   extras: [],
   pricing: null,
@@ -67,7 +71,13 @@ const initialState: BookingState = {
 function bookingReducer(state: BookingState, action: BookingAction): BookingState {
   switch (action.type) {
     case "SET_DATES":
-      return { ...state, pickupDate: action.payload.pickupDate, returnDate: action.payload.returnDate };
+      return {
+        ...state,
+        pickupDate: action.payload.pickupDate,
+        returnDate: action.payload.returnDate,
+        pickupTime: action.payload.pickupTime ?? state.pickupTime,
+        returnTime: action.payload.returnTime ?? state.returnTime,
+      };
     case "SELECT_VEHICLE":
       return { ...state, selectedVehicle: action.payload };
     case "SET_EXTRAS":
@@ -123,7 +133,7 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
 }
 
 interface BookingContextType extends BookingState {
-  setDates: (pickupDate: string, returnDate: string) => void;
+  setDates: (pickupDate: string, returnDate: string, pickupTime?: string, returnTime?: string) => void;
   selectVehicle: (vehicle: Vehicle) => void;
   setExtras: (extras: BookingExtra[]) => void;
   toggleExtra: (extraId: string) => void;
@@ -145,8 +155,8 @@ const BookingContext = createContext<BookingContextType | undefined>(undefined);
 export function BookingProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(bookingReducer, initialState);
 
-  const setDates = useCallback((pickupDate: string, returnDate: string) => {
-    dispatch({ type: "SET_DATES", payload: { pickupDate, returnDate } });
+  const setDates = useCallback((pickupDate: string, returnDate: string, pickupTime?: string, returnTime?: string) => {
+    dispatch({ type: "SET_DATES", payload: { pickupDate, returnDate, pickupTime, returnTime } });
   }, []);
 
   const selectVehicle = useCallback((vehicle: Vehicle) => {
@@ -218,6 +228,8 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           vehicleName: state.selectedVehicle ? `${state.selectedVehicle.year} ${state.selectedVehicle.make} ${state.selectedVehicle.model}` : "",
           pickupDate: state.pickupDate,
           returnDate: state.returnDate,
+          pickupTime: state.pickupTime,
+          returnTime: state.returnTime,
           extras: state.extras.filter((e) => e.selected),
           customerDetails: state.customerDetails,
           totalPrice: state.pricing?.total || 0,

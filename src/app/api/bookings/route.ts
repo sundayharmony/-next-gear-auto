@@ -121,6 +121,8 @@ export async function POST(request: Request) {
       customer_phone: body.customerDetails?.phone,
       pickup_date: body.pickupDate,
       return_date: body.returnDate,
+      pickup_time: body.pickupTime || null,
+      return_time: body.returnTime || null,
       extras: body.extras || [],
       total_price: body.totalPrice || 0,
       deposit: 50,
@@ -156,6 +158,8 @@ export async function POST(request: Request) {
         vehicleName,
         pickupDate: body.pickupDate,
         returnDate: body.returnDate,
+        pickupTime: body.pickupTime || null,
+        returnTime: body.returnTime || null,
         totalPrice: body.totalPrice || 0,
         deposit: 50,
       };
@@ -228,6 +232,8 @@ export async function PATCH(request: Request) {
         vehicleName,
         pickupDate: booking.pickup_date,
         returnDate: booking.return_date,
+        pickupTime: booking.pickup_time || null,
+        returnTime: booking.return_time || null,
         totalPrice: booking.total_price || 0,
         deposit: booking.deposit || 0,
       };

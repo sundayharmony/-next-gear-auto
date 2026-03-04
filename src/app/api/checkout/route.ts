@@ -13,6 +13,8 @@ export async function POST(request: Request) {
       vehicleName,
       pickupDate,
       returnDate,
+      pickupTime,
+      returnTime,
       extras,
       customerDetails,
       totalPrice,
@@ -110,6 +112,8 @@ export async function POST(request: Request) {
       customer_phone: (customerDetails.phone || "").slice(0, 20),
       pickup_date: pickupDate,
       return_date: returnDate,
+      pickup_time: pickupTime || null,
+      return_time: returnTime || null,
       extras: extras || [],
       total_price: totalPrice,
       deposit: chargeAmount,
@@ -141,7 +145,7 @@ export async function POST(request: Request) {
             currency: "usd",
             product_data: {
               name: `NextGearAuto - Vehicle Rental`,
-              description: `${vehicleName || "Vehicle"} rental: ${pickupDate} to ${returnDate}`,
+              description: `${vehicleName || "Vehicle"} rental: ${pickupDate}${pickupTime ? " at " + pickupTime : ""} to ${returnDate}${returnTime ? " at " + returnTime : ""}`,
             },
             unit_amount: Math.round(chargeAmount * 100), // Stripe uses cents
           },

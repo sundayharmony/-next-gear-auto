@@ -8,11 +8,20 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 
+const formatTime = (t?: string) => {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+};
+
 interface BookingDetails {
   id: string;
   vehicle_name: string;
   pickup_date: string;
   return_date: string;
+  pickup_time?: string;
+  return_time?: string;
   total_price: number;
   deposit: number;
   customer_name: string;
@@ -89,11 +98,16 @@ function SuccessContent() {
                       </div>
                       <div className="flex items-center justify-between py-3 border-b border-gray-100">
                         <span className="flex items-center gap-2 text-sm text-gray-500">
-                          <Calendar className="h-4 w-4" /> Dates
+                          <Calendar className="h-4 w-4" /> Dates & Times
                         </span>
-                        <span className="text-sm font-medium text-gray-900">
-                          {booking.pickup_date} → {booking.return_date}
-                        </span>
+                        <div className="text-right text-sm">
+                          <div className="font-medium text-gray-900">
+                            {booking.pickup_date} at <span className="text-xl font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
+                          </div>
+                          <div className="font-medium text-gray-900">
+                            {booking.return_date} at <span className="text-xl font-bold text-purple-600">{formatTime(booking.return_time)}</span>
+                          </div>
+                        </div>
                       </div>
                       <div className="flex items-center justify-between py-3 border-b border-gray-100">
                         <span className="flex items-center gap-2 text-sm text-gray-500">

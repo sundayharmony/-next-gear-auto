@@ -5,6 +5,8 @@ interface EmailData {
   vehicleName: string;
   pickupDate: string;
   returnDate: string;
+  pickupTime?: string;
+  returnTime?: string;
   totalPrice: number;
   deposit: number;
 }
@@ -56,8 +58,8 @@ export function bookingConfirmationTemplate(data: EmailData): string {
 
       <table style="width: 100%; border-collapse: collapse;">
         <tr><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Vehicle</td><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.vehicleName}</td></tr>
-        <tr><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Pick-up</td><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.pickupDate}</td></tr>
-        <tr><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Return</td><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.returnDate}</td></tr>
+        <tr><td colspan="2"><div style="background: linear-gradient(135deg, #EDE9FE, #F3E8FF); border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid #7C3AED;"><p style="margin: 0 0 8px; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Pick-up</p><p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${data.pickupDate}</p>${data.pickupTime ? `<p style="margin: 4px 0 0; color: #7C3AED; font-size: 20px; font-weight: 700;">${data.pickupTime}</p>` : ''}</div></td></tr>
+        <tr><td colspan="2"><div style="background: linear-gradient(135deg, #FEF3C7, #FEF08A); border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid #F59E0B;"><p style="margin: 0 0 8px; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Return</p><p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${data.returnDate}</p>${data.returnTime ? `<p style="margin: 4px 0 0; color: #F59E0B; font-size: 20px; font-weight: 700;">${data.returnTime}</p>` : ''}</div></td></tr>
         <tr><td style="padding: 12px 0; color: #6B7280; font-size: 14px;">Total Paid</td><td style="padding: 12px 0; color: #10B981; font-size: 18px; font-weight: 700; text-align: right;">$${data.totalPrice.toFixed(2)}</td></tr>
       </table>
 
@@ -91,7 +93,7 @@ export function adminNewBookingTemplate(data: EmailData): string {
         <tr><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Customer</td><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.customerName}</td></tr>
         <tr><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Email</td><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; text-align: right;">${data.customerEmail}</td></tr>
         <tr><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Vehicle</td><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.vehicleName}</td></tr>
-        <tr><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Dates</td><td style="padding: 10px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; text-align: right;">${data.pickupDate} → ${data.returnDate}</td></tr>
+        <tr><td colspan="2"><div style="background: linear-gradient(135deg, #D1FAE5, #ECFDF5); border-radius: 8px; padding: 16px; margin: 16px 0; border: 1px solid #A7F3D0;"><p style="margin: 0 0 8px; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Pick-up: ${data.pickupDate}${data.pickupTime ? ` at ${data.pickupTime}` : ''}</p><p style="margin: 0 0 8px; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Return: ${data.returnDate}${data.returnTime ? ` at ${data.returnTime}` : ''}</p>${data.pickupTime || data.returnTime ? `<p style="margin: 8px 0 0; color: #059669; font-size: 18px; font-weight: 700;">${data.pickupTime || ''} → ${data.returnTime || ''}</p>` : ''}</div></td></tr>
         <tr><td style="padding: 10px 0; color: #6B7280; font-size: 14px;">Total Paid</td><td style="padding: 10px 0; color: #10B981; font-size: 16px; font-weight: 700; text-align: right;">$${data.totalPrice.toFixed(2)}</td></tr>
       </table>
       <div style="text-align: center; margin: 24px 0;">
@@ -111,7 +113,8 @@ export function cancellationTemplate(data: EmailData): string {
     </div>
     <div style="padding: 32px 24px;">
       <p style="color: #374151; font-size: 16px;">Hi ${data.customerName},</p>
-      <p style="color: #6B7280; font-size: 14px; line-height: 1.6;">Your booking <strong>${data.bookingId}</strong> for the ${data.vehicleName} (${data.pickupDate} to ${data.returnDate}) has been cancelled.</p>
+      <p style="color: #6B7280; font-size: 14px; line-height: 1.6;">Your booking <strong>${data.bookingId}</strong> for the ${data.vehicleName} has been cancelled.</p>
+      <div style="background: #FEE2E2; border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid #DC2626;"><p style="margin: 0 0 8px; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Original Dates</p><p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${data.pickupDate} to ${data.returnDate}</p>${data.pickupTime || data.returnTime ? `<p style="margin: 4px 0 0; color: #DC2626; font-size: 18px; font-weight: 700;">${data.pickupTime || 'TBD'} → ${data.returnTime || 'TBD'}</p>` : ''}</div>
       <p style="color: #6B7280; font-size: 14px;">If you have questions about refunds or need further assistance, please contact us.</p>
       <div style="text-align: center; margin: 24px 0;">
         <a href="mailto:contact@rentnextgearauto.com" style="display: inline-block; background: #7C3AED; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">Contact Us</a>
@@ -132,8 +135,9 @@ export function pickupReminderTemplate(data: EmailData): string {
     <div style="padding: 32px 24px;">
       <p style="color: #374151; font-size: 16px;">Hi ${data.customerName},</p>
       <p style="color: #6B7280; font-size: 14px; line-height: 1.6;">
-        Just a reminder that your <strong>${data.vehicleName}</strong> is ready for pickup tomorrow, <strong>${data.pickupDate}</strong>.
+        Just a reminder that your <strong>${data.vehicleName}</strong> is ready for pickup tomorrow.
       </p>
+      <div style="background: linear-gradient(135deg, #EDE9FE, #F3E8FF); border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #7C3AED;"><p style="margin: 0 0 8px; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Pick-up Date & Time</p><p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${data.pickupDate}</p>${data.pickupTime ? `<p style="margin: 4px 0 0; color: #7C3AED; font-size: 20px; font-weight: 700;">${data.pickupTime}</p>` : ''}</div>
       <div style="background: #F3F0FF; border-radius: 8px; padding: 20px; margin: 20px 0;">
         <p style="margin: 0 0 8px; color: #5B21B6; font-weight: 600; font-size: 14px;">Please bring:</p>
         <ul style="margin: 0; padding-left: 20px; color: #6B7280; font-size: 14px; line-height: 1.8;">
@@ -162,8 +166,9 @@ export function returnReminderTemplate(data: EmailData): string {
     <div style="padding: 32px 24px;">
       <p style="color: #374151; font-size: 16px;">Hi ${data.customerName},</p>
       <p style="color: #6B7280; font-size: 14px; line-height: 1.6;">
-        This is a friendly reminder that your <strong>${data.vehicleName}</strong> (Booking ${data.bookingId}) is due for return today, <strong>${data.returnDate}</strong>.
+        This is a friendly reminder that your <strong>${data.vehicleName}</strong> (Booking ${data.bookingId}) is due for return today.
       </p>
+      <div style="background: linear-gradient(135deg, #FEF3C7, #FEF08A); border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #F59E0B;"><p style="margin: 0 0 8px; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Return Date & Time</p><p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${data.returnDate}</p>${data.returnTime ? `<p style="margin: 4px 0 0; color: #F59E0B; font-size: 20px; font-weight: 700;">${data.returnTime}</p>` : ''}</div>
       <div style="background: #FFFBEB; border-radius: 8px; padding: 20px; margin: 20px 0; border: 1px solid #FDE68A;">
         <p style="margin: 0; color: #92400E; font-size: 14px;">Please return the vehicle with the same fuel level as pickup to avoid fuel charges.</p>
       </div>

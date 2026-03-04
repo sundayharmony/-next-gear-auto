@@ -35,3 +35,7 @@ BEGIN
   END IF;
 END
 $$;
+
+-- Add pickup and return time columns to bookings
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pickup_time TEXT DEFAULT NULL;
+ALTER TABLE bookings ADD COLUMN IF NOT EXISTS return_time TEXT DEFAULT NULL;

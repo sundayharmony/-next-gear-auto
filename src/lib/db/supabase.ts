@@ -65,6 +65,8 @@ export interface DbBooking {
   customer_phone: string | null;
   pickup_date: string;
   return_date: string;
+  pickup_time: string | null;
+  return_time: string | null;
   extras: Record<string, unknown>[];
   total_price: number;
   deposit: number;

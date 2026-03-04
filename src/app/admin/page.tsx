@@ -21,6 +21,8 @@ interface DashboardData {
     vehicleName: string;
     pickup_date: string;
     return_date: string;
+    pickup_time?: string;
+    return_time?: string;
     total_price: number;
     status: string;
     created_at: string;
@@ -34,6 +36,13 @@ const statusColors: Record<string, string> = {
   completed: "bg-gray-100 text-gray-600",
   cancelled: "bg-red-100 text-red-700",
   "no-show": "bg-orange-100 text-orange-700",
+};
+
+const formatTime = (t?: string) => {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
 export default function AdminDashboardPage() {
@@ -211,7 +220,8 @@ export default function AdminDashboardPage() {
                           <td className="px-4 py-3 text-gray-900">{booking.customer_name || "—"}</td>
                           <td className="px-4 py-3 text-gray-600">{booking.vehicleName}</td>
                           <td className="px-4 py-3 text-gray-500 text-xs">
-                            {booking.pickup_date} → {booking.return_date}
+                            <div>{booking.pickup_date} at <span className="text-sm font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
+                            <div>{booking.return_date} at <span className="text-sm font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>
                           </td>
                           <td className="px-4 py-3 font-medium">${booking.total_price?.toFixed(2) || "—"}</td>
                           <td className="px-4 py-3">

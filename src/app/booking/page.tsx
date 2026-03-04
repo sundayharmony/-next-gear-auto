@@ -47,6 +47,29 @@ const STEPS = [
   { num: 7, label: "Payment", icon: CreditCard },
 ];
 
+// Helper function to convert 24-hour time to 12-hour display format
+const formatTime24To12 = (time24: string): string => {
+  const [hours, minutes] = time24.split(":");
+  const hour = parseInt(hours, 10);
+  const ampm = hour >= 12 ? "PM" : "AM";
+  const displayHour = hour % 12 || 12;
+  return `${displayHour}:${minutes} ${ampm}`;
+};
+
+// Generate time options from 8:00 AM to 6:00 PM in 30-minute intervals
+const generateTimeOptions = () => {
+  const options = [];
+  for (let hour = 8; hour <= 18; hour++) {
+    for (let minute of [0, 30]) {
+      const timeStr = `${hour.toString().padStart(2, "0")}:${minute.toString().padStart(2, "0")}`;
+      options.push({ value: timeStr, display: formatTime24To12(timeStr) });
+    }
+  }
+  return options;
+};
+
+const timeOptions = generateTimeOptions();
+
 function BookingPageInner() {
   const booking = useBooking();
   const searchParams = useSearchParams();
@@ -105,7 +128,7 @@ function BookingPageInner() {
 
   const [signedName, setSignedName] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
-  const [searchDates, setSearchDates] = useState({ pickup: "", return: "" });
+  const [searchDates, setSearchDates] = useState({ pickup: "", return: "", pickupTime: "10:00", returnTime: "10:00" });
   const [promoInput, setPromoInput] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
@@ -171,7 +194,7 @@ function BookingPageInner() {
 
   const canProceed = (): boolean => {
     switch (booking.currentStep) {
-      case 1: return !!searchDates.pickup && !!searchDates.return && new Date(searchDates.return) > new Date(searchDates.pickup);
+      case 1: return !!searchDates.pickup && !!searchDates.return && !!searchDates.pickupTime && !!searchDates.returnTime && new Date(searchDates.return) > new Date(searchDates.pickup);
       case 2: return !!booking.selectedVehicle;
       case 3: return true;
       case 4: return !!details.name && !!details.email && !!details.phone && !!details.dob;
@@ -184,7 +207,7 @@ function BookingPageInner() {
 
   const handleNext = () => {
     if (booking.currentStep === 1) {
-      booking.setDates(searchDates.pickup, searchDates.return);
+      booking.setDates(searchDates.pickup, searchDates.return, searchDates.pickupTime, searchDates.returnTime);
     }
     if (booking.currentStep === 4) {
       booking.setCustomerDetails(details);
@@ -256,10 +279,22 @@ function BookingPageInner() {
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700">Pick-up Date</label>
                     <Input type="date" value={searchDates.pickup} onChange={(e) => setSearchDates((p) => ({ ...p, pickup: e.target.value }))} min={new Date().toISOString().split("T")[0]} />
+                    <label className="mt-3 mb-1.5 block text-sm font-medium text-gray-700">Pick-up Time</label>
+                    <select value={searchDates.pickupTime} onChange={(e) => setSearchDates((p) => ({ ...p, pickupTime: e.target.value }))} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                      {timeOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.display}</option>
+                      ))}
+                    </select>
                   </div>
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700">Return Date</label>
                     <Input type="date" value={searchDates.return} onChange={(e) => setSearchDates((p) => ({ ...p, return: e.target.value }))} min={searchDates.pickup || new Date().toISOString().split("T")[0]} />
+                    <label className="mt-3 mb-1.5 block text-sm font-medium text-gray-700">Return Time</label>
+                    <select value={searchDates.returnTime} onChange={(e) => setSearchDates((p) => ({ ...p, returnTime: e.target.value }))} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                      {timeOptions.map((opt) => (
+                        <option key={opt.value} value={opt.value}>{opt.display}</option>
+                      ))}
+                    </select>
                   </div>
                 </div>
                 {searchDates.pickup && searchDates.return && (
@@ -553,13 +588,29 @@ function BookingPageInner() {
                         <span className="text-gray-500">Vehicle</span>
                         <span className="font-medium text-gray-900">{booking.selectedVehicle.year} {booking.selectedVehicle.make} {booking.selectedVehicle.model}</span>
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Pick-up</span>
-                        <span className="font-medium text-gray-900">{booking.pickupDate}</span>
+                      <div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500">Pick-up</span>
+                          <span className="font-medium text-gray-900">{booking.pickupDate}</span>
+                        </div>
+                        {booking.pickupTime && (
+                          <div className="flex justify-between">
+                            <span></span>
+                            <span className="text-xl font-bold text-purple-600">{formatTime24To12(booking.pickupTime)}</span>
+                          </div>
+                        )}
                       </div>
-                      <div className="flex justify-between text-sm">
-                        <span className="text-gray-500">Return</span>
-                        <span className="font-medium text-gray-900">{booking.returnDate}</span>
+                      <div>
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-500">Return</span>
+                          <span className="font-medium text-gray-900">{booking.returnDate}</span>
+                        </div>
+                        {booking.returnTime && (
+                          <div className="flex justify-between">
+                            <span></span>
+                            <span className="text-xl font-bold text-purple-600">{formatTime24To12(booking.returnTime)}</span>
+                          </div>
+                        )}
                       </div>
                       {booking.pricing && (
                         <>

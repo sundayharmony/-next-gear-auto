@@ -43,6 +43,8 @@ interface BookingData {
   vehicle_name?: string;
   pickup_date: string;
   return_date: string;
+  pickup_time?: string;
+  return_time?: string;
   total_price: number;
   deposit: number;
   status: string;
@@ -56,6 +58,13 @@ const statusColors: Record<string, string> = {
   completed: "bg-gray-100 text-gray-700 border-gray-200",
   cancelled: "bg-red-100 text-red-700 border-red-200",
   "no-show": "bg-red-100 text-red-700 border-red-200",
+};
+
+const formatTime = (t?: string) => {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
 export default function AccountPage() {
@@ -322,9 +331,14 @@ export default function AccountPage() {
                           </Badge>
                         </div>
                         <div className="grid grid-cols-2 gap-3 text-sm mb-4">
-                          <div className="flex items-center gap-2 text-gray-500">
-                            <Calendar className="h-4 w-4" />
-                            <span>{booking.pickup_date} - {booking.return_date}</span>
+                          <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 text-gray-500">
+                              <Calendar className="h-4 w-4" />
+                              <div>
+                                <div>{booking.pickup_date} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
+                                <div>to {booking.return_date} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>
+                              </div>
+                            </div>
                           </div>
                           <div className="flex items-center gap-2 text-gray-500">
                             <CreditCard className="h-4 w-4" />
@@ -380,8 +394,11 @@ export default function AccountPage() {
                               {booking.status}
                             </Badge>
                           </div>
-                          <div className="flex items-center gap-3 text-sm text-gray-500 mb-3">
-                            <span>{booking.pickup_date} - {booking.return_date}</span>
+                          <div className="flex flex-col gap-2 text-sm mb-3">
+                            <div className="text-gray-500">
+                              <div>{booking.pickup_date} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
+                              <div>to {booking.return_date} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>
+                            </div>
                             <span className="font-medium text-gray-900">${booking.total_price}</span>
                           </div>
                           <div className="flex gap-2">

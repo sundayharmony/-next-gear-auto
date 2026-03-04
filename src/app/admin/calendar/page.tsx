@@ -26,6 +26,8 @@ interface BookingRow {
   vehicle_id: string;
   pickup_date: string;
   return_date: string;
+  pickup_time?: string;
+  return_time?: string;
   total_price: number;
   deposit: number;
   status: string;
@@ -61,6 +63,13 @@ const statusBorderColors: Record<string, string> = {
   active: "border-blue-400",
   completed: "border-gray-400",
   cancelled: "border-red-400",
+};
+
+const formatTime = (t?: string) => {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
 export default function AdminCalendarPage() {
@@ -474,7 +483,7 @@ function TimelineView({
                                 style={{
                                   width: `calc(${span * 100}% - 4px)`,
                                 }}
-                                title={`${booking.customer_name}\n${booking.pickup_date} → ${booking.return_date}\n$${booking.total_price.toFixed(2)} • ${booking.status}`}
+                                title={`${booking.customer_name}\n${booking.pickup_date} at ${formatTime(booking.pickup_time)} → ${booking.return_date} at ${formatTime(booking.return_time)}\n$${booking.total_price.toFixed(2)} • ${booking.status}`}
                               >
                                 <span className="text-xs font-bold text-gray-800 truncate">
                                   {booking.customer_name}
@@ -730,13 +739,13 @@ function CalendarView({
                     <div>
                       <span className="text-gray-600">Pickup:</span>
                       <div className="font-medium text-gray-900">
-                        {new Date(booking.pickup_date).toLocaleDateString()}
+                        {new Date(booking.pickup_date).toLocaleDateString()} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
                       </div>
                     </div>
                     <div>
                       <span className="text-gray-600">Return:</span>
                       <div className="font-medium text-gray-900">
-                        {new Date(booking.return_date).toLocaleDateString()}
+                        {new Date(booking.return_date).toLocaleDateString()} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.return_time)}</span>
                       </div>
                     </div>
                   </div>

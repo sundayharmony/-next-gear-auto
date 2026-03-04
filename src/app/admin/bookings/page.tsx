@@ -19,6 +19,8 @@ interface BookingRow {
   vehicle_id: string;
   pickup_date: string;
   return_date: string;
+  pickup_time?: string;
+  return_time?: string;
   total_price: number;
   deposit: number;
   status: string;
@@ -49,6 +51,13 @@ const statusColors: Record<string, string> = {
   "no-show": "bg-orange-100 text-orange-700",
 };
 
+const formatTime = (t?: string) => {
+  if (!t) return "";
+  const [h, m] = t.split(":").map(Number);
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+};
+
 const emptyNewBooking = {
   customerName: "",
   customerEmail: "",
@@ -56,6 +65,8 @@ const emptyNewBooking = {
   vehicleId: "",
   pickupDate: "",
   returnDate: "",
+  pickupTime: "10:00",
+  returnTime: "10:00",
   totalPrice: 0,
   status: "confirmed" as string,
 };
@@ -181,6 +192,8 @@ export default function AdminBookingsPage() {
           },
           pickupDate: newBooking.pickupDate,
           returnDate: newBooking.returnDate,
+          pickupTime: newBooking.pickupTime,
+          returnTime: newBooking.returnTime,
           totalPrice: newBooking.totalPrice,
         }),
       });
@@ -364,7 +377,7 @@ export default function AdminBookingsPage() {
                   </select>
                 </div>
 
-                {/* Dates */}
+                {/* Dates and Times */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Date *</label>
                   <Input
@@ -374,12 +387,50 @@ export default function AdminBookingsPage() {
                   />
                 </div>
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Pickup Time *</label>
+                  <select
+                    value={newBooking.pickupTime}
+                    onChange={(e) => setNewBooking((prev) => ({ ...prev, pickupTime: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    {Array.from({ length: 41 }, (_, i) => {
+                      const hour = 8 + Math.floor(i / 2);
+                      const minute = i % 2 === 0 ? 0 : 30;
+                      const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+                      return (
+                        <option key={time} value={time}>
+                          {formatTime(time)}
+                        </option>
+                      );
+                    })}
+                  </select>
+                </div>
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Return Date *</label>
                   <Input
                     type="date"
                     value={newBooking.returnDate}
                     onChange={(e) => setNewBooking((prev) => ({ ...prev, returnDate: e.target.value }))}
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Return Time *</label>
+                  <select
+                    value={newBooking.returnTime}
+                    onChange={(e) => setNewBooking((prev) => ({ ...prev, returnTime: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    {Array.from({ length: 41 }, (_, i) => {
+                      const hour = 8 + Math.floor(i / 2);
+                      const minute = i % 2 === 0 ? 0 : 30;
+                      const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+                      return (
+                        <option key={time} value={time}>
+                          {formatTime(time)}
+                        </option>
+                      );
+                    })}
+                  </select>
                 </div>
 
                 {/* Price + Status */}
@@ -470,8 +521,11 @@ export default function AdminBookingsPage() {
                         <div className="text-xs text-gray-400">{b.customer_email}</div>
                       </td>
                       <td className="px-4 py-3 text-gray-600">{b.vehicleName}</td>
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {b.pickup_date}<br />→ {b.return_date}
+                      <td className="px-4 py-3">
+                        <div className="text-xs text-gray-500">{b.pickup_date}</div>
+                        <div className="text-lg font-bold text-purple-600">{formatTime(b.pickup_time)}</div>
+                        <div className="text-xs text-gray-500 mt-1">→ {b.return_date}</div>
+                        <div className="text-lg font-bold text-purple-600">{formatTime(b.return_time)}</div>
                       </td>
                       <td className="px-4 py-3 font-medium">${b.total_price?.toFixed(2)}</td>
                       <td className="px-4 py-3 text-green-600">${b.deposit?.toFixed(2)}</td>
@@ -611,15 +665,19 @@ export default function AdminBookingsPage() {
                 <p className="font-medium">{selectedBooking.vehicleName || selectedBooking.vehicle_id}</p>
               </div>
 
-              {/* Dates */}
+              {/* Dates and Times */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <p className="text-xs text-gray-500">Pickup</p>
+                  <p className="text-xs text-gray-500">Pickup Date</p>
                   <p className="font-medium">{selectedBooking.pickup_date}</p>
+                  <p className="text-xs text-gray-500 mt-1">Time</p>
+                  <p className="text-xl font-bold text-purple-600">{formatTime(selectedBooking.pickup_time)}</p>
                 </div>
                 <div>
-                  <p className="text-xs text-gray-500">Return</p>
+                  <p className="text-xs text-gray-500">Return Date</p>
                   <p className="font-medium">{selectedBooking.return_date}</p>
+                  <p className="text-xs text-gray-500 mt-1">Time</p>
+                  <p className="text-xl font-bold text-purple-600">{formatTime(selectedBooking.return_time)}</p>
                 </div>
               </div>
 
