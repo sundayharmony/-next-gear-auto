@@ -67,16 +67,5 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 0.8,
   }));
 
-  const blogPages: MetadataRoute.Sitemap = [
-    { slug: "top-road-trip-destinations", published: "2026-02-01" },
-    { slug: "choose-right-rental-car", published: "2026-02-10" },
-    { slug: "rental-car-insurance-guide", published: "2026-02-20" },
-  ].map((p) => ({
-    url: `${baseUrl}/blog/${p.slug}`,
-    lastModified: new Date(p.published),
-    changeFrequency: "monthly" as const,
-    priority: 0.6,
-  }));
-
-  return [...staticPages, ...vehiclePages, ...blogPages];
+  return [...staticPages, ...vehiclePages];
 }

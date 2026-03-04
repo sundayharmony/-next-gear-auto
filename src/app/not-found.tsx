@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Car, Search, BookOpen, MapPin, ArrowLeft } from "lucide-react";
+import { Car, Search, Instagram, MapPin, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SITE_NAME } from "@/lib/constants";
 
@@ -44,8 +44,8 @@ export default function NotFound() {
             href="/blog"
             className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 p-4 transition-all hover:border-purple-300 hover:bg-purple-50"
           >
-            <BookOpen className="h-6 w-6 text-purple-600" />
-            <span className="text-sm font-medium text-gray-700">Read Blog</span>
+            <Instagram className="h-6 w-6 text-purple-600" />
+            <span className="text-sm font-medium text-gray-700">Follow Us</span>
           </Link>
         </div>
 

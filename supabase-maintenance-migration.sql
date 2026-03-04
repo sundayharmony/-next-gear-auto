@@ -39,3 +39,38 @@ $$;
 -- Add pickup and return time columns to bookings
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS pickup_time TEXT DEFAULT NULL;
 ALTER TABLE bookings ADD COLUMN IF NOT EXISTS return_time TEXT DEFAULT NULL;
+
+-- 5. Create instagram_posts table for the social feed
+CREATE TABLE IF NOT EXISTS instagram_posts (
+  id TEXT PRIMARY KEY,
+  url TEXT NOT NULL,
+  caption TEXT,
+  sort_order INTEGER DEFAULT 0,
+  is_visible BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- Enable RLS on instagram_posts
+ALTER TABLE instagram_posts ENABLE ROW LEVEL SECURITY;
+
+-- Allow public read access to visible posts
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'instagram_posts' AND policyname = 'Public read visible posts'
+  ) THEN
+    CREATE POLICY "Public read visible posts" ON instagram_posts FOR SELECT USING (is_visible = true);
+  END IF;
+END
+$$;
+
+-- Allow service role full access
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies WHERE tablename = 'instagram_posts' AND policyname = 'Service role full access instagram'
+  ) THEN
+    CREATE POLICY "Service role full access instagram" ON instagram_posts FOR ALL USING (true);
+  END IF;
+END
+$$;
