@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import vehiclesJson from "@/data/vehicles.json";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -40,15 +39,10 @@ export async function GET(request: Request) {
       }));
       return NextResponse.json({ data: vehicles, success: true });
     }
-  } catch {
-    // Fall through to JSON
+  } catch (error) {
+    console.error("Vehicles API error:", error);
   }
 
-  // Fallback to static JSON
-  let filtered = vehiclesJson;
-  if (category && category !== "all") {
-    filtered = vehiclesJson.filter((v) => v.category === category);
-  }
-
-  return NextResponse.json({ data: filtered, success: true });
+  // Return empty array if no vehicles found or error
+  return NextResponse.json({ data: [], success: true });
 }

@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
-import vehiclesJson from "@/data/vehicles.json";
 
-// GET: List all vehicles (Supabase with JSON fallback)
+// GET: List all vehicles from Supabase
 export async function GET(req: NextRequest) {
   const auth = await verifyAdmin(req);
   if (!auth.authorized) return auth.response;
@@ -33,13 +32,14 @@ export async function GET(req: NextRequest) {
         vin: v.vin || "",
         maintenanceStatus: v.maintenance_status || "good",
       }));
-      return NextResponse.json({ success: true, data: vehicles, source: "supabase" });
+      return NextResponse.json({ success: true, data: vehicles });
     }
-  } catch {
-    // Fall through to JSON
+  } catch (error) {
+    console.error("Admin vehicles GET error:", error);
   }
 
-  return NextResponse.json({ success: true, data: vehiclesJson, source: "json" });
+  // Return empty array if no vehicles found or error
+  return NextResponse.json({ success: true, data: [] });
 }
 
 // POST: Add a new vehicle

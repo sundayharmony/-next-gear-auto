@@ -13,7 +13,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { generateProductSchema } from "@/lib/utils/schema-generators";
 import { SITE_URL } from "@/lib/constants";
-import vehicles from "@/data/vehicles.json";
+import { getServiceSupabase } from "@/lib/db/supabase";
 import extras from "@/data/extras.json";
 import reviews from "@/data/reviews.json";
 
@@ -21,13 +21,68 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
-export function generateStaticParams() {
-  return vehicles.map((v) => ({ id: v.id }));
+interface Vehicle {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+  category: string;
+  images: string[];
+  specs: Record<string, any>;
+  daily_rate: number;
+  features: string[];
+  is_available: boolean;
+  description: string;
+  color: string;
+  mileage: number;
+  license_plate: string;
+  vin: string;
+  maintenance_status: string;
 }
+
+// Helper function to fetch a vehicle by ID from Supabase
+async function getVehicleById(id: string): Promise<Vehicle | null> {
+  const supabase = getServiceSupabase();
+  try {
+    const { data, error } = await supabase
+      .from("vehicles")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (error || !data) return null;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
+// Fetch all vehicle IDs for static generation
+async function getAllVehicleIds(): Promise<string[]> {
+  const supabase = getServiceSupabase();
+  try {
+    const { data, error } = await supabase
+      .from("vehicles")
+      .select("id");
+
+    if (error || !data) return [];
+    return data.map((v) => v.id);
+  } catch {
+    return [];
+  }
+}
+
+export async function generateStaticParams() {
+  const ids = await getAllVehicleIds();
+  return ids.map((id) => ({ id }));
+}
+
+export const dynamicParams = true;
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { id } = await params;
-  const vehicle = vehicles.find((v) => v.id === id);
+  const vehicle = await getVehicleById(id);
   if (!vehicle) return {};
 
   const vehicleReviews = reviews.filter((r) => r.vehicleId === vehicle.id);
@@ -36,14 +91,15 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     : null;
 
   const displayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+  const specs = vehicle.specs as Record<string, any>;
   return {
-    title: `${displayName} Rental - $${vehicle.dailyRate}/day`,
-    description: `Rent a ${displayName} in Jersey City, NJ. ${vehicle.specs.passengers} passengers, ${vehicle.specs.luggage} bags, ${vehicle.specs.mpg} MPG. Starting at $${vehicle.dailyRate}/day.${avgRating ? ` Rated ${avgRating}/5.` : ""}`,
+    title: `${displayName} Rental - $${vehicle.daily_rate}/day`,
+    description: `Rent a ${displayName} in Jersey City, NJ. ${specs.passengers} passengers, ${specs.luggage} bags, ${specs.mpg} MPG. Starting at $${vehicle.daily_rate}/day.${avgRating ? ` Rated ${avgRating}/5.` : ""}`,
     alternates: {
       canonical: `${SITE_URL}/fleet/${vehicle.id}`,
     },
     openGraph: {
-      title: `${displayName} Rental - $${vehicle.dailyRate}/day | NextGearAuto`,
+      title: `${displayName} Rental - $${vehicle.daily_rate}/day | NextGearAuto`,
       description: `Rent a ${displayName} in Jersey City. ${vehicle.description}`,
       url: `${SITE_URL}/fleet/${vehicle.id}`,
       type: "website",
@@ -53,7 +109,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function VehicleDetailPage({ params }: PageProps) {
   const { id } = await params;
-  const vehicle = vehicles.find((v) => v.id === id);
+  const vehicle = await getVehicleById(id);
 
   if (!vehicle) {
     notFound();
@@ -64,18 +120,29 @@ export default async function VehicleDetailPage({ params }: PageProps) {
     ? (vehicleReviews.reduce((sum, r) => sum + r.rating, 0) / vehicleReviews.length).toFixed(1)
     : null;
 
-  // Similar vehicles: same category, excluding current
-  const similarVehicles = vehicles
-    .filter((v) => v.category === vehicle.category && v.id !== vehicle.id)
-    .slice(0, 3);
+  // Fetch similar vehicles: same category, excluding current
+  const supabase = getServiceSupabase();
+  let similarVehicles: Vehicle[] = [];
+  try {
+    const { data } = await supabase
+      .from("vehicles")
+      .select("*")
+      .eq("category", vehicle.category)
+      .neq("id", vehicle.id)
+      .limit(3);
+    similarVehicles = data || [];
+  } catch {
+    // If error, similar vehicles will be empty
+  }
 
-  const specs = [
-    { icon: Users, label: "Passengers", value: `${vehicle.specs.passengers} seats` },
-    { icon: Briefcase, label: "Luggage", value: `${vehicle.specs.luggage} bags` },
-    { icon: Settings, label: "Transmission", value: vehicle.specs.transmission },
-    { icon: Fuel, label: "Fuel Type", value: vehicle.specs.fuelType },
-    { icon: Gauge, label: "Fuel Economy", value: `${vehicle.specs.mpg} MPG` },
-    { icon: DoorOpen, label: "Doors", value: `${vehicle.specs.doors} doors` },
+  const specs = vehicle.specs as Record<string, any>;
+  const specRows = [
+    { icon: Users, label: "Passengers", value: `${specs.passengers} seats` },
+    { icon: Briefcase, label: "Luggage", value: `${specs.luggage} bags` },
+    { icon: Settings, label: "Transmission", value: specs.transmission },
+    { icon: Fuel, label: "Fuel Type", value: specs.fuelType },
+    { icon: Gauge, label: "Fuel Economy", value: `${specs.mpg} MPG` },
+    { icon: DoorOpen, label: "Doors", value: `${specs.doors} doors` },
   ];
 
   const vehicleDisplayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
@@ -86,8 +153,8 @@ export default async function VehicleDetailPage({ params }: PageProps) {
     model: vehicle.model,
     description: vehicle.description,
     category: vehicle.category,
-    dailyRate: vehicle.dailyRate,
-    isAvailable: vehicle.isAvailable,
+    dailyRate: vehicle.daily_rate,
+    isAvailable: vehicle.is_available,
     avgRating,
     reviewCount: vehicleReviews.length,
   });
@@ -124,7 +191,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
               )}
             </div>
             <div className="text-right hidden sm:block">
-              <div className="text-3xl font-bold">${vehicle.dailyRate}</div>
+              <div className="text-3xl font-bold">${vehicle.daily_rate}</div>
               <div className="text-purple-200 text-sm">per day</div>
             </div>
           </div>
@@ -163,7 +230,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Specifications</h2>
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-                  {specs.map((spec) => (
+                  {specRows.map((spec) => (
                     <div key={spec.label} className="flex items-center gap-3 rounded-lg bg-gray-50 p-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100">
                         <spec.icon className="h-5 w-5 text-purple-600" />
@@ -227,7 +294,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                 <div className="space-y-3">
                   <div className="flex items-center justify-between rounded-lg bg-purple-50 p-3">
                     <span className="text-sm text-gray-600">Daily Rate</span>
-                    <span className="text-lg font-bold text-purple-600">${vehicle.dailyRate}</span>
+                    <span className="text-lg font-bold text-purple-600">${vehicle.daily_rate}</span>
                   </div>
                 </div>
 
@@ -285,11 +352,11 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                     <CardContent className="p-5">
                       <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{sv.year} {sv.make} {sv.model}</h3>
                       <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {sv.specs.passengers}</span>
-                        <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {sv.specs.mpg} mpg</span>
+                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {(sv.specs as Record<string, any>).passengers}</span>
+                        <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {(sv.specs as Record<string, any>).mpg} mpg</span>
                       </div>
                       <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                        <span className="text-xl font-bold text-purple-600">${sv.dailyRate}<span className="text-sm text-gray-400 font-normal">/day</span></span>
+                        <span className="text-xl font-bold text-purple-600">${sv.daily_rate}<span className="text-sm text-gray-400 font-normal">/day</span></span>
                         <Button size="sm" variant="outline">View</Button>
                       </div>
                     </CardContent>

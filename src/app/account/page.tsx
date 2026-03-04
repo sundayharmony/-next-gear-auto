@@ -15,7 +15,25 @@ import { PageContainer } from "@/components/layout/page-container";
 import { ReviewForm } from "@/components/review-form";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/context/auth-context";
-import vehicles from "@/data/vehicles.json";
+
+interface Vehicle {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+  category: string;
+  images: string[];
+  specs: Record<string, any>;
+  dailyRate: number;
+  features: string[];
+  isAvailable: boolean;
+  description: string;
+  color: string;
+  mileage: number;
+  licensePlate: string;
+  vin: string;
+  maintenanceStatus: string;
+}
 
 type Tab = "upcoming" | "past" | "profile" | "payment";
 
@@ -46,11 +64,29 @@ export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<Tab>("upcoming");
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [reviewTarget, setReviewTarget] = useState<{ vehicleId: string; vehicleName: string; bookingId: string } | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState({ name: "", phone: "", dob: "" });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState("");
+
+  // Fetch vehicles for vehicle name lookup
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const response = await fetch("/api/vehicles");
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          setVehicles(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch vehicles:", error);
+      }
+    };
+
+    fetchVehicles();
+  }, []);
 
   const fetchBookings = useCallback(async () => {
     if (!user?.email) return;
@@ -105,7 +141,7 @@ export default function AccountPage() {
   const getVehicleName = (vehicleId: string, vehicleName?: string) => {
     if (vehicleName) return vehicleName;
     const found = vehicles.find((veh) => veh.id === vehicleId);
-    return found ? `${found.year} ${found.make} ${found.model}` : "Vehicle";
+    return found ? `${found.year} ${found.make} ${found.model}` : `Vehicle ${vehicleId}`;
   };
 
   const tabs = [

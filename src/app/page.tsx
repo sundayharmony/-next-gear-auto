@@ -5,11 +5,46 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { HomeReviews } from "@/components/home/home-reviews";
-import vehicles from "@/data/vehicles.json";
+import { getServiceSupabase } from "@/lib/db/supabase";
 import { generateLocalBusinessSchema } from "@/lib/utils/schema-generators";
 
-export default function HomePage() {
-  const featuredVehicles = vehicles.slice(0, 4);
+interface Vehicle {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+  category: string;
+  images: string[];
+  specs: Record<string, any>;
+  daily_rate: number;
+  features: string[];
+  is_available: boolean;
+  description: string;
+  color: string;
+  mileage: number;
+  license_plate: string;
+  vin: string;
+  maintenance_status: string;
+}
+
+export default async function HomePage() {
+  // Fetch featured vehicles from Supabase
+  const supabase = getServiceSupabase();
+  let featuredVehicles: Vehicle[] = [];
+
+  try {
+    const { data } = await supabase
+      .from("vehicles")
+      .select("*")
+      .order("created_at", { ascending: true })
+      .limit(4);
+
+    if (data) {
+      featuredVehicles = data;
+    }
+  } catch (error) {
+    console.error("Failed to fetch featured vehicles:", error);
+  }
 
   return (
     <>
@@ -76,41 +111,51 @@ export default function HomePage() {
           <p className="mt-2 text-gray-500">Choose from our well-maintained selection of vehicles</p>
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredVehicles.map((vehicle) => (
-            <Link key={vehicle.id} href={`/fleet/${vehicle.id}`}>
-              <Card className="group h-full card-hover">
-                <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100">
-                  <div className="flex h-full items-center justify-center">
-                    <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
-                  </div>
-                  <Badge className="absolute top-3 left-3" variant="default">
-                    {vehicle.category}
-                  </Badge>
-                </div>
-                <CardContent className="p-4">
-                  <h3 className="font-semibold text-gray-900">{vehicle.year} {vehicle.make} {vehicle.model}</h3>
-                  <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-                    <span className="flex items-center gap-1">
-                      <Users className="h-3 w-3" /> {vehicle.specs.passengers}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Luggage className="h-3 w-3" /> {vehicle.specs.luggage}
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Fuel className="h-3 w-3" /> {vehicle.specs.mpg} mpg
-                    </span>
-                  </div>
-                  <div className="mt-3 flex items-center justify-between">
-                    <div>
-                      <span className="text-lg font-bold text-purple-600">${vehicle.dailyRate}</span>
-                      <span className="text-sm text-gray-400">/day</span>
+          {featuredVehicles.length > 0 ? (
+            featuredVehicles.map((vehicle) => {
+              const specs = vehicle.specs as Record<string, any>;
+              return (
+                <Link key={vehicle.id} href={`/fleet/${vehicle.id}`}>
+                  <Card className="group h-full card-hover">
+                    <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100">
+                      <div className="flex h-full items-center justify-center">
+                        <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
+                      </div>
+                      <Badge className="absolute top-3 left-3" variant="default">
+                        {vehicle.category}
+                      </Badge>
                     </div>
-                    <Button size="sm" variant="outline">Details</Button>
-                  </div>
-                </CardContent>
-              </Card>
-            </Link>
-          ))}
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold text-gray-900">{vehicle.year} {vehicle.make} {vehicle.model}</h3>
+                      <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                        <span className="flex items-center gap-1">
+                          <Users className="h-3 w-3" /> {specs.passengers}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Luggage className="h-3 w-3" /> {specs.luggage}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Fuel className="h-3 w-3" /> {specs.mpg} mpg
+                        </span>
+                      </div>
+                      <div className="mt-3 flex items-center justify-between">
+                        <div>
+                          <span className="text-lg font-bold text-purple-600">${vehicle.daily_rate}</span>
+                          <span className="text-sm text-gray-400">/day</span>
+                        </div>
+                        <Button size="sm" variant="outline">Details</Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </Link>
+              );
+            })
+          ) : (
+            <div className="col-span-full py-12 text-center">
+              <Car className="mx-auto h-12 w-12 text-gray-300 mb-3" />
+              <p className="text-gray-500">No vehicles available</p>
+            </div>
+          )}
         </div>
         <div className="mt-8 text-center">
           <Link href="/fleet">

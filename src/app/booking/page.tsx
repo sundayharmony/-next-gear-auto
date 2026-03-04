@@ -14,9 +14,27 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { useBooking } from "@/lib/context/booking-context";
 import { cn } from "@/lib/utils/cn";
-import vehicles from "@/data/vehicles.json";
 import extras from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
+
+interface Vehicle {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+  category: string;
+  images: string[];
+  specs: Record<string, any>;
+  dailyRate: number;
+  features: string[];
+  isAvailable: boolean;
+  description: string;
+  color: string;
+  mileage: number;
+  licensePlate: string;
+  vin: string;
+  maintenanceStatus: string;
+}
 
 const STEPS = [
   { num: 1, label: "Search", icon: Search },
@@ -31,14 +49,35 @@ const STEPS = [
 function BookingPageInner() {
   const booking = useBooking();
   const searchParams = useSearchParams();
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [localExtras, setLocalExtras] = useState<BookingExtra[]>(
     extras.map((e) => ({ ...e, selected: false, billingType: e.billingType as BookingExtra["billingType"] }))
   );
 
+  // Fetch vehicles from API
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const response = await fetch("/api/vehicles");
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          setVehicles(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch vehicles:", error);
+      } finally {
+        setVehiclesLoading(false);
+      }
+    };
+
+    fetchVehicles();
+  }, []);
+
   // Pre-select vehicle from URL query param (e.g. /booking?vehicleId=v1)
   const [preSelected, setPreSelected] = useState(false);
   useEffect(() => {
-    if (preSelected) return;
+    if (preSelected || vehiclesLoading) return;
     const vehicleId = searchParams.get("vehicleId");
     if (vehicleId && !booking.selectedVehicle) {
       const vehicle = vehicles.find((v) => v.id === vehicleId);
@@ -47,7 +86,7 @@ function BookingPageInner() {
         setPreSelected(true);
       }
     }
-  }, [searchParams, booking.selectedVehicle, preSelected]);
+  }, [searchParams, booking.selectedVehicle, preSelected, vehicles, vehiclesLoading]);
 
   // Customer details local state
   const [details, setDetails] = useState({

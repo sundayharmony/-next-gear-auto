@@ -1,6 +1,6 @@
 "use client";
 
-import React, { Suspense, useMemo } from "react";
+import React, { Suspense, useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -11,16 +11,65 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
-import vehicles from "@/data/vehicles.json";
+
+interface Vehicle {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+  category: string;
+  images: string[];
+  specs: Record<string, any>;
+  dailyRate: number;
+  features: string[];
+  isAvailable: boolean;
+  description: string;
+  color: string;
+  mileage: number;
+  licensePlate: string;
+  vin: string;
+  maintenanceStatus: string;
+}
 
 function ComparisonContent() {
   const searchParams = useSearchParams();
   const ids = searchParams.get("ids")?.split(",").filter(Boolean) || [];
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // Fetch all vehicles and filter by IDs
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const response = await fetch("/api/vehicles");
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          setVehicles(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch vehicles:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicles();
+  }, []);
 
   const selectedVehicles = useMemo(
-    () => ids.map((id) => vehicles.find((v) => v.id === id)).filter((v): v is typeof vehicles[number] => Boolean(v)),
-    [ids]
+    () => ids.map((id) => vehicles.find((v) => v.id === id)).filter((v): v is Vehicle => Boolean(v)),
+    [ids, vehicles]
   );
+
+  if (loading) {
+    return (
+      <PageContainer className="py-16">
+        <div className="flex items-center justify-center">
+          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" />
+        </div>
+      </PageContainer>
+    );
+  }
 
   if (selectedVehicles.length < 2) {
     return (
@@ -51,22 +100,22 @@ function ComparisonContent() {
   }
 
   const specRows = [
-    { label: "Category", icon: Car, getValue: (v: typeof vehicles[0]) => v.category },
-    { label: "Passengers", icon: Users, getValue: (v: typeof vehicles[0]) => `${v.specs.passengers} seats` },
-    { label: "Luggage", icon: Briefcase, getValue: (v: typeof vehicles[0]) => `${v.specs.luggage} bags` },
-    { label: "Transmission", icon: Settings, getValue: (v: typeof vehicles[0]) => v.specs.transmission },
-    { label: "Fuel Type", icon: Fuel, getValue: (v: typeof vehicles[0]) => v.specs.fuelType },
-    { label: "Fuel Economy", icon: Gauge, getValue: (v: typeof vehicles[0]) => `${v.specs.mpg} MPG` },
-    { label: "Doors", icon: DoorOpen, getValue: (v: typeof vehicles[0]) => `${v.specs.doors}` },
+    { label: "Category", icon: Car, getValue: (v: Vehicle) => v.category },
+    { label: "Passengers", icon: Users, getValue: (v: Vehicle) => `${v.specs.passengers} seats` },
+    { label: "Luggage", icon: Briefcase, getValue: (v: Vehicle) => `${v.specs.luggage} bags` },
+    { label: "Transmission", icon: Settings, getValue: (v: Vehicle) => v.specs.transmission },
+    { label: "Fuel Type", icon: Fuel, getValue: (v: Vehicle) => v.specs.fuelType },
+    { label: "Fuel Economy", icon: Gauge, getValue: (v: Vehicle) => `${v.specs.mpg} MPG` },
+    { label: "Doors", icon: DoorOpen, getValue: (v: Vehicle) => `${v.specs.doors}` },
   ];
 
   const priceRows = [
-    { label: "Daily Rate", getValue: (v: typeof vehicles[0]) => `$${v.dailyRate}` },
+    { label: "Daily Rate", getValue: (v: Vehicle) => `$${v.dailyRate}` },
   ];
 
   // Collect all unique features
   const allFeatures = Array.from(
-    new Set(selectedVehicles.flatMap((v) => v!.features))
+    new Set(selectedVehicles.flatMap((v) => v.features))
   ).sort();
 
   return (
@@ -96,15 +145,15 @@ function ComparisonContent() {
                   Vehicle
                 </th>
                 {selectedVehicles.map((v) => (
-                  <th key={v!.id} className="p-3 text-center">
-                    <Link href={`/fleet/${v!.id}`} className="group">
+                  <th key={v.id} className="p-3 text-center">
+                    <Link href={`/fleet/${v.id}`} className="group">
                       <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center rounded-xl bg-purple-50 group-hover:bg-purple-100 transition-colors">
                         <Car className="h-10 w-10 text-purple-400" />
                       </div>
                       <p className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
-                        {v!.year} {v!.make} {v!.model}
+                        {v.year} {v.make} {v.model}
                       </p>
-                      <Badge className="mt-1">{v!.category}</Badge>
+                      <Badge className="mt-1">{v.category}</Badge>
                     </Link>
                   </th>
                 ))}
@@ -125,15 +174,15 @@ function ComparisonContent() {
                 <tr key={row.label} className="border-b border-gray-100">
                   <td className="p-3 text-sm text-gray-500">{row.label}</td>
                   {selectedVehicles.map((v) => {
-                    const value = row.getValue(v!);
+                    const value = row.getValue(v);
                     const isLowest = selectedVehicles.every(
                       (other) =>
-                        parseFloat(row.getValue(other!).replace("$", "")) >=
+                        parseFloat(row.getValue(other).replace("$", "")) >=
                         parseFloat(value.replace("$", ""))
                     );
                     return (
                       <td
-                        key={v!.id}
+                        key={v.id}
                         className={`p-3 text-center text-sm font-medium ${
                           isLowest ? "text-green-600 font-bold" : "text-gray-900"
                         }`}
@@ -164,8 +213,8 @@ function ComparisonContent() {
                     {row.label}
                   </td>
                   {selectedVehicles.map((v) => (
-                    <td key={v!.id} className="p-3 text-center text-sm text-gray-900">
-                      {row.getValue(v!)}
+                    <td key={v.id} className="p-3 text-center text-sm text-gray-900">
+                      {row.getValue(v)}
                     </td>
                   ))}
                 </tr>
@@ -184,8 +233,8 @@ function ComparisonContent() {
                 <tr key={feature} className="border-b border-gray-100">
                   <td className="p-3 text-sm text-gray-500">{feature}</td>
                   {selectedVehicles.map((v) => (
-                    <td key={v!.id} className="p-3 text-center">
-                      {v!.features.includes(feature) ? (
+                    <td key={v.id} className="p-3 text-center">
+                      {v.features.includes(feature) ? (
                         <Check className="h-5 w-5 text-green-500 mx-auto" />
                       ) : (
                         <X className="h-5 w-5 text-gray-300 mx-auto" />
@@ -201,11 +250,11 @@ function ComparisonContent() {
         {/* Book buttons */}
         <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {selectedVehicles.map((v) => (
-            <Card key={v!.id}>
+            <Card key={v.id}>
               <CardContent className="p-4 text-center">
-                <p className="font-semibold text-gray-900">{v!.year} {v!.make} {v!.model}</p>
+                <p className="font-semibold text-gray-900">{v.year} {v.make} {v.model}</p>
                 <p className="text-2xl font-bold text-purple-600 mt-1">
-                  ${v!.dailyRate}<span className="text-sm text-gray-400">/day</span>
+                  ${v.dailyRate}<span className="text-sm text-gray-400">/day</span>
                 </p>
                 <Link href="/booking" className="block mt-3">
                   <Button className="w-full gap-2" size="sm">

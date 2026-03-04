@@ -10,8 +10,26 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { useComparison } from "@/lib/hooks/use-comparison";
-import vehicles from "@/data/vehicles.json";
 import { VEHICLE_CATEGORIES } from "@/lib/constants";
+
+interface Vehicle {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+  category: string;
+  images: string[];
+  specs: Record<string, any>;
+  dailyRate: number;
+  features: string[];
+  isAvailable: boolean;
+  description: string;
+  color: string;
+  mileage: number;
+  licensePlate: string;
+  vin: string;
+  maintenanceStatus: string;
+}
 
 type SortOption = "price-low" | "price-high" | "name";
 
@@ -20,6 +38,8 @@ function FleetContent() {
   const router = useRouter();
   const categoryParam = searchParams.get("category");
 
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(
     categoryParam && VEHICLE_CATEGORIES.some((c) => c.value === categoryParam)
       ? categoryParam
@@ -28,6 +48,25 @@ function FleetContent() {
   const [sortBy, setSortBy] = useState<SortOption>("price-low");
   const [searchQuery, setSearchQuery] = useState("");
   const comparison = useComparison();
+
+  // Fetch vehicles from API
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      try {
+        const response = await fetch("/api/vehicles");
+        const result = await response.json();
+        if (result.success && Array.isArray(result.data)) {
+          setVehicles(result.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch vehicles:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchVehicles();
+  }, []);
 
   // Sync category when URL param changes
   useEffect(() => {
@@ -85,19 +124,31 @@ function FleetContent() {
       </section>
 
       <PageContainer className="py-8">
-        {/* Filters */}
-        <div className="mb-8 space-y-4">
-          {/* Search */}
-          <div className="relative max-w-md">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
-            <Input
-              type="text"
-              placeholder="Search vehicles..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+        {/* Loading state */}
+        {loading && (
+          <div className="flex items-center justify-center py-16">
+            <div className="flex flex-col items-center gap-4">
+              <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" />
+              <p className="text-gray-500">Loading vehicles...</p>
+            </div>
           </div>
+        )}
+
+        {!loading && (
+          <>
+            {/* Filters */}
+            <div className="mb-8 space-y-4">
+              {/* Search */}
+              <div className="relative max-w-md">
+                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                <Input
+                  type="text"
+                  placeholder="Search vehicles..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
 
           <div className="flex flex-wrap items-center justify-between gap-4">
             {/* Category filters */}
@@ -130,13 +181,13 @@ function FleetContent() {
                 <option value="name">Name: A-Z</option>
               </select>
             </div>
-          </div>
-        </div>
+            </div>
+            </div>
 
-        {/* Results count */}
-        <p className="mb-4 text-sm text-gray-500">
-          Showing {filteredVehicles.length} vehicle{filteredVehicles.length !== 1 ? "s" : ""}
-        </p>
+            {/* Results count */}
+            <p className="mb-4 text-sm text-gray-500">
+              Showing {filteredVehicles.length} vehicle{filteredVehicles.length !== 1 ? "s" : ""}
+            </p>
 
         {/* Vehicle Grid */}
         {filteredVehicles.length === 0 ? (
@@ -216,10 +267,12 @@ function FleetContent() {
             ))}
           </div>
         )}
+            </>
+        )}
       </PageContainer>
 
       {/* Floating Compare Bar */}
-      {comparison.compareCount >= 2 && (
+      {!loading && comparison.compareCount >= 2 && (
         <div className="fixed bottom-0 left-0 right-0 z-50 border-t border-purple-200 bg-white/95 backdrop-blur-sm shadow-lg">
           <div className="mx-auto max-w-7xl px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
