@@ -13,6 +13,8 @@ interface InstaPost {
   id: string;
   url: string;
   caption?: string;
+  thumbnail_url?: string;
+  media_type?: string;
   sort_order: number;
   is_visible: boolean;
   created_at: string;
@@ -213,9 +215,20 @@ export default function AdminInstagramPage() {
           <div className="space-y-3">
             {posts.map((post, index) => (
               <Card key={post.id} className="p-4 flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 text-sm font-bold text-purple-600 shrink-0">
-                  {index + 1}
-                </div>
+                {post.thumbnail_url ? (
+                  <div className="relative h-14 w-14 rounded-lg overflow-hidden shrink-0 bg-gray-100">
+                    <img src={post.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                    {post.media_type === "video" && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/20">
+                        <span className="text-white text-xs font-bold">▶</span>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="flex h-14 w-14 items-center justify-center rounded-lg bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 text-sm font-bold text-purple-600 shrink-0">
+                    {index + 1}
+                  </div>
+                )}
                 <div className="flex-1 min-w-0">
                   <a
                     href={post.url}

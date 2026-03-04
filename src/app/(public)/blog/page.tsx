@@ -1,30 +1,24 @@
 "use client";
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { Instagram, ExternalLink, ArrowRight } from "lucide-react";
+import Image from "next/image";
+import { Instagram, ArrowRight, Play, Heart, MessageCircle, ExternalLink } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 
 interface InstaPost {
   id: string;
   url: string;
   caption?: string;
+  thumbnail_url?: string;
+  media_type?: string;
   created_at: string;
-}
-
-// Declare the global instgrm type
-declare global {
-  interface Window {
-    instgrm?: { Embeds: { process: () => void } };
-  }
 }
 
 export default function SocialPage() {
   const [posts, setPosts] = useState<InstaPost[]>([]);
   const [loading, setLoading] = useState(true);
-  const scriptLoaded = useRef(false);
 
   useEffect(() => {
     async function fetchPosts() {
@@ -41,24 +35,6 @@ export default function SocialPage() {
     }
     fetchPosts();
   }, []);
-
-  // Load Instagram embed script
-  useEffect(() => {
-    if (posts.length === 0) return;
-    if (!scriptLoaded.current) {
-      const script = document.createElement("script");
-      script.src = "https://www.instagram.com/embed.js";
-      script.async = true;
-      script.onload = () => {
-        scriptLoaded.current = true;
-        window.instgrm?.Embeds.process();
-      };
-      document.body.appendChild(script);
-    } else {
-      // Re-process embeds when posts change
-      setTimeout(() => window.instgrm?.Embeds.process(), 100);
-    }
-  }, [posts]);
 
   const INSTAGRAM_HANDLE = "drivenextgearauto";
 
@@ -89,53 +65,67 @@ export default function SocialPage() {
 
       <PageContainer className="py-12">
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {[1, 2, 3].map((i) => (
-              <Card key={i} className="animate-pulse">
-                <div className="aspect-square bg-gray-200 rounded-t-xl" />
-                <div className="p-4 space-y-2">
-                  <div className="h-3 bg-gray-200 rounded w-3/4" />
-                  <div className="h-3 bg-gray-200 rounded w-1/2" />
-                </div>
-              </Card>
+          /* Loading skeleton grid */
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <div key={i} className="aspect-square rounded-xl bg-gray-100 animate-pulse" />
             ))}
           </div>
         ) : posts.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
             {posts.map((post) => (
-              <div key={post.id} className="instagram-embed-wrapper">
-                <blockquote
-                  className="instagram-media"
-                  data-instgrm-captioned
-                  data-instgrm-permalink={post.url.includes("?") ? post.url : `${post.url}?utm_source=ig_embed`}
-                  data-instgrm-version="14"
-                  style={{
-                    background: "#FFF",
-                    border: 0,
-                    borderRadius: "12px",
-                    boxShadow: "0 0 1px 0 rgba(0,0,0,0.5), 0 1px 10px 0 rgba(0,0,0,0.15)",
-                    margin: "0 auto",
-                    maxWidth: "540px",
-                    minWidth: "280px",
-                    padding: 0,
-                    width: "100%",
-                  }}
-                >
-                  <div style={{ padding: "16px" }}>
-                    <a
-                      href={post.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-sm text-purple-600 hover:text-purple-800"
-                    >
-                      View on Instagram
-                    </a>
+              <a
+                key={post.id}
+                href={post.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group relative aspect-square overflow-hidden rounded-xl bg-gray-100 block"
+              >
+                {/* Thumbnail image */}
+                {post.thumbnail_url ? (
+                  <Image
+                    src={post.thumbnail_url}
+                    alt={post.caption || "Instagram post"}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                    unoptimized
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-purple-100 to-pink-100">
+                    <Instagram className="h-12 w-12 text-purple-300" />
                   </div>
-                </blockquote>
-              </div>
+                )}
+
+                {/* Reel/Video play icon */}
+                {post.media_type === "video" && (
+                  <div className="absolute top-3 right-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm">
+                    <Play className="h-4 w-4 fill-white" />
+                  </div>
+                )}
+
+                {/* Hover overlay */}
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/0 transition-colors duration-200 group-hover:bg-black/40">
+                  <div className="flex items-center gap-4 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                    <div className="flex items-center gap-1.5 text-white">
+                      <Heart className="h-5 w-5 fill-white" />
+                    </div>
+                    <div className="flex items-center gap-1.5 text-white">
+                      <MessageCircle className="h-5 w-5 fill-white" />
+                    </div>
+                  </div>
+                  {/* Caption preview on hover */}
+                  {post.caption && (
+                    <p className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent px-3 py-3 text-xs text-white opacity-0 transition-opacity duration-200 group-hover:opacity-100 line-clamp-2">
+                      {post.caption}
+                    </p>
+                  )}
+                </div>
+              </a>
             ))}
           </div>
         ) : (
+          /* Empty state */
           <div className="text-center py-16">
             <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full bg-gradient-to-r from-pink-100 via-purple-100 to-indigo-100 mb-6">
               <Instagram className="h-10 w-10 text-purple-500" />

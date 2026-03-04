@@ -45,10 +45,16 @@ CREATE TABLE IF NOT EXISTS instagram_posts (
   id TEXT PRIMARY KEY,
   url TEXT NOT NULL,
   caption TEXT,
+  thumbnail_url TEXT,
+  media_type TEXT DEFAULT 'image',
   sort_order INTEGER DEFAULT 0,
   is_visible BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Add thumbnail columns if table already exists
+ALTER TABLE instagram_posts ADD COLUMN IF NOT EXISTS thumbnail_url TEXT;
+ALTER TABLE instagram_posts ADD COLUMN IF NOT EXISTS media_type TEXT DEFAULT 'image';
 
 -- Enable RLS on instagram_posts
 ALTER TABLE instagram_posts ENABLE ROW LEVEL SECURITY;

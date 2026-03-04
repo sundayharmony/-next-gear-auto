@@ -189,7 +189,13 @@ export default function AccountPage() {
     setProfileSaving(false);
   }, [user, profileForm, updateProfile]);
 
-  // ---- EARLY RETURN (all hooks are above) ----
+  // ---- EARLY RETURNS (all hooks are above) ----
+  // Redirect admins to the admin dashboard — they don't need a customer account page
+  if (isAuthenticated && user?.role === "admin") {
+    router.push("/admin");
+    return null;
+  }
+
   if (!isAuthenticated || !user) {
     return (
       <PageContainer className="py-20">
