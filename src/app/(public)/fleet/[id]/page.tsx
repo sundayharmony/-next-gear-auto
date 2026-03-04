@@ -15,7 +15,7 @@ import { generateProductSchema } from "@/lib/utils/schema-generators";
 import { SITE_URL } from "@/lib/constants";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import extras from "@/data/extras.json";
-import reviews from "@/data/reviews.json";
+const reviews: Array<{ id: string; customerId: string; customerName: string; vehicleId: string; rating: number; text: string; createdAt: string; isVerified: boolean }> = [];
 import { VehicleImageGallery } from "@/components/vehicle-image-gallery";
 
 interface PageProps {
