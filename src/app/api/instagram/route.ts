@@ -2,22 +2,57 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 
-// Fetch thumbnail and metadata from Instagram's oEmbed API
-async function fetchOEmbed(postUrl: string) {
+// Fetch thumbnail from Instagram post by scraping og:image meta tag
+async function fetchThumbnail(postUrl: string): Promise<{
+  thumbnail_url: string | null;
+  title: string | null;
+  media_type: string;
+}> {
+  const media_type = postUrl.includes("/reel") ? "video" : "image";
   try {
-    const oembedUrl = `https://api.instagram.com/oembed?url=${encodeURIComponent(postUrl)}&maxwidth=640&omitscript=true`;
-    const res = await fetch(oembedUrl, { next: { revalidate: 0 } });
-    if (!res.ok) return null;
-    const data = await res.json();
-    return {
-      thumbnail_url: data.thumbnail_url || null,
-      title: data.title || null,
-      author_name: data.author_name || null,
-      media_type: postUrl.includes("/reel") ? "video" : "image",
-    };
+    // Clean URL — remove query params and ensure trailing slash
+    let cleanUrl = postUrl.split("?")[0];
+    if (!cleanUrl.endsWith("/")) cleanUrl += "/";
+
+    const res = await fetch(cleanUrl, {
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+        Accept: "text/html",
+      },
+      redirect: "follow",
+    });
+
+    if (!res.ok) return { thumbnail_url: null, title: null, media_type };
+
+    const html = await res.text();
+
+    // Extract og:image
+    const ogImageMatch = html.match(
+      /property="og:image"\s+content="([^"]+)"/
+    );
+    let thumbnail_url: string | null = null;
+    if (ogImageMatch?.[1]) {
+      // Decode HTML entities (&amp; -> &)
+      thumbnail_url = ogImageMatch[1]
+        .replace(/&amp;/g, "&")
+        .replace(/&lt;/g, "<")
+        .replace(/&gt;/g, ">")
+        .replace(/&quot;/g, '"');
+    }
+
+    // Extract og:title or description for caption
+    const ogTitleMatch = html.match(
+      /property="og:title"\s+content="([^"]+)"/
+    );
+    const title = ogTitleMatch?.[1]
+      ? ogTitleMatch[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"')
+      : null;
+
+    return { thumbnail_url, title, media_type };
   } catch (err) {
-    console.error("oEmbed fetch failed:", err);
-    return null;
+    console.error("Instagram thumbnail fetch failed:", err);
+    return { thumbnail_url: null, title: null, media_type };
   }
 }
 
@@ -59,8 +94,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Fetch thumbnail from Instagram oEmbed
-    const oembed = await fetchOEmbed(url.trim());
+    // Fetch thumbnail from Instagram page OG tags
+    const meta = await fetchThumbnail(url.trim());
 
     // Get current max sort_order
     const { data: existing } = await supabase
@@ -75,9 +110,9 @@ export async function POST(req: NextRequest) {
     const { error } = await supabase.from("instagram_posts").insert({
       id,
       url: url.trim(),
-      caption: caption?.trim() || oembed?.title || null,
-      thumbnail_url: oembed?.thumbnail_url || null,
-      media_type: oembed?.media_type || "image",
+      caption: caption?.trim() || meta.title || null,
+      thumbnail_url: meta.thumbnail_url,
+      media_type: meta.media_type,
       sort_order: nextOrder,
       is_visible: true,
     });
@@ -92,7 +127,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      data: { id, thumbnail_url: oembed?.thumbnail_url },
+      data: { id, thumbnail_url: meta.thumbnail_url },
     }, { status: 201 });
   } catch {
     return NextResponse.json(
@@ -133,18 +168,21 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Re-fetch oEmbed data
-    const oembed = await fetchOEmbed(post.url);
-    if (oembed?.thumbnail_url) {
+    // Re-fetch thumbnail
+    const meta = await fetchThumbnail(post.url);
+    if (meta.thumbnail_url) {
       await supabase
         .from("instagram_posts")
-        .update({ thumbnail_url: oembed.thumbnail_url })
+        .update({
+          thumbnail_url: meta.thumbnail_url,
+          media_type: meta.media_type,
+        })
         .eq("id", id);
     }
 
     return NextResponse.json({
       success: true,
-      data: { thumbnail_url: oembed?.thumbnail_url },
+      data: { thumbnail_url: meta.thumbnail_url },
     });
   } catch {
     return NextResponse.json(

@@ -66,18 +66,19 @@ export function Header() {
             </Link>
             {isAuthenticated && user ? (
               <div className="hidden sm:flex items-center gap-2">
-                {user.role === "admin" && (
+                {user.role === "admin" ? (
                   <Link href="/admin">
                     <Button variant="outline" size="sm">
                       <Shield className="h-3.5 w-3.5 mr-1" /> Admin
                     </Button>
                   </Link>
+                ) : (
+                  <Link href="/account">
+                    <Button variant="outline" size="sm">
+                      <User className="h-3.5 w-3.5 mr-1" /> {user.name.split(" ")[0]}
+                    </Button>
+                  </Link>
                 )}
-                <Link href="/account">
-                  <Button variant="outline" size="sm">
-                    <User className="h-3.5 w-3.5 mr-1" /> {user.name.split(" ")[0]}
-                  </Button>
-                </Link>
                 <Button variant="outline" size="sm" onClick={() => { logout(); router.push("/"); }}>
                   <LogOut className="h-3.5 w-3.5" />
                 </Button>
@@ -123,14 +124,17 @@ export function Header() {
               </Link>
               {isAuthenticated && user ? (
                 <>
-                  <Link href="/account" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
-                    <Button variant="outline" className="w-full" size="sm">
-                      <User className="h-3.5 w-3.5 mr-1" /> Account
-                    </Button>
-                  </Link>
-                  {user.role === "admin" && (
+                  {user.role === "admin" ? (
                     <Link href="/admin" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full" size="sm">Admin</Button>
+                      <Button variant="outline" className="w-full" size="sm">
+                        <Shield className="h-3.5 w-3.5 mr-1" /> Admin
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link href="/account" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
+                      <Button variant="outline" className="w-full" size="sm">
+                        <User className="h-3.5 w-3.5 mr-1" /> Account
+                      </Button>
                     </Link>
                   )}
                 </>
