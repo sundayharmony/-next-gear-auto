@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw, Filter, Plus, X, Check } from "lucide-react";
+import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,6 +22,12 @@ interface BookingRow {
   deposit: number;
   status: string;
   created_at: string;
+  id_document_url?: string;
+  insurance_proof_url?: string;
+  insurance_opted_out?: boolean;
+  signed_name?: string;
+  agreement_signed_at?: string;
+  extras?: any[];
 }
 
 interface Vehicle {
@@ -63,6 +69,9 @@ export default function AdminBookingsPage() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newBooking, setNewBooking] = useState(emptyNewBooking);
   const [creating, setCreating] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
+  const [showDetail, setShowDetail] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
 
   // Auto-clear error after 5 seconds
   useEffect(() => {
@@ -195,6 +204,49 @@ export default function AdminBookingsPage() {
       setError("Network error — could not create booking");
     }
     setCreating(false);
+  };
+
+  const handleDocumentUpload = async (docType: "id_document" | "insurance_proof", file: File) => {
+    if (!selectedBooking) return;
+
+    setUploadingDoc(docType);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("bookingId", selectedBooking.id);
+      formData.append("type", docType);
+
+      const res = await fetch("/api/bookings/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Update selected booking with new URL
+        const columnName = docType === "id_document" ? "id_document_url" : "insurance_proof_url";
+        setSelectedBooking((prev) =>
+          prev ? { ...prev, [columnName]: data.url } : null
+        );
+
+        // Also update in bookings list
+        setBookings((prev) =>
+          prev.map((b) =>
+            b.id === selectedBooking.id
+              ? { ...b, [columnName]: data.url }
+              : b
+          )
+        );
+
+        setError(null);
+      } else {
+        setError(data.error || "Failed to upload document");
+      }
+    } catch (err) {
+      console.error("Upload error:", err);
+      setError("Network error — could not upload document");
+    }
+    setUploadingDoc(null);
   };
 
   return (
@@ -410,7 +462,7 @@ export default function AdminBookingsPage() {
                   </tr>
                 ) : (
                   bookings.map((b) => (
-                    <tr key={b.id} className="border-b last:border-0 hover:bg-gray-50">
+                    <tr key={b.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedBooking(b); setShowDetail(true); }}>
                       <td className="px-4 py-3 font-mono text-xs text-purple-600">{b.id}</td>
                       <td className="px-4 py-3">
                         <div className="text-gray-900">{b.customer_name || "—"}</div>
@@ -481,6 +533,185 @@ export default function AdminBookingsPage() {
           </div>
         </Card>
       </PageContainer>
+
+      {/* Booking Detail Panel */}
+      {showDetail && selectedBooking && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div className="flex-1 bg-black/50" onClick={() => setShowDetail(false)} />
+          {/* Panel */}
+          <div className="w-full max-w-lg bg-white shadow-xl overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
+              <h2 className="text-lg font-semibold">Booking Details</h2>
+              <button onClick={() => setShowDetail(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Booking ID & Status */}
+              <div>
+                <p className="text-xs text-gray-500">Booking ID</p>
+                <p className="font-mono text-purple-600 font-bold">{selectedBooking.id}</p>
+                <Badge className={statusColors[selectedBooking.status] || "bg-gray-100"}>
+                  {selectedBooking.status}
+                </Badge>
+              </div>
+
+              {/* Customer Info */}
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Customer</h3>
+                <p className="font-medium">{selectedBooking.customer_name}</p>
+                <p className="text-sm text-gray-500">{selectedBooking.customer_email}</p>
+                <p className="text-sm text-gray-500">{selectedBooking.customer_phone}</p>
+              </div>
+
+              {/* ID Document Upload */}
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">ID Document</h3>
+                {selectedBooking.id_document_url ? (
+                  <a
+                    href={selectedBooking.id_document_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <img
+                      src={selectedBooking.id_document_url}
+                      alt="Customer ID"
+                      className="rounded-lg border max-h-48 object-contain"
+                    />
+                    <p className="text-xs text-purple-600 mt-1">Click to view full size</p>
+                  </a>
+                ) : (
+                  <p className="text-sm text-gray-400 italic mb-2">No ID document uploaded</p>
+                )}
+                <label className="block">
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,application/pdf"
+                    onChange={(e) => {
+                      if (e.target.files?.[0]) {
+                        handleDocumentUpload("id_document", e.target.files[0]);
+                      }
+                    }}
+                    disabled={uploadingDoc === "id_document"}
+                    className="hidden"
+                  />
+                  <span className="inline-flex items-center gap-2 px-3 py-2 bg-purple-100 text-purple-600 rounded-lg text-sm font-medium hover:bg-purple-200 cursor-pointer transition-colors">
+                    <Upload className="h-4 w-4" />
+                    {uploadingDoc === "id_document" ? "Uploading..." : "Upload ID"}
+                  </span>
+                </label>
+              </div>
+
+              {/* Vehicle */}
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Vehicle</h3>
+                <p className="font-medium">{selectedBooking.vehicleName || selectedBooking.vehicle_id}</p>
+              </div>
+
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500">Pickup</p>
+                  <p className="font-medium">{selectedBooking.pickup_date}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Return</p>
+                  <p className="font-medium">{selectedBooking.return_date}</p>
+                </div>
+              </div>
+
+              {/* Extras */}
+              {selectedBooking.extras && selectedBooking.extras.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Extras</h3>
+                  <ul className="space-y-1">
+                    {selectedBooking.extras.map((e: any, i: number) => (
+                      <li key={i} className="flex justify-between text-sm">
+                        <span>{e.name}</span>
+                        <span className="text-gray-500">${e.pricePerDay}/day</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Insurance Status */}
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Insurance</h3>
+                {selectedBooking.insurance_opted_out ? (
+                  <div>
+                    <Badge className="bg-yellow-100 text-yellow-700">Opted Out (Own Coverage)</Badge>
+                    {selectedBooking.insurance_proof_url && (
+                      <a
+                        href={selectedBooking.insurance_proof_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-2"
+                      >
+                        <img
+                          src={selectedBooking.insurance_proof_url}
+                          alt="Insurance Proof"
+                          className="rounded-lg border max-h-48 object-contain"
+                        />
+                        <p className="text-xs text-purple-600 mt-1">Click to view full size</p>
+                      </a>
+                    )}
+                    {!selectedBooking.insurance_proof_url && (
+                      <label className="block mt-2">
+                        <input
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          onChange={(e) => {
+                            if (e.target.files?.[0]) {
+                              handleDocumentUpload("insurance_proof", e.target.files[0]);
+                            }
+                          }}
+                          disabled={uploadingDoc === "insurance_proof"}
+                          className="hidden"
+                        />
+                        <span className="inline-flex items-center gap-2 px-3 py-2 bg-purple-100 text-purple-600 rounded-lg text-sm font-medium hover:bg-purple-200 cursor-pointer transition-colors">
+                          <Upload className="h-4 w-4" />
+                          {uploadingDoc === "insurance_proof" ? "Uploading..." : "Upload Proof"}
+                        </span>
+                      </label>
+                    )}
+                  </div>
+                ) : (
+                  <Badge className="bg-green-100 text-green-700">NextGearAuto Insurance Included</Badge>
+                )}
+              </div>
+
+              {/* Pricing */}
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Payment</h3>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Total</span>
+                  <span className="font-bold text-lg">${selectedBooking.total_price?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Paid</span>
+                  <span className="text-green-600 font-semibold">${selectedBooking.deposit?.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Agreement */}
+              {selectedBooking.signed_name && (
+                <div>
+                  <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Agreement</h3>
+                  <p className="font-serif italic">{selectedBooking.signed_name}</p>
+                  <p className="text-xs text-gray-400">
+                    {selectedBooking.agreement_signed_at
+                      ? new Date(selectedBooking.agreement_signed_at).toLocaleString()
+                      : ""}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

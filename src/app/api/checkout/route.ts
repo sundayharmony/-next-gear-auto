@@ -20,6 +20,8 @@ export async function POST(request: Request) {
       signedName,
       promoCode,
       discountAmount,
+      insuranceProofUrl,
+      insuranceOptedOut,
     } = body;
 
     if (!vehicleId || !pickupDate || !returnDate || !customerDetails?.email) {
@@ -114,6 +116,8 @@ export async function POST(request: Request) {
       status: "pending",
       signed_name: signedName,
       agreement_signed_at: signedName ? new Date().toISOString() : null,
+      insurance_proof_url: insuranceProofUrl || null,
+      insurance_opted_out: insuranceOptedOut || false,
     });
 
     if (bookingError) {

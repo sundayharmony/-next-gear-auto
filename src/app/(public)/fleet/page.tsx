@@ -109,7 +109,7 @@ function FleetContent() {
     }
 
     return result;
-  }, [activeCategory, sortBy, searchQuery]);
+  }, [vehicles, activeCategory, sortBy, searchQuery]);
 
   return (
     <>

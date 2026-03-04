@@ -23,6 +23,8 @@ interface BookingState {
   isSubmitting: boolean;
   bookingId: string | null;
   error: string | null;
+  insuranceProofUrl: string | null;
+  insuranceOptedOut: boolean;
 }
 
 type BookingAction =
@@ -41,6 +43,7 @@ type BookingAction =
   | { type: "SUBMIT_ERROR"; payload: string }
   | { type: "SET_PROMO"; payload: { code: string; discount: PromoDiscount } }
   | { type: "CLEAR_PROMO" }
+  | { type: "SET_INSURANCE_PROOF"; payload: { url: string | null; optedOut: boolean } }
   | { type: "RESET" };
 
 const initialState: BookingState = {
@@ -57,6 +60,8 @@ const initialState: BookingState = {
   isSubmitting: false,
   bookingId: null,
   error: null,
+  insuranceProofUrl: null,
+  insuranceOptedOut: false,
 };
 
 function bookingReducer(state: BookingState, action: BookingAction): BookingState {
@@ -102,6 +107,8 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
       return { ...state, promoCode: action.payload.code, promoDiscount: action.payload.discount };
     case "CLEAR_PROMO":
       return { ...state, promoCode: null, promoDiscount: null };
+    case "SET_INSURANCE_PROOF":
+      return { ...state, insuranceProofUrl: action.payload.url, insuranceOptedOut: action.payload.optedOut };
     case "SUBMIT_START":
       return { ...state, isSubmitting: true, error: null };
     case "SUBMIT_SUCCESS":
@@ -128,6 +135,7 @@ interface BookingContextType extends BookingState {
   recalculatePrice: () => void;
   applyPromoCode: (code: string) => Promise<{ success: boolean; error?: string }>;
   clearPromoCode: () => void;
+  setInsuranceProof: (url: string | null, optedOut: boolean) => void;
   submitBooking: () => Promise<void>;
   resetBooking: () => void;
 }
@@ -194,6 +202,10 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     setTimeout(() => dispatch({ type: "CALCULATE_PRICING" }), 0);
   }, []);
 
+  const setInsuranceProof = useCallback((url: string | null, optedOut: boolean) => {
+    dispatch({ type: "SET_INSURANCE_PROOF", payload: { url, optedOut } });
+  }, []);
+
   const submitBooking = useCallback(async () => {
     dispatch({ type: "SUBMIT_START" });
     try {
@@ -213,6 +225,8 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           signedName: state.signedName,
           promoCode: state.promoCode || undefined,
           discountAmount: state.promoDiscount?.discountAmount || 0,
+          insuranceProofUrl: state.insuranceProofUrl,
+          insuranceOptedOut: state.insuranceOptedOut,
         }),
       });
 
@@ -254,6 +268,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         recalculatePrice,
         applyPromoCode,
         clearPromoCode,
+        setInsuranceProof,
         submitBooking,
         resetBooking,
       }}

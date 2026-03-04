@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Search, Car, Package, UserCheck, ShieldCheck, FileText, CreditCard,
-  Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight, Tag, X, Upload
+  Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight, Tag, X, Upload,
+  Shield, CheckCircle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -52,8 +53,14 @@ function BookingPageInner() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [localExtras, setLocalExtras] = useState<BookingExtra[]>(
-    extras.map((e) => ({ ...e, selected: false, billingType: e.billingType as BookingExtra["billingType"] }))
+    extras.map((e) => ({ ...e, selected: e.id === "e1" ? true : false, billingType: e.billingType as BookingExtra["billingType"] }))
   );
+
+  // Insurance proof state
+  const [insuranceProofFile, setInsuranceProofFile] = useState<File | null>(null);
+  const [insuranceProofUrl, setInsuranceProofUrl] = useState<string | null>(null);
+  const [uploadingInsuranceProof, setUploadingInsuranceProof] = useState(false);
+  const [showInsuranceWarning, setShowInsuranceWarning] = useState(false);
 
   // Fetch vehicles from API
   useEffect(() => {
@@ -114,7 +121,16 @@ function BookingPageInner() {
     }
   }, [localExtras, booking.selectedVehicle]);
 
-  const toggleExtra = (id: string) => {
+  const handleToggleExtra = (id: string) => {
+    if (id === "e1") {
+      // Insurance - check if trying to deselect
+      const currentExtra = localExtras.find(e => e.id === "e1");
+      if (currentExtra?.selected && !insuranceProofUrl) {
+        setShowInsuranceWarning(true);
+        return;
+      }
+    }
+    // Normal toggle for other extras
     setLocalExtras((prev) =>
       prev.map((e) => (e.id === id ? { ...e, selected: !e.selected } : e))
     );
@@ -176,6 +192,9 @@ function BookingPageInner() {
     if (booking.currentStep === 3) {
       booking.setExtras(localExtras);
       booking.recalculatePrice();
+      // Store insurance proof in booking context
+      const insuranceOptedOut = insuranceProofUrl !== null;
+      booking.setInsuranceProof(insuranceProofUrl, insuranceOptedOut);
     }
     if (booking.currentStep === 6) {
       booking.setSignedName(signedName);
@@ -304,33 +323,117 @@ function BookingPageInner() {
               <p className="text-sm text-gray-500">Enhance your rental with optional extras.</p>
               <div className="grid grid-cols-1 gap-3">
                 {localExtras.map((extra) => (
-                  <Card
-                    key={extra.id}
-                    className={cn(
-                      "cursor-pointer transition-all",
-                      extra.selected ? "ring-2 ring-purple-600 bg-purple-50" : "hover:shadow-sm"
+                  <React.Fragment key={extra.id}>
+                    <Card
+                      className={cn(
+                        "cursor-pointer transition-all",
+                        extra.selected ? "ring-2 ring-purple-600 bg-purple-50" : "hover:shadow-sm"
+                      )}
+                      onClick={() => handleToggleExtra(extra.id)}
+                    >
+                      <CardContent className="flex items-center justify-between p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={cn(
+                            "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
+                            extra.selected ? "border-purple-600 bg-purple-600" : "border-gray-300"
+                          )}>
+                            {extra.selected && <Check className="h-3 w-3 text-white" />}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <h3 className="font-medium text-gray-900">{extra.name}</h3>
+                              {extra.id === "e1" && (
+                                <span className="inline-flex items-center rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">
+                                  Required
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500">{extra.description}</p>
+                          </div>
+                        </div>
+                        <div className="text-right shrink-0 ml-4">
+                          <div className="font-semibold text-gray-900">${extra.pricePerDay}/day</div>
+                          {extra.maxPrice && <div className="text-xs text-gray-400">max ${extra.maxPrice}</div>}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Insurance Proof Upload Section */}
+                    {extra.id === "e1" && (
+                      <div className="mt-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
+                        <p className="text-sm font-medium text-gray-700 mb-2">
+                          Have your own insurance coverage?
+                        </p>
+                        <p className="text-xs text-gray-500 mb-3">
+                          Upload proof of valid auto insurance to waive the $15/day coverage fee.
+                        </p>
+                        {insuranceProofUrl ? (
+                          <div className="flex items-center gap-3 rounded-lg bg-green-50 border border-green-200 p-3">
+                            <CheckCircle className="h-5 w-5 text-green-600 flex-shrink-0" />
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-green-700">Insurance proof uploaded</p>
+                              <p className="text-xs text-green-600">Coverage charge has been removed</p>
+                            </div>
+                            <button
+                              onClick={() => {
+                                setInsuranceProofUrl(null);
+                                setInsuranceProofFile(null);
+                                // Re-select insurance
+                                setLocalExtras((prev) =>
+                                  prev.map((e) => (e.id === "e1" ? { ...e, selected: true } : e))
+                                );
+                              }}
+                              className="text-xs text-red-500 hover:text-red-700"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ) : (
+                          <label className="flex items-center justify-center gap-2 rounded-lg border-2 border-dashed border-purple-300 bg-white px-4 py-3 cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-colors">
+                            <Upload className="h-4 w-4 text-purple-500" />
+                            <span className="text-sm text-purple-600 font-medium">
+                              {uploadingInsuranceProof ? "Uploading..." : "Upload Insurance Proof"}
+                            </span>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept=".jpg,.jpeg,.png,.pdf,.webp"
+                              disabled={uploadingInsuranceProof}
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+
+                                // Validate
+                                const validTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
+                                if (!validTypes.includes(file.type)) {
+                                  alert("Please upload a JPG, PNG, WebP, or PDF file.");
+                                  return;
+                                }
+                                if (file.size > 5 * 1024 * 1024) {
+                                  alert("File must be under 5MB.");
+                                  return;
+                                }
+
+                                setInsuranceProofFile(file);
+                                setUploadingInsuranceProof(true);
+
+                                // Store locally for now - will upload after booking is created
+                                // Create a local preview URL
+                                const localUrl = URL.createObjectURL(file);
+                                setInsuranceProofUrl(localUrl);
+
+                                // Auto-deselect insurance
+                                setLocalExtras((prev) =>
+                                  prev.map((e) => (e.id === "e1" ? { ...e, selected: false } : e))
+                                );
+                                setUploadingInsuranceProof(false);
+                              }}
+                            />
+                          </label>
+                        )}
+                      </div>
                     )}
-                    onClick={() => toggleExtra(extra.id)}
-                  >
-                    <CardContent className="flex items-center justify-between p-4">
-                      <div className="flex items-center gap-3">
-                        <div className={cn(
-                          "flex h-5 w-5 items-center justify-center rounded border-2 transition-colors",
-                          extra.selected ? "border-purple-600 bg-purple-600" : "border-gray-300"
-                        )}>
-                          {extra.selected && <Check className="h-3 w-3 text-white" />}
-                        </div>
-                        <div>
-                          <h3 className="font-medium text-gray-900">{extra.name}</h3>
-                          <p className="text-xs text-gray-500">{extra.description}</p>
-                        </div>
-                      </div>
-                      <div className="text-right shrink-0 ml-4">
-                        <div className="font-semibold text-gray-900">${extra.pricePerDay}/day</div>
-                        {extra.maxPrice && <div className="text-xs text-gray-400">max ${extra.maxPrice}</div>}
-                      </div>
-                    </CardContent>
-                  </Card>
+                  </React.Fragment>
                 ))}
               </div>
             </div>
@@ -621,6 +724,31 @@ function BookingPageInner() {
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {/* Insurance Warning Modal */}
+          {showInsuranceWarning && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+              <div className="bg-white rounded-xl shadow-xl max-w-sm mx-4 p-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <Shield className="h-8 w-8 text-purple-600" />
+                  <h3 className="text-lg font-semibold">Insurance Required</h3>
+                </div>
+                <p className="text-sm text-gray-600 mb-6">
+                  Insurance coverage is required for all rentals. To opt out, please upload proof of your own valid auto insurance policy.
+                </p>
+                <div className="flex gap-3">
+                  <Button variant="outline" className="flex-1" onClick={() => setShowInsuranceWarning(false)}>
+                    Keep Insurance
+                  </Button>
+                  <Button className="flex-1" onClick={() => {
+                    setShowInsuranceWarning(false);
+                  }}>
+                    Upload Proof
+                  </Button>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Navigation buttons */}
