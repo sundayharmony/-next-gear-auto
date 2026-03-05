@@ -69,7 +69,7 @@ export async function POST(request: Request) {
       // Verify password
       if (!customer.password_hash) {
         return NextResponse.json(
-          { success: false, message: "Account has no password set. Please contact support." },
+          { success: false, message: "No password set yet. Please check your booking confirmation email for the link to set up your password.", needsPassword: true, email: normalizedEmail },
           { status: 401 }
         );
       }
@@ -122,6 +122,50 @@ export async function POST(request: Request) {
         .single();
 
       if (existing) {
+        // Check if this customer has a password already
+        const { data: existingFull } = await adminDb
+          .from("customers")
+          .select("id, password_hash")
+          .eq("email", body.email.toLowerCase().trim())
+          .single();
+
+        if (existingFull && !existingFull.password_hash) {
+          // Customer was auto-created during booking, set their password
+          const passwordHash = await bcrypt.hash(body.password, 12);
+          await adminDb
+            .from("customers")
+            .update({
+              password_hash: passwordHash,
+              name: body.name,
+              phone: body.phone || "",
+            })
+            .eq("id", existingFull.id);
+
+          const { data: updated } = await adminDb
+            .from("customers")
+            .select("*")
+            .eq("id", existingFull.id)
+            .single();
+
+          if (updated) {
+            return NextResponse.json({
+              data: {
+                id: updated.id,
+                name: updated.name,
+                email: updated.email,
+                phone: updated.phone || "",
+                dob: updated.dob || "",
+                driverLicense: null,
+                paymentMethods: [],
+                bookings: [],
+                createdAt: updated.created_at,
+                role: updated.role || "customer",
+              },
+              success: true,
+            }, { status: 201 });
+          }
+        }
+
         return NextResponse.json(
           { success: false, message: "Email already registered. Please sign in instead." },
           { status: 409 }

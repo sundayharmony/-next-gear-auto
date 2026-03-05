@@ -9,6 +9,7 @@ interface EmailData {
   returnTime?: string;
   totalPrice: number;
   deposit: number;
+  needsPassword?: boolean;
 }
 
 const baseStyle = `
@@ -64,11 +65,20 @@ export function bookingConfirmationTemplate(data: EmailData): string {
       </table>
 
       <p style="color: #6B7280; font-size: 14px; line-height: 1.6; margin-top: 24px;">
-        Your rental has been paid in full. Please bring a valid driver's license and the credit card used for payment at pickup.
+        ${data.totalPrice > 0 ? 'Your rental has been paid in full. Please bring a valid driver\'s license and the credit card used for payment at pickup.' : 'Your complimentary rental is confirmed! Please bring a valid driver\'s license at pickup.'}
       </p>
 
+      ${data.needsPassword ? `
+      <div style="background: linear-gradient(135deg, #DBEAFE, #EFF6FF); border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #3B82F6;">
+        <p style="margin: 0 0 8px; color: #1E40AF; font-size: 14px; font-weight: 600;">Create Your Account</p>
+        <p style="margin: 0 0 16px; color: #6B7280; font-size: 13px; line-height: 1.5;">Set up a password to manage your bookings, view rental history, and speed up future reservations.</p>
+        <a href="https://rentnextgearauto.com/set-password?email=${encodeURIComponent(data.customerEmail)}" style="display: inline-block; background: #3B82F6; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 13px;">Set Up My Password</a>
+      </div>
+      ` : ''}
+
       <div style="text-align: center; margin: 24px 0;">
-        <a href="https://rentnextgearauto.com/account" style="display: inline-block; background: #7C3AED; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View My Bookings</a>
+        <a href="https://rentnextgearauto.com/booking/agreement/${data.bookingId}" style="display: inline-block; background: #7C3AED; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; margin-right: 8px;">Sign Rental Agreement</a>
+        <a href="https://rentnextgearauto.com/account" style="display: inline-block; background: #ffffff; color: #7C3AED; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px; border: 2px solid #7C3AED;">View My Bookings</a>
       </div>
     </div>
     <div style="background: #F9FAFB; padding: 24px; text-align: center; border-top: 1px solid #E5E7EB;">

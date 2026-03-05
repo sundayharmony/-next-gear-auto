@@ -67,6 +67,17 @@ export async function POST(request: Request) {
               .eq("id", booking.vehicle_id)
               .single();
 
+            // Check if customer needs a password
+            let needsPassword = false;
+            if (booking.customer_id) {
+              const { data: cust } = await supabase
+                .from("customers")
+                .select("password_hash")
+                .eq("id", booking.customer_id)
+                .single();
+              needsPassword = !cust?.password_hash;
+            }
+
             const emailData = {
               bookingId: booking.id,
               customerName: booking.customer_name || "Customer",
@@ -74,8 +85,11 @@ export async function POST(request: Request) {
               vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
               pickupDate: booking.pickup_date,
               returnDate: booking.return_date,
+              pickupTime: booking.pickup_time || undefined,
+              returnTime: booking.return_time || undefined,
               totalPrice: booking.total_price,
               deposit: booking.deposit,
+              needsPassword,
             };
 
             // Send confirmation emails (don't await - fire and forget)

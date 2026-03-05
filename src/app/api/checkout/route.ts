@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { sendBookingConfirmation, sendAdminNewBooking } from "@/lib/email/mailer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -154,9 +155,56 @@ export async function POST(request: Request) {
       );
     }
 
-    // 3. Create Stripe Checkout Session
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://rentnextgearauto.com";
 
+    // 3. Handle $0 bookings — skip Stripe, auto-confirm, send emails directly
+    if (chargeAmount <= 0) {
+      await supabase
+        .from("bookings")
+        .update({ status: "confirmed" })
+        .eq("id", bookingId);
+
+      // Check if customer has a password set
+      let needsPassword = false;
+      if (customerId) {
+        const { data: cust } = await supabase
+          .from("customers")
+          .select("password_hash")
+          .eq("id", customerId)
+          .single();
+        needsPassword = !cust?.password_hash;
+      }
+
+      // Send confirmation emails
+      const emailData = {
+        bookingId,
+        customerName: safeName || "Customer",
+        customerEmail: customerDetails.email.toLowerCase().trim(),
+        vehicleName: vehicleName || "Vehicle",
+        pickupDate,
+        returnDate,
+        pickupTime: pickupTime || undefined,
+        returnTime: returnTime || undefined,
+        totalPrice: totalPrice || 0,
+        deposit: 0,
+        needsPassword,
+      };
+
+      sendBookingConfirmation(emailData).catch(console.error);
+      sendAdminNewBooking(emailData).catch(console.error);
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          sessionId: null,
+          sessionUrl: `${siteUrl}/booking/success?booking_id=${bookingId}`,
+          bookingId,
+          freeBooking: true,
+        },
+      });
+    }
+
+    // 4. Create Stripe Checkout Session for paid bookings
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card", "cashapp", "link"],
       mode: "payment",
@@ -186,7 +234,7 @@ export async function POST(request: Request) {
       cancel_url: `${siteUrl}/booking/cancel?booking_id=${bookingId}`,
     });
 
-    // 4. Update booking with Stripe session ID
+    // 5. Update booking with Stripe session ID
     await supabase
       .from("bookings")
       .update({ stripe_session_id: session.id })

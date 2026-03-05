@@ -27,8 +27,11 @@ interface BookingEmailData {
   vehicleName: string;
   pickupDate: string;
   returnDate: string;
+  pickupTime?: string;
+  returnTime?: string;
   totalPrice: number;
   deposit: number;
+  needsPassword?: boolean;
 }
 
 export async function sendBookingConfirmation(data: BookingEmailData) {
