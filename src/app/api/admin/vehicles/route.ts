@@ -31,6 +31,7 @@ export async function GET(req: NextRequest) {
         licensePlate: v.license_plate || "",
         vin: v.vin || "",
         maintenanceStatus: v.maintenance_status || "good",
+        purchasePrice: v.purchase_price || 0,
       }));
       return NextResponse.json({ success: true, data: vehicles });
     }
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest) {
         license_plate: body.licensePlate || "",
         vin: body.vin || "",
         maintenance_status: body.maintenanceStatus || "good",
+        purchase_price: body.purchasePrice || 0,
       })
       .select()
       .single();
@@ -114,6 +116,7 @@ export async function PUT(request: NextRequest) {
     if (updates.licensePlate !== undefined) dbUpdates.license_plate = updates.licensePlate;
     if (updates.vin !== undefined) dbUpdates.vin = updates.vin;
     if (updates.maintenanceStatus !== undefined) dbUpdates.maintenance_status = updates.maintenanceStatus;
+    if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;
 
     const { error } = await supabase
       .from("vehicles")

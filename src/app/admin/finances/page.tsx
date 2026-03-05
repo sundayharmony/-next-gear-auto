@@ -15,6 +15,7 @@ import {
   Calendar,
   RefreshCw,
   AlertCircle,
+  ArrowLeft,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -59,6 +60,7 @@ interface Vehicle {
   year: number;
   make: string;
   model: string;
+  purchasePrice?: number;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -191,6 +193,7 @@ export default function AdminFinancesPage() {
     null
   );
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -465,6 +468,352 @@ export default function AdminFinancesPage() {
     }
   };
 
+  // Get vehicle detail data
+  const getVehicleDetail = (vehicleId: string) => {
+    const vehicle = vehicles.find((v) => v.id === vehicleId);
+    if (!vehicle) return null;
+
+    const vehicleBookings = bookings.filter(
+      (b) =>
+        b.vehicle_id === vehicleId &&
+        ["confirmed", "active", "completed"].includes(b.status)
+    );
+    const vehicleExpenses = expenses.filter((e) => e.vehicle_id === vehicleId);
+
+    const revenue = vehicleBookings.reduce(
+      (sum, b) => sum + (b.total_price || 0),
+      0
+    );
+    const expenseTotal = vehicleExpenses.reduce(
+      (sum, e) => sum + (e.amount || 0),
+      0
+    );
+    const profit = revenue - expenseTotal;
+    const purchasePrice = vehicle.purchasePrice || 0;
+    const roi =
+      purchasePrice > 0 ? ((profit / purchasePrice) * 100).toFixed(2) : "0.00";
+
+    const totalDaysInRange = Math.ceil(
+      (new Date(dateRange.to).getTime() -
+        new Date(dateRange.from).getTime()) /
+        (1000 * 60 * 60 * 24)
+    );
+
+    let bookedDays = 0;
+    vehicleBookings.forEach((booking) => {
+      const pickup = new Date(booking.pickup_date).getTime();
+      const returnDate = new Date(booking.return_date).getTime();
+      const days = Math.ceil((returnDate - pickup) / (1000 * 60 * 60 * 24));
+      bookedDays += days;
+    });
+
+    const occupancyRate = Math.min(
+      100,
+      Math.max(0, (bookedDays / totalDaysInRange) * 100)
+    );
+
+    return {
+      vehicle,
+      bookings: vehicleBookings,
+      expenseList: vehicleExpenses,
+      revenue,
+      expenseAmount: expenseTotal,
+      profit,
+      purchasePrice,
+      roi,
+      occupancyRate,
+      bookedDays,
+    };
+  };
+
+  const selectedVehicleDetail = selectedVehicleId
+    ? getVehicleDetail(selectedVehicleId)
+    : null;
+
+  // Render vehicle detail view
+  if (selectedVehicleDetail) {
+    const { vehicle, bookings: vBookings, expenseList: vExpenses, revenue, expenseAmount, profit, purchasePrice, roi, occupancyRate, bookedDays } = selectedVehicleDetail;
+
+    const expenseCategoryBreakdown: Record<string, number> = {};
+    vExpenses.forEach((exp: Expense) => {
+      expenseCategoryBreakdown[exp.category] =
+        (expenseCategoryBreakdown[exp.category] || 0) + (exp.amount || 0);
+    });
+
+    return (
+      <PageContainer>
+        <div className="space-y-6">
+          {/* Header with back button */}
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => setSelectedVehicleId(null)}
+              className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+            >
+              <ArrowLeft className="w-6 h-6 text-gray-900" />
+            </button>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">
+                {vehicle.year} {vehicle.make} {vehicle.model}
+              </h1>
+              <p className="text-gray-600 mt-1">Vehicle Financial Details</p>
+            </div>
+          </div>
+
+          {/* Purple gradient header card */}
+          <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-6 text-white">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <p className="text-purple-100 text-sm">Purchase Price</p>
+                <p className="text-3xl font-bold mt-1">
+                  ${purchasePrice.toLocaleString()}
+                </p>
+              </div>
+              <div className="text-right">
+                <p className="text-purple-100 text-sm">ROI</p>
+                <p className="text-3xl font-bold mt-1">{roi}%</p>
+              </div>
+            </div>
+          </div>
+
+          {/* Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-gray-600">Total Revenue</p>
+                <p className="text-2xl font-bold text-green-600 mt-2">
+                  ${revenue.toLocaleString()}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-gray-600">Total Expenses</p>
+                <p className="text-2xl font-bold text-red-600 mt-2">
+                  ${expenseAmount.toLocaleString()}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-gray-600">Net Profit</p>
+                <p className="text-2xl font-bold text-purple-600 mt-2">
+                  ${profit.toLocaleString()}
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-gray-600">Occupancy Rate</p>
+                <p className="text-2xl font-bold text-blue-600 mt-2">
+                  {occupancyRate.toFixed(1)}%
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-gray-600">Booked Days</p>
+                <p className="text-2xl font-bold text-blue-600 mt-2">
+                  {bookedDays} days
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <p className="text-sm text-gray-600">Number of Bookings</p>
+                <p className="text-2xl font-bold text-orange-600 mt-2">
+                  {vBookings.length}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Booking History */}
+          <Card>
+            <CardContent className="pt-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Booking History
+              </h2>
+              {vBookings.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                          Booking ID
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                          Dates
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold text-gray-700">
+                          Status
+                        </th>
+                        <th className="px-4 py-3 text-right font-semibold text-gray-700">
+                          Amount
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {vBookings
+                        .sort(
+                          (a, b) =>
+                            new Date(b.created_at).getTime() -
+                            new Date(a.created_at).getTime()
+                        )
+                        .map((booking) => (
+                          <tr
+                            key={booking.id}
+                            className="border-b border-gray-100 hover:bg-gray-50"
+                          >
+                            <td className="px-4 py-3 text-gray-900">
+                              {booking.id.slice(0, 8)}...
+                            </td>
+                            <td className="px-4 py-3 text-gray-600">
+                              {new Date(booking.pickup_date).toLocaleDateString()} -
+                              {new Date(booking.return_date).toLocaleDateString()}
+                            </td>
+                            <td className="px-4 py-3">
+                              <Badge
+                                className={
+                                  booking.status === "completed"
+                                    ? "bg-green-100 text-green-700"
+                                    : booking.status === "active"
+                                    ? "bg-blue-100 text-blue-700"
+                                    : "bg-gray-100 text-gray-700"
+                                }
+                              >
+                                {booking.status.charAt(0).toUpperCase() +
+                                  booking.status.slice(1)}
+                              </Badge>
+                            </td>
+                            <td className="px-4 py-3 text-right font-medium text-green-600">
+                              ${booking.total_price.toLocaleString()}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-8">
+                  No bookings for this vehicle in the selected period
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Expense Breakdown */}
+          <Card>
+            <CardContent className="pt-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Expense Breakdown
+              </h2>
+              {vExpenses.length > 0 ? (
+                <div className="space-y-3">
+                  {Object.entries(expenseCategoryBreakdown)
+                    .sort(([, a], [, b]) => b - a)
+                    .map(([category, amount]) => (
+                      <div
+                        key={category}
+                        className="flex items-center justify-between p-3 bg-gray-50 rounded-lg"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{
+                              backgroundColor:
+                                CATEGORY_COLORS[category] || "#6B7280",
+                            }}
+                          />
+                          <span className="font-medium text-gray-900">
+                            {category.charAt(0).toUpperCase() +
+                              category.slice(1)}
+                          </span>
+                        </div>
+                        <span className="font-semibold text-gray-900">
+                          ${amount.toLocaleString()}
+                        </span>
+                      </div>
+                    ))}
+
+                  <div className="mt-4 pt-4 border-t border-gray-200 flex items-center justify-between">
+                    <span className="font-semibold text-gray-900">Total</span>
+                    <span className="text-lg font-bold text-red-600">
+                      ${expenseAmount.toLocaleString()}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-8">
+                  No expenses recorded for this vehicle
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Detailed Expense List */}
+          <Card>
+            <CardContent className="pt-6">
+              <h2 className="text-lg font-semibold text-gray-900 mb-4">
+                Expense Details
+              </h2>
+              {vExpenses.length > 0 ? (
+                <div className="space-y-2">
+                  {vExpenses
+                    .sort(
+                      (a, b) =>
+                        new Date(b.date).getTime() -
+                        new Date(a.date).getTime()
+                    )
+                    .map((expense) => (
+                      <div
+                        key={expense.id}
+                        className="flex items-center justify-between p-3 border border-gray-100 rounded-lg hover:bg-gray-50"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1">
+                            <Badge
+                              className="bg-purple-100 text-purple-700"
+                              variant="secondary"
+                            >
+                              {new Date(expense.date).toLocaleDateString()}
+                            </Badge>
+                            <Badge
+                              style={{
+                                backgroundColor:
+                                  CATEGORY_COLORS[expense.category] + "20",
+                                color:
+                                  CATEGORY_COLORS[expense.category],
+                              }}
+                              variant="secondary"
+                            >
+                              {expense.category.charAt(0).toUpperCase() +
+                                expense.category.slice(1)}
+                            </Badge>
+                          </div>
+                          {expense.description && (
+                            <p className="text-sm text-gray-600">
+                              {expense.description}
+                            </p>
+                          )}
+                        </div>
+                        <p className="text-lg font-semibold text-red-600 ml-4">
+                          ${expense.amount.toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                </div>
+              ) : (
+                <p className="text-center text-gray-500 py-8">
+                  No expenses recorded for this vehicle
+                </p>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </PageContainer>
+    );
+  }
+
   if (loading) {
     return (
       <PageContainer>
@@ -685,6 +1034,9 @@ export default function AdminFinancesPage() {
                       Vehicle
                     </th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
+                      Purchase Price
+                    </th>
+                    <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
                       Bookings
                     </th>
                     <th className="px-4 py-3 text-right text-sm font-semibold text-gray-700">
@@ -700,33 +1052,43 @@ export default function AdminFinancesPage() {
                 </thead>
                 <tbody>
                   {vehicleAnalytics.length > 0 ? (
-                    vehicleAnalytics.map((vehicle) => (
-                      <tr
-                        key={vehicle.vehicleId}
-                        className="border-b border-gray-100 hover:bg-gray-50"
-                      >
-                        <td className="px-4 py-3 text-sm">
-                          <span className="font-medium text-gray-900">
-                            {vehicle.year} {vehicle.make} {vehicle.model}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm text-gray-600">
-                          {vehicle.bookings}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-medium text-green-600">
-                          ${vehicle.revenue.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-medium text-red-600">
-                          ${vehicle.expenses.toLocaleString()}
-                        </td>
-                        <td className="px-4 py-3 text-right text-sm font-medium text-purple-600">
-                          ${vehicle.profit.toLocaleString()}
-                        </td>
-                      </tr>
-                    ))
+                    vehicleAnalytics.map((vehicle) => {
+                      const vehicleData = vehicles.find(
+                        (v) => v.id === vehicle.vehicleId
+                      );
+                      const purchasePrice = vehicleData?.purchasePrice || 0;
+                      return (
+                        <tr
+                          key={vehicle.vehicleId}
+                          className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                          onClick={() => setSelectedVehicleId(vehicle.vehicleId)}
+                        >
+                          <td className="px-4 py-3 text-sm">
+                            <span className="font-medium text-gray-900">
+                              {vehicle.year} {vehicle.make} {vehicle.model}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-600">
+                            ${purchasePrice.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm text-gray-600">
+                            {vehicle.bookings}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm font-medium text-green-600">
+                            ${vehicle.revenue.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm font-medium text-red-600">
+                            ${vehicle.expenses.toLocaleString()}
+                          </td>
+                          <td className="px-4 py-3 text-right text-sm font-medium text-purple-600">
+                            ${vehicle.profit.toLocaleString()}
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={5} className="px-4 py-6 text-center text-gray-500">
+                      <td colSpan={6} className="px-4 py-6 text-center text-gray-500">
                         No vehicle data available
                       </td>
                     </tr>
@@ -764,7 +1126,8 @@ export default function AdminFinancesPage() {
                     occupancyData.map((vehicle) => (
                       <tr
                         key={vehicle.vehicleId}
-                        className="border-b border-gray-100 hover:bg-gray-50"
+                        className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => setSelectedVehicleId(vehicle.vehicleId)}
                       >
                         <td className="px-4 py-3 text-sm">
                           <span className="font-medium text-gray-900">

@@ -42,3 +42,150 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, error: "Failed to fetch customers" }, { status: 500 });
   }
 }
+
+// POST: Create a new customer
+export async function POST(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
+  const supabase = getServiceSupabase();
+
+  try {
+    const body = await req.json();
+    const { name, email, phone } = body;
+
+    if (!name || !email) {
+      return NextResponse.json(
+        { success: false, error: "Name and email are required" },
+        { status: 400 }
+      );
+    }
+
+    const customerId = "c" + Date.now();
+
+    const { data, error } = await supabase
+      .from("customers")
+      .insert([
+        {
+          id: customerId,
+          name,
+          email,
+          phone: phone || null,
+          role: "customer",
+          created_at: new Date().toISOString(),
+        },
+      ])
+      .select("id, name, email, phone, role, created_at");
+
+    if (error) {
+      console.error("Customer creation error:", error);
+      return NextResponse.json({ success: false, error: "Failed to create customer" }, { status: 500 });
+    }
+
+    const customer = (data && data[0]) ? {
+      id: data[0].id,
+      name: data[0].name,
+      email: data[0].email,
+      phone: data[0].phone || "",
+      role: data[0].role || "customer",
+      createdAt: data[0].created_at,
+    } : null;
+
+    return NextResponse.json({ success: true, data: customer }, { status: 201 });
+  } catch (err) {
+    console.error("Customers POST error:", err);
+    return NextResponse.json({ success: false, error: "Failed to create customer" }, { status: 500 });
+  }
+}
+
+// PATCH: Update a customer by ID
+export async function PATCH(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
+  const supabase = getServiceSupabase();
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Customer ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const body = await req.json();
+    const { name, email, phone } = body;
+
+    const updateData: Record<string, unknown> = {};
+    if (name !== undefined) updateData.name = name;
+    if (email !== undefined) updateData.email = email;
+    if (phone !== undefined) updateData.phone = phone;
+
+    if (Object.keys(updateData).length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No fields to update" },
+        { status: 400 }
+      );
+    }
+
+    const { data, error } = await supabase
+      .from("customers")
+      .update(updateData)
+      .eq("id", id)
+      .select("id, name, email, phone, role, created_at");
+
+    if (error) {
+      console.error("Customer update error:", error);
+      return NextResponse.json({ success: false, error: "Failed to update customer" }, { status: 500 });
+    }
+
+    const customer = (data && data[0]) ? {
+      id: data[0].id,
+      name: data[0].name,
+      email: data[0].email,
+      phone: data[0].phone || "",
+      role: data[0].role || "customer",
+      createdAt: data[0].created_at,
+    } : null;
+
+    return NextResponse.json({ success: true, data: customer });
+  } catch (err) {
+    console.error("Customers PATCH error:", err);
+    return NextResponse.json({ success: false, error: "Failed to update customer" }, { status: 500 });
+  }
+}
+
+// DELETE: Remove a customer by ID
+export async function DELETE(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
+  const supabase = getServiceSupabase();
+
+  try {
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json(
+        { success: false, error: "Customer ID is required" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("customers")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      console.error("Customer deletion error:", error);
+      return NextResponse.json({ success: false, error: "Failed to delete customer" }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: "Customer deleted successfully" });
+  } catch (err) {
+    console.error("Customers DELETE error:", err);
+    return NextResponse.json({ success: false, error: "Failed to delete customer" }, { status: 500 });
+  }
+}

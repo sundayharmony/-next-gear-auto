@@ -27,6 +27,7 @@ export interface Vehicle {
   licensePlate: string;
   vin: string;
   maintenanceStatus: "good" | "needs-service" | "in-maintenance";
+  purchasePrice?: number;
 }
 
 /** Helper to get display name like "2024 Toyota Camry" */

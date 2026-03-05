@@ -22,6 +22,10 @@ import {
   CheckCircle2,
   XCircle,
   ArrowLeft,
+  Edit2,
+  Upload,
+  Plus,
+  Trash2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -97,6 +101,16 @@ export default function AdminCustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRow | null>(null);
   const [customerBookings, setCustomerBookings] = useState<BookingRow[]>([]);
   const [loadingBookings, setLoadingBookings] = useState(false);
+  const [showAddCustomerModal, setShowAddCustomerModal] = useState(false);
+  const [editingMode, setEditingMode] = useState(false);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [selectedBookingForUpload, setSelectedBookingForUpload] = useState<string | null>(null);
+  const [uploadDocType, setUploadDocType] = useState<"id_document" | "insurance_proof">("id_document");
+  const [deletingCustomer, setDeletingCustomer] = useState(false);
 
   const fetchCustomers = async (query = "") => {
     setLoading(true);
@@ -119,7 +133,7 @@ export default function AdminCustomersPage() {
     setSelectedCustomer(customer);
     setLoadingBookings(true);
     try {
-      const res = await fetch(`/api/bookings?customer_email=${encodeURIComponent(customer.email)}`);
+      const res = await adminFetch(`/api/bookings?customer_email=${encodeURIComponent(customer.email)}`);
       const data = await res.json();
       if (data.success) {
         setCustomerBookings(data.data || []);
@@ -133,6 +147,115 @@ export default function AdminCustomersPage() {
   const closeCustomer = () => {
     setSelectedCustomer(null);
     setCustomerBookings([]);
+    setEditingMode(false);
+    setSelectedBookingForUpload(null);
+  };
+
+  const startEditingCustomer = () => {
+    if (selectedCustomer) {
+      setEditName(selectedCustomer.name);
+      setEditEmail(selectedCustomer.email);
+      setEditPhone(selectedCustomer.phone);
+      setEditingMode(true);
+    }
+  };
+
+  const saveCustomerEdit = async () => {
+    if (!selectedCustomer || !editName || !editEmail) {
+      alert("Name and email are required");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const res = await adminFetch(`/api/admin/customers?id=${selectedCustomer.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: editName,
+          email: editEmail,
+          phone: editPhone,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        setSelectedCustomer(data.data);
+        setEditingMode(false);
+        alert("Customer updated successfully");
+      } else {
+        alert("Failed to update customer: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Failed to update customer:", err);
+      alert("Error updating customer");
+    }
+    setSavingEdit(false);
+  };
+
+  const cancelCustomerEdit = () => {
+    setEditingMode(false);
+  };
+
+  const deleteCustomer = async () => {
+    if (!selectedCustomer) return;
+    if (!confirm(`Are you sure you want to delete customer "${selectedCustomer.name}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    setDeletingCustomer(true);
+    try {
+      const res = await adminFetch(`/api/admin/customers?id=${selectedCustomer.id}`, {
+        method: "DELETE",
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("Customer deleted successfully");
+        closeCustomer();
+        fetchCustomers();
+      } else {
+        alert("Failed to delete customer: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Failed to delete customer:", err);
+      alert("Error deleting customer");
+    }
+    setDeletingCustomer(false);
+  };
+
+  const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedBookingForUpload || !e.target.files?.[0]) return;
+
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append("bookingId", selectedBookingForUpload);
+    formData.append("type", uploadDocType);
+    formData.append("file", file);
+
+    setUploadingDoc(true);
+    try {
+      const res = await adminFetch("/api/bookings/upload", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("Document uploaded successfully");
+        setSelectedBookingForUpload(null);
+        setUploadDocType("id_document");
+        if (selectedCustomer) {
+          await openCustomer(selectedCustomer);
+        }
+      } else {
+        alert("Failed to upload document: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      console.error("Failed to upload document:", err);
+      alert("Error uploading document");
+    }
+    setUploadingDoc(false);
   };
 
   // Customer statistics
@@ -208,12 +331,23 @@ export default function AdminCustomersPage() {
                   </div>
                 </div>
               </div>
-              <button
-                onClick={closeCustomer}
-                className="rounded-full p-2 hover:bg-white/10 transition-colors"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-2">
+                <Button
+                  onClick={deleteCustomer}
+                  disabled={deletingCustomer}
+                  variant="outline"
+                  className="border-red-300 text-red-600 hover:bg-red-50"
+                  size="sm"
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                </Button>
+                <button
+                  onClick={closeCustomer}
+                  className="rounded-full p-2 hover:bg-white/10 transition-colors"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
           </div>
         </section>
@@ -280,19 +414,59 @@ export default function AdminCustomersPage() {
                   {/* Customer Info Card */}
                   <Card>
                     <CardContent className="p-5">
-                      <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Customer Info</h3>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="text-sm font-semibold text-gray-500 uppercase">Customer Info</h3>
+                        {!editingMode ? (
+                          <Button
+                            onClick={startEditingCustomer}
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 w-7 p-0"
+                          >
+                            <Edit2 className="h-3.5 w-3.5" />
+                          </Button>
+                        ) : null}
+                      </div>
                       <div className="space-y-3">
                         <div>
                           <span className="text-xs text-gray-400">Full Name</span>
-                          <p className="font-medium text-gray-900">{selectedCustomer.name}</p>
+                          {editingMode ? (
+                            <Input
+                              value={editName}
+                              onChange={(e) => setEditName(e.target.value)}
+                              className="mt-1"
+                              placeholder="Full name"
+                            />
+                          ) : (
+                            <p className="font-medium text-gray-900">{selectedCustomer.name}</p>
+                          )}
                         </div>
                         <div>
                           <span className="text-xs text-gray-400">Email</span>
-                          <p className="text-gray-700">{selectedCustomer.email}</p>
+                          {editingMode ? (
+                            <Input
+                              value={editEmail}
+                              onChange={(e) => setEditEmail(e.target.value)}
+                              type="email"
+                              className="mt-1"
+                              placeholder="Email address"
+                            />
+                          ) : (
+                            <p className="text-gray-700">{selectedCustomer.email}</p>
+                          )}
                         </div>
                         <div>
                           <span className="text-xs text-gray-400">Phone</span>
-                          <p className="text-gray-700">{selectedCustomer.phone || "Not provided"}</p>
+                          {editingMode ? (
+                            <Input
+                              value={editPhone}
+                              onChange={(e) => setEditPhone(e.target.value)}
+                              className="mt-1"
+                              placeholder="Phone number"
+                            />
+                          ) : (
+                            <p className="text-gray-700">{selectedCustomer.phone || "Not provided"}</p>
+                          )}
                         </div>
                         <div>
                           <span className="text-xs text-gray-400">Member Since</span>
@@ -311,6 +485,26 @@ export default function AdminCustomersPage() {
                           </div>
                         )}
                       </div>
+                      {editingMode && (
+                        <div className="flex gap-2 mt-4 pt-3 border-t">
+                          <Button
+                            onClick={saveCustomerEdit}
+                            disabled={savingEdit}
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Save Changes
+                          </Button>
+                          <Button
+                            onClick={cancelCustomerEdit}
+                            variant="outline"
+                            size="sm"
+                            className="flex-1"
+                          >
+                            Cancel
+                          </Button>
+                        </div>
+                      )}
                     </CardContent>
                   </Card>
 
@@ -366,6 +560,58 @@ export default function AdminCustomersPage() {
                           )}
                         </div>
                       </div>
+
+                      {/* Admin Document Upload */}
+                      {customerBookings.length > 0 && (
+                        <div className="mt-4 pt-3 border-t">
+                          <p className="text-xs font-semibold text-gray-600 mb-2">Admin: Upload Documents</p>
+                          <div className="space-y-2">
+                            <div className="flex gap-2">
+                              <select
+                                value={uploadDocType}
+                                onChange={(e) => setUploadDocType(e.target.value as "id_document" | "insurance_proof")}
+                                className="text-xs border rounded px-2 py-1 flex-1"
+                              >
+                                <option value="id_document">ID Document</option>
+                                <option value="insurance_proof">Insurance Proof</option>
+                              </select>
+                              <select
+                                value={selectedBookingForUpload || ""}
+                                onChange={(e) => setSelectedBookingForUpload(e.target.value)}
+                                className="text-xs border rounded px-2 py-1 flex-1"
+                              >
+                                <option value="">Select Booking</option>
+                                {customerBookings.map((b) => (
+                                  <option key={b.id} value={b.id}>
+                                    {(b.vehicle_name || b.vehicleName || "Unknown")} - {formatDate(b.pickup_date || b.pickupDate)}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                            {selectedBookingForUpload && (
+                              <label className="block">
+                                <input
+                                  type="file"
+                                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                                  onChange={handleDocumentUpload}
+                                  disabled={uploadingDoc}
+                                  className="hidden"
+                                  id="doc-upload-input"
+                                />
+                                <Button
+                                  onClick={() => document.getElementById("doc-upload-input")?.click()}
+                                  disabled={uploadingDoc}
+                                  size="sm"
+                                  variant="outline"
+                                  className="w-full text-xs"
+                                >
+                                  <Upload className="h-3 w-3 mr-1" /> {uploadingDoc ? "Uploading..." : "Choose File"}
+                                </Button>
+                              </label>
+                            )}
+                          </div>
+                        </div>
+                      )}
 
                       {/* ID Document Preview */}
                       {latestIdUrl && (
@@ -539,6 +785,106 @@ export default function AdminCustomersPage() {
     );
   }
 
+  // === ADD CUSTOMER MODAL ===
+  const AddCustomerModal = () => {
+    const [formName, setFormName] = useState("");
+    const [formEmail, setFormEmail] = useState("");
+    const [formPhone, setFormPhone] = useState("");
+    const [submitting, setSubmitting] = useState(false);
+
+    const handleAddCustomer = async () => {
+      if (!formName || !formEmail) {
+        alert("Name and email are required");
+        return;
+      }
+
+      setSubmitting(true);
+      try {
+        const res = await adminFetch("/api/admin/customers", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            name: formName,
+            email: formEmail,
+            phone: formPhone,
+          }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          setFormName("");
+          setFormEmail("");
+          setFormPhone("");
+          setShowAddCustomerModal(false);
+          fetchCustomers();
+          alert("Customer created successfully");
+        } else {
+          alert("Failed to create customer: " + (data.error || "Unknown error"));
+        }
+      } catch (err) {
+        console.error("Failed to create customer:", err);
+        alert("Error creating customer");
+      }
+      setSubmitting(false);
+    };
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="p-6">
+            <h2 className="text-lg font-bold mb-4">Add New Customer</h2>
+            <div className="space-y-3">
+              <div>
+                <label className="text-xs text-gray-600 font-semibold">Full Name</label>
+                <Input
+                  value={formName}
+                  onChange={(e) => setFormName(e.target.value)}
+                  placeholder="John Doe"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600 font-semibold">Email</label>
+                <Input
+                  type="email"
+                  value={formEmail}
+                  onChange={(e) => setFormEmail(e.target.value)}
+                  placeholder="john@example.com"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <label className="text-xs text-gray-600 font-semibold">Phone (optional)</label>
+                <Input
+                  value={formPhone}
+                  onChange={(e) => setFormPhone(e.target.value)}
+                  placeholder="+1 (555) 000-0000"
+                  className="mt-1"
+                />
+              </div>
+            </div>
+            <div className="flex gap-2 mt-6">
+              <Button
+                onClick={handleAddCustomer}
+                disabled={submitting}
+                className="flex-1"
+              >
+                Create Customer
+              </Button>
+              <Button
+                onClick={() => setShowAddCustomerModal(false)}
+                variant="outline"
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  };
+
   // === CUSTOMER LIST VIEW ===
   return (
     <>
@@ -549,6 +895,12 @@ export default function AdminCustomersPage() {
               <h1 className="text-3xl font-bold">Customers</h1>
               <p className="mt-1 text-purple-200">{customers.length} total customers</p>
             </div>
+            <Button
+              onClick={() => setShowAddCustomerModal(true)}
+              className="bg-purple-600 hover:bg-purple-700"
+            >
+              <Plus className="h-4 w-4 mr-2" /> Add Customer
+            </Button>
           </div>
         </div>
       </section>
@@ -594,13 +946,15 @@ export default function AdminCustomersPage() {
             {customers.map((c) => (
               <Card
                 key={c.id}
-                className="cursor-pointer hover:border-purple-300 hover:shadow-md transition-all"
-                onClick={() => openCustomer(c)}
+                className="hover:border-purple-300 hover:shadow-md transition-all"
               >
                 <CardContent className="p-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-700 font-bold text-sm">
+                  <div className="flex items-start justify-between gap-2 mb-2">
+                    <div
+                      className="flex items-center gap-3 flex-1 cursor-pointer"
+                      onClick={() => openCustomer(c)}
+                    >
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-700 font-bold text-sm flex-shrink-0">
                         {c.name?.charAt(0)?.toUpperCase() || "?"}
                       </div>
                       <div>
@@ -608,10 +962,43 @@ export default function AdminCustomersPage() {
                         <p className="text-xs text-gray-500">{c.email}</p>
                       </div>
                     </div>
-                    <ChevronRight className="h-4 w-4 text-gray-400 mt-1" />
+                    <div className="flex gap-1 flex-shrink-0">
+                      <Button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          if (confirm(`Delete customer "${c.name}"?`)) {
+                            (async () => {
+                              try {
+                                const res = await adminFetch(`/api/admin/customers?id=${c.id}`, {
+                                  method: "DELETE",
+                                });
+                                const data = await res.json();
+                                if (data.success) {
+                                  fetchCustomers();
+                                } else {
+                                  alert("Failed to delete customer");
+                                }
+                              } catch (err) {
+                                console.error("Failed to delete:", err);
+                                alert("Error deleting customer");
+                              }
+                            })();
+                          }
+                        }}
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                      <ChevronRight className="h-4 w-4 text-gray-400 mt-1" />
+                    </div>
                   </div>
 
-                  <div className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100">
+                  <div
+                    className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 cursor-pointer"
+                    onClick={() => openCustomer(c)}
+                  >
                     <div className="flex items-center gap-1 text-xs text-gray-500">
                       <Calendar className="h-3 w-3" />
                       <span className="font-semibold text-black">{formatDate(c.createdAt)}</span>
@@ -629,6 +1016,8 @@ export default function AdminCustomersPage() {
           </div>
         )}
       </PageContainer>
+
+      {showAddCustomerModal && <AddCustomerModal />}
     </>
   );
 }

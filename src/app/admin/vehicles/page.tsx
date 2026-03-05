@@ -55,6 +55,7 @@ const emptyVehicle: Omit<Vehicle, "id"> = {
     doors: 4,
   },
   dailyRate: 50,
+  purchasePrice: 0,
   features: [],
   isAvailable: true,
   description: "",
@@ -246,6 +247,7 @@ export default function AdminVehiclesPage() {
           licensePlate: editForm.licensePlate,
           vin: editForm.vin,
           maintenanceStatus: editForm.maintenanceStatus,
+          purchasePrice: editForm.purchasePrice,
         }),
       });
       const data = await res.json();
@@ -270,6 +272,7 @@ export default function AdminVehiclesPage() {
                   licensePlate: editForm.licensePlate || v.licensePlate,
                   vin: editForm.vin || v.vin,
                   maintenanceStatus: editForm.maintenanceStatus || v.maintenanceStatus,
+                  purchasePrice: editForm.purchasePrice !== undefined ? editForm.purchasePrice : v.purchasePrice,
                 }
               : v
           )
@@ -310,6 +313,7 @@ export default function AdminVehiclesPage() {
           licensePlate: newVehicle.licensePlate,
           vin: newVehicle.vin,
           maintenanceStatus: newVehicle.maintenanceStatus,
+          purchasePrice: newVehicle.purchasePrice,
         }),
       });
       const data = await res.json();
@@ -476,6 +480,20 @@ export default function AdminVehiclesPage() {
                   setForm({ ...form, dailyRate: Number(e.target.value) })
                 }
                 min="0"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">
+                Purchase Price ($)
+              </label>
+              <Input
+                type="number"
+                value={form.purchasePrice || 0}
+                onChange={(e) =>
+                  setForm({ ...form, purchasePrice: Number(e.target.value) })
+                }
+                min="0"
+                step="100"
               />
             </div>
             <div>
@@ -1064,12 +1082,20 @@ export default function AdminVehiclesPage() {
                     <span className="text-xs text-gray-600">{vehicle.color}</span>
                   </div>
 
-                  {/* Daily Rate */}
-                  <div className="mb-3 p-2 bg-purple-50 rounded-lg">
-                    <div className="text-lg font-bold text-purple-600">
-                      ${vehicle.dailyRate}
+                  {/* Pricing */}
+                  <div className="mb-3 grid grid-cols-2 gap-2">
+                    <div className="p-2 bg-purple-50 rounded-lg">
+                      <div className="text-lg font-bold text-purple-600">
+                        ${vehicle.dailyRate}
+                      </div>
+                      <div className="text-xs text-gray-600">Daily Rate</div>
                     </div>
-                    <div className="text-xs text-gray-600">Daily Rate</div>
+                    <div className="p-2 bg-gray-50 rounded-lg">
+                      <div className="text-lg font-bold text-gray-700">
+                        ${(vehicle.purchasePrice || 0).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-gray-600">Purchase Price</div>
+                    </div>
                   </div>
 
                   {/* Mileage and Specs */}

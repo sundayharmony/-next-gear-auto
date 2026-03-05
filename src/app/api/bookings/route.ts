@@ -171,10 +171,20 @@ export async function POST(request: Request) {
         if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
       }
 
+      // Check if customer needs a password
+      let needsPassword = false;
+      const customerEmail = body.customerDetails.email.toLowerCase().trim();
+      const { data: cust } = await supabase
+        .from("customers")
+        .select("password_hash")
+        .eq("email", customerEmail)
+        .single();
+      needsPassword = !cust?.password_hash;
+
       const emailData = {
         bookingId,
         customerName: body.customerDetails.name || "Customer",
-        customerEmail: body.customerDetails.email,
+        customerEmail,
         vehicleName,
         pickupDate: body.pickupDate,
         returnDate: body.returnDate,
@@ -182,6 +192,7 @@ export async function POST(request: Request) {
         returnTime: body.returnTime || null,
         totalPrice: body.totalPrice || 0,
         deposit: body.totalPrice || 0,
+        needsPassword,
       };
 
       sendBookingConfirmation(emailData).catch(console.error);
