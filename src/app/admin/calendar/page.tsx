@@ -738,14 +738,14 @@ function CalendarView({
                     </div>
                     <div>
                       <span className="text-gray-600">Pickup:</span>
-                      <div className="font-medium text-gray-900">
-                        {new Date(booking.pickup_date).toLocaleDateString()} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
+                      <div>
+                        <span className="text-base font-bold text-black">{new Date(booking.pickup_date).toLocaleDateString()}</span> at <span className="text-lg font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
                       </div>
                     </div>
                     <div>
                       <span className="text-gray-600">Return:</span>
-                      <div className="font-medium text-gray-900">
-                        {new Date(booking.return_date).toLocaleDateString()} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.return_time)}</span>
+                      <div>
+                        <span className="text-base font-bold text-black">{new Date(booking.return_date).toLocaleDateString()}</span> at <span className="text-lg font-bold text-purple-600">{formatTime(booking.return_time)}</span>
                       </div>
                     </div>
                   </div>
