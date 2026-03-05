@@ -36,10 +36,11 @@
     "lucide-react": "^0.575.0",
     "next": "^16.1.6",
     "nodemailer": "^6.10.1",
+    "pdf-lib": "^1.17.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "stripe": "^17.7.0",
     "recharts": "^2.15.3",
+    "stripe": "^17.7.0",
     "tailwind-merge": "^3.5.0"
   },
   "devDependencies": {

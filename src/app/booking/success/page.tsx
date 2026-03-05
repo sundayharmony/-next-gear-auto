@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, Car, Calendar, CreditCard, ArrowRight } from "lucide-react";
+import { Check, Car, Calendar, CreditCard, ArrowRight, PenLine } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
@@ -134,6 +134,28 @@ function SuccessContent() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* Sign Rental Agreement CTA */}
+              {bookingId && (
+                <Card className="mb-6 border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+                  <CardContent className="p-6 text-center">
+                    <PenLine className="mx-auto h-8 w-8 text-purple-600 mb-2" />
+                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                      Sign Your Rental Agreement
+                    </h3>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Complete your rental agreement with a digital signature before your pickup date.
+                    </p>
+                    <Link href={`/booking/agreement/${bookingId}`}>
+                      <Button className="bg-purple-600 hover:bg-purple-700">
+                        <PenLine className="h-4 w-4 mr-2" />
+                        Sign Rental Agreement
+                        <ArrowRight className="h-4 w-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              )}
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/account">

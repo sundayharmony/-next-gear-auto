@@ -30,6 +30,7 @@ interface BookingRow {
   insurance_opted_out?: boolean;
   signed_name?: string;
   agreement_signed_at?: string;
+  rental_agreement_url?: string;
   extras?: any[];
 }
 
@@ -844,15 +845,32 @@ export default function AdminBookingsPage() {
               </div>
 
               {/* Agreement */}
-              {selectedBooking.signed_name && (
+              {selectedBooking.signed_name || selectedBooking.rental_agreement_url ? (
                 <div>
                   <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Agreement</h3>
-                  <p className="font-serif italic">{selectedBooking.signed_name}</p>
+                  {selectedBooking.signed_name && (
+                    <p className="font-serif italic">{selectedBooking.signed_name}</p>
+                  )}
                   <p className="text-xs text-gray-400">
                     {selectedBooking.agreement_signed_at
                       ? new Date(selectedBooking.agreement_signed_at).toLocaleString()
                       : ""}
                   </p>
+                  {selectedBooking.rental_agreement_url && (
+                    <a
+                      href={selectedBooking.rental_agreement_url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-800 font-medium"
+                    >
+                      View Signed Agreement &rarr;
+                    </a>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Agreement</h3>
+                  <p className="text-xs text-gray-400">Not yet signed</p>
                 </div>
               )}
             </div>

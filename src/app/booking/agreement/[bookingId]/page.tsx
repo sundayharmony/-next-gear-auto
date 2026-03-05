@@ -1,0 +1,417 @@
+"use client";
+
+import React, { useEffect, useState, useCallback } from "react";
+import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  FileText,
+  CheckCircle2,
+  ArrowRight,
+  ArrowLeft,
+  Loader2,
+  AlertCircle,
+  PenLine,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { PageContainer } from "@/components/layout/page-container";
+import { SignaturePad } from "@/components/signature-pad";
+
+// Signature fields the renter must complete
+const SIGNATURE_FIELDS = [
+  {
+    id: "t35",
+    label: "Renter Initials — Page 1 (Terms & Conditions)",
+    description: "By initialing, you acknowledge the vehicle condition and rental terms on page 1.",
+    isInitials: true,
+  },
+  {
+    id: "t42",
+    label: "GPS Tracking Acknowledgement Initials",
+    description: "By initialing, you acknowledge and consent to GPS tracking during the rental period.",
+    isInitials: true,
+  },
+  {
+    id: "t43",
+    label: "Renter Initials — Page 2 (Insurance & Liability)",
+    description: "By initialing, you acknowledge the insurance and liability terms on page 2.",
+    isInitials: true,
+  },
+  {
+    id: "t47",
+    label: "Renter Full Signature",
+    description: "Your full signature confirming agreement to all rental terms and conditions.",
+    isInitials: false,
+  },
+  {
+    id: "t57",
+    label: "Renter Initials — Page 3 (Final Acknowledgement)",
+    description: "By initialing, you confirm you have read and agree to all terms in this agreement.",
+    isInitials: true,
+  },
+];
+
+interface BookingInfo {
+  id: string;
+  customer_name: string;
+  customer_email: string;
+  vehicle_name: string;
+  pickup_date: string;
+  return_date: string;
+  total_price: number;
+  agreement_signed_at: string | null;
+  rental_agreement_url: string | null;
+}
+
+export default function AgreementSigningPage() {
+  const params = useParams();
+  const router = useRouter();
+  const bookingId = params.bookingId as string;
+
+  const [booking, setBooking] = useState<BookingInfo | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [signatures, setSignatures] = useState<Record<string, string | null>>({});
+  const [currentStep, setCurrentStep] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+
+  // Fetch booking details
+  useEffect(() => {
+    async function fetchBooking() {
+      try {
+        const res = await fetch(`/api/bookings?id=${bookingId}`);
+        const data = await res.json();
+        if (data.success && data.data) {
+          setBooking(data.data);
+          // Check if already signed
+          if (data.data.agreement_signed_at) {
+            setSubmitted(true);
+            setSignedUrl(data.data.rental_agreement_url);
+          }
+        } else {
+          setError("Booking not found. Please check your booking ID.");
+        }
+      } catch {
+        setError("Failed to load booking details.");
+      }
+      setLoading(false);
+    }
+    if (bookingId) fetchBooking();
+  }, [bookingId]);
+
+  // Generate PDF preview
+  useEffect(() => {
+    if (booking && !booking.agreement_signed_at) {
+      setPdfPreviewUrl(`/api/rental-agreement/generate?bookingId=${bookingId}`);
+    }
+  }, [booking, bookingId]);
+
+  const handleSignatureChange = useCallback(
+    (fieldId: string, dataUrl: string | null) => {
+      setSignatures((prev) => ({ ...prev, [fieldId]: dataUrl }));
+    },
+    []
+  );
+
+  const completedCount = SIGNATURE_FIELDS.filter((f) => signatures[f.id]).length;
+  const allSigned = completedCount === SIGNATURE_FIELDS.length;
+  const currentField = SIGNATURE_FIELDS[currentStep];
+
+  const handleSubmit = async () => {
+    if (!allSigned) return;
+    setSubmitting(true);
+
+    try {
+      const res = await fetch("/api/rental-agreement/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId, signatures }),
+      });
+      const data = await res.json();
+
+      if (data.success) {
+        setSubmitted(true);
+        setSignedUrl(data.data.url);
+      } else {
+        setError(data.error || "Failed to submit signed agreement.");
+      }
+    } catch {
+      setError("Network error. Please try again.");
+    }
+    setSubmitting(false);
+  };
+
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+      </div>
+    );
+  }
+
+  // Error state
+  if (error && !booking) {
+    return (
+      <PageContainer className="py-16">
+        <div className="mx-auto max-w-lg text-center">
+          <AlertCircle className="mx-auto h-12 w-12 text-red-400 mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Error</h2>
+          <p className="text-gray-500 mb-6">{error}</p>
+          <Link href="/account">
+            <Button>Go to My Bookings</Button>
+          </Link>
+        </div>
+      </PageContainer>
+    );
+  }
+
+  // Already signed
+  if (submitted) {
+    return (
+      <>
+        <section className="bg-gradient-to-br from-green-700 to-green-900 py-12 text-white">
+          <div className="mx-auto max-w-5xl px-4 text-center">
+            <CheckCircle2 className="mx-auto h-14 w-14 text-green-200 mb-3" />
+            <h1 className="text-3xl font-bold">Agreement Signed!</h1>
+            <p className="mt-2 text-green-100">
+              Your rental agreement has been signed and saved to your booking.
+            </p>
+          </div>
+        </section>
+        <PageContainer className="py-8">
+          <div className="mx-auto max-w-lg">
+            <Card>
+              <CardContent className="p-6 text-center">
+                <FileText className="mx-auto h-10 w-10 text-purple-500 mb-3" />
+                <h3 className="text-lg font-semibold mb-2">Signed Rental Agreement</h3>
+                <p className="text-sm text-gray-500 mb-4">
+                  Booking: {bookingId}
+                </p>
+                {signedUrl && (
+                  <a
+                    href={signedUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-block"
+                  >
+                    <Button className="mb-3">
+                      <FileText className="h-4 w-4 mr-2" /> View Signed Agreement
+                    </Button>
+                  </a>
+                )}
+                <div className="flex justify-center gap-3 mt-4">
+                  <Link href="/account">
+                    <Button variant="outline">My Bookings</Button>
+                  </Link>
+                  <Link href="/fleet">
+                    <Button variant="outline">Browse Fleet</Button>
+                  </Link>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </PageContainer>
+      </>
+    );
+  }
+
+  return (
+    <>
+      {/* Hero */}
+      <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-10 text-white">
+        <div className="mx-auto max-w-5xl px-4">
+          <Link
+            href={`/booking/success?booking_id=${bookingId}`}
+            className="inline-flex items-center gap-1 text-sm text-purple-300 hover:text-white mb-3 transition-colors"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Back to booking
+          </Link>
+          <div className="flex items-center gap-3">
+            <PenLine className="h-8 w-8 text-purple-300" />
+            <div>
+              <h1 className="text-3xl font-bold">Sign Rental Agreement</h1>
+              <p className="mt-1 text-purple-200">
+                {booking?.vehicle_name} — {booking?.pickup_date} to {booking?.return_date}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <PageContainer className="py-8">
+        <div className="mx-auto max-w-3xl">
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+              {error}
+            </div>
+          )}
+
+          {/* PDF Preview */}
+          {pdfPreviewUrl && (
+            <Card className="mb-6">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-purple-500" />
+                    Rental Agreement Preview
+                  </h3>
+                  <a
+                    href={pdfPreviewUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-xs text-purple-600 hover:text-purple-800"
+                  >
+                    Open in new tab
+                  </a>
+                </div>
+                <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
+                  <iframe
+                    src={pdfPreviewUrl}
+                    className="w-full h-[500px]"
+                    title="Rental Agreement Preview"
+                  />
+                </div>
+                <p className="text-xs text-gray-400 mt-2">
+                  Vehicle and booking information has been pre-filled. Review the agreement above, then sign below.
+                </p>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Progress */}
+          <div className="mb-6">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-sm font-medium text-gray-700">
+                Signatures: {completedCount} of {SIGNATURE_FIELDS.length}
+              </span>
+              <span className="text-xs text-gray-400">
+                Step {currentStep + 1} of {SIGNATURE_FIELDS.length}
+              </span>
+            </div>
+            <div className="flex gap-1">
+              {SIGNATURE_FIELDS.map((field, i) => (
+                <button
+                  key={field.id}
+                  onClick={() => setCurrentStep(i)}
+                  className={`h-2 flex-1 rounded-full transition-colors ${
+                    signatures[field.id]
+                      ? "bg-green-500"
+                      : i === currentStep
+                        ? "bg-purple-500"
+                        : "bg-gray-200"
+                  }`}
+                />
+              ))}
+            </div>
+          </div>
+
+          {/* Current Signature Field */}
+          <Card className="mb-6 border-purple-200">
+            <CardContent className="p-6">
+              <div className="mb-4">
+                <div className="flex items-center gap-2 mb-1">
+                  {signatures[currentField.id] ? (
+                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  ) : (
+                    <PenLine className="h-5 w-5 text-purple-500" />
+                  )}
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {currentField.label}
+                  </h3>
+                </div>
+                <p className="text-sm text-gray-500 ml-7">
+                  {currentField.description}
+                </p>
+              </div>
+
+              <div className="flex justify-center">
+                <SignaturePad
+                  key={currentField.id}
+                  onSignatureChange={(data) =>
+                    handleSignatureChange(currentField.id, data)
+                  }
+                  isInitials={currentField.isInitials}
+                  label={currentField.isInitials ? "Initial here" : "Sign here"}
+                  width={currentField.isInitials ? 200 : 400}
+                  height={currentField.isInitials ? 80 : 150}
+                />
+              </div>
+
+              {/* Navigation buttons */}
+              <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100">
+                <Button
+                  variant="outline"
+                  onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
+                  disabled={currentStep === 0}
+                >
+                  <ArrowLeft className="h-4 w-4 mr-1" /> Previous
+                </Button>
+
+                {currentStep < SIGNATURE_FIELDS.length - 1 ? (
+                  <Button
+                    onClick={() => setCurrentStep((s) => s + 1)}
+                    disabled={!signatures[currentField.id]}
+                  >
+                    Next <ArrowRight className="h-4 w-4 ml-1" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!allSigned || submitting}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {submitting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Submitting...
+                      </>
+                    ) : (
+                      <>
+                        <CheckCircle2 className="h-4 w-4 mr-2" /> Submit Signed Agreement
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Signature Summary */}
+          <Card>
+            <CardContent className="p-4">
+              <h4 className="text-sm font-semibold text-gray-700 mb-3">All Signatures</h4>
+              <div className="space-y-2">
+                {SIGNATURE_FIELDS.map((field, i) => (
+                  <button
+                    key={field.id}
+                    onClick={() => setCurrentStep(i)}
+                    className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors ${
+                      i === currentStep
+                        ? "bg-purple-50 border border-purple-200"
+                        : "hover:bg-gray-50"
+                    }`}
+                  >
+                    {signatures[field.id] ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                    ) : (
+                      <div className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" />
+                    )}
+                    <span className="text-sm text-gray-700 truncate">
+                      {field.label}
+                    </span>
+                    {signatures[field.id] && (
+                      <span className="ml-auto text-xs text-green-600 shrink-0">Signed</span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </PageContainer>
+    </>
+  );
+}
