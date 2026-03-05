@@ -1,10 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 
-export const config = {
-  api: { bodyParser: false },
-};
-
 export async function POST(request: NextRequest) {
   try {
     const supabase = getServiceSupabase();
