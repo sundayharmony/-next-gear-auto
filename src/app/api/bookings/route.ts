@@ -256,6 +256,24 @@ export async function PATCH(request: Request) {
         if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
       }
 
+      // Check if customer needs a password
+      let needsPassword = false;
+      if (booking.customer_id) {
+        const { data: cust } = await supabase
+          .from("customers")
+          .select("password_hash")
+          .eq("id", booking.customer_id)
+          .single();
+        needsPassword = !cust?.password_hash;
+      } else if (booking.customer_email) {
+        const { data: cust } = await supabase
+          .from("customers")
+          .select("password_hash")
+          .eq("email", booking.customer_email.toLowerCase().trim())
+          .single();
+        needsPassword = !cust?.password_hash;
+      }
+
       const emailData = {
         bookingId: booking.id,
         customerName: booking.customer_name || "Customer",
@@ -267,6 +285,7 @@ export async function PATCH(request: Request) {
         returnTime: booking.return_time || null,
         totalPrice: booking.total_price || 0,
         deposit: booking.deposit || 0,
+        needsPassword,
       };
 
       if (status === "cancelled") {
