@@ -51,6 +51,8 @@ interface BookingData {
   deposit: number;
   status: string;
   created_at: string;
+  agreement_signed_at?: string | null;
+  signed_name?: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -354,12 +356,15 @@ export default function AccountPage() {
                           </div>
                         </div>
                         <div className="flex gap-2 flex-wrap">
-                          {booking.status === "confirmed" && (
+                          {booking.status === "confirmed" && !booking.agreement_signed_at && (
                             <Link href={`/booking/agreement/${booking.id}`}>
                               <Button size="sm" variant="outline" className="text-purple-600 hover:bg-purple-50">
                                 <FileText className="h-3.5 w-3.5 mr-1" /> Sign Agreement
                               </Button>
                             </Link>
+                          )}
+                          {booking.agreement_signed_at && (
+                            <Badge className="bg-green-100 text-green-700 border-green-200">Agreement Signed</Badge>
                           )}
                           {(booking.status === "pending" || booking.status === "confirmed") && (
                             <Button
@@ -591,16 +596,19 @@ export default function AccountPage() {
                             <div className="text-lg font-bold mb-3">
                               <span className="text-gray-900">{formatDate(next.pickup_date)}</span> at <span className="text-purple-600">{formatTime(next.pickup_time)}</span> → <span className="text-gray-900">{formatDate(next.return_date)}</span> at <span className="text-purple-600">{formatTime(next.return_time)}</span>
                             </div>
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 items-center">
                               <Button size="sm" variant="outline" onClick={() => setActiveTab("upcoming")}>
                                 View Details
                               </Button>
-                              {next.status === "confirmed" && (
+                              {next.status === "confirmed" && !next.agreement_signed_at && (
                                 <Link href={`/booking/agreement/${next.id}`}>
                                   <Button size="sm" variant="outline" className="text-purple-600 hover:bg-purple-50">
                                     <FileText className="h-3.5 w-3.5 mr-1" /> Sign Agreement
                                   </Button>
                                 </Link>
+                              )}
+                              {next.agreement_signed_at && (
+                                <Badge className="bg-green-100 text-green-700 border-green-200">Agreement Signed</Badge>
                               )}
                             </div>
                           </div>
