@@ -257,6 +257,8 @@ function BookingPageInner() {
   const [promoError, setPromoError] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState("");
+  const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(null);
+  const [uploadingId, setUploadingId] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Recalculate pricing when vehicle or extras change
@@ -293,7 +295,7 @@ function BookingPageInner() {
     setPromoLoading(false);
   };
 
-  const handleFileUpload = (file: File) => {
+  const handleFileUpload = async (file: File) => {
     setUploadError("");
     const validTypes = ["image/jpeg", "image/png", "application/pdf"];
     if (!validTypes.includes(file.type)) {
@@ -305,6 +307,26 @@ function BookingPageInner() {
       return;
     }
     setUploadedFile(file);
+    setUploadingId(true);
+
+    // Upload to Supabase storage immediately
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload-temp", { method: "POST", body: formData });
+      const data = await res.json();
+      if (data.success) {
+        setIdDocumentUrl(data.url);
+      } else {
+        setUploadError("Upload failed: " + (data.error || "Unknown error"));
+        setUploadedFile(null);
+      }
+    } catch (err) {
+      console.error("ID upload error:", err);
+      setUploadError("Failed to upload ID document");
+      setUploadedFile(null);
+    }
+    setUploadingId(false);
   };
 
   const handleRemovePromo = () => {
@@ -341,6 +363,10 @@ function BookingPageInner() {
       // Store insurance proof in booking context
       const insuranceOptedOut = insuranceProofUrl !== null;
       booking.setInsuranceProof(insuranceProofUrl, insuranceOptedOut);
+    }
+    if (booking.currentStep === 5) {
+      // Store ID document URL in booking context
+      booking.setIdDocumentUrl(idDocumentUrl);
     }
     if (booking.currentStep === 6) {
       booking.setSignedName(signedName);
@@ -684,13 +710,15 @@ function BookingPageInner() {
                 {uploadedFile ? (
                   <div className="rounded-xl border-2 border-green-300 bg-green-50 p-6 text-center">
                     <Check className="mx-auto h-10 w-10 text-green-500 mb-3" />
-                    <p className="text-sm font-medium text-green-700">File uploaded successfully</p>
+                    <p className="text-sm font-medium text-green-700">
+                      {uploadingId ? "Uploading..." : "File uploaded successfully"}
+                    </p>
                     <p className="mt-1 text-xs text-gray-500">{uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(0)} KB)</p>
                     <div className="mt-4 flex justify-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => { setUploadedFile(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                        onClick={() => { setUploadedFile(null); setIdDocumentUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                       >
                         <X className="h-3.5 w-3.5 mr-1" /> Remove
                       </Button>

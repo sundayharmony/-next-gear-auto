@@ -25,6 +25,7 @@ export async function POST(request: Request) {
       discountAmount,
       insuranceProofUrl,
       insuranceOptedOut,
+      idDocumentUrl,
     } = body;
 
     if (!vehicleId || !pickupDate || !returnDate || !customerDetails?.email) {
@@ -145,6 +146,7 @@ export async function POST(request: Request) {
       agreement_signed_at: signedName ? new Date().toISOString() : null,
       insurance_proof_url: insuranceProofUrl || null,
       insurance_opted_out: insuranceOptedOut || false,
+      id_document_url: idDocumentUrl || null,
     });
 
     if (bookingError) {
