@@ -5,7 +5,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   Calendar, Clock, User,
-  CreditCard, Download, XCircle, Star, LogOut, Shield
+  Car, Download, XCircle, Star, LogOut, Shield,
+  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -35,7 +36,7 @@ interface Vehicle {
   maintenanceStatus: string;
 }
 
-type Tab = "upcoming" | "past" | "profile" | "payment";
+type Tab = "overview" | "upcoming" | "past" | "profile";
 
 interface BookingData {
   id: string;
@@ -70,7 +71,7 @@ const formatTime = (t?: string) => {
 export default function AccountPage() {
   const { user, isAuthenticated, logout, updateProfile } = useAuth();
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>("upcoming");
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [loading, setLoading] = useState(true);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -219,10 +220,10 @@ export default function AccountPage() {
     .slice(0, 2);
 
   const tabs = [
+    { id: "overview" as Tab, label: "Overview", icon: BarChart3 },
     { id: "upcoming" as Tab, label: "Upcoming", icon: Calendar, count: upcomingBookings.length },
     { id: "past" as Tab, label: "Past Rentals", icon: Clock, count: pastBookings.length },
     { id: "profile" as Tab, label: "Profile", icon: User },
-    { id: "payment" as Tab, label: "Payment", icon: CreditCard },
   ];
 
   const LoadingSkeleton = () => (
@@ -341,17 +342,24 @@ export default function AccountPage() {
                             <div className="flex items-center gap-2 text-gray-500">
                               <Calendar className="h-4 w-4" />
                               <div>
-                                <div>{booking.pickup_date} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
-                                <div>to {booking.return_date} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>
+                                <div className="text-lg font-bold text-purple-600">{booking.pickup_date} at {formatTime(booking.pickup_time)}</div>
+                                <div className="text-lg font-bold text-purple-600">to {booking.return_date} at {formatTime(booking.return_time)}</div>
                               </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-2 text-gray-500">
-                            <CreditCard className="h-4 w-4" />
+                            <BarChart3 className="h-4 w-4" />
                             <span className="font-medium text-gray-900">${booking.total_price}</span>
                           </div>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex gap-2 flex-wrap">
+                          {booking.status === "confirmed" && (
+                            <Link href={`/booking/agreement/${booking.id}`}>
+                              <Button size="sm" variant="outline" className="text-purple-600 hover:bg-purple-50">
+                                <FileText className="h-3.5 w-3.5 mr-1" /> Sign Agreement
+                              </Button>
+                            </Link>
+                          )}
                           {(booking.status === "pending" || booking.status === "confirmed") && (
                             <Button
                               size="sm"
@@ -401,9 +409,9 @@ export default function AccountPage() {
                             </Badge>
                           </div>
                           <div className="flex flex-col gap-2 text-sm mb-3">
-                            <div className="text-gray-500">
-                              <div>{booking.pickup_date} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
-                              <div>to {booking.return_date} at <span className="text-lg font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>
+                            <div>
+                              <div className="text-lg font-bold text-purple-600">{booking.pickup_date} at {formatTime(booking.pickup_time)}</div>
+                              <div className="text-lg font-bold text-purple-600">to {booking.return_date} at {formatTime(booking.return_time)}</div>
                             </div>
                             <span className="font-medium text-gray-900">${booking.total_price}</span>
                           </div>
@@ -422,6 +430,11 @@ export default function AccountPage() {
                             >
                               <Download className="h-3.5 w-3.5 mr-1" /> Receipt
                             </Button>
+                            <Link href={`/fleet/${booking.vehicle_id}`}>
+                              <Button size="sm" variant="outline" className="text-purple-600 hover:bg-purple-50">
+                                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Book Again
+                              </Button>
+                            </Link>
                             {booking.status === "completed" && (
                               <Button
                                 size="sm"
@@ -513,15 +526,136 @@ export default function AccountPage() {
               </Card>
             )}
 
-            {/* Payment Methods */}
-            {activeTab === "payment" && (
+            {/* Overview Dashboard */}
+            {activeTab === "overview" && (
               <>
-                <h2 className="text-xl font-semibold text-gray-900">Payment Methods</h2>
+                <h2 className="text-xl font-semibold text-gray-900">Dashboard Overview</h2>
+
+                {/* Quick Stats */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Calendar className="mx-auto h-6 w-6 text-purple-500 mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">{upcomingBookings.length}</p>
+                      <p className="text-xs text-gray-500">Upcoming</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Clock className="mx-auto h-6 w-6 text-blue-500 mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">{pastBookings.length}</p>
+                      <p className="text-xs text-gray-500">Completed</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <Car className="mx-auto h-6 w-6 text-green-500 mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">{bookings.length}</p>
+                      <p className="text-xs text-gray-500">Total Rentals</p>
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardContent className="p-4 text-center">
+                      <BarChart3 className="mx-auto h-6 w-6 text-amber-500 mb-2" />
+                      <p className="text-2xl font-bold text-gray-900">
+                        ${bookings.reduce((sum, b) => sum + (b.total_price || 0), 0).toFixed(0)}
+                      </p>
+                      <p className="text-xs text-gray-500">Total Spent</p>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Next Upcoming Rental */}
+                {upcomingBookings.length > 0 && (
+                  <Card className="border-purple-200 bg-purple-50/50">
+                    <CardContent className="p-5">
+                      <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-purple-600" /> Your Next Rental
+                      </h3>
+                      {(() => {
+                        const next = upcomingBookings[0];
+                        return (
+                          <div>
+                            <div className="flex items-start justify-between mb-2">
+                              <div>
+                                <p className="font-bold text-lg text-gray-900">
+                                  {getVehicleName(next.vehicle_id, next.vehicle_name)}
+                                </p>
+                                <p className="text-xs text-gray-400">Booking #{next.id}</p>
+                              </div>
+                              <Badge className={statusColors[next.status] || statusColors.pending}>
+                                {next.status}
+                              </Badge>
+                            </div>
+                            <div className="text-lg font-bold text-purple-600 mb-3">
+                              {next.pickup_date} at {formatTime(next.pickup_time)} → {next.return_date} at {formatTime(next.return_time)}
+                            </div>
+                            <div className="flex gap-2">
+                              <Button size="sm" variant="outline" onClick={() => setActiveTab("upcoming")}>
+                                View Details
+                              </Button>
+                              {next.status === "confirmed" && (
+                                <Link href={`/booking/agreement/${next.id}`}>
+                                  <Button size="sm" variant="outline" className="text-purple-600 hover:bg-purple-50">
+                                    <FileText className="h-3.5 w-3.5 mr-1" /> Sign Agreement
+                                  </Button>
+                                </Link>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Quick Actions */}
                 <Card>
-                  <CardContent className="py-12 text-center">
-                    <CreditCard className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-                    <p className="text-gray-500 mb-2">Payment methods are managed through Stripe.</p>
-                    <p className="text-sm text-gray-400">Your card details are securely stored by Stripe and never touch our servers.</p>
+                  <CardContent className="p-5">
+                    <h3 className="font-semibold text-gray-900 mb-4">Quick Actions</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <Link href="/fleet">
+                        <Button variant="outline" className="w-full justify-start gap-2 h-12">
+                          <Car className="h-5 w-5 text-purple-600" />
+                          <div className="text-left">
+                            <p className="text-sm font-medium">Browse Fleet</p>
+                            <p className="text-xs text-gray-400">Find your next ride</p>
+                          </div>
+                        </Button>
+                      </Link>
+                      <Button variant="outline" className="w-full justify-start gap-2 h-12" onClick={() => setActiveTab("profile")}>
+                        <User className="h-5 w-5 text-blue-600" />
+                        <div className="text-left">
+                          <p className="text-sm font-medium">Edit Profile</p>
+                          <p className="text-xs text-gray-400">Update your info</p>
+                        </div>
+                      </Button>
+                      <Button variant="outline" className="w-full justify-start gap-2 h-12" onClick={() => setActiveTab("past")}>
+                        <RefreshCw className="h-5 w-5 text-green-600" />
+                        <div className="text-left">
+                          <p className="text-sm font-medium">Rent Again</p>
+                          <p className="text-xs text-gray-400">View past vehicles</p>
+                        </div>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Contact / Support */}
+                <Card>
+                  <CardContent className="p-5">
+                    <h3 className="font-semibold text-gray-900 mb-3">Need Help?</h3>
+                    <div className="flex flex-col sm:flex-row gap-4 text-sm text-gray-600">
+                      <a href="tel:+1234567890" className="flex items-center gap-2 hover:text-purple-600 transition-colors">
+                        <Phone className="h-4 w-4" /> Call Us
+                      </a>
+                      <a href="mailto:contact@rentnextgearauto.com" className="flex items-center gap-2 hover:text-purple-600 transition-colors">
+                        <Mail className="h-4 w-4" /> contact@rentnextgearauto.com
+                      </a>
+                      <a href="https://maps.google.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:text-purple-600 transition-colors">
+                        <MapPin className="h-4 w-4" /> Visit Us
+                      </a>
+                    </div>
                   </CardContent>
                 </Card>
               </>

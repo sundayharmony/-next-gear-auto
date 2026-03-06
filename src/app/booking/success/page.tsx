@@ -149,12 +149,12 @@ function SuccessContent() {
                         <span className="flex items-center gap-2 text-sm text-gray-500">
                           <Calendar className="h-4 w-4" /> Dates & Times
                         </span>
-                        <div className="text-right text-sm">
-                          <div className="font-medium text-gray-900">
-                            {booking.pickup_date} at <span className="text-xl font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
+                        <div className="text-right">
+                          <div className="text-xl font-bold text-purple-600">
+                            {booking.pickup_date} at {formatTime(booking.pickup_time)}
                           </div>
-                          <div className="font-medium text-gray-900">
-                            {booking.return_date} at <span className="text-xl font-bold text-purple-600">{formatTime(booking.return_time)}</span>
+                          <div className="text-xl font-bold text-purple-600">
+                            {booking.return_date} at {formatTime(booking.return_time)}
                           </div>
                         </div>
                       </div>
