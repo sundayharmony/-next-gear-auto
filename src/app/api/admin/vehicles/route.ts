@@ -32,6 +32,11 @@ export async function GET(req: NextRequest) {
         vin: v.vin || "",
         maintenanceStatus: v.maintenance_status || "good",
         purchasePrice: v.purchase_price || 0,
+        isFinanced: v.is_financed || false,
+        monthlyPayment: v.monthly_payment || 0,
+        paymentDayOfMonth: v.payment_day_of_month || 1,
+        financingStartDate: v.financing_start_date || null,
+        createdAt: v.created_at || null,
       }));
       return NextResponse.json({ success: true, data: vehicles });
     }
@@ -72,6 +77,10 @@ export async function POST(request: NextRequest) {
         vin: body.vin || "",
         maintenance_status: body.maintenanceStatus || "good",
         purchase_price: body.purchasePrice || 0,
+        is_financed: body.isFinanced || false,
+        monthly_payment: body.monthlyPayment || 0,
+        payment_day_of_month: body.paymentDayOfMonth || 1,
+        financing_start_date: body.financingStartDate || null,
       })
       .select()
       .single();
@@ -117,6 +126,10 @@ export async function PUT(request: NextRequest) {
     if (updates.vin !== undefined) dbUpdates.vin = updates.vin;
     if (updates.maintenanceStatus !== undefined) dbUpdates.maintenance_status = updates.maintenanceStatus;
     if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;
+    if (updates.isFinanced !== undefined) dbUpdates.is_financed = updates.isFinanced;
+    if (updates.monthlyPayment !== undefined) dbUpdates.monthly_payment = updates.monthlyPayment;
+    if (updates.paymentDayOfMonth !== undefined) dbUpdates.payment_day_of_month = updates.paymentDayOfMonth;
+    if (updates.financingStartDate !== undefined) dbUpdates.financing_start_date = updates.financingStartDate;
 
     const { error } = await supabase
       .from("vehicles")

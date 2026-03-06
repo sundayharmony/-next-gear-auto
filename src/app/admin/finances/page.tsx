@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { calculateFinancing, getEffectiveVehicleCost } from "@/lib/utils/financing";
 import {
   DollarSign,
   TrendingUp,
@@ -61,6 +62,11 @@ interface Vehicle {
   make: string;
   model: string;
   purchasePrice?: number;
+  isFinanced?: boolean;
+  monthlyPayment?: number;
+  paymentDayOfMonth?: number;
+  financingStartDate?: string;
+  createdAt?: string;
 }
 
 const CATEGORY_COLORS: Record<string, string> = {
@@ -70,6 +76,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   cleaning: "#10B981",
   parking: "#8B5CF6",
   registration: "#EC4899",
+  financing: "#7C3AED",
   other: "#6B7280",
 };
 
@@ -241,7 +248,21 @@ export default function AdminFinancesPage() {
       0
     );
     const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const totalVehicleCosts = vehicles.reduce((sum, v) => sum + (v.purchasePrice || 0), 0);
+
+    // For financed vehicles, use sum of processed monthly payments instead of full purchase price
+    const totalFinancingPayments = vehicles.reduce((sum, v) => {
+      if (v.isFinanced) {
+        return sum + getEffectiveVehicleCost(v);
+      }
+      return sum;
+    }, 0);
+    const totalNonFinancedCosts = vehicles.reduce((sum, v) => {
+      if (!v.isFinanced) {
+        return sum + (v.purchasePrice || 0);
+      }
+      return sum;
+    }, 0);
+    const totalVehicleCosts = totalNonFinancedCosts + totalFinancingPayments;
     const netProfit = totalRevenue - totalExpenses - totalVehicleCosts;
 
     const totalDaysInRange = Math.ceil(
@@ -301,13 +322,23 @@ export default function AdminFinancesPage() {
         (categoryTotals[expense.category] || 0) + (expense.amount || 0);
     });
 
+    // Add financing payments as a virtual expense category
+    vehicles.forEach((v) => {
+      if (v.isFinanced) {
+        const cost = getEffectiveVehicleCost(v);
+        if (cost > 0) {
+          categoryTotals["financing"] = (categoryTotals["financing"] || 0) + cost;
+        }
+      }
+    });
+
     return Object.entries(categoryTotals)
       .map(([name, value]) => ({
         name: name.charAt(0).toUpperCase() + name.slice(1),
         value: Math.round(value),
       }))
       .sort((a, b) => b.value - a.value);
-  }, [expenses]);
+  }, [expenses, vehicles]);
 
   const vehicleAnalytics = useMemo(() => {
     const analytics: VehicleAnalytics[] = [];
@@ -332,6 +363,10 @@ export default function AdminFinancesPage() {
         0
       );
 
+      // For financed vehicles, add financing payments to expenses
+      const vehicleCost = getEffectiveVehicleCost(vehicle);
+      const totalExpensesWithFinancing = expenseTotal + vehicleCost;
+
       analytics.push({
         vehicleId: vehicle.id,
         year: vehicle.year,
@@ -339,8 +374,8 @@ export default function AdminFinancesPage() {
         model: vehicle.model,
         bookings: revenueBookings.length,
         revenue,
-        expenses: expenseTotal,
-        profit: revenue - expenseTotal,
+        expenses: totalExpensesWithFinancing,
+        profit: revenue - totalExpensesWithFinancing,
       });
     });
 
@@ -490,9 +525,11 @@ export default function AdminFinancesPage() {
       0
     );
     const purchasePrice = vehicle.purchasePrice || 0;
-    const profit = revenue - expenseTotal - purchasePrice;
+    const effectiveCost = getEffectiveVehicleCost(vehicle);
+    const financingInfo = vehicle.isFinanced ? calculateFinancing(vehicle) : null;
+    const profit = revenue - expenseTotal - effectiveCost;
     const roi =
-      purchasePrice > 0 ? ((profit / purchasePrice) * 100).toFixed(2) : "0.00";
+      effectiveCost > 0 ? ((profit / effectiveCost) * 100).toFixed(2) : "0.00";
 
     const totalDaysInRange = Math.ceil(
       (new Date(dateRange.to).getTime() -
@@ -521,6 +558,8 @@ export default function AdminFinancesPage() {
       expenseAmount: expenseTotal,
       profit,
       purchasePrice,
+      effectiveCost,
+      financingInfo,
       roi,
       occupancyRate,
       bookedDays,
@@ -533,13 +572,18 @@ export default function AdminFinancesPage() {
 
   // Render vehicle detail view
   if (selectedVehicleDetail) {
-    const { vehicle, bookings: vBookings, expenseList: vExpenses, revenue, expenseAmount, profit, purchasePrice, roi, occupancyRate, bookedDays } = selectedVehicleDetail;
+    const { vehicle, bookings: vBookings, expenseList: vExpenses, revenue, expenseAmount, profit, purchasePrice, effectiveCost, financingInfo, roi, occupancyRate, bookedDays } = selectedVehicleDetail;
 
     const expenseCategoryBreakdown: Record<string, number> = {};
     vExpenses.forEach((exp: Expense) => {
       expenseCategoryBreakdown[exp.category] =
         (expenseCategoryBreakdown[exp.category] || 0) + (exp.amount || 0);
     });
+    // Add financing payments as a virtual expense category
+    if (financingInfo && financingInfo.totalPaid > 0) {
+      expenseCategoryBreakdown["financing"] =
+        (expenseCategoryBreakdown["financing"] || 0) + financingInfo.totalPaid;
+    }
 
     return (
       <PageContainer>
@@ -562,16 +606,45 @@ export default function AdminFinancesPage() {
 
           {/* Purple gradient header card */}
           <div className="bg-gradient-to-r from-purple-600 to-purple-700 rounded-lg p-6 text-white">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className={`grid grid-cols-1 ${financingInfo ? "md:grid-cols-4" : "md:grid-cols-2"} gap-4`}>
               <div>
-                <p className="text-purple-100 text-sm">Purchase Price</p>
+                <p className="text-purple-100 text-sm">
+                  {vehicle.isFinanced ? "Total Vehicle Price" : "Purchase Price"}
+                </p>
                 <p className="text-3xl font-bold mt-1">
                   ${purchasePrice.toLocaleString()}
                 </p>
               </div>
-              <div className="text-right">
+              {financingInfo && (
+                <>
+                  <div>
+                    <p className="text-purple-100 text-sm">Monthly Payment</p>
+                    <p className="text-2xl font-bold mt-1">
+                      ${financingInfo.monthlyPayment.toLocaleString()}/mo
+                    </p>
+                    <p className="text-purple-200 text-xs mt-1">
+                      Due on the {financingInfo.paymentDayOfMonth}{financingInfo.paymentDayOfMonth === 1 ? "st" : financingInfo.paymentDayOfMonth === 2 ? "nd" : financingInfo.paymentDayOfMonth === 3 ? "rd" : "th"}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-purple-100 text-sm">Paid So Far</p>
+                    <p className="text-2xl font-bold mt-1">
+                      ${financingInfo.totalPaid.toLocaleString()}
+                    </p>
+                    <p className="text-purple-200 text-xs mt-1">
+                      {financingInfo.paymentsProcessed} payment{financingInfo.paymentsProcessed !== 1 ? "s" : ""} made
+                    </p>
+                  </div>
+                </>
+              )}
+              <div className={financingInfo ? "" : "text-right"}>
                 <p className="text-purple-100 text-sm">ROI</p>
                 <p className="text-3xl font-bold mt-1">{roi}%</p>
+                {financingInfo && (
+                  <p className="text-purple-200 text-xs mt-1">
+                    ${financingInfo.remainingBalance.toLocaleString()} remaining
+                  </p>
+                )}
               </div>
             </div>
           </div>

@@ -64,6 +64,10 @@ const emptyVehicle: Omit<Vehicle, "id"> = {
   licensePlate: "",
   vin: "",
   maintenanceStatus: "good",
+  isFinanced: false,
+  monthlyPayment: 0,
+  paymentDayOfMonth: 1,
+  financingStartDate: "",
 };
 
 interface FormState extends Omit<Vehicle, "id"> {
@@ -248,6 +252,10 @@ export default function AdminVehiclesPage() {
           vin: editForm.vin,
           maintenanceStatus: editForm.maintenanceStatus,
           purchasePrice: editForm.purchasePrice,
+          isFinanced: editForm.isFinanced,
+          monthlyPayment: editForm.monthlyPayment,
+          paymentDayOfMonth: editForm.paymentDayOfMonth,
+          financingStartDate: editForm.financingStartDate || null,
         }),
       });
       const data = await res.json();
@@ -273,6 +281,10 @@ export default function AdminVehiclesPage() {
                   vin: editForm.vin || v.vin,
                   maintenanceStatus: editForm.maintenanceStatus || v.maintenanceStatus,
                   purchasePrice: editForm.purchasePrice !== undefined ? editForm.purchasePrice : v.purchasePrice,
+                  isFinanced: editForm.isFinanced !== undefined ? editForm.isFinanced : v.isFinanced,
+                  monthlyPayment: editForm.monthlyPayment !== undefined ? editForm.monthlyPayment : v.monthlyPayment,
+                  paymentDayOfMonth: editForm.paymentDayOfMonth !== undefined ? editForm.paymentDayOfMonth : v.paymentDayOfMonth,
+                  financingStartDate: editForm.financingStartDate || v.financingStartDate,
                 }
               : v
           )
@@ -314,6 +326,10 @@ export default function AdminVehiclesPage() {
           vin: newVehicle.vin,
           maintenanceStatus: newVehicle.maintenanceStatus,
           purchasePrice: newVehicle.purchasePrice,
+          isFinanced: newVehicle.isFinanced,
+          monthlyPayment: newVehicle.monthlyPayment,
+          paymentDayOfMonth: newVehicle.paymentDayOfMonth,
+          financingStartDate: newVehicle.financingStartDate || null,
         }),
       });
       const data = await res.json();
@@ -496,6 +512,78 @@ export default function AdminVehiclesPage() {
                 step="100"
               />
             </div>
+          </div>
+
+          {/* Financing Section */}
+          <div className="border border-purple-200 rounded-lg p-3 bg-purple-50/50">
+            <div className="flex items-center justify-between mb-3">
+              <label className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                Vehicle Financing
+              </label>
+              <button
+                type="button"
+                onClick={() => setForm({ ...form, isFinanced: !form.isFinanced })}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  form.isFinanced ? "bg-purple-600" : "bg-gray-300"
+                }`}
+              >
+                <span
+                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    form.isFinanced ? "translate-x-6" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
+            {form.isFinanced && (
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Monthly Payment ($)
+                  </label>
+                  <Input
+                    type="number"
+                    value={form.monthlyPayment || 0}
+                    onChange={(e) =>
+                      setForm({ ...form, monthlyPayment: Number(e.target.value) })
+                    }
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Payment Day (1-31)
+                  </label>
+                  <Input
+                    type="number"
+                    value={form.paymentDayOfMonth || 1}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        paymentDayOfMonth: Math.min(31, Math.max(1, Number(e.target.value))),
+                      })
+                    }
+                    min="1"
+                    max="31"
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                    Financing Start Date
+                  </label>
+                  <Input
+                    type="date"
+                    value={form.financingStartDate || ""}
+                    onChange={(e) =>
+                      setForm({ ...form, financingStartDate: e.target.value })
+                    }
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">
                 Available
@@ -1094,7 +1182,15 @@ export default function AdminVehiclesPage() {
                       <div className="text-lg font-bold text-gray-700">
                         ${(vehicle.purchasePrice || 0).toLocaleString()}
                       </div>
-                      <div className="text-xs text-gray-600">Purchase Price</div>
+                      <div className="text-xs text-gray-600">
+                        {vehicle.isFinanced ? (
+                          <span className="text-purple-600 font-medium">
+                            Financed · ${(vehicle.monthlyPayment || 0).toLocaleString()}/mo
+                          </span>
+                        ) : (
+                          "Purchase Price"
+                        )}
+                      </div>
                     </div>
                   </div>
 

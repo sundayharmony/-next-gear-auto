@@ -28,6 +28,11 @@ export interface Vehicle {
   vin: string;
   maintenanceStatus: "good" | "needs-service" | "in-maintenance";
   purchasePrice?: number;
+  isFinanced?: boolean;
+  monthlyPayment?: number;
+  paymentDayOfMonth?: number;
+  financingStartDate?: string;
+  createdAt?: string;
 }
 
 /** Helper to get display name like "2024 Toyota Camry" */
