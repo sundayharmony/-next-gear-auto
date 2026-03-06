@@ -150,11 +150,11 @@ function SuccessContent() {
                           <Calendar className="h-4 w-4" /> Dates & Times
                         </span>
                         <div className="text-right">
-                          <div className="text-xl font-bold text-purple-600">
-                            {booking.pickup_date} at {formatTime(booking.pickup_time)}
+                          <div className="text-xl font-bold">
+                            <span className="text-gray-900">{booking.pickup_date}</span> at <span className="text-purple-600">{formatTime(booking.pickup_time)}</span>
                           </div>
-                          <div className="text-xl font-bold text-purple-600">
-                            {booking.return_date} at {formatTime(booking.return_time)}
+                          <div className="text-xl font-bold">
+                            <span className="text-gray-900">{booking.return_date}</span> at <span className="text-purple-600">{formatTime(booking.return_time)}</span>
                           </div>
                         </div>
                       </div>
