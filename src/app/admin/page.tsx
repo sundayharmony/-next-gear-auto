@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { formatDate } from "@/lib/utils/date-helpers";
 
 interface DashboardData {
   totalBookings: number;
@@ -220,8 +221,8 @@ export default function AdminDashboardPage() {
                           <td className="px-4 py-3 text-gray-900">{booking.customer_name || "—"}</td>
                           <td className="px-4 py-3 text-gray-600">{booking.vehicleName}</td>
                           <td className="px-4 py-3">
-                            <div><span className="text-sm font-bold text-black">{booking.pickup_date}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
-                            <div><span className="text-sm font-bold text-black">{booking.return_date}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>
+                            <div><span className="text-sm font-bold text-black">{formatDate(booking.pickup_date)}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
+                            <div><span className="text-sm font-bold text-black">{formatDate(booking.return_date)}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>
                           </td>
                           <td className="px-4 py-3 font-medium">${booking.total_price?.toFixed(2) || "—"}</td>
                           <td className="px-4 py-3">

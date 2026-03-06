@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { formatDate } from "@/lib/utils/date-helpers";
 import {
   BarChart,
   Bar,
@@ -742,8 +743,8 @@ export default function AdminFinancesPage() {
                               {booking.id.slice(0, 8)}...
                             </td>
                             <td className="px-4 py-3 text-gray-600">
-                              {new Date(booking.pickup_date).toLocaleDateString()} -
-                              {new Date(booking.return_date).toLocaleDateString()}
+                              {formatDate(booking.pickup_date)} -
+                              {formatDate(booking.return_date)}
                             </td>
                             <td className="px-4 py-3">
                               <Badge

@@ -29,6 +29,7 @@ const formatDate = (d: string | undefined) => {
   if (!d) return "___________";
   const date = new Date(d + "T00:00:00");
   return date.toLocaleDateString("en-US", {
+    weekday: "short",
     month: "2-digit",
     day: "2-digit",
     year: "numeric",

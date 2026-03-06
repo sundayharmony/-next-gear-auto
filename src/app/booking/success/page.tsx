@@ -7,6 +7,7 @@ import { Check, Car, Calendar, CreditCard, ArrowRight, FileCheck, Loader2 } from
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
+import { formatDate } from "@/lib/utils/date-helpers";
 
 const formatTime = (t?: string) => {
   if (!t) return "";
@@ -151,10 +152,10 @@ function SuccessContent() {
                         </span>
                         <div className="text-right">
                           <div className="text-xl font-bold">
-                            <span className="text-gray-900">{booking.pickup_date}</span> at <span className="text-purple-600">{formatTime(booking.pickup_time)}</span>
+                            <span className="text-gray-900">{formatDate(booking.pickup_date)}</span> at <span className="text-purple-600">{formatTime(booking.pickup_time)}</span>
                           </div>
                           <div className="text-xl font-bold">
-                            <span className="text-gray-900">{booking.return_date}</span> at <span className="text-purple-600">{formatTime(booking.return_time)}</span>
+                            <span className="text-gray-900">{formatDate(booking.return_date)}</span> at <span className="text-purple-600">{formatTime(booking.return_time)}</span>
                           </div>
                         </div>
                       </div>

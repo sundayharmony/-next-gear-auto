@@ -16,6 +16,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { ReviewForm } from "@/components/review-form";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/context/auth-context";
+import { formatDate } from "@/lib/utils/date-helpers";
 
 interface Vehicle {
   id: string;
@@ -342,8 +343,8 @@ export default function AccountPage() {
                             <div className="flex items-center gap-2 text-gray-500">
                               <Calendar className="h-4 w-4" />
                               <div>
-                                <div className="text-lg font-bold"><span className="text-gray-900">{booking.pickup_date}</span> at <span className="text-purple-600">{formatTime(booking.pickup_time)}</span></div>
-                                <div className="text-lg font-bold">to <span className="text-gray-900">{booking.return_date}</span> at <span className="text-purple-600">{formatTime(booking.return_time)}</span></div>
+                                <div className="text-lg font-bold"><span className="text-gray-900">{formatDate(booking.pickup_date)}</span> at <span className="text-purple-600">{formatTime(booking.pickup_time)}</span></div>
+                                <div className="text-lg font-bold">to <span className="text-gray-900">{formatDate(booking.return_date)}</span> at <span className="text-purple-600">{formatTime(booking.return_time)}</span></div>
                               </div>
                             </div>
                           </div>
@@ -410,8 +411,8 @@ export default function AccountPage() {
                           </div>
                           <div className="flex flex-col gap-2 text-sm mb-3">
                             <div>
-                              <div className="text-lg font-bold"><span className="text-gray-900">{booking.pickup_date}</span> at <span className="text-purple-600">{formatTime(booking.pickup_time)}</span></div>
-                              <div className="text-lg font-bold">to <span className="text-gray-900">{booking.return_date}</span> at <span className="text-purple-600">{formatTime(booking.return_time)}</span></div>
+                              <div className="text-lg font-bold"><span className="text-gray-900">{formatDate(booking.pickup_date)}</span> at <span className="text-purple-600">{formatTime(booking.pickup_time)}</span></div>
+                              <div className="text-lg font-bold">to <span className="text-gray-900">{formatDate(booking.return_date)}</span> at <span className="text-purple-600">{formatTime(booking.return_time)}</span></div>
                             </div>
                             <span className="font-medium text-gray-900">${booking.total_price}</span>
                           </div>
@@ -588,7 +589,7 @@ export default function AccountPage() {
                               </Badge>
                             </div>
                             <div className="text-lg font-bold mb-3">
-                              <span className="text-gray-900">{next.pickup_date}</span> at <span className="text-purple-600">{formatTime(next.pickup_time)}</span> → <span className="text-gray-900">{next.return_date}</span> at <span className="text-purple-600">{formatTime(next.return_time)}</span>
+                              <span className="text-gray-900">{formatDate(next.pickup_date)}</span> at <span className="text-purple-600">{formatTime(next.pickup_time)}</span> → <span className="text-gray-900">{formatDate(next.return_date)}</span> at <span className="text-purple-600">{formatTime(next.return_time)}</span>
                             </div>
                             <div className="flex gap-2">
                               <Button size="sm" variant="outline" onClick={() => setActiveTab("upcoming")}>

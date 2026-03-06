@@ -12,6 +12,17 @@ interface EmailData {
   needsPassword?: boolean;
 }
 
+/** Format "2026-03-06" → "Fri, Mar 6, 2026" */
+function fmtDate(dateStr: string): string {
+  const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+}
+
 function wrapEmail(content: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -241,7 +252,7 @@ export function cancellationTemplate(data: EmailData): string {
           <tr>
             <td style="background: #fef2f2; border-radius: 12px; padding: 20px; border-left: 4px solid #dc2626;">
               <p style="margin: 0 0 10px; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Original Dates</p>
-              <p style="margin: 0; color: #111827; font-size: 18px; font-weight: 700;">${data.pickupDate} &rarr; ${data.returnDate}</p>
+              <p style="margin: 0; color: #111827; font-size: 18px; font-weight: 700;">${fmtDate(data.pickupDate)} &rarr; ${fmtDate(data.returnDate)}</p>
               ${data.pickupTime || data.returnTime ? `<p style="margin: 6px 0 0; color: #dc2626; font-size: 18px; font-weight: 700;">${data.pickupTime || 'TBD'} &rarr; ${data.returnTime || 'TBD'}</p>` : ''}
             </td>
           </tr>
