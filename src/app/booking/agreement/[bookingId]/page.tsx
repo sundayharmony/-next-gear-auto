@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 import { SignaturePad } from "@/components/signature-pad";
+import { RentalAgreementInline } from "@/components/rental-agreement-inline";
 
 // Signature fields the renter must complete
 const SIGNATURE_FIELDS = [
@@ -55,12 +56,26 @@ interface BookingInfo {
   id: string;
   customer_name: string;
   customer_email: string;
+  customer_phone?: string;
   vehicle_name: string;
+  vehicle_id?: string;
   pickup_date: string;
   return_date: string;
+  pickup_time?: string;
+  return_time?: string;
   total_price: number;
   agreement_signed_at: string | null;
   rental_agreement_url: string | null;
+}
+
+interface VehicleInfo {
+  make: string;
+  model: string;
+  year: number;
+  licensePlate?: string;
+  vin?: string;
+  color?: string;
+  mileage?: number;
 }
 
 export default function AgreementSigningPage() {
@@ -76,7 +91,7 @@ export default function AgreementSigningPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
-  const [pdfPreviewUrl, setPdfPreviewUrl] = useState<string | null>(null);
+  const [vehicle, setVehicle] = useState<VehicleInfo | null>(null);
 
   // Fetch booking details
   useEffect(() => {
@@ -86,6 +101,19 @@ export default function AgreementSigningPage() {
         const data = await res.json();
         if (data.success && data.data) {
           setBooking(data.data);
+          // Fetch vehicle details if vehicle_id is available
+          if (data.data.vehicle_id) {
+            try {
+              const vRes = await fetch("/api/vehicles");
+              const vData = await vRes.json();
+              if (vData.success && Array.isArray(vData.data)) {
+                const v = vData.data.find((veh: any) => veh.id === data.data.vehicle_id);
+                if (v) setVehicle(v);
+              }
+            } catch {
+              // Vehicle fetch failed, continue without it
+            }
+          }
           // Check if already signed
           if (data.data.agreement_signed_at) {
             setSubmitted(true);
@@ -101,13 +129,6 @@ export default function AgreementSigningPage() {
     }
     if (bookingId) fetchBooking();
   }, [bookingId]);
-
-  // Generate PDF preview
-  useEffect(() => {
-    if (booking && !booking.agreement_signed_at) {
-      setPdfPreviewUrl(`/api/rental-agreement/generate?bookingId=${bookingId}`);
-    }
-  }, [booking, bookingId]);
 
   const handleSignatureChange = useCallback(
     (fieldId: string, dataUrl: string | null) => {
@@ -250,31 +271,28 @@ export default function AgreementSigningPage() {
             </div>
           )}
 
-          {/* PDF Preview */}
-          {pdfPreviewUrl && (
+          {/* Inline Rental Agreement */}
+          {booking && (
             <Card className="mb-6">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
                     <FileText className="h-4 w-4 text-purple-500" />
-                    Rental Agreement Preview
+                    Rental Agreement
                   </h3>
-                  <a
-                    href={pdfPreviewUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-xs text-purple-600 hover:text-purple-800"
-                  >
-                    Open in new tab
-                  </a>
                 </div>
-                <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-100">
-                  <iframe
-                    src={pdfPreviewUrl}
-                    className="w-full h-[500px]"
-                    title="Rental Agreement Preview"
-                  />
-                </div>
+                <RentalAgreementInline
+                  vehicle={vehicle}
+                  customerName={booking.customer_name}
+                  customerEmail={booking.customer_email}
+                  customerPhone={booking.customer_phone}
+                  pickupDate={booking.pickup_date}
+                  returnDate={booking.return_date}
+                  pickupTime={booking.pickup_time}
+                  returnTime={booking.return_time}
+                  totalPrice={booking.total_price}
+                  totalDays={Math.max(1, Math.ceil((new Date(booking.return_date + "T00:00:00").getTime() - new Date(booking.pickup_date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)))}
+                />
                 <p className="text-xs text-gray-400 mt-2">
                   Vehicle and booking information has been pre-filled. Review the agreement above, then sign below.
                 </p>

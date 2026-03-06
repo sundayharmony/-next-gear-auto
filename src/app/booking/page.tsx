@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { useBooking } from "@/lib/context/booking-context";
 import { SignaturePad } from "@/components/signature-pad";
+import { RentalAgreementInline } from "@/components/rental-agreement-inline";
 import { cn } from "@/lib/utils/cn";
 import extras from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
@@ -941,13 +942,20 @@ function BookingPageInner() {
                     Review the rental agreement below, then provide your initials and signature to proceed.
                   </p>
 
-                  {/* PDF Preview */}
+                  {/* Inline Rental Agreement */}
                   {booking.selectedVehicle && (
-                    <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-100 mb-4">
-                      <iframe
-                        src={`/api/rental-agreement/generate?vehicleId=${booking.selectedVehicle.id}&pickupDate=${booking.pickupDate}&returnDate=${booking.returnDate}&pickupTime=${booking.pickupTime || ""}&returnTime=${booking.returnTime || ""}&customerName=${encodeURIComponent(details.name || "")}&customerEmail=${encodeURIComponent(details.email || "")}&customerPhone=${encodeURIComponent(details.phone || "")}&totalPrice=${booking.pricing?.total || 0}`}
-                        className="w-full h-[400px]"
-                        title="Rental Agreement Preview"
+                    <div className="mb-4">
+                      <RentalAgreementInline
+                        vehicle={booking.selectedVehicle}
+                        customerName={details.name}
+                        customerEmail={details.email}
+                        customerPhone={details.phone}
+                        pickupDate={booking.pickupDate}
+                        returnDate={booking.returnDate}
+                        pickupTime={booking.pickupTime}
+                        returnTime={booking.returnTime}
+                        totalPrice={booking.pricing?.total || 0}
+                        totalDays={booking.pricing ? Math.max(1, Math.ceil((new Date(booking.returnDate + "T00:00:00").getTime() - new Date(booking.pickupDate + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))) : 1}
                       />
                     </div>
                   )}
