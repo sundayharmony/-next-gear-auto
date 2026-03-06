@@ -15,7 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { useBooking } from "@/lib/context/booking-context";
 import { SignaturePad } from "@/components/signature-pad";
-import { RentalAgreementInline } from "@/components/rental-agreement-inline";
+import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
 import { cn } from "@/lib/utils/cn";
 import extras from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
@@ -942,7 +942,7 @@ function BookingPageInner() {
                     Review the rental agreement below, then provide your initials and signature to proceed.
                   </p>
 
-                  {/* Inline Rental Agreement */}
+                  {/* Inline Rental Agreement — page advances with signature step */}
                   {booking.selectedVehicle && (
                     <div className="mb-4">
                       <RentalAgreementInline
@@ -956,6 +956,7 @@ function BookingPageInner() {
                         returnTime={booking.returnTime}
                         totalPrice={booking.pricing?.total || 0}
                         totalDays={booking.pricing ? Math.max(1, Math.ceil((new Date(booking.returnDate + "T00:00:00").getTime() - new Date(booking.pickupDate + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))) : 1}
+                        currentPage={getPageForStep(agreementStep)}
                       />
                     </div>
                   )}

@@ -16,7 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 import { SignaturePad } from "@/components/signature-pad";
-import { RentalAgreementInline } from "@/components/rental-agreement-inline";
+import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
 
 // Signature fields the renter must complete
 const SIGNATURE_FIELDS = [
@@ -292,6 +292,7 @@ export default function AgreementSigningPage() {
                   returnTime={booking.return_time}
                   totalPrice={booking.total_price}
                   totalDays={Math.max(1, Math.ceil((new Date(booking.return_date + "T00:00:00").getTime() - new Date(booking.pickup_date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)))}
+                  currentPage={getPageForStep(currentStep)}
                 />
                 <p className="text-xs text-gray-400 mt-2">
                   Vehicle and booking information has been pre-filled. Review the agreement above, then sign below.
