@@ -17,6 +17,8 @@ import { useBooking } from "@/lib/context/booking-context";
 import { SignaturePad } from "@/components/signature-pad";
 import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
 import { cn } from "@/lib/utils/cn";
+import { formatDate } from "@/lib/utils/date-helpers";
+import { useAuth } from "@/lib/context/auth-context";
 import extras from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
@@ -109,6 +111,7 @@ const timeOptions = generateTimeOptions();
 function BookingPageInner() {
   const booking = useBooking();
   const searchParams = useSearchParams();
+  const { user, isAuthenticated } = useAuth();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [vehiclesError, setVehiclesError] = useState<string | null>(null);
@@ -240,6 +243,18 @@ function BookingPageInner() {
     phone: "",
     dob: "",
   });
+
+  // Auto-populate details from signed-in user
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      setDetails((prev) => ({
+        name: prev.name || user.name || "",
+        email: prev.email || user.email || "",
+        phone: prev.phone || user.phone || "",
+        dob: prev.dob || user.dob || "",
+      }));
+    }
+  }, [isAuthenticated, user]);
 
   const [signedName, setSignedName] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
@@ -822,9 +837,9 @@ function BookingPageInner() {
                         <span className="font-medium text-gray-900">{booking.selectedVehicle.year} {booking.selectedVehicle.make} {booking.selectedVehicle.model}</span>
                       </div>
                       <div>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between">
                           <span className="text-gray-500">Pick-up</span>
-                          <span className="font-medium text-gray-900">{booking.pickupDate}</span>
+                          <span className="text-lg font-bold text-gray-900">{formatDate(booking.pickupDate)}</span>
                         </div>
                         {booking.pickupTime && (
                           <div className="flex justify-between">
@@ -834,9 +849,9 @@ function BookingPageInner() {
                         )}
                       </div>
                       <div>
-                        <div className="flex justify-between text-sm">
+                        <div className="flex justify-between">
                           <span className="text-gray-500">Return</span>
-                          <span className="font-medium text-gray-900">{booking.returnDate}</span>
+                          <span className="text-lg font-bold text-gray-900">{formatDate(booking.returnDate)}</span>
                         </div>
                         {booking.returnTime && (
                           <div className="flex justify-between">

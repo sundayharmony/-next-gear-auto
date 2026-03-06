@@ -130,9 +130,51 @@ export async function POST(request: Request) {
 
     const bookingId = "bk" + Date.now() + Math.floor(Math.random() * 1000);
 
+    // If customer details provided, find or create customer in the customers table
+    let customerId = body.customerId || null;
+    if (!customerId && body.customerDetails?.email) {
+      const customerEmail = body.customerDetails.email.toLowerCase().trim();
+      const customerName = (body.customerDetails.name || "Customer").slice(0, 100);
+      const customerPhone = (body.customerDetails.phone || "").slice(0, 20);
+
+      // Check if customer already exists
+      const { data: existingCustomer } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("email", customerEmail)
+        .single();
+
+      if (existingCustomer) {
+        customerId = existingCustomer.id;
+        // Update name/phone if they were previously empty
+        await supabase
+          .from("customers")
+          .update({
+            name: customerName,
+            ...(customerPhone ? { phone: customerPhone } : {}),
+          })
+          .eq("id", existingCustomer.id);
+      } else {
+        // Create new customer
+        const newCustId = "c" + Date.now();
+        const { data: newCustomer } = await supabase
+          .from("customers")
+          .insert({
+            id: newCustId,
+            name: customerName,
+            email: customerEmail,
+            phone: customerPhone,
+            role: "customer",
+          })
+          .select("id")
+          .single();
+        if (newCustomer) customerId = newCustomer.id;
+      }
+    }
+
     const { error } = await supabase.from("bookings").insert({
       id: bookingId,
-      customer_id: body.customerId || null,
+      customer_id: customerId,
       vehicle_id: body.vehicleId,
       customer_name: body.customerDetails?.name,
       customer_email: body.customerDetails?.email,

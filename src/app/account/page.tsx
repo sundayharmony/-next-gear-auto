@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Calendar, Clock, User,
   Car, Download, XCircle, Star, LogOut, Shield,
-  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw
+  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw, Upload, CheckCircle2, ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,6 +53,8 @@ interface BookingData {
   created_at: string;
   agreement_signed_at?: string | null;
   signed_name?: string | null;
+  id_document_url?: string | null;
+  insurance_proof_url?: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -481,6 +483,7 @@ export default function AccountPage() {
 
             {/* Profile */}
             {activeTab === "profile" && (
+              <>
               <Card>
                 <CardContent className="p-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-6">Profile Settings</h2>
@@ -530,6 +533,69 @@ export default function AccountPage() {
                   </div>
                 </CardContent>
               </Card>
+
+              {/* My Documents */}
+              <Card className="mt-6">
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">My Documents</h2>
+                  <p className="text-sm text-gray-500 mb-4">Documents uploaded during your bookings are stored here for easy access.</p>
+
+                  {(() => {
+                    const latestIdDoc = bookings.find((b) => b.id_document_url)?.id_document_url;
+                    const latestInsDoc = bookings.find((b) => b.insurance_proof_url)?.insurance_proof_url;
+                    const hasAnyDoc = latestIdDoc || latestInsDoc;
+
+                    if (!hasAnyDoc) {
+                      return (
+                        <div className="text-center py-8 text-gray-400">
+                          <FileText className="mx-auto h-10 w-10 mb-3" />
+                          <p className="text-sm">No documents uploaded yet.</p>
+                          <p className="text-xs mt-1">Documents will appear here after you complete a booking.</p>
+                        </div>
+                      );
+                    }
+
+                    return (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        {/* ID Document */}
+                        <div className={`rounded-xl border-2 p-4 ${latestIdDoc ? "border-green-200 bg-green-50" : "border-gray-200 bg-gray-50"}`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Shield className={`h-5 w-5 ${latestIdDoc ? "text-green-600" : "text-gray-400"}`} />
+                            <span className="font-medium text-gray-900">Driver&apos;s License</span>
+                            {latestIdDoc && <CheckCircle2 className="h-4 w-4 text-green-500 ml-auto" />}
+                          </div>
+                          {latestIdDoc ? (
+                            <a href={latestIdDoc} target="_blank" rel="noopener noreferrer" className="block">
+                              <img src={latestIdDoc} alt="ID Document" className="rounded-lg border max-h-32 w-full object-contain bg-white" />
+                              <p className="text-xs text-purple-600 mt-2 font-medium">Click to view full size</p>
+                            </a>
+                          ) : (
+                            <p className="text-xs text-gray-400 italic">Not yet uploaded</p>
+                          )}
+                        </div>
+
+                        {/* Insurance Proof */}
+                        <div className={`rounded-xl border-2 p-4 ${latestInsDoc ? "border-green-200 bg-green-50" : "border-gray-200 bg-gray-50"}`}>
+                          <div className="flex items-center gap-2 mb-3">
+                            <ShieldCheck className={`h-5 w-5 ${latestInsDoc ? "text-green-600" : "text-gray-400"}`} />
+                            <span className="font-medium text-gray-900">Insurance Proof</span>
+                            {latestInsDoc && <CheckCircle2 className="h-4 w-4 text-green-500 ml-auto" />}
+                          </div>
+                          {latestInsDoc ? (
+                            <a href={latestInsDoc} target="_blank" rel="noopener noreferrer" className="block">
+                              <img src={latestInsDoc} alt="Insurance Proof" className="rounded-lg border max-h-32 w-full object-contain bg-white" />
+                              <p className="text-xs text-purple-600 mt-2 font-medium">Click to view full size</p>
+                            </a>
+                          ) : (
+                            <p className="text-xs text-gray-400 italic">Not yet uploaded</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </CardContent>
+              </Card>
+              </>
             )}
 
             {/* Overview Dashboard */}
