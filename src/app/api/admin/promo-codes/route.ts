@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
-import promoCodes from "@/data/promo-codes.json";
 
 // GET: List all promo codes (Supabase with JSON fallback)
 export async function GET(req: NextRequest) {
@@ -28,23 +27,12 @@ export async function GET(req: NextRequest) {
       }));
       return NextResponse.json({ success: true, data: codes, source: "supabase" });
     }
-  } catch {
-    // Fall through to JSON
+  } catch (err) {
+    console.error("Promo codes fetch error:", err);
   }
 
-  // Fallback to static JSON
-  const codes = promoCodes.map((c) => ({
-    code: c.code,
-    discountType: c.discountType,
-    discountValue: c.discountValue,
-    minBookingAmount: c.minBookingAmount,
-    maxUses: c.maxUses,
-    usedCount: c.usedCount,
-    expiresAt: c.expiryDate || null,
-    description: c.description,
-    isActive: true,
-  }));
-  return NextResponse.json({ success: true, data: codes, source: "json" });
+  // Return empty array if no codes found in database
+  return NextResponse.json({ success: true, data: [], source: "supabase" });
 }
 
 // POST: Create a new promo code
@@ -121,7 +109,7 @@ export async function PUT(request: NextRequest) {
     const { error } = await supabase
       .from("promo_codes")
       .update(dbUpdates)
-      .eq("code", body.code);
+      .eq("code", body.code.toUpperCase());
 
     if (error) {
       console.error("Promo code update error:", error);
@@ -150,7 +138,7 @@ export async function DELETE(request: NextRequest) {
     const { error } = await supabase
       .from("promo_codes")
       .delete()
-      .eq("code", code);
+      .eq("code", code.toUpperCase());
 
     if (error) {
       console.error("Promo code delete error:", error);
