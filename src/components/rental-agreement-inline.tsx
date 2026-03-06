@@ -173,15 +173,15 @@ export function RentalAgreementInline({
           <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-2">
             <div>
               <span className="font-semibold">Rental Pickup:</span>{" "}
-              <Field value={formatDate(pickupDate)} width="100px" />
+              <Field value={formatDate(pickupDate)} width="120px" />
               <span className="ml-2 font-semibold">at:</span>{" "}
-              <Field value={formatTime(pickupTime)} width="90px" />
+              <Field value={formatTime(pickupTime)} width="120px" />
             </div>
             <div>
               <span className="font-semibold">Expected Return:</span>{" "}
-              <Field value={formatDate(returnDate)} width="100px" />
+              <Field value={formatDate(returnDate)} width="120px" />
               <span className="ml-2 font-semibold">at:</span>{" "}
-              <Field value={formatTime(returnTime)} width="90px" />
+              <Field value={formatTime(returnTime)} width="120px" />
             </div>
           </div>
           <p className="font-semibold text-gray-900">
