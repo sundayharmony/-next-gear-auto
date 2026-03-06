@@ -186,10 +186,10 @@ function SuccessContent() {
 
               {/* Rental Agreement Status */}
               {bookingId && agreementStatus !== "idle" && (
-                <Card className={`mb-6 border-${agreementStatus === "signed" ? "green" : agreementStatus === "error" ? "red" : "purple"}-200 bg-gradient-to-r ${
-                  agreementStatus === "signed" ? "from-green-50 to-emerald-50" :
-                  agreementStatus === "error" ? "from-red-50 to-orange-50" :
-                  "from-purple-50 to-indigo-50"
+                <Card className={`mb-6 ${
+                  agreementStatus === "signed" ? "border-green-200 bg-gradient-to-r from-green-50 to-emerald-50" :
+                  agreementStatus === "error" ? "border-red-200 bg-gradient-to-r from-red-50 to-orange-50" :
+                  "border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50"
                 }`}>
                   <CardContent className="p-6 text-center">
                     {agreementStatus === "signing" && (

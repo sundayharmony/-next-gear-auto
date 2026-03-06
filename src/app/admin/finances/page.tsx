@@ -200,7 +200,7 @@ export default function AdminFinancesPage() {
     setError(null);
     try {
       const [bookingsRes, expensesRes, vehiclesRes] = await Promise.all([
-        fetch("/api/bookings"),
+        adminFetch("/api/admin/bookings"),
         adminFetch(
           `/api/admin/expenses?from=${dateRange.from}&to=${dateRange.to}`
         ),
@@ -863,9 +863,11 @@ export default function AdminFinancesPage() {
                 <Input
                   type="date"
                   value={dateRange.from}
-                  onChange={(e) =>
-                    setDateRange({ ...dateRange, from: e.target.value })
-                  }
+                  onChange={(e) => {
+                    if (e.target.value <= dateRange.to) {
+                      setDateRange({ ...dateRange, from: e.target.value });
+                    }
+                  }}
                 />
               </div>
               <div className="flex-1">
@@ -875,9 +877,11 @@ export default function AdminFinancesPage() {
                 <Input
                   type="date"
                   value={dateRange.to}
-                  onChange={(e) =>
-                    setDateRange({ ...dateRange, to: e.target.value })
-                  }
+                  onChange={(e) => {
+                    if (e.target.value >= dateRange.from) {
+                      setDateRange({ ...dateRange, to: e.target.value });
+                    }
+                  }}
                 />
               </div>
               <Button

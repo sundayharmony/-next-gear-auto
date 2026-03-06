@@ -49,17 +49,24 @@ function FleetContent() {
   const [searchQuery, setSearchQuery] = useState("");
   const comparison = useComparison();
 
+  const [error, setError] = useState<string | null>(null);
+
   // Fetch vehicles from API
   useEffect(() => {
     const fetchVehicles = async () => {
       try {
         const response = await fetch("/api/vehicles");
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
         const result = await response.json();
         if (result.success && Array.isArray(result.data)) {
           setVehicles(result.data);
+          setError(null);
         }
-      } catch (error) {
-        console.error("Failed to fetch vehicles:", error);
+      } catch (err) {
+        console.error("Failed to fetch vehicles:", err);
+        setError("Failed to load vehicles. Please try again later.");
       } finally {
         setLoading(false);
       }
@@ -124,6 +131,13 @@ function FleetContent() {
       </section>
 
       <PageContainer className="py-8">
+        {/* Error state */}
+        {error && (
+          <div className="mb-8 rounded-lg bg-red-50 border border-red-200 p-4">
+            <p className="text-red-700 font-medium">{error}</p>
+          </div>
+        )}
+
         {/* Loading state */}
         {loading && (
           <div className="flex items-center justify-center py-16">

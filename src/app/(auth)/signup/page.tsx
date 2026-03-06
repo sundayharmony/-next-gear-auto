@@ -49,13 +49,16 @@ export default function SignupPage() {
     if (formData.password !== formData.confirmPassword) { setLocalError("Passwords do not match"); return; }
     if (!agreedToTerms) { setLocalError("Please agree to the terms and conditions"); return; }
 
-    await signup({
+    const signupSuccess = await signup({
       name: formData.name,
       email: formData.email,
       password: formData.password,
       phone: formData.phone,
     });
-    router.push("/account");
+
+    if (signupSuccess && !error) {
+      router.push("/account");
+    }
   };
 
   return (

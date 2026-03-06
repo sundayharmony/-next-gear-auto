@@ -36,7 +36,7 @@ export default async function HomePage() {
     const { data } = await supabase
       .from("vehicles")
       .select("*")
-      .order("created_at", { ascending: true })
+      .order("created_at", { ascending: false })
       .limit(4);
 
     if (data) {

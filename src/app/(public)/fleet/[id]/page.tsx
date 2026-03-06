@@ -15,7 +15,6 @@ import { generateProductSchema } from "@/lib/utils/schema-generators";
 import { SITE_URL } from "@/lib/constants";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import extras from "@/data/extras.json";
-const reviews: Array<{ id: string; customerId: string; customerName: string; vehicleId: string; rating: number; text: string; createdAt: string; isVerified: boolean }> = [];
 import { VehicleImageGallery } from "@/components/vehicle-image-gallery";
 
 interface PageProps {
@@ -58,6 +57,23 @@ async function getVehicleById(id: string): Promise<Vehicle | null> {
   }
 }
 
+// Helper function to fetch reviews for a vehicle
+async function getVehicleReviews(vehicleId: string): Promise<Array<{ id: string; customerId: string; customerName: string; vehicleId: string; rating: number; text: string; createdAt: string; isVerified: boolean }>> {
+  const supabase = getServiceSupabase();
+  try {
+    const { data, error } = await supabase
+      .from("reviews")
+      .select("*")
+      .eq("vehicleId", vehicleId)
+      .order("createdAt", { ascending: false });
+
+    if (error || !data) return [];
+    return data;
+  } catch {
+    return [];
+  }
+}
+
 // Fetch all vehicle IDs for static generation
 async function getAllVehicleIds(): Promise<string[]> {
   const supabase = getServiceSupabase();
@@ -86,7 +102,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   const vehicle = await getVehicleById(id);
   if (!vehicle) return {};
 
-  const vehicleReviews = reviews.filter((r) => r.vehicleId === vehicle.id);
+  const vehicleReviews = await getVehicleReviews(id);
   const avgRating = vehicleReviews.length
     ? (vehicleReviews.reduce((sum, r) => sum + r.rating, 0) / vehicleReviews.length).toFixed(1)
     : null;
@@ -116,7 +132,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
     notFound();
   }
 
-  const vehicleReviews = reviews.filter((r) => r.vehicleId === vehicle.id);
+  const vehicleReviews = await getVehicleReviews(id);
   const avgRating = vehicleReviews.length
     ? (vehicleReviews.reduce((sum, r) => sum + r.rating, 0) / vehicleReviews.length).toFixed(1)
     : null;

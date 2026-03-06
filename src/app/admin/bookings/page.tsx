@@ -107,6 +107,7 @@ export default function AdminBookingsPage() {
     try {
       const url = statusFilter === "all" ? "/api/bookings" : `/api/bookings?status=${statusFilter}`;
       const res = await fetch(url);
+      if (!res.ok) throw new Error(`Failed to fetch bookings: ${res.status}`);
       const data = await res.json();
       if (data.success) {
         // Hide cancelled bookings unless specifically filtering for them
@@ -149,6 +150,7 @@ export default function AdminBookingsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId, status: newStatus }),
       });
+      if (!res.ok) throw new Error(`Failed to update booking: ${res.status}`);
       const data = await res.json();
       if (data.success) {
         if (newStatus === "cancelled") {
@@ -237,15 +239,18 @@ export default function AdminBookingsPage() {
         }),
       });
 
+      if (!res.ok) throw new Error(`Failed to create booking: ${res.status}`);
       const data = await res.json();
       if (data.success) {
         // If admin wants it confirmed immediately, update status
         if (newBooking.status === "confirmed" && data.data?.id) {
-          await fetch("/api/bookings", {
+          const statusRes = await fetch("/api/bookings", {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ bookingId: data.data.id, status: "confirmed" }),
           });
+          if (!statusRes.ok) throw new Error("Failed to confirm booking status");
+          await statusRes.json();
         }
         setShowCreateForm(false);
         setNewBooking(emptyNewBooking);
@@ -274,6 +279,7 @@ export default function AdminBookingsPage() {
         body: formData,
       });
 
+      if (!res.ok) throw new Error(`Failed to upload document: ${res.status}`);
       const data = await res.json();
       if (data.success) {
         // Update selected booking with new URL

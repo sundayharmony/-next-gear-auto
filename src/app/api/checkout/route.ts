@@ -85,8 +85,8 @@ export async function POST(request: Request) {
       .select("id, pickup_date, return_date")
       .eq("vehicle_id", vehicleId)
       .in("status", ["confirmed", "active", "pending"])
-      .lte("pickup_date", returnDate)
-      .gte("return_date", pickupDate);
+      .lte("pickup_date", bufferReturn.toISOString())
+      .gte("return_date", bufferPickup.toISOString());
 
     if (conflicting && conflicting.length > 0) {
       return NextResponse.json(
@@ -126,7 +126,11 @@ export async function POST(request: Request) {
     }
 
     // 2. Create booking in Supabase (status: pending)
-    const bookingId = "bk" + Date.now() + Math.floor(Math.random() * 1000);
+    // Use crypto for better collision prevention
+    const randomBytes = Array.from(crypto.getRandomValues(new Uint8Array(6)))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+    const bookingId = "bk" + Date.now() + randomBytes;
     const { error: bookingError } = await supabase.from("bookings").insert({
       id: bookingId,
       customer_id: customerId,

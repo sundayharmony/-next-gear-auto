@@ -18,7 +18,8 @@ export async function POST(request: Request) {
     if (webhookSecret && webhookSecret !== "whsec_REPLACE_WITH_ACTUAL_WEBHOOK_SECRET" && sig) {
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
     } else {
-      // In development or if webhook secret not set, parse directly
+      // If webhook secret is not properly configured, parse but log warning
+      console.warn("SECURITY WARNING: Webhook secret not configured - parsing unverified event");
       event = JSON.parse(body) as Stripe.Event;
     }
   } catch (err) {
@@ -33,17 +34,30 @@ export async function POST(request: Request) {
         const bookingId = session.metadata?.booking_id;
 
         if (bookingId) {
-          // Update booking status to confirmed
-          await supabase
+          // Check current booking status for idempotency
+          const { data: existingBooking } = await supabase
             .from("bookings")
-            .update({
-              status: "confirmed",
-              stripe_payment_intent: session.payment_intent as string,
-            })
-            .eq("id", bookingId);
+            .select("status")
+            .eq("id", bookingId)
+            .single();
+
+          // Only update if not already confirmed
+          if (existingBooking?.status !== "confirmed") {
+            const { error: updateError } = await supabase
+              .from("bookings")
+              .update({
+                status: "confirmed",
+                stripe_payment_intent: session.payment_intent as string,
+              })
+              .eq("id", bookingId);
+
+            if (updateError) {
+              console.error("Error updating booking status:", updateError);
+            }
+          }
 
           // Create payment record
-          await supabase.from("payment_records").insert({
+          const { error: paymentError } = await supabase.from("payment_records").insert({
             id: "pay" + Date.now(),
             booking_id: bookingId,
             stripe_session_id: session.id,
@@ -51,6 +65,10 @@ export async function POST(request: Request) {
             amount: (session.amount_total || 0) / 100,
             status: "succeeded",
           });
+
+          if (paymentError) {
+            console.error("Error creating payment record:", paymentError);
+          }
 
           // Fetch booking details for email
           const { data: booking } = await supabase
@@ -105,11 +123,15 @@ export async function POST(request: Request) {
         const bookingId = session.metadata?.booking_id;
         if (bookingId) {
           // Mark booking as cancelled if payment expired
-          await supabase
+          const { error: expireError } = await supabase
             .from("bookings")
             .update({ status: "cancelled" })
             .eq("id", bookingId)
             .eq("status", "pending");
+
+          if (expireError) {
+            console.error("Error cancelling expired booking:", expireError);
+          }
         }
         break;
       }

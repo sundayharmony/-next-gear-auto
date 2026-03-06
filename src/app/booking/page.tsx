@@ -110,6 +110,7 @@ function BookingPageInner() {
   const searchParams = useSearchParams();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
+  const [vehiclesError, setVehiclesError] = useState<string | null>(null);
   const [localExtras, setLocalExtras] = useState<BookingExtra[]>(
     extras.map((e) => ({ ...e, selected: e.id === "e1" ? true : false, billingType: e.billingType as BookingExtra["billingType"] }))
   );
@@ -140,9 +141,13 @@ function BookingPageInner() {
         const result = await response.json();
         if (result.success && Array.isArray(result.data)) {
           setVehicles(result.data);
+          setVehiclesError(null);
+        } else {
+          setVehiclesError("Failed to load vehicles. Please try again.");
         }
       } catch (error) {
         console.error("Failed to fetch vehicles:", error);
+        setVehiclesError("Failed to load vehicles. Please try again.");
       } finally {
         setVehiclesLoading(false);
       }
@@ -260,6 +265,7 @@ function BookingPageInner() {
   const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const insuranceSectionRef = useRef<HTMLDivElement>(null);
 
   // Recalculate pricing when vehicle or extras change
   useEffect(() => {
@@ -339,10 +345,45 @@ function BookingPageInner() {
 
   const canProceed = (): boolean => {
     switch (booking.currentStep) {
-      case 1: return !!searchDates.pickup && !!searchDates.return && !!searchDates.pickupTime && !!searchDates.returnTime && new Date(searchDates.return) > new Date(searchDates.pickup);
+      case 1: {
+        if (!searchDates.pickup || !searchDates.return || !searchDates.pickupTime || !searchDates.returnTime) {
+          return false;
+        }
+        const pickupDate = new Date(searchDates.pickup);
+        const returnDate = new Date(searchDates.return);
+        if (returnDate <= pickupDate) {
+          return false;
+        }
+        // If same day, validate return time > pickup time
+        if (searchDates.pickup === searchDates.return) {
+          return searchDates.returnTime > searchDates.pickupTime;
+        }
+        return true;
+      }
       case 2: return !!booking.selectedVehicle;
       case 3: return true;
-      case 4: return !!details.name && !!details.email && !!details.phone && !!details.dob;
+      case 4: {
+        if (!details.name || !details.email || !details.phone || !details.dob) {
+          return false;
+        }
+        // Age validation: must be 18+
+        const dob = new Date(details.dob);
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+          age--;
+        }
+        if (age < 18) {
+          return false;
+        }
+        // Email validation: basic format check
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(details.email)) {
+          return false;
+        }
+        return true;
+      }
       case 5: return true; // ID upload optional in prototype
       case 6: return allAgreementsSigned && !!signedName;
       case 7: return true;
@@ -463,6 +504,11 @@ function BookingPageInner() {
             <div className="space-y-4">
               <h2 className="text-xl font-semibold text-gray-900">Choose Your Vehicle</h2>
               <p className="text-sm text-gray-500">Select from our available fleet for your dates.</p>
+              {vehiclesError && (
+                <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700 border border-red-200">
+                  {vehiclesError}
+                </div>
+              )}
               {checkingAvailability && (
                 <div className="rounded-lg bg-purple-50 p-3 text-sm text-purple-600 flex items-center gap-2">
                   <span className="animate-spin inline-block h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full" />
@@ -565,7 +611,7 @@ function BookingPageInner() {
 
                     {/* Insurance Proof Upload Section */}
                     {extra.id === "e1" && (
-                      <div className="mt-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
+                      <div ref={insuranceSectionRef} className="mt-3 rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4">
                         <p className="text-sm font-medium text-gray-700 mb-2">
                           Have your own insurance coverage?
                         </p>
@@ -1103,6 +1149,10 @@ function BookingPageInner() {
                   </Button>
                   <Button className="flex-1" onClick={() => {
                     setShowInsuranceWarning(false);
+                    // Scroll to insurance section
+                    setTimeout(() => {
+                      insuranceSectionRef.current?.scrollIntoView({ behavior: "smooth" });
+                    }, 100);
                   }}>
                     Upload Proof
                   </Button>

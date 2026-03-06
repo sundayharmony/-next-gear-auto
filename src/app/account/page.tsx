@@ -211,7 +211,7 @@ export default function AccountPage() {
     );
   }
 
-  const initials = user.name
+  const initials = (user?.name || "User")
     .split(" ")
     .map((n: string) => n[0])
     .join("")
@@ -257,7 +257,7 @@ export default function AccountPage() {
                 {initials}
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Welcome back, {user.name.split(" ")[0]}</h1>
+                <h1 className="text-2xl font-bold">Welcome back, {(user?.name || "User").split(" ")[0]}</h1>
                 <p className="text-purple-200">Manage your rentals and account settings</p>
               </div>
             </div>
@@ -408,7 +408,18 @@ export default function AccountPage() {
                             <span className="font-medium text-gray-900">${booking.total_price}</span>
                           </div>
                           <div className="flex gap-2">
-                            <Button size="sm" variant="outline">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                const link = document.createElement("a");
+                                link.href = `/api/bookings/receipt?id=${booking.id}`;
+                                link.download = `receipt-${booking.id}.pdf`;
+                                document.body.appendChild(link);
+                                link.click();
+                                document.body.removeChild(link);
+                              }}
+                            >
                               <Download className="h-3.5 w-3.5 mr-1" /> Receipt
                             </Button>
                             {booking.status === "completed" && (

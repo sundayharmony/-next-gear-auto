@@ -16,6 +16,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState("");
+  const [forgotPasswordMsg, setForgotPasswordMsg] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,9 +32,9 @@ export default function LoginPage() {
     }
 
     try {
-      await login(email, password);
+      const user = await login(email, password);
       // Redirect admin users to admin dashboard, customers to account page
-      if (email.toLowerCase() === "admin@nextgearauto.com") {
+      if (user?.role === "admin") {
         router.push("/admin");
       } else {
         router.push("/account");
@@ -120,10 +121,17 @@ export default function LoginPage() {
                   <input type="checkbox" className="rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
                   <span className="text-gray-600">Remember me</span>
                 </label>
-                <button type="button" onClick={() => alert("A password reset link will be sent to your email address.")} className="text-sm text-purple-600 hover:text-purple-700 font-medium">
+                <button type="button" onClick={() => setForgotPasswordMsg("Check your email for password reset instructions.")} className="text-sm text-purple-600 hover:text-purple-700 font-medium">
                   Forgot password?
                 </button>
               </div>
+
+              {/* Forgot Password Message */}
+              {forgotPasswordMsg && (
+                <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-600 border border-blue-200">
+                  {forgotPasswordMsg}
+                </div>
+              )}
 
               {/* Submit */}
               <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
@@ -132,22 +140,6 @@ export default function LoginPage() {
               </Button>
             </form>
 
-            {/* Divider */}
-            <div className="my-6 flex items-center gap-3">
-              <div className="h-px flex-1 bg-gray-200" />
-              <span className="text-xs text-gray-400">or continue with</span>
-              <div className="h-px flex-1 bg-gray-200" />
-            </div>
-
-            {/* Social logins */}
-            <div className="grid grid-cols-2 gap-3">
-              <Button variant="outline" type="button" className="w-full">
-                Google
-              </Button>
-              <Button variant="outline" type="button" className="w-full">
-                Apple
-              </Button>
-            </div>
           </CardContent>
         </Card>
 

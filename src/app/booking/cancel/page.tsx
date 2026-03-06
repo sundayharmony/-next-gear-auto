@@ -31,7 +31,7 @@ function CancelContent() {
           <Card>
             <CardContent className="p-6 text-center">
               <p className="text-gray-600 mb-2">
-                Your booking is still saved and can be completed by returning to the payment step.
+                Your booking has been cancelled and will not be charged.
               </p>
               {bookingId && (
                 <p className="text-sm text-gray-400 mb-6">
@@ -41,15 +41,15 @@ function CancelContent() {
 
               <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 mb-6 text-left">
                 <p className="text-sm text-amber-800">
-                  <strong>Note:</strong> Unpaid bookings will be automatically cancelled after 30 minutes.
-                  If you still want to rent, please try again soon.
+                  <strong>Next steps:</strong> To start a new booking, begin fresh from the fleet selection.
+                  Your previous booking details have been cleared.
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
                 <Link href="/booking">
                   <Button className="w-full sm:w-auto">
-                    <RefreshCw className="h-4 w-4 mr-1" /> Try Again
+                    <RefreshCw className="h-4 w-4 mr-1" /> Start New Booking
                   </Button>
                 </Link>
                 <Link href="/fleet">

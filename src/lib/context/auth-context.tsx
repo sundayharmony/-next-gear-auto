@@ -45,9 +45,9 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<Customer | null>;
   logout: () => void;
-  signup: (data: { name: string; email: string; password: string; phone: string }) => Promise<void>;
+  signup: (data: { name: string; email: string; password: string; phone: string }) => Promise<boolean>;
   updateProfile: (data: Partial<Customer>) => void;
   checkRole: (role: string) => boolean;
 }
@@ -81,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.user]);
 
-  const login = useCallback(async (email: string, password: string) => {
+  const login = useCallback(async (email: string, password: string): Promise<Customer | null> => {
     dispatch({ type: "LOGIN_START" });
     try {
       const res = await fetch("/api/auth", {
@@ -92,11 +92,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.success) {
         dispatch({ type: "LOGIN_SUCCESS", payload: data.data });
+        return data.data as Customer;
       } else {
         dispatch({ type: "LOGIN_FAILURE", payload: data.message || "Login failed" });
+        return null;
       }
     } catch {
       dispatch({ type: "LOGIN_FAILURE", payload: "An error occurred during login" });
+      return null;
     }
   }, []);
 
@@ -105,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "LOGOUT" });
   }, []);
 
-  const signup = useCallback(async (data: { name: string; email: string; password: string; phone: string }) => {
+  const signup = useCallback(async (data: { name: string; email: string; password: string; phone: string }): Promise<boolean> => {
     dispatch({ type: "LOGIN_START" });
     try {
       const res = await fetch("/api/auth", {
@@ -116,11 +119,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await res.json();
       if (result.success) {
         dispatch({ type: "LOGIN_SUCCESS", payload: result.data });
+        return true;
       } else {
         dispatch({ type: "LOGIN_FAILURE", payload: result.message || "Signup failed" });
+        return false;
       }
     } catch {
       dispatch({ type: "LOGIN_FAILURE", payload: "An error occurred during signup" });
+      return false;
     }
   }, []);
 
