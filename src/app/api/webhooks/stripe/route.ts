@@ -78,41 +78,50 @@ export async function POST(request: Request) {
             .single();
 
           if (booking) {
-            // Fetch vehicle name
-            const { data: vehicle } = await supabase
-              .from("vehicles")
-              .select("year, make, model")
-              .eq("id", booking.vehicle_id)
-              .single();
-
-            // Check if customer needs a password
-            let needsPassword = false;
-            if (booking.customer_id) {
-              const { data: cust } = await supabase
-                .from("customers")
-                .select("password_hash")
-                .eq("id", booking.customer_id)
+            // Only send confirmation emails if customer email exists
+            if (!booking.customer_email) {
+              console.warn("Booking has no customer email, skipping email notification:", bookingId);
+            } else {
+              // Fetch vehicle name
+              const { data: vehicle } = await supabase
+                .from("vehicles")
+                .select("year, make, model")
+                .eq("id", booking.vehicle_id)
                 .single();
-              needsPassword = !cust?.password_hash;
+
+              // Check if customer needs a password
+              let needsPassword = false;
+              if (booking.customer_id) {
+                const { data: cust } = await supabase
+                  .from("customers")
+                  .select("password_hash")
+                  .eq("id", booking.customer_id)
+                  .single();
+                needsPassword = !cust?.password_hash;
+              }
+
+              const emailData = {
+                bookingId: booking.id,
+                customerName: booking.customer_name || "Customer",
+                customerEmail: booking.customer_email,
+                vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
+                pickupDate: booking.pickup_date,
+                returnDate: booking.return_date,
+                pickupTime: booking.pickup_time || undefined,
+                returnTime: booking.return_time || undefined,
+                totalPrice: booking.total_price,
+                deposit: booking.deposit,
+                needsPassword,
+              };
+
+              // Send confirmation emails (don't await - fire and forget)
+              sendBookingConfirmation(emailData)
+                .then(() => console.log("Confirmation email sent via webhook for booking:", bookingId))
+                .catch((error) => console.error("Failed to send confirmation email via webhook:", error));
+              sendAdminNewBooking(emailData)
+                .then(() => console.log("Admin confirmation email sent via webhook for booking:", bookingId))
+                .catch((error) => console.error("Failed to send admin confirmation email via webhook:", error));
             }
-
-            const emailData = {
-              bookingId: booking.id,
-              customerName: booking.customer_name || "Customer",
-              customerEmail: booking.customer_email || "",
-              vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
-              pickupDate: booking.pickup_date,
-              returnDate: booking.return_date,
-              pickupTime: booking.pickup_time || undefined,
-              returnTime: booking.return_time || undefined,
-              totalPrice: booking.total_price,
-              deposit: booking.deposit,
-              needsPassword,
-            };
-
-            // Send confirmation emails (don't await - fire and forget)
-            sendBookingConfirmation(emailData).catch(console.error);
-            sendAdminNewBooking(emailData).catch(console.error);
           }
         }
         break;

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { sendBookingConfirmation, sendAdminNewBooking } from "@/lib/email/mailer";
+import { sendBookingConfirmation, sendBookingPendingEmail, sendAdminNewBooking } from "@/lib/email/mailer";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -245,6 +245,30 @@ export async function POST(request: Request) {
       .from("bookings")
       .update({ stripe_session_id: session.id })
       .eq("id", bookingId);
+
+    // 6. Send pending payment email to customer and admin
+    // This ensures notification even if webhook fails
+    const emailData = {
+      bookingId,
+      customerName: safeName || "Customer",
+      customerEmail: customerDetails.email.toLowerCase().trim(),
+      vehicleName: vehicleName || "Vehicle",
+      pickupDate,
+      returnDate,
+      pickupTime: pickupTime || undefined,
+      returnTime: returnTime || undefined,
+      totalPrice: totalPrice || 0,
+      deposit: chargeAmount,
+      needsPassword: false,
+    };
+
+    // Fire and forget - don't block the response
+    sendBookingPendingEmail(emailData).catch((error) => {
+      console.error("Failed to send pending email to customer:", error);
+    });
+    sendAdminNewBooking(emailData).catch((error) => {
+      console.error("Failed to send admin notification for pending booking:", error);
+    });
 
     return NextResponse.json({
       success: true,

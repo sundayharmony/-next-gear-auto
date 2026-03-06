@@ -189,7 +189,10 @@ export default function AdminMaintenancePage() {
           vehicleId: newRecord.vehicleId,
           title: newRecord.title,
           description: newRecord.description,
+          status: newRecord.status,
           cost: newRecord.cost,
+          startedDate: newRecord.startedDate || null,
+          completedDate: newRecord.completedDate || null,
           notes: newRecord.notes,
         }),
       });

@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { vehicleId, title, description, cost, scheduledDate, notes } = body;
+    const { vehicleId, title, description, cost, scheduledDate, status, startedDate, completedDate, notes } = body;
 
     if (!vehicleId || !title) {
       return NextResponse.json(
@@ -106,6 +106,7 @@ export async function POST(req: NextRequest) {
     }
 
     const id = "mt" + Date.now();
+    const recordStatus = status || "pending";
 
     const { data, error } = await supabase
       .from("maintenance_records")
@@ -114,12 +115,12 @@ export async function POST(req: NextRequest) {
         vehicle_id: vehicleId,
         title,
         description: description || "",
-        status: "pending",
+        status: recordStatus,
         cost: cost || null,
         receipt_urls: [],
         scheduled_date: scheduledDate || null,
-        started_date: null,
-        completed_date: null,
+        started_date: startedDate || null,
+        completed_date: completedDate || null,
         notes: notes || "",
       })
       .select()
@@ -133,10 +134,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Update vehicle maintenance status to "needs-service"
+    // Update vehicle maintenance status based on record status
+    let vehicleMaintenanceStatus = "needs-service";
+    if (recordStatus === "completed") {
+      vehicleMaintenanceStatus = "good";
+    } else if (recordStatus === "in-progress") {
+      vehicleMaintenanceStatus = "in-maintenance";
+    }
+
     await supabase
       .from("vehicles")
-      .update({ maintenance_status: "needs-service" })
+      .update({ maintenance_status: vehicleMaintenanceStatus })
       .eq("id", vehicleId);
 
     const response = {

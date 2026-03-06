@@ -40,6 +40,58 @@ function wrapEmail(content: string): string {
 </html>`;
 }
 
+export function bookingPendingTemplate(data: EmailData): string {
+  return wrapEmail(`
+    <div style="background: linear-gradient(135deg, #7C3AED, #5B21B6); padding: 32px 24px; text-align: center;">
+      <h1 style="color: #ffffff; margin: 0; font-size: 24px;">Booking Received!</h1>
+      <p style="color: #DDD6FE; margin: 8px 0 0; font-size: 14px;">Awaiting payment verification</p>
+    </div>
+    <div style="padding: 32px 24px;">
+      <p style="color: #374151; font-size: 16px;">Hi ${data.customerName},</p>
+      <p style="color: #6B7280; font-size: 14px; line-height: 1.6;">
+        Thank you for your booking! We've received your reservation request. Here are your booking details:
+      </p>
+
+      <div style="background: #F3F0FF; border-radius: 8px; padding: 20px; margin: 20px 0;">
+        <p style="margin: 0 0 4px; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Booking ID</p>
+        <p style="margin: 0; color: #7C3AED; font-size: 20px; font-weight: 700; font-family: monospace;">${data.bookingId}</p>
+      </div>
+
+      <table style="width: 100%; border-collapse: collapse;">
+        <tr><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #6B7280; font-size: 14px;">Vehicle</td><td style="padding: 12px 0; border-bottom: 1px solid #f0f0f0; color: #111827; font-size: 14px; font-weight: 600; text-align: right;">${data.vehicleName}</td></tr>
+        <tr><td colspan="2"><div style="background: linear-gradient(135deg, #EDE9FE, #F3E8FF); border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid #7C3AED;"><p style="margin: 0 0 8px; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Pick-up</p><p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${data.pickupDate}</p>${data.pickupTime ? `<p style="margin: 4px 0 0; color: #7C3AED; font-size: 20px; font-weight: 700;">${data.pickupTime}</p>` : ''}</div></td></tr>
+        <tr><td colspan="2"><div style="background: linear-gradient(135deg, #FEF3C7, #FEF08A); border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid #F59E0B;"><p style="margin: 0 0 8px; color: #6B7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Return</p><p style="margin: 0; color: #111827; font-size: 16px; font-weight: 600;">${data.returnDate}</p>${data.returnTime ? `<p style="margin: 4px 0 0; color: #F59E0B; font-size: 20px; font-weight: 700;">${data.returnTime}</p>` : ''}</div></td></tr>
+        <tr><td style="padding: 12px 0; color: #6B7280; font-size: 14px;">Total Amount</td><td style="padding: 12px 0; color: #7C3AED; font-size: 18px; font-weight: 700; text-align: right;">$${data.totalPrice.toFixed(2)}</td></tr>
+      </table>
+
+      <div style="background: linear-gradient(135deg, #DBEAFE, #EFF6FF); border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #3B82F6;">
+        <p style="margin: 0 0 8px; color: #1E40AF; font-size: 14px; font-weight: 600;">Payment Pending</p>
+        <p style="margin: 0; color: #6B7280; font-size: 13px; line-height: 1.5;">You'll receive a confirmation email as soon as your payment is verified. You can proceed to checkout to complete your payment.</p>
+      </div>
+
+      <p style="color: #6B7280; font-size: 14px; line-height: 1.6; margin-top: 24px;">
+        Please bring a valid driver's license and the credit card used for payment at pickup.
+      </p>
+
+      ${data.needsPassword ? `
+      <div style="background: linear-gradient(135deg, #DBEAFE, #EFF6FF); border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #3B82F6;">
+        <p style="margin: 0 0 8px; color: #1E40AF; font-size: 14px; font-weight: 600;">Create Your Account</p>
+        <p style="margin: 0 0 16px; color: #6B7280; font-size: 13px; line-height: 1.5;">Set up a password to manage your bookings, view rental history, and speed up future reservations.</p>
+        <a href="https://rentnextgearauto.com/set-password?email=${encodeURIComponent(data.customerEmail)}" style="display: inline-block; background: #3B82F6; color: #ffffff; text-decoration: none; padding: 10px 20px; border-radius: 6px; font-weight: 600; font-size: 13px;">Set Up My Password</a>
+      </div>
+      ` : ''}
+
+      <div style="text-align: center; margin: 24px 0;">
+        <a href="https://rentnextgearauto.com/account" style="display: inline-block; background: #7C3AED; color: #ffffff; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 600; font-size: 14px;">View My Booking</a>
+      </div>
+    </div>
+    <div style="background: #F9FAFB; padding: 24px; text-align: center; border-top: 1px solid #E5E7EB;">
+      <p style="color: #6B7280; font-size: 13px; margin: 0 0 4px;">Need help? Contact us at (551) 429-3472</p>
+      <p style="color: #9CA3AF; font-size: 12px; margin: 0;">NextGearAuto | 92 Forrest Street, Jersey City, NJ 07304</p>
+    </div>
+  `);
+}
+
 export function bookingConfirmationTemplate(data: EmailData): string {
   return wrapEmail(`
     <div style="background: linear-gradient(135deg, #7C3AED, #5B21B6); padding: 32px 24px; text-align: center;">
