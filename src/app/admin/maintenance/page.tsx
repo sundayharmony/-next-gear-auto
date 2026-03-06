@@ -33,7 +33,6 @@ interface MaintenanceRecord {
   status: "pending" | "in-progress" | "completed";
   cost: number | null;
   receiptUrls: string[];
-  scheduledDate: string;
   startedDate: string;
   completedDate: string;
   notes: string;
@@ -48,7 +47,6 @@ const emptyRecord: Omit<MaintenanceRecord, "id" | "createdAt"> = {
   status: "pending",
   cost: null,
   receiptUrls: [],
-  scheduledDate: "",
   startedDate: "",
   completedDate: "",
   notes: "",
@@ -140,7 +138,6 @@ export default function AdminMaintenancePage() {
           description: editForm.description,
           status: editForm.status,
           cost: editForm.cost,
-          scheduledDate: editForm.scheduledDate,
           startedDate: editForm.startedDate,
           completedDate: editForm.completedDate,
           notes: editForm.notes,
@@ -160,7 +157,6 @@ export default function AdminMaintenancePage() {
                   description: editForm.description,
                   status: editForm.status,
                   cost: editForm.cost,
-                  scheduledDate: editForm.scheduledDate,
                   startedDate: editForm.startedDate,
                   completedDate: editForm.completedDate,
                   notes: editForm.notes,
@@ -194,7 +190,6 @@ export default function AdminMaintenancePage() {
           title: newRecord.title,
           description: newRecord.description,
           cost: newRecord.cost,
-          scheduledDate: newRecord.scheduledDate,
           notes: newRecord.notes,
         }),
       });
@@ -426,17 +421,7 @@ export default function AdminMaintenancePage() {
             </div>
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Scheduled Date
-              </label>
-              <Input
-                type="date"
-                value={form.scheduledDate || ""}
-                onChange={(e) => setForm({ ...form, scheduledDate: e.target.value })}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Started Date
+                Start Date
               </label>
               <Input
                 type="date"
@@ -444,10 +429,6 @@ export default function AdminMaintenancePage() {
                 onChange={(e) => setForm({ ...form, startedDate: e.target.value })}
               />
             </div>
-          </div>
-
-          {/* Completed Date and Notes */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">
                 Completed Date
@@ -699,7 +680,10 @@ export default function AdminMaintenancePage() {
                       Cost
                     </th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Scheduled
+                      Start Date
+                    </th>
+                    <th className="px-6 py-3 text-left font-semibold text-gray-900">
+                      Completed
                     </th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-900">
                       Receipts
@@ -733,7 +717,10 @@ export default function AdminMaintenancePage() {
                         {record.cost !== null ? `$${record.cost.toFixed(2)}` : "—"}
                       </td>
                       <td className="px-6 py-3 text-gray-600 text-xs">
-                        {record.scheduledDate ? new Date(record.scheduledDate).toLocaleDateString() : "—"}
+                        {record.startedDate ? new Date(record.startedDate).toLocaleDateString() : "—"}
+                      </td>
+                      <td className="px-6 py-3 text-gray-600 text-xs">
+                        {record.completedDate ? new Date(record.completedDate).toLocaleDateString() : "—"}
                       </td>
                       <td className="px-6 py-3">
                         {record.receiptUrls.length > 0 ? (

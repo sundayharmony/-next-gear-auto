@@ -596,10 +596,24 @@ function BookingPageInner() {
                                 setInsuranceProofFile(file);
                                 setUploadingInsuranceProof(true);
 
-                                // Store locally for now - will upload after booking is created
-                                // Create a local preview URL
-                                const localUrl = URL.createObjectURL(file);
-                                setInsuranceProofUrl(localUrl);
+                                try {
+                                  const formData = new FormData();
+                                  formData.append("file", file);
+                                  const uploadRes = await fetch("/api/upload-temp", { method: "POST", body: formData });
+                                  const uploadData = await uploadRes.json();
+                                  if (uploadData.success) {
+                                    setInsuranceProofUrl(uploadData.url);
+                                  } else {
+                                    alert("Failed to upload insurance proof: " + (uploadData.error || "Unknown error"));
+                                    setUploadingInsuranceProof(false);
+                                    return;
+                                  }
+                                } catch (err) {
+                                  console.error("Insurance upload error:", err);
+                                  alert("Failed to upload insurance proof");
+                                  setUploadingInsuranceProof(false);
+                                  return;
+                                }
 
                                 // Auto-deselect insurance
                                 setLocalExtras((prev) =>

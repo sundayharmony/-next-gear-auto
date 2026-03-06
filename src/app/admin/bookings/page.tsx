@@ -578,7 +578,6 @@ export default function AdminBookingsPage() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-gray-50">
-                  <th className="px-4 py-3 text-left font-medium text-gray-500">ID</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Customer</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Vehicle</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Dates</th>
@@ -591,20 +590,19 @@ export default function AdminBookingsPage() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                       Loading...
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
+                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
                       No bookings found.
                     </td>
                   </tr>
                 ) : (
                   bookings.map((b) => (
                     <tr key={b.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedBooking(b); setShowDetail(true); }}>
-                      <td className="px-4 py-3 font-mono text-xs text-purple-600">{b.id}</td>
                       <td className="px-4 py-3">
                         <div className="text-gray-900">{b.customer_name || "—"}</div>
                         <div className="text-xs text-gray-400">{b.customer_email}</div>

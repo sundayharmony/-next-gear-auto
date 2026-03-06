@@ -173,6 +173,12 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // First nullify customer_id on related bookings to avoid FK constraint
+    await supabase
+      .from("bookings")
+      .update({ customer_id: null })
+      .eq("customer_id", id);
+
     const { error } = await supabase
       .from("customers")
       .delete()

@@ -241,7 +241,8 @@ export default function AdminFinancesPage() {
       0
     );
     const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const netProfit = totalRevenue - totalExpenses;
+    const totalVehicleCosts = vehicles.reduce((sum, v) => sum + (v.purchasePrice || 0), 0);
+    const netProfit = totalRevenue - totalExpenses - totalVehicleCosts;
 
     const totalDaysInRange = Math.ceil(
       (new Date(dateRange.to).getTime() -
@@ -488,8 +489,8 @@ export default function AdminFinancesPage() {
       (sum, e) => sum + (e.amount || 0),
       0
     );
-    const profit = revenue - expenseTotal;
     const purchasePrice = vehicle.purchasePrice || 0;
+    const profit = revenue - expenseTotal - purchasePrice;
     const roi =
       purchasePrice > 0 ? ((profit / purchasePrice) * 100).toFixed(2) : "0.00";
 
