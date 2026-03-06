@@ -20,6 +20,7 @@ interface BookingState {
     dob: string;
   };
   signedName: string;
+  agreementSignatures: Record<string, string | null>;
   promoCode: string | null;
   promoDiscount: PromoDiscount | null;
   isSubmitting: boolean;
@@ -36,6 +37,7 @@ type BookingAction =
   | { type: "TOGGLE_EXTRA"; payload: string }
   | { type: "SET_CUSTOMER_DETAILS"; payload: BookingState["customerDetails"] }
   | { type: "SET_SIGNED_NAME"; payload: string }
+  | { type: "SET_AGREEMENT_SIGNATURES"; payload: Record<string, string | null> }
   | { type: "SET_STEP"; payload: BookingStep }
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
@@ -59,6 +61,7 @@ const initialState: BookingState = {
   pricing: null,
   customerDetails: { name: "", email: "", phone: "", dob: "" },
   signedName: "",
+  agreementSignatures: {},
   promoCode: null,
   promoDiscount: null,
   isSubmitting: false,
@@ -93,6 +96,8 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
       return { ...state, customerDetails: action.payload };
     case "SET_SIGNED_NAME":
       return { ...state, signedName: action.payload };
+    case "SET_AGREEMENT_SIGNATURES":
+      return { ...state, agreementSignatures: action.payload };
     case "SET_STEP":
       return { ...state, currentStep: action.payload };
     case "NEXT_STEP":
@@ -139,6 +144,7 @@ interface BookingContextType extends BookingState {
   toggleExtra: (extraId: string) => void;
   setCustomerDetails: (details: BookingState["customerDetails"]) => void;
   setSignedName: (name: string) => void;
+  setAgreementSignatures: (signatures: Record<string, string | null>) => void;
   setStep: (step: BookingStep) => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -177,6 +183,10 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
   const setSignedName = useCallback((name: string) => {
     dispatch({ type: "SET_SIGNED_NAME", payload: name });
+  }, []);
+
+  const setAgreementSignatures = useCallback((signatures: Record<string, string | null>) => {
+    dispatch({ type: "SET_AGREEMENT_SIGNATURES", payload: signatures });
   }, []);
 
   const setStep = useCallback((step: BookingStep) => {
@@ -245,6 +255,18 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (data.success && data.data?.sessionUrl) {
+        // Save agreement signatures to localStorage before redirecting to Stripe
+        // (React state is lost during redirect, so we persist signatures here)
+        if (state.agreementSignatures && Object.keys(state.agreementSignatures).length > 0) {
+          try {
+            localStorage.setItem(
+              `nga_agreement_sigs_${data.data.bookingId}`,
+              JSON.stringify(state.agreementSignatures)
+            );
+          } catch (e) {
+            console.warn("Failed to save agreement signatures to localStorage:", e);
+          }
+        }
         // Redirect to Stripe Checkout hosted page
         dispatch({ type: "SUBMIT_SUCCESS", payload: data.data.bookingId });
         window.location.href = data.data.sessionUrl;
@@ -274,6 +296,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         toggleExtra,
         setCustomerDetails,
         setSignedName,
+        setAgreementSignatures,
         setStep,
         nextStep,
         prevStep,

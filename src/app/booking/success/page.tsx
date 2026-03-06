@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, Car, Calendar, CreditCard, ArrowRight, PenLine } from "lucide-react";
+import { Check, Car, Calendar, CreditCard, ArrowRight, FileCheck, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
@@ -33,6 +33,55 @@ function SuccessContent() {
   const sessionId = searchParams.get("session_id");
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [agreementStatus, setAgreementStatus] = useState<"idle" | "signing" | "signed" | "error">("idle");
+
+  // Submit agreement signatures that were saved to localStorage before Stripe redirect
+  useEffect(() => {
+    async function submitAgreementSignatures() {
+      if (!bookingId) return;
+
+      const storageKey = `nga_agreement_sigs_${bookingId}`;
+      try {
+        const savedSigs = localStorage.getItem(storageKey);
+        if (!savedSigs) return;
+
+        const signatures = JSON.parse(savedSigs);
+        // Filter out null/empty signatures
+        const validSigs: Record<string, string> = {};
+        for (const [key, val] of Object.entries(signatures)) {
+          if (val && typeof val === "string") validSigs[key] = val;
+        }
+
+        if (Object.keys(validSigs).length === 0) {
+          localStorage.removeItem(storageKey);
+          return;
+        }
+
+        setAgreementStatus("signing");
+
+        const res = await fetch("/api/rental-agreement/sign", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId, signatures: validSigs }),
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          setAgreementStatus("signed");
+          // Clean up localStorage
+          localStorage.removeItem(storageKey);
+        } else {
+          console.error("Agreement sign failed:", data.error);
+          setAgreementStatus("error");
+        }
+      } catch (err) {
+        console.error("Failed to submit agreement signatures:", err);
+        setAgreementStatus("error");
+      }
+    }
+
+    submitAgreementSignatures();
+  }, [bookingId]);
 
   useEffect(() => {
     async function fetchBooking() {
@@ -135,24 +184,53 @@ function SuccessContent() {
                 </CardContent>
               </Card>
 
-              {/* Sign Rental Agreement CTA */}
-              {bookingId && (
-                <Card className="mb-6 border-purple-200 bg-gradient-to-r from-purple-50 to-indigo-50">
+              {/* Rental Agreement Status */}
+              {bookingId && agreementStatus !== "idle" && (
+                <Card className={`mb-6 border-${agreementStatus === "signed" ? "green" : agreementStatus === "error" ? "red" : "purple"}-200 bg-gradient-to-r ${
+                  agreementStatus === "signed" ? "from-green-50 to-emerald-50" :
+                  agreementStatus === "error" ? "from-red-50 to-orange-50" :
+                  "from-purple-50 to-indigo-50"
+                }`}>
                   <CardContent className="p-6 text-center">
-                    <PenLine className="mx-auto h-8 w-8 text-purple-600 mb-2" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                      Sign Your Rental Agreement
-                    </h3>
-                    <p className="text-sm text-gray-500 mb-4">
-                      Complete your rental agreement with a digital signature before your pickup date.
-                    </p>
-                    <Link href={`/booking/agreement/${bookingId}`}>
-                      <Button className="bg-purple-600 hover:bg-purple-700">
-                        <PenLine className="h-4 w-4 mr-2" />
-                        Sign Rental Agreement
-                        <ArrowRight className="h-4 w-4 ml-2" />
-                      </Button>
-                    </Link>
+                    {agreementStatus === "signing" && (
+                      <>
+                        <Loader2 className="mx-auto h-8 w-8 text-purple-600 mb-2 animate-spin" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          Generating Your Rental Agreement...
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Applying your signatures to the rental agreement PDF.
+                        </p>
+                      </>
+                    )}
+                    {agreementStatus === "signed" && (
+                      <>
+                        <FileCheck className="mx-auto h-8 w-8 text-green-600 mb-2" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          Rental Agreement Signed!
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          Your signed rental agreement has been saved to your booking.
+                        </p>
+                      </>
+                    )}
+                    {agreementStatus === "error" && (
+                      <>
+                        <FileCheck className="mx-auto h-8 w-8 text-red-500 mb-2" />
+                        <h3 className="text-lg font-semibold text-gray-900 mb-1">
+                          Agreement Processing Issue
+                        </h3>
+                        <p className="text-sm text-gray-500 mb-3">
+                          There was an issue generating your signed agreement. Don&apos;t worry — you can sign it later.
+                        </p>
+                        <Link href={`/booking/agreement/${bookingId}`}>
+                          <Button className="bg-purple-600 hover:bg-purple-700">
+                            Sign Agreement Now
+                            <ArrowRight className="h-4 w-4 ml-2" />
+                          </Button>
+                        </Link>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               )}

@@ -1,12 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Search, Car, Package, UserCheck, ShieldCheck, FileText, CreditCard,
   Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight, Tag, X, Upload,
-  Shield, CheckCircle
+  Shield, CheckCircle, PenLine, CheckCircle2, Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -14,9 +14,44 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { useBooking } from "@/lib/context/booking-context";
+import { SignaturePad } from "@/components/signature-pad";
 import { cn } from "@/lib/utils/cn";
 import extras from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
+
+// Signature fields the renter must complete on the rental agreement PDF
+const AGREEMENT_SIGNATURE_FIELDS = [
+  {
+    id: "t35",
+    label: "Renter Initials — Page 1 (Terms & Conditions)",
+    description: "By initialing, you acknowledge the vehicle condition and rental terms on page 1.",
+    isInitials: true,
+  },
+  {
+    id: "t42",
+    label: "GPS Tracking Acknowledgement Initials",
+    description: "By initialing, you acknowledge and consent to GPS tracking during the rental period.",
+    isInitials: true,
+  },
+  {
+    id: "t43",
+    label: "Renter Initials — Page 2 (Insurance & Liability)",
+    description: "By initialing, you acknowledge the insurance and liability terms on page 2.",
+    isInitials: true,
+  },
+  {
+    id: "t47",
+    label: "Renter Full Signature",
+    description: "Your full signature confirming agreement to all rental terms and conditions.",
+    isInitials: false,
+  },
+  {
+    id: "t57",
+    label: "Renter Initials — Page 3 (Final Acknowledgement)",
+    description: "By initialing, you confirm you have read and agree to all terms in this agreement.",
+    isInitials: true,
+  },
+];
 
 interface Vehicle {
   id: string;
@@ -202,6 +237,20 @@ function BookingPageInner() {
 
   const [signedName, setSignedName] = useState("");
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  // PDF agreement signature state
+  const [agreementSignatures, setAgreementSignatures] = useState<Record<string, string | null>>({});
+  const [agreementStep, setAgreementStep] = useState(0);
+
+  const handleAgreementSignatureChange = useCallback(
+    (fieldId: string, dataUrl: string | null) => {
+      setAgreementSignatures((prev) => ({ ...prev, [fieldId]: dataUrl }));
+    },
+    []
+  );
+
+  const agreementCompletedCount = AGREEMENT_SIGNATURE_FIELDS.filter((f) => agreementSignatures[f.id]).length;
+  const allAgreementsSigned = agreementCompletedCount === AGREEMENT_SIGNATURE_FIELDS.length;
+  const currentAgreementField = AGREEMENT_SIGNATURE_FIELDS[agreementStep];
   const [searchDates, setSearchDates] = useState({ pickup: "", return: "", pickupTime: "10:00", returnTime: "10:00" });
   const [promoInput, setPromoInput] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
@@ -273,7 +322,7 @@ function BookingPageInner() {
       case 3: return true;
       case 4: return !!details.name && !!details.email && !!details.phone && !!details.dob;
       case 5: return true; // ID upload optional in prototype
-      case 6: return agreedToTerms && !!signedName;
+      case 6: return allAgreementsSigned && !!signedName;
       case 7: return true;
       default: return false;
     }
@@ -295,6 +344,8 @@ function BookingPageInner() {
     }
     if (booking.currentStep === 6) {
       booking.setSignedName(signedName);
+      // Save agreement signatures to context (will be persisted to localStorage before Stripe redirect)
+      booking.setAgreementSignatures(agreementSignatures);
     }
     booking.nextStep();
   };
@@ -791,22 +842,145 @@ function BookingPageInner() {
                 </CardContent>
               </Card>
 
+              {/* PDF Rental Agreement */}
               <Card>
                 <CardContent className="p-6">
-                  <h3 className="font-semibold text-gray-900 mb-3">Rental Agreement</h3>
-                  <div className="max-h-40 overflow-y-auto rounded-lg bg-gray-50 p-4 text-xs text-gray-600 leading-relaxed mb-4">
-                    <p className="mb-2">By signing this rental agreement, you agree to the terms and conditions set forth by NextGearAuto. You acknowledge that you are renting the vehicle described above for the dates specified. You agree to return the vehicle in the same condition, normal wear and tear excepted.</p>
-                    <p className="mb-2">Full payment is required at the time of booking. Free cancellation with a full refund is available up to 24 hours before the scheduled pickup time. Cancellations less than 24 hours before pickup are non-refundable.</p>
-                    <p>A security hold may be placed on your credit card for incidentals and released upon satisfactory vehicle return inspection. You are responsible for any damage, loss, or theft of the vehicle during the rental period.</p>
+                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                    <PenLine className="h-4 w-4 text-purple-600" />
+                    Rental Agreement
+                  </h3>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Review the rental agreement below, then provide your initials and signature to proceed.
+                  </p>
+
+                  {/* PDF Preview */}
+                  {booking.selectedVehicle && (
+                    <div className="rounded-lg overflow-hidden border border-gray-200 bg-gray-100 mb-4">
+                      <iframe
+                        src={`/api/rental-agreement/generate?vehicleId=${booking.selectedVehicle.id}&pickupDate=${booking.pickupDate}&returnDate=${booking.returnDate}&pickupTime=${booking.pickupTime || ""}&returnTime=${booking.returnTime || ""}&customerName=${encodeURIComponent(details.name || "")}&customerEmail=${encodeURIComponent(details.email || "")}&customerPhone=${encodeURIComponent(details.phone || "")}&totalPrice=${booking.pricing?.total || 0}`}
+                        className="w-full h-[400px]"
+                        title="Rental Agreement Preview"
+                      />
+                    </div>
+                  )}
+
+                  {/* Signature Progress */}
+                  <div className="mb-4">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium text-gray-700">
+                        Signatures: {agreementCompletedCount} of {AGREEMENT_SIGNATURE_FIELDS.length}
+                      </span>
+                      <span className="text-xs text-gray-400">
+                        Step {agreementStep + 1} of {AGREEMENT_SIGNATURE_FIELDS.length}
+                      </span>
+                    </div>
+                    <div className="flex gap-1">
+                      {AGREEMENT_SIGNATURE_FIELDS.map((field, i) => (
+                        <button
+                          key={field.id}
+                          onClick={() => setAgreementStep(i)}
+                          className={`h-2 flex-1 rounded-full transition-colors ${
+                            agreementSignatures[field.id]
+                              ? "bg-green-500"
+                              : i === agreementStep
+                                ? "bg-purple-500"
+                                : "bg-gray-200"
+                          }`}
+                        />
+                      ))}
+                    </div>
                   </div>
-                  <label className="flex items-start gap-2 text-sm mb-4">
-                    <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
-                    <span className="text-gray-600">I have read and agree to the rental agreement terms and conditions.</span>
-                  </label>
-                  <div>
-                    <label className="mb-1.5 block text-sm font-medium text-gray-700">Digital Signature (Type Full Legal Name)</label>
+
+                  {/* Current Signature Field */}
+                  <div className="rounded-lg border border-purple-200 bg-purple-50/30 p-4 mb-4">
+                    <div className="mb-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        {agreementSignatures[currentAgreementField.id] ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-500" />
+                        ) : (
+                          <PenLine className="h-5 w-5 text-purple-500" />
+                        )}
+                        <h4 className="text-sm font-semibold text-gray-900">
+                          {currentAgreementField.label}
+                        </h4>
+                      </div>
+                      <p className="text-xs text-gray-500 ml-7">
+                        {currentAgreementField.description}
+                      </p>
+                    </div>
+
+                    <div className="flex justify-center">
+                      <SignaturePad
+                        key={currentAgreementField.id}
+                        onSignatureChange={(data) =>
+                          handleAgreementSignatureChange(currentAgreementField.id, data)
+                        }
+                        isInitials={currentAgreementField.isInitials}
+                        label={currentAgreementField.isInitials ? "Initial here" : "Sign here"}
+                        width={currentAgreementField.isInitials ? 200 : 400}
+                        height={currentAgreementField.isInitials ? 80 : 150}
+                      />
+                    </div>
+
+                    {/* Signature Navigation */}
+                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-purple-100">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setAgreementStep((s) => Math.max(0, s - 1))}
+                        disabled={agreementStep === 0}
+                      >
+                        <ArrowLeft className="h-3 w-3 mr-1" /> Previous
+                      </Button>
+                      {agreementStep < AGREEMENT_SIGNATURE_FIELDS.length - 1 && (
+                        <Button
+                          size="sm"
+                          onClick={() => setAgreementStep((s) => s + 1)}
+                          disabled={!agreementSignatures[currentAgreementField.id]}
+                        >
+                          Next <ArrowRight className="h-3 w-3 ml-1" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* All Signatures Summary */}
+                  <div className="space-y-1.5 mb-4">
+                    {AGREEMENT_SIGNATURE_FIELDS.map((field, i) => (
+                      <button
+                        key={field.id}
+                        onClick={() => setAgreementStep(i)}
+                        className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors text-sm ${
+                          i === agreementStep
+                            ? "bg-purple-50 border border-purple-200"
+                            : "hover:bg-gray-50"
+                        }`}
+                      >
+                        {agreementSignatures[field.id] ? (
+                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
+                        ) : (
+                          <div className="h-3.5 w-3.5 rounded-full border-2 border-gray-300 shrink-0" />
+                        )}
+                        <span className="text-gray-700 truncate text-xs">{field.label}</span>
+                        {agreementSignatures[field.id] && (
+                          <span className="ml-auto text-xs text-green-600 shrink-0">Signed</span>
+                        )}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Typed Legal Name */}
+                  <div className="border-t pt-4">
+                    <label className="mb-1.5 block text-sm font-medium text-gray-700">Type Your Full Legal Name</label>
                     <Input placeholder="Your full legal name" value={signedName} onChange={(e) => setSignedName(e.target.value)} className="font-serif italic text-lg" />
                   </div>
+
+                  {allAgreementsSigned && signedName && (
+                    <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3 flex items-center gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+                      <span className="text-sm text-green-700">Agreement fully signed — you may proceed to payment.</span>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </div>

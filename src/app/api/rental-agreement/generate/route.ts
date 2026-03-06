@@ -4,14 +4,18 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import path from "path";
 import fs from "fs/promises";
 
-// GET: Generate a pre-filled rental agreement PDF for a booking
+// GET: Generate a pre-filled rental agreement PDF
+// Supports two modes:
+//   1. ?bookingId=xxx — fetches data from an existing booking
+//   2. ?vehicleId=xxx&pickupDate=...&returnDate=...&customerName=... — for pre-booking preview
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const bookingId = searchParams.get("bookingId");
+  const vehicleId = searchParams.get("vehicleId");
 
-  if (!bookingId) {
+  if (!bookingId && !vehicleId) {
     return NextResponse.json(
-      { success: false, error: "bookingId is required" },
+      { success: false, error: "bookingId or vehicleId is required" },
       { status: 400 }
     );
   }
@@ -19,29 +23,59 @@ export async function GET(req: NextRequest) {
   const supabase = getServiceSupabase();
 
   try {
-    // Fetch booking
-    const { data: booking, error: bookingErr } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("id", bookingId)
-      .single();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let booking: any = null;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let vehicle: any = null;
 
-    if (bookingErr || !booking) {
-      return NextResponse.json(
-        { success: false, error: "Booking not found" },
-        { status: 404 }
-      );
-    }
-
-    // Fetch vehicle
-    let vehicle = null;
-    if (booking.vehicle_id) {
-      const { data: v } = await supabase
-        .from("vehicles")
+    if (bookingId) {
+      // Mode 1: Existing booking
+      const { data: b, error: bookingErr } = await supabase
+        .from("bookings")
         .select("*")
-        .eq("id", booking.vehicle_id)
+        .eq("id", bookingId)
         .single();
-      vehicle = v;
+
+      if (bookingErr || !b) {
+        return NextResponse.json(
+          { success: false, error: "Booking not found" },
+          { status: 404 }
+        );
+      }
+      booking = b;
+
+      if (booking.vehicle_id) {
+        const { data: v } = await supabase
+          .from("vehicles")
+          .select("*")
+          .eq("id", booking.vehicle_id)
+          .single();
+        vehicle = v;
+      }
+    } else {
+      // Mode 2: Pre-booking preview with query params
+      if (vehicleId) {
+        const { data: v } = await supabase
+          .from("vehicles")
+          .select("*")
+          .eq("id", vehicleId)
+          .single();
+        vehicle = v;
+      }
+
+      // Build a mock booking object from query params
+      booking = {
+        customer_name: searchParams.get("customerName") || "",
+        customer_email: searchParams.get("customerEmail") || "",
+        customer_phone: searchParams.get("customerPhone") || "",
+        pickup_date: searchParams.get("pickupDate") || "",
+        return_date: searchParams.get("returnDate") || "",
+        pickup_time: searchParams.get("pickupTime") || null,
+        return_time: searchParams.get("returnTime") || null,
+        total_price: parseFloat(searchParams.get("totalPrice") || "0"),
+        deposit: parseFloat(searchParams.get("totalPrice") || "0"),
+        vehicle_id: vehicleId || "",
+      };
     }
 
     // Load the blank PDF template
