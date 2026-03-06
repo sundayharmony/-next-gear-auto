@@ -49,8 +49,15 @@ async function fetchThumbnail(postUrl: string): Promise<{
       ? ogTitleMatch[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"')
       : null;
 
+    // #region agent log
+    fetch("http://127.0.0.1:7294/ingest/53c91875-0450-4365-9e2e-62372b8ba563",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"27d820"},body:JSON.stringify({sessionId:"27d820",runId:"baseline",hypothesisId:"H4",location:"src/app/api/instagram/route.ts:52",message:"instagram thumbnail scrape result",data:{status:res.status,hasThumbnail:Boolean(thumbnail_url),hasTitle:Boolean(title),media_type},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+
     return { thumbnail_url, title, media_type };
   } catch (err) {
+    // #region agent log
+    fetch("http://127.0.0.1:7294/ingest/53c91875-0450-4365-9e2e-62372b8ba563",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"27d820"},body:JSON.stringify({sessionId:"27d820",runId:"baseline",hypothesisId:"H4",location:"src/app/api/instagram/route.ts:57",message:"instagram thumbnail scrape exception",data:{error:err instanceof Error ? err.message : "unknown",media_type},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     console.error("Instagram thumbnail fetch failed:", err);
     return { thumbnail_url: null, title: null, media_type };
   }
@@ -67,12 +74,21 @@ export async function GET() {
       .order("sort_order", { ascending: true });
 
     if (error) {
+      // #region agent log
+      fetch("http://127.0.0.1:7294/ingest/53c91875-0450-4365-9e2e-62372b8ba563",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"27d820"},body:JSON.stringify({sessionId:"27d820",runId:"baseline",hypothesisId:"H5",location:"src/app/api/instagram/route.ts:75",message:"instagram GET db error",data:{error:error.message},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       console.error("Instagram posts fetch error:", error);
       return NextResponse.json({ data: [], success: true });
     }
 
+    // #region agent log
+    fetch("http://127.0.0.1:7294/ingest/53c91875-0450-4365-9e2e-62372b8ba563",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"27d820"},body:JSON.stringify({sessionId:"27d820",runId:"baseline",hypothesisId:"H5",location:"src/app/api/instagram/route.ts:80",message:"instagram GET rows fetched",data:{count:data?.length||0},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     return NextResponse.json({ data: data || [], success: true });
-  } catch {
+  } catch (err) {
+    // #region agent log
+    fetch("http://127.0.0.1:7294/ingest/53c91875-0450-4365-9e2e-62372b8ba563",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"27d820"},body:JSON.stringify({sessionId:"27d820",runId:"baseline",hypothesisId:"H5",location:"src/app/api/instagram/route.ts:84",message:"instagram GET exception",data:{error:err instanceof Error ? err.message : "unknown"},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     return NextResponse.json({ data: [], success: true });
   }
 }

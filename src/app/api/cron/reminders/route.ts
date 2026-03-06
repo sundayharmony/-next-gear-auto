@@ -34,24 +34,28 @@ export async function GET(request: Request) {
 
     if (pickupBookings && pickupBookings.length > 0) {
       for (const booking of pickupBookings) {
-        // Get vehicle name
-        const { data: vehicle } = await supabase
-          .from("vehicles")
-          .select("year, make, model")
-          .eq("id", booking.vehicle_id)
-          .single();
+        if (!booking.customer_email) continue; // Skip if no email
+        try {
+          const { data: vehicle } = await supabase
+            .from("vehicles")
+            .select("year, make, model")
+            .eq("id", booking.vehicle_id)
+            .single();
 
-        await sendPickupReminder({
-          bookingId: booking.id,
-          customerName: booking.customer_name || "Customer",
-          customerEmail: booking.customer_email || "",
-          vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
-          pickupDate: booking.pickup_date,
-          returnDate: booking.return_date,
-          totalPrice: booking.total_price,
-          deposit: booking.deposit,
-        });
-        pickupCount++;
+          await sendPickupReminder({
+            bookingId: booking.id,
+            customerName: booking.customer_name || "Customer",
+            customerEmail: booking.customer_email,
+            vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
+            pickupDate: booking.pickup_date,
+            returnDate: booking.return_date,
+            totalPrice: booking.total_price,
+            deposit: booking.deposit,
+          });
+          pickupCount++;
+        } catch (err) {
+          console.error(`Failed to send pickup reminder for booking ${booking.id}:`, err);
+        }
       }
     }
 
@@ -64,23 +68,28 @@ export async function GET(request: Request) {
 
     if (returnBookings && returnBookings.length > 0) {
       for (const booking of returnBookings) {
-        const { data: vehicle } = await supabase
-          .from("vehicles")
-          .select("year, make, model")
-          .eq("id", booking.vehicle_id)
-          .single();
+        if (!booking.customer_email) continue; // Skip if no email
+        try {
+          const { data: vehicle } = await supabase
+            .from("vehicles")
+            .select("year, make, model")
+            .eq("id", booking.vehicle_id)
+            .single();
 
-        await sendReturnReminder({
-          bookingId: booking.id,
-          customerName: booking.customer_name || "Customer",
-          customerEmail: booking.customer_email || "",
-          vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
-          pickupDate: booking.pickup_date,
-          returnDate: booking.return_date,
-          totalPrice: booking.total_price,
-          deposit: booking.deposit,
-        });
-        returnCount++;
+          await sendReturnReminder({
+            bookingId: booking.id,
+            customerName: booking.customer_name || "Customer",
+            customerEmail: booking.customer_email,
+            vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
+            pickupDate: booking.pickup_date,
+            returnDate: booking.return_date,
+            totalPrice: booking.total_price,
+            deposit: booking.deposit,
+          });
+          returnCount++;
+        } catch (err) {
+          console.error(`Failed to send return reminder for booking ${booking.id}:`, err);
+        }
       }
     }
 

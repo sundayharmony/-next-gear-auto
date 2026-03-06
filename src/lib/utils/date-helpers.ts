@@ -1,5 +1,7 @@
-export function formatDate(dateStr: string): string {
+export function formatDate(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
   const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
+  if (isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-US", {
     weekday: "short",
     year: "numeric",

@@ -205,8 +205,8 @@ export default function AdminBookingsPage() {
   }, [newBooking.vehicleId, newBooking.pickupDate, newBooking.returnDate, newBooking.selectedExtras, vehicles]);
 
   const handleCreateBooking = async () => {
-    if (!newBooking.customerName || !newBooking.vehicleId || !newBooking.pickupDate || !newBooking.returnDate) {
-      setError("Please fill in customer name, vehicle, and dates.");
+    if (!newBooking.customerName || !newBooking.customerEmail || !newBooking.vehicleId || !newBooking.pickupDate || !newBooking.returnDate) {
+      setError("Please fill in customer name, email, vehicle, and dates.");
       return;
     }
 
@@ -388,12 +388,12 @@ export default function AdminBookingsPage() {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
                   <Input
                     type="email"
                     value={newBooking.customerEmail}
                     onChange={(e) => setNewBooking((prev) => ({ ...prev, customerEmail: e.target.value }))}
-                    placeholder="john@email.com (optional)"
+                    placeholder="john@email.com"
                   />
                 </div>
                 <div>

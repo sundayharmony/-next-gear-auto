@@ -17,10 +17,13 @@ export async function POST(request: Request) {
   try {
     if (webhookSecret && webhookSecret !== "whsec_REPLACE_WITH_ACTUAL_WEBHOOK_SECRET" && sig) {
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-    } else {
-      // If webhook secret is not properly configured, parse but log warning
-      console.warn("SECURITY WARNING: Webhook secret not configured - parsing unverified event");
+    } else if (process.env.NODE_ENV === "development") {
+      // Allow unverified events in development only
+      console.warn("DEV WARNING: Webhook secret not configured - parsing unverified event");
       event = JSON.parse(body) as Stripe.Event;
+    } else {
+      console.error("SECURITY: Webhook secret not configured in production - rejecting request");
+      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
     }
   } catch (err) {
     console.error("Webhook signature verification failed:", err);

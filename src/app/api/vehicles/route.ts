@@ -18,6 +18,10 @@ export async function GET(request: Request) {
 
     const { data, error } = await query;
 
+    // #region agent log
+    fetch("http://127.0.0.1:7294/ingest/53c91875-0450-4365-9e2e-62372b8ba563",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"27d820"},body:JSON.stringify({sessionId:"27d820",runId:"baseline",hypothesisId:"H3",location:"src/app/api/vehicles/route.ts:22",message:"vehicles query result",data:{category,error:error?.message||null,rowCount:data?.length||0},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+
     if (!error && data && data.length > 0) {
       const vehicles = data.map((v) => ({
         id: v.id,
@@ -40,6 +44,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: vehicles, success: true });
     }
   } catch (error) {
+    // #region agent log
+    fetch("http://127.0.0.1:7294/ingest/53c91875-0450-4365-9e2e-62372b8ba563",{method:"POST",headers:{"Content-Type":"application/json","X-Debug-Session-Id":"27d820"},body:JSON.stringify({sessionId:"27d820",runId:"baseline",hypothesisId:"H3",location:"src/app/api/vehicles/route.ts:45",message:"vehicles route exception",data:{category,error:error instanceof Error ? error.message : "unknown"},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     console.error("Vehicles API error:", error);
   }
 

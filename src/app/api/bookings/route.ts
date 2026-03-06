@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import {
   sendBookingConfirmation,
+  sendBookingPendingEmail,
   sendAdminNewBooking,
   sendCancellationEmail,
 } from "@/lib/email/mailer";
@@ -201,7 +202,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Send confirmation emails for admin-created bookings
+    // Send emails for new bookings (only when email is provided)
     if (body.customerDetails?.email) {
       let vehicleName = "Vehicle";
       if (body.vehicleId) {
@@ -215,18 +216,18 @@ export async function POST(request: Request) {
 
       // Check if customer needs a password
       let needsPassword = false;
-      const customerEmail = body.customerDetails.email.toLowerCase().trim();
+      const custEmail = body.customerDetails.email.toLowerCase().trim();
       const { data: cust } = await supabase
         .from("customers")
         .select("password_hash")
-        .eq("email", customerEmail)
+        .eq("email", custEmail)
         .single();
       needsPassword = !cust?.password_hash;
 
       const emailData = {
         bookingId,
         customerName: body.customerDetails.name || "Customer",
-        customerEmail,
+        customerEmail: custEmail,
         vehicleName,
         pickupDate: body.pickupDate,
         returnDate: body.returnDate,
@@ -237,12 +238,14 @@ export async function POST(request: Request) {
         needsPassword,
       };
 
-      sendBookingConfirmation(emailData).catch(console.error);
+      // Send pending email to customer (booking starts as pending)
+      sendBookingPendingEmail(emailData).catch(console.error);
+      // Always notify admin of new booking
       sendAdminNewBooking(emailData).catch(console.error);
     }
 
     return NextResponse.json(
-      { data: { id: bookingId }, success: true },
+      { data: { id: bookingId, customer_id: customerId }, success: true },
       { status: 201 }
     );
   } catch {

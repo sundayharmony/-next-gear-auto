@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Calendar, Clock, User,
   Car, Download, XCircle, Star, LogOut, Shield,
-  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw, Upload, CheckCircle2, ShieldCheck
+  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw, CheckCircle2, ShieldCheck
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
