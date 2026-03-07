@@ -256,33 +256,90 @@ export async function POST(request: Request) {
   }
 }
 
-// PATCH - Update booking status
+// PATCH - Update booking (status change OR field edits)
 export async function PATCH(request: Request) {
   const supabase = getServiceSupabase();
   try {
     const body = await request.json();
-    const { bookingId, status } = body;
+    const { bookingId } = body;
 
-    if (!bookingId || !status) {
+    if (!bookingId) {
       return NextResponse.json(
-        { success: false, message: "Missing bookingId or status" },
+        { success: false, message: "Missing bookingId" },
         { status: 400 }
       );
     }
 
-    // Fetch booking details before updating (for emails)
+    // Fetch booking details before updating (for emails and comparison)
     const { data: booking } = await supabase
       .from("bookings")
       .select("*")
       .eq("id", bookingId)
       .single();
 
+    if (!booking) {
+      return NextResponse.json(
+        { success: false, message: "Booking not found" },
+        { status: 404 }
+      );
+    }
+
+    // Build update object — only include fields that were actually sent
+    const updateFields: Record<string, any> = {};
+
+    if (body.status !== undefined) updateFields.status = body.status;
+    if (body.customer_name !== undefined) updateFields.customer_name = body.customer_name;
+    if (body.customer_email !== undefined) updateFields.customer_email = body.customer_email;
+    if (body.customer_phone !== undefined) updateFields.customer_phone = body.customer_phone;
+    if (body.vehicle_id !== undefined) updateFields.vehicle_id = body.vehicle_id;
+    if (body.pickup_date !== undefined) updateFields.pickup_date = body.pickup_date;
+    if (body.return_date !== undefined) updateFields.return_date = body.return_date;
+    if (body.pickup_time !== undefined) updateFields.pickup_time = body.pickup_time;
+    if (body.return_time !== undefined) updateFields.return_time = body.return_time;
+    if (body.total_price !== undefined) updateFields.total_price = body.total_price;
+    if (body.deposit !== undefined) updateFields.deposit = body.deposit;
+    if (body.extras !== undefined) updateFields.extras = body.extras;
+    if (body.insurance_opted_out !== undefined) updateFields.insurance_opted_out = body.insurance_opted_out;
+
+    if (Object.keys(updateFields).length === 0) {
+      return NextResponse.json(
+        { success: false, message: "No fields to update" },
+        { status: 400 }
+      );
+    }
+
+    // If vehicle or dates changed, check for double-booking conflicts
+    const newVehicleId = updateFields.vehicle_id || booking.vehicle_id;
+    const newPickupDate = updateFields.pickup_date || booking.pickup_date;
+    const newReturnDate = updateFields.return_date || booking.return_date;
+    const datesOrVehicleChanged =
+      updateFields.vehicle_id || updateFields.pickup_date || updateFields.return_date;
+
+    if (datesOrVehicleChanged) {
+      const { data: conflicting } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("vehicle_id", newVehicleId)
+        .in("status", ["confirmed", "active", "pending"])
+        .neq("id", bookingId) // Exclude this booking
+        .lte("pickup_date", newReturnDate)
+        .gte("return_date", newPickupDate);
+
+      if (conflicting && conflicting.length > 0) {
+        return NextResponse.json(
+          { success: false, message: "This vehicle is already booked for the selected dates." },
+          { status: 409 }
+        );
+      }
+    }
+
     const { error } = await supabase
       .from("bookings")
-      .update({ status })
+      .update(updateFields)
       .eq("id", bookingId);
 
     if (error) {
+      console.error("Update booking error:", error);
       return NextResponse.json(
         { success: false, message: "Failed to update booking" },
         { status: 500 }
@@ -290,13 +347,17 @@ export async function PATCH(request: Request) {
     }
 
     // Send emails based on status change
-    if (booking && booking.customer_email) {
+    const statusChanged = body.status && body.status !== booking.status;
+    const emailAddress = updateFields.customer_email || booking.customer_email;
+
+    if (statusChanged && emailAddress) {
       let vehicleName = "Vehicle";
-      if (booking.vehicle_id) {
+      const vId = updateFields.vehicle_id || booking.vehicle_id;
+      if (vId) {
         const { data: vehicle } = await supabase
           .from("vehicles")
           .select("year, make, model")
-          .eq("id", booking.vehicle_id)
+          .eq("id", vId)
           .single();
         if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
       }
@@ -310,33 +371,32 @@ export async function PATCH(request: Request) {
           .eq("id", booking.customer_id)
           .single();
         needsPassword = !cust?.password_hash;
-      } else if (booking.customer_email) {
+      } else if (emailAddress) {
         const { data: cust } = await supabase
           .from("customers")
           .select("password_hash")
-          .eq("email", booking.customer_email.toLowerCase().trim())
+          .eq("email", emailAddress.toLowerCase().trim())
           .single();
         needsPassword = !cust?.password_hash;
       }
 
       const emailData = {
         bookingId: booking.id,
-        customerName: booking.customer_name || "Customer",
-        customerEmail: booking.customer_email,
+        customerName: updateFields.customer_name || booking.customer_name || "Customer",
+        customerEmail: emailAddress,
         vehicleName,
-        pickupDate: booking.pickup_date,
-        returnDate: booking.return_date,
-        pickupTime: booking.pickup_time || null,
-        returnTime: booking.return_time || null,
-        totalPrice: booking.total_price || 0,
-        deposit: booking.deposit || 0,
+        pickupDate: updateFields.pickup_date || booking.pickup_date,
+        returnDate: updateFields.return_date || booking.return_date,
+        pickupTime: updateFields.pickup_time || booking.pickup_time || null,
+        returnTime: updateFields.return_time || booking.return_time || null,
+        totalPrice: updateFields.total_price || booking.total_price || 0,
+        deposit: updateFields.deposit || booking.deposit || 0,
         needsPassword,
       };
 
-      if (status === "cancelled") {
+      if (body.status === "cancelled") {
         sendCancellationEmail(emailData).catch(console.error);
-      } else if (status === "confirmed" && booking.status === "pending") {
-        // Admin confirming a manual/pending booking
+      } else if (body.status === "confirmed" && booking.status === "pending") {
         sendBookingConfirmation(emailData).catch(console.error);
       }
     }

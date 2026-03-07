@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield } from "lucide-react";
+import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -94,6 +94,9 @@ export default function AdminBookingsPage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [showDetail, setShowDetail] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [editData, setEditData] = useState<Partial<BookingRow>>({});
+  const [saving, setSaving] = useState(false);
 
   // Auto-clear error after 5 seconds
   useEffect(() => {
@@ -308,6 +311,124 @@ export default function AdminBookingsPage() {
     }
     setUploadingDoc(null);
   };
+
+  const startEditing = () => {
+    if (!selectedBooking) return;
+    setEditData({
+      customer_name: selectedBooking.customer_name,
+      customer_email: selectedBooking.customer_email,
+      customer_phone: selectedBooking.customer_phone || "",
+      vehicle_id: selectedBooking.vehicle_id,
+      pickup_date: selectedBooking.pickup_date,
+      return_date: selectedBooking.return_date,
+      pickup_time: selectedBooking.pickup_time || "10:00",
+      return_time: selectedBooking.return_time || "10:00",
+      total_price: selectedBooking.total_price,
+      deposit: selectedBooking.deposit,
+    });
+    setEditMode(true);
+  };
+
+  const cancelEditing = () => {
+    setEditMode(false);
+    setEditData({});
+  };
+
+  const handleSaveEdit = async () => {
+    if (!selectedBooking) return;
+
+    // Basic validation
+    if (!editData.customer_name || !editData.customer_email || !editData.vehicle_id || !editData.pickup_date || !editData.return_date) {
+      setError("Please fill in customer name, email, vehicle, and dates.");
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: selectedBooking.id,
+          customer_name: editData.customer_name,
+          customer_email: editData.customer_email,
+          customer_phone: editData.customer_phone,
+          vehicle_id: editData.vehicle_id,
+          pickup_date: editData.pickup_date,
+          return_date: editData.return_date,
+          pickup_time: editData.pickup_time,
+          return_time: editData.return_time,
+          total_price: editData.total_price,
+          deposit: editData.deposit,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        // Find vehicle name for the updated booking
+        const vehicle = vehicles.find((v) => v.id === editData.vehicle_id);
+        const vehicleName = vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : selectedBooking.vehicleName;
+
+        const updatedBooking: BookingRow = {
+          ...selectedBooking,
+          customer_name: editData.customer_name || selectedBooking.customer_name,
+          customer_email: editData.customer_email || selectedBooking.customer_email,
+          customer_phone: editData.customer_phone || selectedBooking.customer_phone,
+          vehicle_id: editData.vehicle_id || selectedBooking.vehicle_id,
+          vehicleName,
+          pickup_date: editData.pickup_date || selectedBooking.pickup_date,
+          return_date: editData.return_date || selectedBooking.return_date,
+          pickup_time: editData.pickup_time || selectedBooking.pickup_time,
+          return_time: editData.return_time || selectedBooking.return_time,
+          total_price: editData.total_price ?? selectedBooking.total_price,
+          deposit: editData.deposit ?? selectedBooking.deposit,
+        };
+
+        setSelectedBooking(updatedBooking);
+        setBookings((prev) =>
+          prev.map((b) => (b.id === selectedBooking.id ? updatedBooking : b))
+        );
+        setEditMode(false);
+        setEditData({});
+      } else {
+        setError(data.message || "Failed to update booking");
+      }
+    } catch {
+      setError("Network error — could not update booking");
+    }
+    setSaving(false);
+  };
+
+  // Auto-recalculate price when vehicle or dates change in edit mode
+  useEffect(() => {
+    if (!editMode || !editData.vehicle_id || !editData.pickup_date || !editData.return_date) return;
+    const vehicle = vehicles.find((v) => v.id === editData.vehicle_id);
+    if (!vehicle) return;
+
+    const start = new Date(editData.pickup_date);
+    const end = new Date(editData.return_date);
+    const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+
+    // Calculate base + extras (use selected booking's extras if available)
+    let baseTotal = days * vehicle.dailyRate;
+    let extrasTotal = 0;
+    if (selectedBooking?.extras && selectedBooking.extras.length > 0) {
+      for (const extra of selectedBooking.extras) {
+        if (extra.billingType === "one-time") {
+          extrasTotal += extra.pricePerDay;
+        } else if (extra.billingType === "per-day-capped" && extra.maxPrice) {
+          extrasTotal += Math.min(days * extra.pricePerDay, extra.maxPrice);
+        } else {
+          extrasTotal += days * (extra.pricePerDay || 0);
+        }
+      }
+    }
+
+    const subtotal = baseTotal + extrasTotal;
+    const tax = subtotal * 0.08;
+    const total = parseFloat((subtotal + tax).toFixed(2));
+    setEditData((prev) => ({ ...prev, total_price: total }));
+  }, [editMode, editData.vehicle_id, editData.pickup_date, editData.return_date, vehicles]);
 
   return (
     <>
@@ -687,14 +808,24 @@ export default function AdminBookingsPage() {
       {showDetail && selectedBooking && (
         <div className="fixed inset-0 z-50 flex">
           {/* Backdrop */}
-          <div className="flex-1 bg-black/50" onClick={() => setShowDetail(false)} />
+          <div className="flex-1 bg-black/50" onClick={() => { setShowDetail(false); cancelEditing(); }} />
           {/* Panel */}
           <div className="w-full max-w-lg bg-white shadow-xl overflow-y-auto">
             <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
-              <h2 className="text-lg font-semibold">Booking Details</h2>
-              <button onClick={() => setShowDetail(false)} className="text-gray-400 hover:text-gray-600">
-                <X className="h-5 w-5" />
-              </button>
+              <h2 className="text-lg font-semibold">{editMode ? "Edit Booking" : "Booking Details"}</h2>
+              <div className="flex items-center gap-2">
+                {!editMode && !["completed", "cancelled"].includes(selectedBooking.status) && (
+                  <button
+                    onClick={startEditing}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </button>
+                )}
+                <button onClick={() => { setShowDetail(false); cancelEditing(); }} className="text-gray-400 hover:text-gray-600">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
             <div className="p-6 space-y-6">
               {/* Booking ID & Status */}
@@ -709,9 +840,38 @@ export default function AdminBookingsPage() {
               {/* Customer Info */}
               <div>
                 <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Customer</h3>
-                <p className="font-medium">{selectedBooking.customer_name}</p>
-                <p className="text-sm text-gray-500">{selectedBooking.customer_email}</p>
-                <p className="text-sm text-gray-500">{selectedBooking.customer_phone}</p>
+                {editMode ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
+                      <Input
+                        value={editData.customer_name || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, customer_name: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Email *</label>
+                      <Input
+                        type="email"
+                        value={editData.customer_email || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, customer_email: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                      <Input
+                        value={editData.customer_phone || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, customer_phone: e.target.value }))}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="font-medium">{selectedBooking.customer_name}</p>
+                    <p className="text-sm text-gray-500">{selectedBooking.customer_email}</p>
+                    <p className="text-sm text-gray-500">{selectedBooking.customer_phone}</p>
+                  </>
+                )}
               </div>
 
               {/* ID Document Upload */}
@@ -756,23 +916,91 @@ export default function AdminBookingsPage() {
               {/* Vehicle */}
               <div>
                 <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Vehicle</h3>
-                <p className="font-medium">{selectedBooking.vehicleName || selectedBooking.vehicle_id}</p>
+                {editMode ? (
+                  <select
+                    value={editData.vehicle_id || ""}
+                    onChange={(e) => setEditData((prev) => ({ ...prev, vehicle_id: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="">Select vehicle...</option>
+                    {vehicles.map((v) => (
+                      <option key={v.id} value={v.id}>
+                        {v.year} {v.make} {v.model} — ${v.dailyRate}/day
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <p className="font-medium">{selectedBooking.vehicleName || selectedBooking.vehicle_id}</p>
+                )}
               </div>
 
               {/* Dates and Times */}
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500">Pickup Date</p>
-                  <p className="text-lg font-bold text-gray-900">{formatDate(selectedBooking.pickup_date)}</p>
-                  <p className="text-xs text-gray-500 mt-1">Time</p>
-                  <p className="text-xl font-bold text-purple-600">{formatTime(selectedBooking.pickup_time)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Return Date</p>
-                  <p className="text-lg font-bold text-gray-900">{formatDate(selectedBooking.return_date)}</p>
-                  <p className="text-xs text-gray-500 mt-1">Time</p>
-                  <p className="text-xl font-bold text-purple-600">{formatTime(selectedBooking.return_time)}</p>
-                </div>
+                {editMode ? (
+                  <>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Pickup Date *</label>
+                      <Input
+                        type="date"
+                        value={editData.pickup_date || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, pickup_date: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Pickup Time</label>
+                      <select
+                        value={editData.pickup_time || "10:00"}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, pickup_time: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        {Array.from({ length: 41 }, (_, i) => {
+                          const hour = 8 + Math.floor(i / 2);
+                          const minute = i % 2 === 0 ? 0 : 30;
+                          const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+                          return <option key={time} value={time}>{formatTime(time)}</option>;
+                        })}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Return Date *</label>
+                      <Input
+                        type="date"
+                        value={editData.return_date || ""}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, return_date: e.target.value }))}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Return Time</label>
+                      <select
+                        value={editData.return_time || "10:00"}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, return_time: e.target.value }))}
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        {Array.from({ length: 41 }, (_, i) => {
+                          const hour = 8 + Math.floor(i / 2);
+                          const minute = i % 2 === 0 ? 0 : 30;
+                          const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+                          return <option key={time} value={time}>{formatTime(time)}</option>;
+                        })}
+                      </select>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div>
+                      <p className="text-xs text-gray-500">Pickup Date</p>
+                      <p className="text-lg font-bold text-gray-900">{formatDate(selectedBooking.pickup_date)}</p>
+                      <p className="text-xs text-gray-500 mt-1">Time</p>
+                      <p className="text-xl font-bold text-purple-600">{formatTime(selectedBooking.pickup_time)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500">Return Date</p>
+                      <p className="text-lg font-bold text-gray-900">{formatDate(selectedBooking.return_date)}</p>
+                      <p className="text-xs text-gray-500 mt-1">Time</p>
+                      <p className="text-xl font-bold text-purple-600">{formatTime(selectedBooking.return_time)}</p>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Extras */}
@@ -839,14 +1067,42 @@ export default function AdminBookingsPage() {
               {/* Pricing */}
               <div>
                 <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Payment</h3>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-500">Total</span>
-                  <span className="font-bold text-lg">${selectedBooking.total_price?.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-gray-500">Paid</span>
-                  <span className="text-green-600 font-semibold">${selectedBooking.deposit?.toFixed(2)}</span>
-                </div>
+                {editMode ? (
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Total Price ($)</label>
+                      <Input
+                        type="number"
+                        value={editData.total_price ?? 0}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, total_price: parseFloat(e.target.value) || 0 }))}
+                        min={0}
+                        step={0.01}
+                      />
+                      <p className="text-xs text-gray-400 mt-1">Auto-calculated when vehicle or dates change, editable for custom pricing</p>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Amount Paid ($)</label>
+                      <Input
+                        type="number"
+                        value={editData.deposit ?? 0}
+                        onChange={(e) => setEditData((prev) => ({ ...prev, deposit: parseFloat(e.target.value) || 0 }))}
+                        min={0}
+                        step={0.01}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-gray-500">Total</span>
+                      <span className="font-bold text-lg">${selectedBooking.total_price?.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-gray-500">Paid</span>
+                      <span className="text-green-600 font-semibold">${selectedBooking.deposit?.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Agreement */}
@@ -876,6 +1132,32 @@ export default function AdminBookingsPage() {
                 <div>
                   <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Agreement</h3>
                   <p className="text-xs text-gray-400">Not yet signed</p>
+                </div>
+              )}
+
+              {/* Edit Mode Save/Cancel Buttons */}
+              {editMode && (
+                <div className="flex gap-3 pt-4 border-t">
+                  <Button
+                    variant="outline"
+                    onClick={cancelEditing}
+                    className="flex-1"
+                    disabled={saving}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleSaveEdit}
+                    disabled={saving}
+                    className="flex-1 bg-purple-600 hover:bg-purple-700 text-white"
+                  >
+                    {saving ? (
+                      <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                    ) : (
+                      <Save className="h-4 w-4 mr-1" />
+                    )}
+                    {saving ? "Saving..." : "Save Changes"}
+                  </Button>
                 </div>
               )}
             </div>
