@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
         description,
         status,
         cost,
-        receipt_urls,
+        photo_urls,
         scheduled_date,
         started_date,
         completed_date,
@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
         description: record.description || "",
         status: record.status || "pending",
         cost: record.cost || null,
-        receiptUrls: record.receipt_urls || [],
+        photoUrls: record.photo_urls || [],
         scheduledDate: record.scheduled_date || "",
         startedDate: record.started_date || "",
         completedDate: record.completed_date || "",
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         description: description || "",
         status: recordStatus,
         cost: cost || null,
-        receipt_urls: [],
+        photo_urls: [],
         scheduled_date: scheduledDate || null,
         started_date: startedDate || null,
         completed_date: completedDate || null,
@@ -155,7 +155,7 @@ export async function POST(req: NextRequest) {
       description: data.description,
       status: data.status,
       cost: data.cost,
-      receiptUrls: data.receipt_urls,
+      photoUrls: data.photo_urls,
       scheduledDate: data.scheduled_date,
       startedDate: data.started_date,
       completedDate: data.completed_date,
@@ -200,7 +200,7 @@ export async function PUT(req: NextRequest) {
     if (updates.startedDate !== undefined) dbUpdates.started_date = updates.startedDate;
     if (updates.completedDate !== undefined) dbUpdates.completed_date = updates.completedDate;
     if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
-    if (updates.receiptUrls !== undefined) dbUpdates.receipt_urls = updates.receiptUrls;
+    if (updates.photoUrls !== undefined) dbUpdates.photo_urls = updates.photoUrls;
 
     // Get the record to find vehicleId
     const { data: record } = await supabase

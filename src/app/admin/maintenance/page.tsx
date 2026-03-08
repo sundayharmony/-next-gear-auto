@@ -14,8 +14,6 @@ import {
   Clock,
   AlertTriangle,
   X,
-  FileText,
-  Image,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -23,6 +21,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { Vehicle, getVehicleDisplayName } from "@/lib/types";
+import { MaintenancePhotoGallery } from "@/components/maintenance-photo-gallery";
 
 interface MaintenanceRecord {
   id: string;
@@ -32,7 +31,7 @@ interface MaintenanceRecord {
   description: string;
   status: "pending" | "in-progress" | "completed";
   cost: number | null;
-  receiptUrls: string[];
+  photoUrls: string[];
   startedDate: string;
   completedDate: string;
   notes: string;
@@ -46,7 +45,7 @@ const emptyRecord: Omit<MaintenanceRecord, "id" | "createdAt"> = {
   description: "",
   status: "pending",
   cost: null,
-  receiptUrls: [],
+  photoUrls: [],
   startedDate: "",
   completedDate: "",
   notes: "",
@@ -65,7 +64,7 @@ export default function AdminMaintenancePage() {
   const [newRecord, setNewRecord] = useState<FormState>(emptyRecord);
   const [editForm, setEditForm] = useState<FormState>({} as FormState);
   const [saving, setSaving] = useState(false);
-  const [uploadingReceipt, setUploadingReceipt] = useState<Record<string, boolean>>({});
+  const [uploadingPhoto, setUploadingPhoto] = useState<Record<string, boolean>>({});
 
   // Auto-clear error after 5 seconds
   useEffect(() => {
@@ -141,7 +140,7 @@ export default function AdminMaintenancePage() {
           startedDate: editForm.startedDate,
           completedDate: editForm.completedDate,
           notes: editForm.notes,
-          receiptUrls: editForm.receiptUrls,
+          photoUrls: editForm.photoUrls,
         }),
       });
 
@@ -160,7 +159,7 @@ export default function AdminMaintenancePage() {
                   startedDate: editForm.startedDate,
                   completedDate: editForm.completedDate,
                   notes: editForm.notes,
-                  receiptUrls: editForm.receiptUrls,
+                  photoUrls: editForm.photoUrls,
                 }
               : r
           )
@@ -228,14 +227,14 @@ export default function AdminMaintenancePage() {
     }
   };
 
-  const handleReceiptUpload = async (
+  const handlePhotoUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
     recordId: string
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    setUploadingReceipt((prev) => ({ ...prev, [recordId]: true }));
+    setUploadingPhoto((prev) => ({ ...prev, [recordId]: true }));
 
     try {
       const formData = new FormData();
@@ -253,7 +252,7 @@ export default function AdminMaintenancePage() {
         setRecords((prev) =>
           prev.map((r) =>
             r.id === recordId
-              ? { ...r, receiptUrls: data.receiptUrls || [...r.receiptUrls, data.url] }
+              ? { ...r, photoUrls: data.photoUrls || [...r.photoUrls, data.url] }
               : r
           )
         );
@@ -262,30 +261,30 @@ export default function AdminMaintenancePage() {
         if (editingId === recordId) {
           setEditForm((prev) => ({
             ...prev,
-            receiptUrls: data.receiptUrls || [...prev.receiptUrls, data.url],
+            photoUrls: data.photoUrls || [...prev.photoUrls, data.url],
           }));
         }
       } else {
-        setError(data.error || "Failed to upload receipt");
+        setError(data.error || "Failed to upload photo");
       }
     } catch (err) {
-      console.error("Receipt upload error:", err);
-      setError("Network error — could not upload receipt");
+      console.error("Photo upload error:", err);
+      setError("Network error — could not upload photo");
     } finally {
-      setUploadingReceipt((prev) => ({ ...prev, [recordId]: false }));
+      setUploadingPhoto((prev) => ({ ...prev, [recordId]: false }));
     }
   };
 
-  const removeReceipt = (url: string, formKey: "new" | string) => {
+  const removePhoto = (url: string, formKey: "new" | string) => {
     if (formKey === "new") {
       setNewRecord((prev) => ({
         ...prev,
-        receiptUrls: prev.receiptUrls.filter((r) => r !== url),
+        photoUrls: prev.photoUrls.filter((r) => r !== url),
       }));
     } else {
       setEditForm((prev) => ({
         ...prev,
-        receiptUrls: prev.receiptUrls.filter((r) => r !== url),
+        photoUrls: prev.photoUrls.filter((r) => r !== url),
       }));
     }
   };
@@ -458,52 +457,35 @@ export default function AdminMaintenancePage() {
             />
           </div>
 
-          {/* Receipts Section */}
+          {/* Photos Section */}
           <div>
             <label className="text-xs font-medium text-gray-700 mb-2 block">
-              Receipts
+              Photos
             </label>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {(form.receiptUrls || []).map((url, idx) => (
-                <div
-                  key={idx}
-                  className="relative inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2"
-                >
-                  {url.endsWith(".pdf") ? (
-                    <FileText className="h-4 w-4 text-red-500" />
-                  ) : (
-                    <Image className="h-4 w-4 text-blue-500" />
-                  )}
-                  <a
-                    href={url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-sm text-blue-600 hover:underline truncate max-w-xs"
-                  >
-                    {url.split("/").pop()?.substring(0, 30)}...
-                  </a>
-                  <button
-                    type="button"
-                    onClick={() => removeReceipt(url, formKey)}
-                    className="ml-1 text-gray-400 hover:text-red-600"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
-            </div>
+
+            {(form.photoUrls && form.photoUrls.length > 0) && (
+              <div className="mb-3">
+                <MaintenancePhotoGallery
+                  photos={form.photoUrls}
+                  alt={form.title || "Maintenance"}
+                  onDeletePhoto={(url) => removePhoto(url, formKey)}
+                  showDelete={true}
+                />
+              </div>
+            )}
 
             {formKey !== "new" && (
               <label className="cursor-pointer">
                 <div className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">
                   <Upload className="h-4 w-4" />
-                  {uploadingReceipt[formKey] ? "Uploading..." : "Upload Receipt"}
+                  {uploadingPhoto[formKey] ? "Uploading..." : "Upload Photo"}
                 </div>
                 <input
                   type="file"
+                  multiple
                   accept=".pdf,.jpg,.jpeg,.png,.webp"
-                  onChange={(e) => handleReceiptUpload(e, formKey)}
-                  disabled={uploadingReceipt[formKey]}
+                  onChange={(e) => handlePhotoUpload(e, formKey)}
+                  disabled={uploadingPhoto[formKey]}
                   className="hidden"
                 />
               </label>
@@ -689,7 +671,7 @@ export default function AdminMaintenancePage() {
                       Completed
                     </th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-900">
-                      Receipts
+                      Photos
                     </th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-900">
                       Actions
@@ -726,12 +708,12 @@ export default function AdminMaintenancePage() {
                         {record.completedDate ? new Date(record.completedDate).toLocaleDateString() : "—"}
                       </td>
                       <td className="px-6 py-3">
-                        {record.receiptUrls.length > 0 ? (
+                        {record.photoUrls.length > 0 ? (
                           <Badge variant="secondary" className="text-xs">
-                            {record.receiptUrls.length} file{record.receiptUrls.length !== 1 ? "s" : ""}
+                            {record.photoUrls.length} photo{record.photoUrls.length !== 1 ? "s" : ""}
                           </Badge>
                         ) : (
-                          <span className="text-gray-400 text-xs">No receipts</span>
+                          <span className="text-gray-400 text-xs">No photos</span>
                         )}
                       </td>
                       <td className="px-6 py-3">

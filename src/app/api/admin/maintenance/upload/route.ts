@@ -48,7 +48,7 @@ export async function POST(request: NextRequest) {
 
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("maintenance-receipts")
+      .from("maintenance-photos")
       .upload(fileName, buffer, {
         contentType: file.type,
         upsert: false,
@@ -57,23 +57,23 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       console.error("Supabase storage upload error:", uploadError);
       return NextResponse.json(
-        { success: false, error: "Failed to upload receipt: " + uploadError.message },
+        { success: false, error: "Failed to upload photo: " + uploadError.message },
         { status: 500 }
       );
     }
 
     // Get the public URL
     const { data: urlData } = supabase.storage
-      .from("maintenance-receipts")
+      .from("maintenance-photos")
       .getPublicUrl(uploadData.path);
 
     const publicUrl = urlData.publicUrl;
 
-    // If maintenanceId provided, update maintenance record's receipt_urls array
+    // If maintenanceId provided, update maintenance record's photo_urls array
     if (maintenanceId) {
       const { data: record, error: fetchError } = await supabase
         .from("maintenance_records")
-        .select("receipt_urls")
+        .select("photo_urls")
         .eq("id", maintenanceId)
         .single();
 
@@ -82,31 +82,31 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           success: true,
           url: publicUrl,
-          warning: "Receipt uploaded but could not update record",
+          warning: "Photo uploaded but could not update record",
         });
       }
 
-      const currentUrls = record?.receipt_urls || [];
+      const currentUrls = record?.photo_urls || [];
       const updatedUrls = [...currentUrls, publicUrl];
 
       const { error: updateError } = await supabase
         .from("maintenance_records")
-        .update({ receipt_urls: updatedUrls })
+        .update({ photo_urls: updatedUrls })
         .eq("id", maintenanceId);
 
       if (updateError) {
-        console.error("Error updating maintenance receipt_urls:", updateError);
+        console.error("Error updating maintenance photo_urls:", updateError);
         return NextResponse.json({
           success: true,
           url: publicUrl,
-          warning: "Receipt uploaded but could not update record",
+          warning: "Photo uploaded but could not update record",
         });
       }
 
       return NextResponse.json({
         success: true,
         url: publicUrl,
-        receiptUrls: updatedUrls,
+        photoUrls: updatedUrls,
       });
     }
 
