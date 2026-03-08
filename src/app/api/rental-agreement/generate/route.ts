@@ -96,6 +96,13 @@ export async function GET(req: NextRequest) {
       };
     }
 
+    if (!booking) {
+      return NextResponse.json(
+        { success: false, error: "Booking data could not be resolved" },
+        { status: 400 }
+      );
+    }
+
     // Load the blank PDF template
     const templatePath = path.join(process.cwd(), "public", "templates", "rental-agreement.pdf");
     const templateBytes = await fs.readFile(templatePath);
