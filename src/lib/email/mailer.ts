@@ -8,17 +8,26 @@ import {
   returnReminderTemplate,
 } from "./templates";
 
-// Create reusable transporter
+const SMTP_USER = process.env.SMTP_USER || "contact@rentnextgearauto.com";
+const FROM_CUSTOMER = `"NextGearAuto" <${SMTP_USER}>`;
+const FROM_SYSTEM = `"NextGearAuto System" <${SMTP_USER}>`;
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com";
+
+// Lazy-initialized singleton transporter
+let _transporter: nodemailer.Transporter | null = null;
 function getTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST || "smtp.hostinger.com",
-    port: parseInt(process.env.SMTP_PORT || "465"),
-    secure: true, // port 465 = SSL
-    auth: {
-      user: process.env.SMTP_USER || "contact@rentnextgearauto.com",
-      pass: process.env.SMTP_PASS,
-    },
-  });
+  if (!_transporter) {
+    _transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.hostinger.com",
+      port: parseInt(process.env.SMTP_PORT || "465"),
+      secure: true, // port 465 = SSL
+      auth: {
+        user: SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+  }
+  return _transporter;
 }
 
 interface BookingEmailData {
@@ -39,7 +48,7 @@ export async function sendBookingConfirmation(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
-      from: `"NextGearAuto" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
+      from: FROM_CUSTOMER,
       to: data.customerEmail,
       subject: `Booking Confirmed - ${data.bookingId}`,
       html: bookingConfirmationTemplate(data),
@@ -55,7 +64,7 @@ export async function sendBookingPendingEmail(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
-      from: `"NextGearAuto" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
+      from: FROM_CUSTOMER,
       to: data.customerEmail,
       subject: `Booking Received - ${data.bookingId}`,
       html: bookingPendingTemplate(data),
@@ -71,8 +80,8 @@ export async function sendAdminNewBooking(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
-      from: `"NextGearAuto System" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
-      to: process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com",
+      from: FROM_SYSTEM,
+      to: ADMIN_EMAIL,
       subject: `New Booking: ${data.bookingId} - ${data.vehicleName}`,
       html: adminNewBookingTemplate(data),
     });
@@ -88,7 +97,7 @@ export async function sendCancellationEmail(data: BookingEmailData) {
     const transporter = getTransporter();
     // Send to customer
     await transporter.sendMail({
-      from: `"NextGearAuto" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
+      from: FROM_CUSTOMER,
       to: data.customerEmail,
       subject: `Booking Cancelled - ${data.bookingId}`,
       html: cancellationTemplate(data),
