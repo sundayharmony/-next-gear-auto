@@ -57,7 +57,7 @@ export async function GET(req: NextRequest) {
 
     if (!error && data && data.length > 0) {
       const records = data.map((record) => {
-        const v = record.vehicles as { year: number; make: string; model: string } | null;
+        const v = record.vehicles as unknown as { year: number; make: string; model: string } | null;
         return {
         id: record.id,
         vehicleId: record.vehicle_id,
