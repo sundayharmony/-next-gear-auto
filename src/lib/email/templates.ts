@@ -13,7 +13,7 @@ interface EmailData {
 }
 
 /** Format "2026-03-06" → "Fri, Mar 6, 2026" */
-function fmtDate(dateStr: string): string {
+export function fmtDate(dateStr: string): string {
   const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
   return date.toLocaleDateString("en-US", {
     weekday: "short",
@@ -24,7 +24,7 @@ function fmtDate(dateStr: string): string {
 }
 
 /** Format "10:00" → "10:00 AM", "14:30" → "2:30 PM" */
-function fmtTime(timeStr: string | undefined | null): string {
+export function fmtTime(timeStr: string | undefined | null): string {
   if (!timeStr) return "";
   const [h, m] = timeStr.split(":").map(Number);
   if (isNaN(h) || isNaN(m)) return timeStr;

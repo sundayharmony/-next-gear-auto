@@ -6,6 +6,8 @@ import {
   cancellationTemplate,
   pickupReminderTemplate,
   returnReminderTemplate,
+  fmtDate,
+  fmtTime,
 } from "./templates";
 
 const SMTP_USER = process.env.SMTP_USER || "contact@rentnextgearauto.com";
@@ -104,8 +106,8 @@ export async function sendCancellationEmail(data: BookingEmailData) {
     });
     // Send to admin
     await transporter.sendMail({
-      from: `"NextGearAuto System" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
-      to: process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com",
+      from: FROM_SYSTEM,
+      to: ADMIN_EMAIL,
       subject: `Booking Cancelled: ${data.bookingId}`,
       html: cancellationTemplate(data),
     });
@@ -120,7 +122,7 @@ export async function sendPickupReminder(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
-      from: `"NextGearAuto" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
+      from: FROM_CUSTOMER,
       to: data.customerEmail,
       subject: `Pickup Reminder - Your ${data.vehicleName} is Ready!`,
       html: pickupReminderTemplate(data),
@@ -136,7 +138,7 @@ export async function sendAgreementEmail(data: BookingEmailData & { pdfBytes: Ui
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
-      from: `"NextGearAuto" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
+      from: FROM_CUSTOMER,
       to: data.customerEmail,
       subject: `Your Signed Rental Agreement - ${data.bookingId}`,
       html: agreementEmailTemplate(data),
@@ -163,15 +165,9 @@ function agreementEmailTemplate(data: BookingEmailData): string {
   const name = escHtml(data.customerName);
   const vehicle = escHtml(data.vehicleName);
   const bId = escHtml(data.bookingId);
-  const fDate = (d: string) => {
-    const date = new Date(d + (d.includes("T") ? "" : "T00:00:00"));
-    return date.toLocaleDateString("en-US", { weekday: "short", year: "numeric", month: "short", day: "numeric" });
-  };
-  const fTime = (t?: string) => {
-    if (!t) return "";
-    const [h, m] = t.split(":").map(Number);
-    const ampm = h >= 12 ? "PM" : "AM";
-    return ` at ${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+  const fmtTimeAt = (t?: string) => {
+    const formatted = fmtTime(t);
+    return formatted ? ` at ${formatted}` : "";
   };
 
   return `<!DOCTYPE html>
@@ -212,7 +208,7 @@ export async function sendReturnReminder(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
     await transporter.sendMail({
-      from: `"NextGearAuto" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
+      from: FROM_CUSTOMER,
       to: data.customerEmail,
       subject: `Return Reminder - ${data.vehicleName} due today`,
       html: returnReminderTemplate(data),
