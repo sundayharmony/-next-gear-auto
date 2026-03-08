@@ -1,6 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  experimental: {
+    // Allow larger multipart payloads in local/proxied requests (e.g. image uploads)
+    proxyClientMaxBodySize: 10 * 1024 * 1024,
+  },
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },

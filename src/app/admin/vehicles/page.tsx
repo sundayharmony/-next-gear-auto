@@ -156,6 +156,16 @@ export default function AdminVehiclesPage() {
   ) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
+    const maxBytesPerFile = 5 * 1024 * 1024;
+
+    const tooLarge = files.find((file) => file.size > maxBytesPerFile);
+    if (tooLarge) {
+      setError(
+        `Image "${tooLarge.name}" is too large. Please use files under 5MB each.`
+      );
+      e.target.value = "";
+      return;
+    }
 
     setUploadingImage((prev) => ({ ...prev, [formKey]: true }));
 
@@ -174,6 +184,15 @@ export default function AdminVehiclesPage() {
           body: formData,
         });
 
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          if (res.status === 413) {
+            throw new Error(
+              "Upload is too large for the server. Try a smaller image file."
+            );
+          }
+          throw new Error("Upload failed with a non-JSON server response.");
+        }
         const data = await res.json();
         if (!data.success || !data.url) {
           throw new Error(data.error || "Failed to upload image");
@@ -196,7 +215,9 @@ export default function AdminVehiclesPage() {
       }
     } catch (err) {
       console.error("Image upload error:", err);
-      setError("Network error — could not upload image");
+      setError(
+        err instanceof Error ? err.message : "Network error — could not upload image"
+      );
     } finally {
       e.target.value = "";
       setUploadingImage((prev) => ({ ...prev, [formKey]: false }));
