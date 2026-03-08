@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import {
@@ -47,16 +47,12 @@ interface CustomerRow {
 interface BookingRow {
   id: string;
   vehicle_id?: string;
-  vehicle_name?: string;
   vehicleName?: string;
   pickup_date?: string;
-  pickupDate?: string;
   return_date?: string;
-  returnDate?: string;
   pickup_time?: string;
   return_time?: string;
   total_price?: number;
-  totalPrice?: number;
   deposit?: number;
   status: string;
   created_at?: string;
@@ -126,7 +122,8 @@ export default function AdminCustomersPage() {
       const found = customers.find((c) => c.id === highlightId);
       if (found) openCustomer(found);
     }
-  }, [highlightId, customers]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [highlightId, customers, selectedCustomer]);
 
   const handleSearch = () => fetchCustomers(searchInput);
 
@@ -259,20 +256,36 @@ export default function AdminCustomersPage() {
     setUploadingDoc(false);
   };
 
+  const handleDeleteFromList = async (customer: CustomerRow) => {
+    if (!confirm(`Delete customer "${customer.name}"?`)) return;
+    try {
+      const res = await adminFetch(`/api/admin/customers?id=${customer.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (data.success) {
+        fetchCustomers();
+      } else {
+        alert("Failed to delete customer");
+      }
+    } catch (err) {
+      console.error("Failed to delete:", err);
+      alert("Error deleting customer");
+    }
+  };
+
   // Customer statistics
   const stats = useMemo(() => {
     if (!customerBookings.length) return null;
 
     const nonCancelled = customerBookings.filter((b) => b.status !== "cancelled");
-    const totalSpent = nonCancelled.reduce((sum, b) => sum + (b.total_price || b.totalPrice || 0), 0);
+    const totalSpent = nonCancelled.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
     const completedTrips = customerBookings.filter((b) => b.status === "completed").length;
     const activeTrips = customerBookings.filter((b) => b.status === "active" || b.status === "confirmed").length;
     const cancelledTrips = customerBookings.filter((b) => b.status === "cancelled").length;
     const totalBookings = customerBookings.length;
 
     const totalDays = nonCancelled.reduce((sum, b) => {
-      const pickup = new Date((b.pickup_date || b.pickupDate || "") + "T00:00:00");
-      const ret = new Date((b.return_date || b.returnDate || "") + "T00:00:00");
+      const pickup = new Date((b.pickup_date || "") + "T00:00:00");
+      const ret = new Date((b.return_date || "") + "T00:00:00");
       const days = Math.max(1, Math.ceil((ret.getTime() - pickup.getTime()) / (1000 * 60 * 60 * 24)));
       return sum + days;
     }, 0);
@@ -584,7 +597,7 @@ export default function AdminCustomersPage() {
                                 <option value="">Select Booking</option>
                                 {customerBookings.map((b) => (
                                   <option key={b.id} value={b.id}>
-                                    {(b.vehicle_name || b.vehicleName || "Unknown")} - {formatDate(b.pickup_date || b.pickupDate)}
+                                    {b.vehicleName || "Unknown"} - {formatDate(b.pickup_date)}
                                   </option>
                                 ))}
                               </select>
@@ -704,10 +717,10 @@ export default function AdminCustomersPage() {
                           {customerBookings
                             .sort((a, b) => new Date(b.created_at || "").getTime() - new Date(a.created_at || "").getTime())
                             .map((b) => {
-                              const pickupDate = b.pickup_date || b.pickupDate || "";
-                              const returnDate = b.return_date || b.returnDate || "";
-                              const price = b.total_price || b.totalPrice || 0;
-                              const vehicle = b.vehicle_name || b.vehicleName || "Unknown";
+                              const pickupDate = b.pickup_date || "";
+                              const returnDate = b.return_date || "";
+                              const price = b.total_price ?? 0;
+                              const vehicle = b.vehicleName || "Unknown";
 
                               return (
                                 <div
@@ -967,24 +980,7 @@ export default function AdminCustomersPage() {
                       <Button
                         onClick={(e) => {
                           e.stopPropagation();
-                          if (confirm(`Delete customer "${c.name}"?`)) {
-                            (async () => {
-                              try {
-                                const res = await adminFetch(`/api/admin/customers?id=${c.id}`, {
-                                  method: "DELETE",
-                                });
-                                const data = await res.json();
-                                if (data.success) {
-                                  fetchCustomers();
-                                } else {
-                                  alert("Failed to delete customer");
-                                }
-                              } catch (err) {
-                                console.error("Failed to delete:", err);
-                                alert("Error deleting customer");
-                              }
-                            })();
-                          }
+                          handleDeleteFromList(c);
                         }}
                         variant="ghost"
                         size="sm"

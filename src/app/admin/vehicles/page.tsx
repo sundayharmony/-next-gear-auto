@@ -154,45 +154,51 @@ export default function AdminVehiclesPage() {
     e: React.ChangeEvent<HTMLInputElement>,
     formKey: "new" | string
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
 
     setUploadingImage((prev) => ({ ...prev, [formKey]: true }));
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      if (formKey !== "new") {
-        formData.append("vehicleId", formKey);
+      const uploadedUrls: string[] = [];
+
+      for (const file of files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        if (formKey !== "new") {
+          formData.append("vehicleId", formKey);
+        }
+
+        const res = await adminFetch("/api/admin/vehicles/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (!data.success || !data.url) {
+          throw new Error(data.error || "Failed to upload image");
+        }
+        uploadedUrls.push(data.url as string);
       }
 
-      const res = await adminFetch("/api/admin/vehicles/upload", {
-        method: "POST",
-        body: formData,
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        const imageUrl = data.url;
+      if (uploadedUrls.length > 0) {
         if (formKey === "new") {
           setNewVehicle((prev) => ({
             ...prev,
-            images: [...(prev.images || []), imageUrl],
+            images: [...(prev.images || []), ...uploadedUrls],
           }));
         } else {
           setEditForm((prev) => ({
             ...prev,
-            images: [...(prev.images || []), imageUrl],
+            images: [...(prev.images || []), ...uploadedUrls],
           }));
         }
-      } else {
-        setError("Failed to upload image");
       }
     } catch (err) {
       console.error("Image upload error:", err);
       setError("Network error — could not upload image");
     } finally {
+      e.target.value = "";
       setUploadingImage((prev) => ({ ...prev, [formKey]: false }));
     }
   };
@@ -769,6 +775,7 @@ export default function AdminVehiclesPage() {
                 <input
                   type="file"
                   accept="image/*"
+                  multiple
                   onChange={(e) => handleImageUpload(e, formKey)}
                   disabled={uploadingImage[formKey]}
                   className="hidden"
