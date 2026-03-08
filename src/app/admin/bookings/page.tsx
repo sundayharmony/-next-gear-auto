@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save } from "lucide-react";
+import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save, User, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { formatDate } from "@/lib/utils/date-helpers";
 
 interface BookingRow {
   id: string;
+  customer_id?: string;
   customer_name: string;
   customer_email: string;
   customer_phone?: string;
@@ -97,6 +98,7 @@ export default function AdminBookingsPage() {
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState<Partial<BookingRow>>({});
   const [saving, setSaving] = useState(false);
+  const [addingCustomer, setAddingCustomer] = useState(false);
 
   // Auto-clear error after 5 seconds
   useEffect(() => {
@@ -312,6 +314,40 @@ export default function AdminBookingsPage() {
     setUploadingDoc(null);
   };
 
+  const handleAddAsCustomer = async () => {
+    if (!selectedBooking) return;
+    setAddingCustomer(true);
+    try {
+      const res = await adminFetch("/api/admin/customers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          name: selectedBooking.customer_name,
+          email: selectedBooking.customer_email,
+          phone: selectedBooking.customer_phone || "",
+        }),
+      });
+      const data = await res.json();
+      if (data.success && data.data?.id) {
+        // Update the booking with the new customer_id
+        await fetch("/api/bookings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId: selectedBooking.id, customer_id: data.data.id }),
+        });
+        // Update local state
+        const updated = { ...selectedBooking, customer_id: data.data.id };
+        setSelectedBooking(updated);
+        setBookings((prev) => prev.map((b) => (b.id === selectedBooking.id ? updated : b)));
+      } else {
+        setError(data.message || "Failed to add customer");
+      }
+    } catch {
+      setError("Network error — could not add customer");
+    }
+    setAddingCustomer(false);
+  };
+
   const startEditing = () => {
     if (!selectedBooking) return;
     setEditData({
@@ -428,7 +464,7 @@ export default function AdminBookingsPage() {
     const tax = subtotal * 0.08;
     const total = parseFloat((subtotal + tax).toFixed(2));
     setEditData((prev) => ({ ...prev, total_price: total }));
-  }, [editMode, editData.vehicle_id, editData.pickup_date, editData.return_date, vehicles]);
+  }, [editMode, editData.vehicle_id, editData.pickup_date, editData.return_date, vehicles, selectedBooking]);
 
   return (
     <>
@@ -870,6 +906,25 @@ export default function AdminBookingsPage() {
                     <p className="font-medium">{selectedBooking.customer_name}</p>
                     <p className="text-sm text-gray-500">{selectedBooking.customer_email}</p>
                     <p className="text-sm text-gray-500">{selectedBooking.customer_phone}</p>
+                    <div className="flex gap-2 mt-3">
+                      {selectedBooking.customer_id ? (
+                        <Link
+                          href={`/admin/customers?highlight=${selectedBooking.customer_id}`}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                        >
+                          <User className="h-3.5 w-3.5" /> View Client
+                        </Link>
+                      ) : (
+                        <button
+                          onClick={handleAddAsCustomer}
+                          disabled={addingCustomer}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-green-700 bg-green-50 rounded-lg hover:bg-green-100 transition-colors disabled:opacity-50"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          {addingCustomer ? "Adding..." : "Add as Customer"}
+                        </button>
+                      )}
+                    </div>
                   </>
                 )}
               </div>

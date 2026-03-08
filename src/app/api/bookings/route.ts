@@ -5,7 +5,9 @@ import {
   sendBookingPendingEmail,
   sendAdminNewBooking,
   sendCancellationEmail,
+  sendAgreementEmail,
 } from "@/lib/email/mailer";
+import { autoSignAgreement } from "@/lib/agreement/auto-sign";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -244,6 +246,39 @@ export async function POST(request: Request) {
       sendAdminNewBooking(emailData).catch(console.error);
     }
 
+    // Auto-sign rental agreement with client initials (admin-created bookings)
+    autoSignAgreement(bookingId)
+      .then(async (result) => {
+        if (result && body.customerDetails?.email) {
+          // Fetch vehicle name for agreement email
+          let vehicleName = "Vehicle";
+          if (body.vehicleId) {
+            const supabaseInner = getServiceSupabase();
+            const { data: vehicle } = await supabaseInner
+              .from("vehicles")
+              .select("year, make, model")
+              .eq("id", body.vehicleId)
+              .single();
+            if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+          }
+
+          sendAgreementEmail({
+            bookingId,
+            customerName: body.customerDetails.name || "Customer",
+            customerEmail: body.customerDetails.email,
+            vehicleName,
+            pickupDate: body.pickupDate,
+            returnDate: body.returnDate,
+            pickupTime: body.pickupTime || undefined,
+            returnTime: body.returnTime || undefined,
+            totalPrice: body.totalPrice || 0,
+            deposit: body.totalPrice || 0,
+            pdfBytes: result.pdfBytes,
+          }).catch(console.error);
+        }
+      })
+      .catch(console.error);
+
     return NextResponse.json(
       { data: { id: bookingId, customer_id: customerId }, success: true },
       { status: 201 }
@@ -288,6 +323,7 @@ export async function PATCH(request: Request) {
     const updateFields: Record<string, any> = {};
 
     if (body.status !== undefined) updateFields.status = body.status;
+    if (body.customer_id !== undefined) updateFields.customer_id = body.customer_id;
     if (body.customer_name !== undefined) updateFields.customer_name = body.customer_name;
     if (body.customer_email !== undefined) updateFields.customer_email = body.customer_email;
     if (body.customer_phone !== undefined) updateFields.customer_phone = body.customer_phone;

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { sendAgreementEmail } from "@/lib/email/mailer";
 import path from "path";
 import fs from "fs/promises";
 
@@ -276,6 +277,26 @@ export async function POST(req: NextRequest) {
         signed_name: booking.customer_name,
       })
       .eq("id", bookingId);
+
+    // Email the signed agreement to the customer
+    if (booking.customer_email) {
+      let vehicleName = "Vehicle";
+      if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+
+      sendAgreementEmail({
+        bookingId: booking.id,
+        customerName: booking.customer_name || "Customer",
+        customerEmail: booking.customer_email,
+        vehicleName,
+        pickupDate: booking.pickup_date,
+        returnDate: booking.return_date,
+        pickupTime: booking.pickup_time || undefined,
+        returnTime: booking.return_time || undefined,
+        totalPrice: booking.total_price || 0,
+        deposit: booking.deposit || 0,
+        pdfBytes: signedPdfBytes,
+      }).catch(console.error);
+    }
 
     return NextResponse.json({
       success: true,

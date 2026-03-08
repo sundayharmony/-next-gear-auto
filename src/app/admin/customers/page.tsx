@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { useSearchParams } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import {
   Search,
@@ -114,7 +115,18 @@ export default function AdminCustomersPage() {
     setLoading(false);
   };
 
+  const searchParams = useSearchParams();
+  const highlightId = searchParams.get("highlight");
+
   useEffect(() => { fetchCustomers(); }, []);
+
+  // Auto-open customer when navigated with ?highlight=<customerId>
+  useEffect(() => {
+    if (highlightId && customers.length > 0 && !selectedCustomer) {
+      const found = customers.find((c) => c.id === highlightId);
+      if (found) openCustomer(found);
+    }
+  }, [highlightId, customers]);
 
   const handleSearch = () => fetchCustomers(searchInput);
 
