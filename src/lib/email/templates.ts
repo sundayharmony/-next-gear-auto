@@ -23,6 +23,15 @@ function fmtDate(dateStr: string): string {
   });
 }
 
+/** Format "10:00" → "10:00 AM", "14:30" → "2:30 PM" */
+function fmtTime(timeStr: string | undefined | null): string {
+  if (!timeStr) return "";
+  const [h, m] = timeStr.split(":").map(Number);
+  if (isNaN(h) || isNaN(m)) return timeStr;
+  const ampm = h >= 12 ? "PM" : "AM";
+  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
+}
+
 function wrapEmail(content: string): string {
   return `<!DOCTYPE html>
 <html lang="en">
@@ -91,13 +100,15 @@ function detailRow(label: string, value: string, bold = false): string {
 }
 
 function dateTimeBlock(label: string, date: string, time: string | undefined, accentColor: string, bgGradient: string): string {
+  const formattedDate = fmtDate(date);
+  const formattedTime = fmtTime(time);
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 12px 0;">
     <tr>
       <td style="background: ${bgGradient}; border-radius: 12px; padding: 20px; border-left: 4px solid ${accentColor};">
         <p style="margin: 0 0 10px; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">${label}</p>
-        <p style="margin: 0; color: #111827; font-size: 20px; font-weight: 700; line-height: 1.3;">${date}</p>
-        ${time ? `<p style="margin: 6px 0 0; color: ${accentColor}; font-size: 22px; font-weight: 800;">${time}</p>` : ''}
+        <p style="margin: 0; color: #111827; font-size: 20px; font-weight: 700; line-height: 1.3;">${formattedDate}</p>
+        ${formattedTime ? `<p style="margin: 6px 0 0; color: ${accentColor}; font-size: 22px; font-weight: 800;">${formattedTime}</p>` : ''}
       </td>
     </tr>
   </table>`;
@@ -253,7 +264,7 @@ export function cancellationTemplate(data: EmailData): string {
             <td style="background: #fef2f2; border-radius: 12px; padding: 20px; border-left: 4px solid #dc2626;">
               <p style="margin: 0 0 10px; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">Original Dates</p>
               <p style="margin: 0; color: #111827; font-size: 18px; font-weight: 700;">${fmtDate(data.pickupDate)} &rarr; ${fmtDate(data.returnDate)}</p>
-              ${data.pickupTime || data.returnTime ? `<p style="margin: 6px 0 0; color: #dc2626; font-size: 18px; font-weight: 700;">${data.pickupTime || 'TBD'} &rarr; ${data.returnTime || 'TBD'}</p>` : ''}
+              ${data.pickupTime || data.returnTime ? `<p style="margin: 6px 0 0; color: #dc2626; font-size: 18px; font-weight: 700;">${fmtTime(data.pickupTime) || 'TBD'} &rarr; ${fmtTime(data.returnTime) || 'TBD'}</p>` : ''}
             </td>
           </tr>
         </table>
