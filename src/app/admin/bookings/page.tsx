@@ -33,7 +33,17 @@ interface BookingRow {
   signed_name?: string;
   agreement_signed_at?: string;
   rental_agreement_url?: string;
-  extras?: any[];
+  extras?: ExtraItem[];
+}
+
+interface ExtraItem {
+  id: string;
+  name: string;
+  pricePerDay: number;
+  maxPrice: number | null;
+  billingType: "per-day" | "per-day-capped" | "one-time";
+  description: string;
+  selected?: boolean;
 }
 
 interface Vehicle {
@@ -60,6 +70,14 @@ const formatTime = (t?: string) => {
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 };
+
+// Pre-generate time slot options (8:00 AM – 4:00 AM, 30-min intervals)
+const TIME_SLOTS = Array.from({ length: 41 }, (_, i) => {
+  const hour = 8 + Math.floor(i / 2);
+  const minute = i % 2 === 0 ? 0 : 30;
+  const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  return { value, label: formatTime(value) };
+});
 
 const AVAILABLE_EXTRAS = [
   { id: "e1", name: "Insurance Coverage", pricePerDay: 15, maxPrice: null, billingType: "per-day" as const, description: "Basic collision damage waiver" },
@@ -596,16 +614,9 @@ export default function AdminBookingsPage() {
                     onChange={(e) => setNewBooking((prev) => ({ ...prev, pickupTime: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
-                    {Array.from({ length: 41 }, (_, i) => {
-                      const hour = 8 + Math.floor(i / 2);
-                      const minute = i % 2 === 0 ? 0 : 30;
-                      const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-                      return (
-                        <option key={time} value={time}>
-                          {formatTime(time)}
-                        </option>
-                      );
-                    })}
+                    {TIME_SLOTS.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
                   </select>
                 </div>
                 <div>
@@ -623,16 +634,9 @@ export default function AdminBookingsPage() {
                     onChange={(e) => setNewBooking((prev) => ({ ...prev, returnTime: e.target.value }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                   >
-                    {Array.from({ length: 41 }, (_, i) => {
-                      const hour = 8 + Math.floor(i / 2);
-                      const minute = i % 2 === 0 ? 0 : 30;
-                      const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-                      return (
-                        <option key={time} value={time}>
-                          {formatTime(time)}
-                        </option>
-                      );
-                    })}
+                    {TIME_SLOTS.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
                   </select>
                 </div>
 
@@ -783,7 +787,7 @@ export default function AdminBookingsPage() {
                       <td className="px-4 py-3">
                         <Badge className={statusColors[b.status] || "bg-gray-100"}>{b.status}</Badge>
                       </td>
-                      <td className="px-4 py-3">
+                      <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex gap-1">
                           {b.status === "pending" && (
                             <Button
@@ -1008,12 +1012,9 @@ export default function AdminBookingsPage() {
                         onChange={(e) => setEditData((prev) => ({ ...prev, pickup_time: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                       >
-                        {Array.from({ length: 41 }, (_, i) => {
-                          const hour = 8 + Math.floor(i / 2);
-                          const minute = i % 2 === 0 ? 0 : 30;
-                          const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-                          return <option key={time} value={time}>{formatTime(time)}</option>;
-                        })}
+                        {TIME_SLOTS.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
                       </select>
                     </div>
                     <div>
@@ -1031,12 +1032,9 @@ export default function AdminBookingsPage() {
                         onChange={(e) => setEditData((prev) => ({ ...prev, return_time: e.target.value }))}
                         className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
                       >
-                        {Array.from({ length: 41 }, (_, i) => {
-                          const hour = 8 + Math.floor(i / 2);
-                          const minute = i % 2 === 0 ? 0 : 30;
-                          const time = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-                          return <option key={time} value={time}>{formatTime(time)}</option>;
-                        })}
+                        {TIME_SLOTS.map((s) => (
+                          <option key={s.value} value={s.value}>{s.label}</option>
+                        ))}
                       </select>
                     </div>
                   </>
@@ -1063,7 +1061,7 @@ export default function AdminBookingsPage() {
                 <div>
                   <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Extras</h3>
                   <ul className="space-y-1">
-                    {selectedBooking.extras.map((e: any, i: number) => (
+                    {selectedBooking.extras.map((e: ExtraItem, i: number) => (
                       <li key={i} className="flex justify-between text-sm">
                         <span>{e.name}</span>
                         <span className="text-gray-500">${e.pricePerDay}/day</span>

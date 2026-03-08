@@ -15,6 +15,8 @@ import {
   Eye,
   Search,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -377,6 +379,23 @@ export default function AdminVehiclesPage() {
     }
   };
 
+  const moveImage = (formKey: "new" | string, index: number, direction: -1 | 1) => {
+    const reorder = (images: string[] = []) => {
+      const nextIndex = index + direction;
+      if (nextIndex < 0 || nextIndex >= images.length) return images;
+      const updated = [...images];
+      const [moved] = updated.splice(index, 1);
+      updated.splice(nextIndex, 0, moved);
+      return updated;
+    };
+
+    if (formKey === "new") {
+      setNewVehicle((prev) => ({ ...prev, images: reorder(prev.images || []) }));
+    } else {
+      setEditForm((prev) => ({ ...prev, images: reorder(prev.images || []) }));
+    }
+  };
+
   const addFeature = (formKey: "new" | string, featureInput: string) => {
     if (!featureInput.trim()) return;
 
@@ -708,6 +727,29 @@ export default function AdminVehiclesPage() {
                     alt={`Vehicle ${idx + 1}`}
                     className="w-full h-full object-cover"
                   />
+                  <div className="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    #{idx + 1}
+                  </div>
+                  <div className="absolute left-1 bottom-1 flex gap-1">
+                    <button
+                      type="button"
+                      onClick={() => moveImage(formKey, idx, -1)}
+                      disabled={idx === 0}
+                      className="bg-white/90 text-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Move image left"
+                    >
+                      <ChevronLeft className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveImage(formKey, idx, 1)}
+                      disabled={idx === (form.images || []).length - 1}
+                      className="bg-white/90 text-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
+                      title="Move image right"
+                    >
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <button
                     type="button"
                     onClick={() => removeImage(img, formKey)}

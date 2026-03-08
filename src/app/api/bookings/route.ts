@@ -204,18 +204,19 @@ export async function POST(request: Request) {
       );
     }
 
+    // Fetch vehicle name once (used for emails and agreement)
+    let vehicleName = "Vehicle";
+    if (body.vehicleId) {
+      const { data: vehicle } = await supabase
+        .from("vehicles")
+        .select("year, make, model")
+        .eq("id", body.vehicleId)
+        .single();
+      if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+    }
+
     // Send emails for new bookings (only when email is provided)
     if (body.customerDetails?.email) {
-      let vehicleName = "Vehicle";
-      if (body.vehicleId) {
-        const { data: vehicle } = await supabase
-          .from("vehicles")
-          .select("year, make, model")
-          .eq("id", body.vehicleId)
-          .single();
-        if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
-      }
-
       // Check if customer needs a password
       let needsPassword = false;
       const custEmail = body.customerDetails.email.toLowerCase().trim();
@@ -248,20 +249,8 @@ export async function POST(request: Request) {
 
     // Auto-sign rental agreement with client initials (admin-created bookings)
     autoSignAgreement(bookingId)
-      .then(async (result) => {
+      .then((result) => {
         if (result && body.customerDetails?.email) {
-          // Fetch vehicle name for agreement email
-          let vehicleName = "Vehicle";
-          if (body.vehicleId) {
-            const supabaseInner = getServiceSupabase();
-            const { data: vehicle } = await supabaseInner
-              .from("vehicles")
-              .select("year, make, model")
-              .eq("id", body.vehicleId)
-              .single();
-            if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
-          }
-
           sendAgreementEmail({
             bookingId,
             customerName: body.customerDetails.name || "Customer",
@@ -421,12 +410,12 @@ export async function PATCH(request: Request) {
         customerName: updateFields.customer_name || booking.customer_name || "Customer",
         customerEmail: emailAddress,
         vehicleName,
-        pickupDate: updateFields.pickup_date || booking.pickup_date,
-        returnDate: updateFields.return_date || booking.return_date,
-        pickupTime: updateFields.pickup_time || booking.pickup_time || null,
-        returnTime: updateFields.return_time || booking.return_time || null,
-        totalPrice: updateFields.total_price || booking.total_price || 0,
-        deposit: updateFields.deposit || booking.deposit || 0,
+        pickupDate: updateFields.pickup_date ?? booking.pickup_date,
+        returnDate: updateFields.return_date ?? booking.return_date,
+        pickupTime: updateFields.pickup_time ?? booking.pickup_time ?? null,
+        returnTime: updateFields.return_time ?? booking.return_time ?? null,
+        totalPrice: updateFields.total_price ?? booking.total_price ?? 0,
+        deposit: updateFields.deposit ?? booking.deposit ?? 0,
         needsPassword,
       };
 
