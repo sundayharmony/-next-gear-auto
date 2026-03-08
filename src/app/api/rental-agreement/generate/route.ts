@@ -62,7 +62,7 @@ export async function GET(req: NextRequest) {
       }
       booking = b;
 
-      if (booking.vehicle_id) {
+      if (booking && booking.vehicle_id) {
         const { data: v } = await supabase
           .from("vehicles")
           .select("*")
