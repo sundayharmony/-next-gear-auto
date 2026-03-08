@@ -58,7 +58,7 @@ export async function GET(req: NextRequest) {
       success: true,
       data: {
         available,
-        conflictingBookings: conflicting?.length || 0,
+        conflictingBookings: conflicting?.length ?? 0,
       },
     });
   } catch (err) {

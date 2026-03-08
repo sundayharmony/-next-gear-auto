@@ -1,5 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { fmtTime } from "@/lib/email/templates";
 import path from "path";
 import fs from "fs/promises";
 
@@ -26,7 +27,15 @@ export async function autoSignAgreement(bookingId: string) {
   }
 
   // Fetch vehicle
-  let vehicle: any = null;
+  let vehicle: {
+    make?: string;
+    model?: string;
+    year?: number;
+    license_plate?: string;
+    vin?: string;
+    color?: string;
+    mileage?: number;
+  } | null = null;
   if (booking.vehicle_id) {
     const { data: v } = await supabase
       .from("vehicles")
@@ -67,17 +76,11 @@ export async function autoSignAgreement(bookingId: string) {
     }
   };
 
-  // Helper date/time formatters
-  const formatDate = (d: string) => {
+  // Compact MM/DD/YYYY formatter for PDF form fields (different from email fmtDate)
+  const pdfDate = (d: string) => {
     if (!d) return "";
     const date = new Date(d + "T00:00:00");
     return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
-  };
-  const formatTime = (t: string | null) => {
-    if (!t) return "";
-    const [h, m] = t.split(":").map(Number);
-    const ampm = h >= 12 ? "PM" : "AM";
-    return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
   };
 
   // === Fill all fields (same as generate route) ===
@@ -102,17 +105,17 @@ export async function autoSignAgreement(bookingId: string) {
   setText("t16", booking.customer_phone || "");
   setText("t17", booking.customer_email || "");
 
-  setText("t18", formatDate(booking.pickup_date));
-  setText("t19", formatTime(booking.pickup_time));
-  setText("t20", formatDate(booking.return_date));
-  setText("t21", formatTime(booking.return_time));
+  setText("t18", pdfDate(booking.pickup_date));
+  setText("t19", fmtTime(booking.pickup_time));
+  setText("t20", pdfDate(booking.return_date));
+  setText("t21", fmtTime(booking.return_time));
   setText("t22", booking.customer_name || "");
   setText("t23", "");
   setText("t24", "");
   setText("t25", "");
 
-  const totalPrice = booking.total_price || 0;
-  const deposit = booking.deposit || 0;
+  const totalPrice = booking.total_price ?? 0;
+  const deposit = booking.deposit ?? 0;
   const pickupDate = new Date(booking.pickup_date + "T00:00:00");
   const returnDate = new Date(booking.return_date + "T00:00:00");
   const totalDays = Math.max(1, Math.ceil((returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24)));

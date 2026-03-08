@@ -16,7 +16,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { ReviewForm } from "@/components/review-form";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/context/auth-context";
-import { formatDate } from "@/lib/utils/date-helpers";
+import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 
 interface Vehicle {
   id: string;
@@ -64,13 +64,6 @@ const statusColors: Record<string, string> = {
   completed: "bg-gray-100 text-gray-700 border-gray-200",
   cancelled: "bg-red-100 text-red-700 border-red-200",
   "no-show": "bg-red-100 text-red-700 border-red-200",
-};
-
-const formatTime = (t?: string) => {
-  if (!t) return "";
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
 export default function AccountPage() {
@@ -630,7 +623,7 @@ export default function AccountPage() {
                     <CardContent className="p-4 text-center">
                       <BarChart3 className="mx-auto h-6 w-6 text-amber-500 mb-2" />
                       <p className="text-2xl font-bold text-gray-900">
-                        ${bookings.reduce((sum, b) => sum + (b.total_price || 0), 0).toFixed(0)}
+                        ${bookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0).toFixed(0)}
                       </p>
                       <p className="text-xs text-gray-500">Total Spent</p>
                     </CardContent>

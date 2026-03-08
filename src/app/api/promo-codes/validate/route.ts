@@ -23,7 +23,17 @@ export async function POST(req: NextRequest) {
 
     if (error || !promo) {
       // Fall back to JSON file for legacy codes
-      let promoCodes: any[] = [];
+      interface LegacyPromo {
+        code: string;
+        discountType: string;
+        discountValue: number;
+        minBookingAmount: number;
+        maxUses: number;
+        usedCount: number;
+        expiryDate: string;
+        description: string;
+      }
+      let promoCodes: LegacyPromo[] = [];
       try {
         const jsonModule = await import("@/data/promo-codes.json");
         promoCodes = jsonModule.default || [];
@@ -32,7 +42,7 @@ export async function POST(req: NextRequest) {
       }
 
       const jsonPromo = promoCodes.find(
-        (p: any) => p.code.toUpperCase() === code.toUpperCase()
+        (p) => p.code.toUpperCase() === code.toUpperCase()
       );
 
       if (!jsonPromo) {
@@ -121,7 +131,7 @@ export async function POST(req: NextRequest) {
     // Increment usage count
     await supabase
       .from("promo_codes")
-      .update({ used_count: (promo.used_count || 0) + 1 })
+      .update({ used_count: (promo.used_count ?? 0) + 1 })
       .eq("id", promo.id);
 
     return NextResponse.json({

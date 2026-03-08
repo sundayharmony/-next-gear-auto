@@ -245,10 +245,10 @@ export default function AdminFinancesPage() {
       ["confirmed", "active", "completed"].includes(b.status)
     );
     const totalRevenue = revenueBookings.reduce(
-      (sum, b) => sum + (b.total_price || 0),
+      (sum, b) => sum + (b.total_price ?? 0),
       0
     );
-    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount || 0), 0);
+    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
 
     // For financed vehicles, use sum of processed monthly payments instead of full purchase price
     const totalFinancingPayments = vehicles.reduce((sum, v) => {
@@ -259,7 +259,7 @@ export default function AdminFinancesPage() {
     }, 0);
     const totalNonFinancedCosts = vehicles.reduce((sum, v) => {
       if (!v.isFinanced) {
-        return sum + (v.purchasePrice || 0);
+        return sum + (v.purchasePrice ?? 0);
       }
       return sum;
     }, 0);
@@ -301,7 +301,7 @@ export default function AdminFinancesPage() {
       .forEach((booking) => {
         const date = new Date(booking.created_at);
         const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
-        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + (booking.total_price || 0);
+        monthlyData[monthKey] = (monthlyData[monthKey] || 0) + (booking.total_price ?? 0);
       });
 
     return Object.entries(monthlyData)
@@ -320,7 +320,7 @@ export default function AdminFinancesPage() {
 
     expenses.forEach((expense) => {
       categoryTotals[expense.category] =
-        (categoryTotals[expense.category] || 0) + (expense.amount || 0);
+        (categoryTotals[expense.category] || 0) + (expense.amount ?? 0);
     });
 
     // Add financing payments as a virtual expense category
@@ -356,11 +356,11 @@ export default function AdminFinancesPage() {
         ["confirmed", "active", "completed"].includes(b.status)
       );
       const revenue = revenueBookings.reduce(
-        (sum, b) => sum + (b.total_price || 0),
+        (sum, b) => sum + (b.total_price ?? 0),
         0
       );
       const expenseTotal = vehicleExpenses.reduce(
-        (sum, e) => sum + (e.amount || 0),
+        (sum, e) => sum + (e.amount ?? 0),
         0
       );
 
@@ -518,14 +518,14 @@ export default function AdminFinancesPage() {
     const vehicleExpenses = expenses.filter((e) => e.vehicle_id === vehicleId);
 
     const revenue = vehicleBookings.reduce(
-      (sum, b) => sum + (b.total_price || 0),
+      (sum, b) => sum + (b.total_price ?? 0),
       0
     );
     const expenseTotal = vehicleExpenses.reduce(
-      (sum, e) => sum + (e.amount || 0),
+      (sum, e) => sum + (e.amount ?? 0),
       0
     );
-    const purchasePrice = vehicle.purchasePrice || 0;
+    const purchasePrice = vehicle.purchasePrice ?? 0;
     const effectiveCost = getEffectiveVehicleCost(vehicle);
     const financingInfo = vehicle.isFinanced ? calculateFinancing(vehicle) : null;
     const profit = revenue - expenseTotal - effectiveCost;
@@ -578,7 +578,7 @@ export default function AdminFinancesPage() {
     const expenseCategoryBreakdown: Record<string, number> = {};
     vExpenses.forEach((exp: Expense) => {
       expenseCategoryBreakdown[exp.category] =
-        (expenseCategoryBreakdown[exp.category] || 0) + (exp.amount || 0);
+        (expenseCategoryBreakdown[exp.category] || 0) + (exp.amount ?? 0);
     });
     // Add financing payments as a virtual expense category
     if (financingInfo && financingInfo.totalPaid > 0) {

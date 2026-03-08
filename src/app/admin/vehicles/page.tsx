@@ -1250,12 +1250,12 @@ export default function AdminVehiclesPage() {
                     </div>
                     <div className="p-2 bg-gray-50 rounded-lg">
                       <div className="text-lg font-bold text-gray-700">
-                        ${(vehicle.purchasePrice || 0).toLocaleString()}
+                        ${(vehicle.purchasePrice ?? 0).toLocaleString()}
                       </div>
                       <div className="text-xs text-gray-600">
                         {vehicle.isFinanced ? (
                           <span className="text-purple-600 font-medium">
-                            Financed · ${(vehicle.monthlyPayment || 0).toLocaleString()}/mo
+                            Financed · ${(vehicle.monthlyPayment ?? 0).toLocaleString()}/mo
                           </span>
                         ) : (
                           "Purchase Price"

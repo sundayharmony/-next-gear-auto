@@ -187,8 +187,8 @@ export async function POST(request: Request) {
       pickup_time: body.pickupTime || null,
       return_time: body.returnTime || null,
       extras: body.extras || [],
-      total_price: body.totalPrice || 0,
-      deposit: body.totalPrice || 0,
+      total_price: body.totalPrice ?? 0,
+      deposit: body.totalPrice ?? 0,
       status: "pending",
       signed_name: body.signedName || null,
       agreement_signed_at: body.signedName ? new Date().toISOString() : null,
@@ -236,8 +236,8 @@ export async function POST(request: Request) {
         returnDate: body.returnDate,
         pickupTime: body.pickupTime || null,
         returnTime: body.returnTime || null,
-        totalPrice: body.totalPrice || 0,
-        deposit: body.totalPrice || 0,
+        totalPrice: body.totalPrice ?? 0,
+        deposit: body.totalPrice ?? 0,
         needsPassword,
       };
 
@@ -260,8 +260,8 @@ export async function POST(request: Request) {
             returnDate: body.returnDate,
             pickupTime: body.pickupTime || undefined,
             returnTime: body.returnTime || undefined,
-            totalPrice: body.totalPrice || 0,
-            deposit: body.totalPrice || 0,
+            totalPrice: body.totalPrice ?? 0,
+            deposit: body.totalPrice ?? 0,
             pdfBytes: result.pdfBytes,
           }).catch(console.error);
         }

@@ -17,7 +17,7 @@ import { useBooking } from "@/lib/context/booking-context";
 import { SignaturePad } from "@/components/signature-pad";
 import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
 import { cn } from "@/lib/utils/cn";
-import { formatDate } from "@/lib/utils/date-helpers";
+import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { useAuth } from "@/lib/context/auth-context";
 import extras from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
@@ -86,13 +86,7 @@ const STEPS = [
 ];
 
 // Helper function to convert 24-hour time to 12-hour display format
-const formatTime24To12 = (time24: string): string => {
-  const [hours, minutes] = time24.split(":");
-  const hour = parseInt(hours, 10);
-  const ampm = hour >= 12 ? "PM" : "AM";
-  const displayHour = hour % 12 || 12;
-  return `${displayHour}:${minutes} ${ampm}`;
-};
+const formatTime24To12 = formatTime;
 
 // Generate time options from 8:00 AM to 6:00 PM in 30-minute intervals
 const generateTimeOptions = () => {

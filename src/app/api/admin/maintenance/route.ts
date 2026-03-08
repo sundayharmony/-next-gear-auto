@@ -56,12 +56,12 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query;
 
     if (!error && data && data.length > 0) {
-      const records = data.map((record: any) => ({
+      const records = data.map((record) => {
+        const v = record.vehicles as { year: number; make: string; model: string } | null;
+        return {
         id: record.id,
         vehicleId: record.vehicle_id,
-        vehicleName: record.vehicles
-          ? `${record.vehicles.year} ${record.vehicles.make} ${record.vehicles.model}`
-          : "Unknown",
+        vehicleName: v ? `${v.year} ${v.make} ${v.model}` : "Unknown",
         title: record.title || "",
         description: record.description || "",
         status: record.status || "pending",
@@ -72,7 +72,8 @@ export async function GET(req: NextRequest) {
         completedDate: record.completed_date || "",
         notes: record.notes || "",
         createdAt: record.created_at || "",
-      }));
+      };
+      });
 
       return NextResponse.json({ success: true, data: records });
     }

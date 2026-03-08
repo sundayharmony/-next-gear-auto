@@ -208,7 +208,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       const res = await fetch("/api/promo-codes/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, bookingAmount: state.pricing?.subtotal || 0 }),
+        body: JSON.stringify({ code, bookingAmount: state.pricing?.subtotal ?? 0 }),
       });
       const data = await res.json();
       if (data.success) {
@@ -252,11 +252,11 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           returnTime: state.returnTime,
           extras: state.extras.filter((e) => e.selected),
           customerDetails: state.customerDetails,
-          totalPrice: state.pricing?.total || 0,
-          deposit: state.pricing?.deposit || 0,
+          totalPrice: state.pricing?.total ?? 0,
+          deposit: state.pricing?.deposit ?? 0,
           signedName: state.signedName,
           promoCode: state.promoCode || undefined,
-          discountAmount: state.promoDiscount?.discountAmount || 0,
+          discountAmount: state.promoDiscount?.discountAmount ?? 0,
           insuranceProofUrl: state.insuranceProofUrl,
           insuranceOptedOut: state.insuranceOptedOut,
           idDocumentUrl: state.idDocumentUrl,

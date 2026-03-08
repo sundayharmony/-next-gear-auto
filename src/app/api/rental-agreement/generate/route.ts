@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { fmtTime } from "@/lib/email/templates";
 import path from "path";
 import fs from "fs/promises";
 
@@ -23,10 +24,27 @@ export async function GET(req: NextRequest) {
   const supabase = getServiceSupabase();
 
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let booking: any = null;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let vehicle: any = null;
+    let booking: {
+      customer_name?: string;
+      customer_email?: string;
+      customer_phone?: string;
+      pickup_date: string;
+      return_date: string;
+      pickup_time?: string | null;
+      return_time?: string | null;
+      total_price: number;
+      deposit: number;
+      vehicle_id?: string;
+    } | null = null;
+    let vehicle: {
+      make?: string;
+      model?: string;
+      year?: number;
+      license_plate?: string;
+      vin?: string;
+      color?: string;
+      mileage?: number;
+    } | null = null;
 
     if (bookingId) {
       // Mode 1: Existing booking
@@ -73,7 +91,7 @@ export async function GET(req: NextRequest) {
         pickup_time: searchParams.get("pickupTime") || null,
         return_time: searchParams.get("returnTime") || null,
         total_price: parseFloat(searchParams.get("totalPrice") || "0"),
-        deposit: parseFloat(searchParams.get("totalPrice") || "0"),
+        deposit: parseFloat(searchParams.get("deposit") || "0"),
         vehicle_id: vehicleId || "",
       };
     }
@@ -137,22 +155,16 @@ export async function GET(req: NextRequest) {
     setText("t17", booking.customer_email || ""); // Email
 
     // === Rental Dates & Times ===
-    const formatDate = (d: string) => {
+    const pdfDate = (d: string) => {
       if (!d) return "";
       const date = new Date(d + "T00:00:00");
       return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
     };
-    const formatTime = (t: string | null) => {
-      if (!t) return "";
-      const [h, m] = t.split(":").map(Number);
-      const ampm = h >= 12 ? "PM" : "AM";
-      return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
-    };
 
-    setText("t18", formatDate(booking.pickup_date)); // Pickup Date
-    setText("t19", formatTime(booking.pickup_time)); // Pickup Time
-    setText("t20", formatDate(booking.return_date)); // Return Date
-    setText("t21", formatTime(booking.return_time)); // Return Time
+    setText("t18", pdfDate(booking.pickup_date)); // Pickup Date
+    setText("t19", fmtTime(booking.pickup_time)); // Pickup Time
+    setText("t20", pdfDate(booking.return_date)); // Return Date
+    setText("t21", fmtTime(booking.return_time)); // Return Time
 
     // === Driver Info ===
     setText("t22", booking.customer_name || ""); // Primary Renter
@@ -161,8 +173,8 @@ export async function GET(req: NextRequest) {
     setText("t25", ""); // Additional Driver License
 
     // === Pricing ===
-    const totalPrice = booking.total_price || 0;
-    const deposit = booking.deposit || 0;
+    const totalPrice = booking.total_price ?? 0;
+    const deposit = booking.deposit ?? 0;
     const pickupDate = new Date(booking.pickup_date + "T00:00:00");
     const returnDate = new Date(booking.return_date + "T00:00:00");
     const totalDays = Math.max(1, Math.ceil((returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24)));

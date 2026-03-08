@@ -65,7 +65,7 @@ export async function POST(request: Request) {
             booking_id: bookingId,
             stripe_session_id: session.id,
             stripe_payment_intent: session.payment_intent as string,
-            amount: (session.amount_total || 0) / 100,
+            amount: (session.amount_total ?? 0) / 100,
             status: "succeeded",
           });
 

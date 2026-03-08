@@ -59,7 +59,7 @@ export function calculateFinancing(
 
   const monthlyPayment = vehicle.monthlyPayment;
   const paymentDay = Math.min(Math.max(vehicle.paymentDayOfMonth || 1, 1), 31);
-  const purchasePrice = vehicle.purchasePrice || 0;
+  const purchasePrice = vehicle.purchasePrice ?? 0;
   const startDate = new Date(vehicle.financingStartDate);
 
   if (isNaN(startDate.getTime())) return null;
@@ -160,12 +160,12 @@ export function getEffectiveVehicleCost(
   asOfDate?: Date
 ): number {
   if (!vehicle.isFinanced) {
-    return vehicle.purchasePrice || 0;
+    return vehicle.purchasePrice ?? 0;
   }
 
   const financing = calculateFinancing(vehicle, asOfDate);
   if (!financing) {
-    return vehicle.purchasePrice || 0;
+    return vehicle.purchasePrice ?? 0;
   }
 
   return financing.totalPaid;

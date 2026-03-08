@@ -17,6 +17,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { formatTime } from "@/lib/utils/date-helpers";
 
 interface BookingRow {
   id: string;
@@ -63,13 +64,6 @@ const statusBorderColors: Record<string, string> = {
   active: "border-blue-400",
   completed: "border-gray-400",
   cancelled: "border-red-400",
-};
-
-const formatTime = (t?: string) => {
-  if (!t) return "";
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
 export default function AdminCalendarPage() {

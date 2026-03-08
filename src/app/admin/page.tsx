@@ -7,7 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
-import { formatDate } from "@/lib/utils/date-helpers";
+import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 
 interface DashboardData {
   totalBookings: number;
@@ -39,13 +39,6 @@ const statusColors: Record<string, string> = {
   "no-show": "bg-orange-100 text-orange-700",
 };
 
-const formatTime = (t?: string) => {
-  if (!t) return "";
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
-};
-
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -64,10 +57,10 @@ export default function AdminDashboardPage() {
           const active = bookings.filter((b: { status: string }) => b.status === "active");
           const totalRevenue = bookings
             .filter((b: { status: string }) => ["confirmed", "active", "completed"].includes(b.status))
-            .reduce((sum: number, b: { total_price: number }) => sum + (b.total_price || 0), 0);
+            .reduce((sum: number, b: { total_price: number }) => sum + (b.total_price ?? 0), 0);
           const totalDeposits = bookings
             .filter((b: { status: string }) => ["confirmed", "active", "completed"].includes(b.status))
-            .reduce((sum: number, b: { deposit: number }) => sum + (b.deposit || 0), 0);
+            .reduce((sum: number, b: { deposit: number }) => sum + (b.deposit ?? 0), 0);
 
           setData({
             totalBookings: bookings.length,

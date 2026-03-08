@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     }
 
     // Charge full rental amount upfront
-    const chargeAmount = totalPrice || deposit || 0;
+    const chargeAmount = totalPrice ?? deposit ?? 0;
 
     // 1. Find or create customer in Supabase
     let customerId: string | null = null;
@@ -191,7 +191,7 @@ export async function POST(request: Request) {
         returnDate,
         pickupTime: pickupTime || undefined,
         returnTime: returnTime || undefined,
-        totalPrice: totalPrice || 0,
+        totalPrice: totalPrice ?? 0,
         deposit: 0,
         needsPassword,
       };
@@ -234,7 +234,7 @@ export async function POST(request: Request) {
         vehicle_id: vehicleId,
         total_price: totalPrice.toString(),
         promo_code: promoCode || "",
-        discount_amount: (discountAmount || 0).toString(),
+        discount_amount: (discountAmount ?? 0).toString(),
       },
       success_url: `${siteUrl}/booking/success?session_id={CHECKOUT_SESSION_ID}&booking_id=${bookingId}`,
       cancel_url: `${siteUrl}/booking/cancel?booking_id=${bookingId}`,
@@ -257,7 +257,7 @@ export async function POST(request: Request) {
       returnDate,
       pickupTime: pickupTime || undefined,
       returnTime: returnTime || undefined,
-      totalPrice: totalPrice || 0,
+      totalPrice: totalPrice ?? 0,
       deposit: chargeAmount,
       needsPassword: false,
     };

@@ -106,12 +106,10 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-async function updateBookingAndRespond(supabase: any, bookingId: string, docType: string, publicUrl: string) {
+async function updateBookingAndRespond(supabase: ReturnType<typeof import("@/lib/db/supabase").getServiceSupabase>, bookingId: string, docType: string, publicUrl: string) {
   const columnName =
     docType === "id_document" ? "id_document_url" : "insurance_proof_url";
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const updateData: Record<string, any> = { [columnName]: publicUrl };
+  const updateData: Record<string, unknown> = { [columnName]: publicUrl };
   if (docType === "insurance_proof") {
     updateData.insurance_opted_out = true;
   }

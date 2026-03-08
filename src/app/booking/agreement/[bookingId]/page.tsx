@@ -107,7 +107,7 @@ export default function AgreementSigningPage() {
               const vRes = await fetch("/api/vehicles");
               const vData = await vRes.json();
               if (vData.success && Array.isArray(vData.data)) {
-                const v = vData.data.find((veh: any) => veh.id === data.data.vehicle_id);
+                const v = vData.data.find((veh: { id: string }) => veh.id === data.data.vehicle_id);
                 if (v) setVehicle(v);
               }
             } catch {

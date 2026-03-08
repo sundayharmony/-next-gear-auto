@@ -167,7 +167,7 @@ export async function PUT(request: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    const updates: Record<string, any> = {};
+    const updates: Record<string, unknown> = {};
     if (vehicleId !== undefined) updates.vehicle_id = vehicleId || null;
     if (category !== undefined) updates.category = category;
     if (amount !== undefined) updates.amount = parseFloat(amount);

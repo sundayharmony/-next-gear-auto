@@ -120,7 +120,7 @@ export async function POST(req: NextRequest) {
       .order("sort_order", { ascending: false })
       .limit(1);
 
-    const nextOrder = (existing?.[0]?.sort_order || 0) + 1;
+    const nextOrder = (existing?.[0]?.sort_order ?? 0) + 1;
 
     const id = `ig_${Date.now()}`;
     const { error } = await supabase.from("instagram_posts").insert({

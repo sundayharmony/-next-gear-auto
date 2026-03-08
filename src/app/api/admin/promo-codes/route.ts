@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
         code: body.code.toUpperCase(),
         discount_type: body.discountType || "percentage",
         discount_value: body.discountValue || 10,
-        min_booking_amount: body.minBookingAmount || 0,
+        min_booking_amount: body.minBookingAmount ?? 0,
         max_uses: body.maxUses || 100,
         used_count: 0,
         expires_at: body.expiresAt || null,

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { formatDate } from "@/lib/utils/date-helpers";
+import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 
 interface BookingRow {
   id: string;
@@ -62,13 +62,6 @@ const statusColors: Record<string, string> = {
   completed: "bg-gray-100 text-gray-600",
   cancelled: "bg-red-100 text-red-700",
   "no-show": "bg-orange-100 text-orange-700",
-};
-
-const formatTime = (t?: string) => {
-  if (!t) return "";
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 };
 
 // Pre-generate time slot options (8:00 AM – 4:00 AM, 30-min intervals)
@@ -473,7 +466,7 @@ export default function AdminBookingsPage() {
         } else if (extra.billingType === "per-day-capped" && extra.maxPrice) {
           extrasTotal += Math.min(days * extra.pricePerDay, extra.maxPrice);
         } else {
-          extrasTotal += days * (extra.pricePerDay || 0);
+          extrasTotal += days * (extra.pricePerDay ?? 0);
         }
       }
     }

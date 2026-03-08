@@ -7,14 +7,7 @@ import { Check, Car, Calendar, CreditCard, ArrowRight, FileCheck, Loader2 } from
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
-import { formatDate } from "@/lib/utils/date-helpers";
-
-const formatTime = (t?: string) => {
-  if (!t) return "";
-  const [h, m] = t.split(":").map(Number);
-  const ampm = h >= 12 ? "PM" : "AM";
-  return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
-};
+import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 
 interface BookingDetails {
   id: string;

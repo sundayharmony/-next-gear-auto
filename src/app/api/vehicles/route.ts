@@ -36,7 +36,7 @@ export async function GET(request: Request) {
         isAvailable: v.is_available,
         description: v.description || "",
         color: v.color || "",
-        mileage: v.mileage || 0,
+        mileage: v.mileage ?? 0,
         licensePlate: v.license_plate || "",
         vin: v.vin || "",
         maintenanceStatus: v.maintenance_status || "good",
