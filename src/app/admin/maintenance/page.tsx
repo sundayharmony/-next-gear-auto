@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { compressImage } from "@/lib/utils/compress-image";
 import {
   Wrench,
   Plus,
@@ -231,12 +232,15 @@ export default function AdminMaintenancePage() {
     e: React.ChangeEvent<HTMLInputElement>,
     recordId: string
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const rawFile = e.target.files?.[0];
+    if (!rawFile) return;
 
     setUploadingPhoto((prev) => ({ ...prev, [recordId]: true }));
 
     try {
+      // Compress image client-side to stay under Vercel's 4.5MB body limit
+      const file = await compressImage(rawFile, 4, 2048, 0.8);
+
       const formData = new FormData();
       formData.append("file", file);
       formData.append("maintenanceId", recordId);

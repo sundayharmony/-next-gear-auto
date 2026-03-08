@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { compressImage } from "@/lib/utils/compress-image";
 import {
   Car,
   Plus,
@@ -154,22 +155,19 @@ export default function AdminVehiclesPage() {
     e: React.ChangeEvent<HTMLInputElement>,
     formKey: "new" | string
   ) => {
-    const files = Array.from(e.target.files || []);
-    if (!files.length) return;
-    const maxBytesPerFile = 5 * 1024 * 1024;
-
-    const tooLarge = files.find((file) => file.size > maxBytesPerFile);
-    if (tooLarge) {
-      setError(
-        `Image "${tooLarge.name}" is too large. Please use files under 5MB each.`
-      );
-      e.target.value = "";
-      return;
-    }
+    const rawFiles = Array.from(e.target.files || []);
+    if (!rawFiles.length) return;
 
     setUploadingImage((prev) => ({ ...prev, [formKey]: true }));
 
     try {
+      // Compress images client-side to stay under Vercel's 4.5MB body limit
+      const files: File[] = [];
+      for (const raw of rawFiles) {
+        const compressed = await compressImage(raw, 4, 2048, 0.8);
+        files.push(compressed);
+      }
+
       const uploadedUrls: string[] = [];
 
       for (const file of files) {
