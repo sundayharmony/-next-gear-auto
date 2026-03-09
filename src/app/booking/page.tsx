@@ -543,7 +543,7 @@ function BookingPageInner() {
                       <CardContent className="flex items-center gap-4 p-4">
                         <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg bg-gray-100 overflow-hidden">
                           {vehicle.images && vehicle.images.length > 0 ? (
-                            <img src={vehicle.images[0]} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} className="h-full w-full object-cover" />
+                            <img src={vehicle.images[0]} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} loading="lazy" className="h-full w-full object-cover" />
                           ) : (
                             <Car className="h-10 w-10 text-gray-300" />
                           )}

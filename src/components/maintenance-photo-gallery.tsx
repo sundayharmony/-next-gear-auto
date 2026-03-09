@@ -87,6 +87,7 @@ export function MaintenancePhotoGallery({
               <img
                 src={photo}
                 alt={`${alt} - ${i + 1}`}
+                loading="lazy"
                 className="h-full w-full object-cover transition-transform duration-200 group-hover:scale-105"
               />
             )}
@@ -199,7 +200,7 @@ export function MaintenancePhotoGallery({
                       <FileText className="h-4 w-4 text-red-400" />
                     </div>
                   ) : (
-                    <img src={photo} alt="" className="h-full w-full object-cover" />
+                    <img src={photo} alt={`${alt} thumbnail ${i + 1}`} loading="lazy" className="h-full w-full object-cover" />
                   )}
                 </button>
               ))}

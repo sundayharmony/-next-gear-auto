@@ -595,7 +595,7 @@ export default function AdminFinancesPage() {
               onClick={() => setSelectedVehicleId(null)}
               className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
             >
-              <ArrowLeft className="w-6 h-6 text-gray-900" />
+              <ArrowLeft className="h-5 w-5 text-gray-900" />
             </button>
             <div>
               <h1 className="text-3xl font-bold text-gray-900">
@@ -892,11 +892,9 @@ export default function AdminFinancesPage() {
   if (loading) {
     return (
       <PageContainer>
-        <div className="flex items-center justify-center py-12">
-          <div className="text-center">
-            <RefreshCw className="w-8 h-8 text-purple-600 mx-auto animate-spin mb-4" />
-            <p className="text-gray-600">Loading financial data...</p>
-          </div>
+        <div className="text-center py-12">
+          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
+          <p className="mt-4 text-gray-500">Loading financial data...</p>
         </div>
       </PageContainer>
     );

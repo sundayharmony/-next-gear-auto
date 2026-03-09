@@ -34,6 +34,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
+import { statusColors } from "@/lib/utils/status-colors";
 
 interface CustomerRow {
   id: string;
@@ -63,15 +64,6 @@ interface BookingRow {
   agreement_signed_at?: string;
   signed_name?: string;
 }
-
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
-  confirmed: "bg-green-100 text-green-700",
-  active: "bg-blue-100 text-blue-700",
-  completed: "bg-gray-100 text-gray-600",
-  cancelled: "bg-red-100 text-red-700",
-  "no-show": "bg-orange-100 text-orange-700",
-};
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
@@ -315,10 +307,10 @@ export default function AdminCustomersPage() {
   if (selectedCustomer) {
     return (
       <>
-        <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 text-white">
+        <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <button onClick={closeCustomer} className="flex items-center gap-1 text-sm text-purple-300 hover:text-white mb-2 transition-colors">
-              <ArrowLeft className="h-3.5 w-3.5" /> Back to all customers
+              <ArrowLeft className="h-4 w-4" /> Back to all customers
             </button>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">

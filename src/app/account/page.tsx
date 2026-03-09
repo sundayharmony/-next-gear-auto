@@ -559,7 +559,7 @@ export default function AccountPage() {
                           </div>
                           {latestIdDoc ? (
                             <a href={latestIdDoc} target="_blank" rel="noopener noreferrer" className="block">
-                              <img src={latestIdDoc} alt="ID Document" className="rounded-lg border max-h-32 w-full object-contain bg-white" />
+                              <img src={latestIdDoc} alt="ID Document" loading="lazy" className="rounded-lg border max-h-32 w-full object-contain bg-white" />
                               <p className="text-xs text-purple-600 mt-2 font-medium">Click to view full size</p>
                             </a>
                           ) : (
@@ -576,7 +576,7 @@ export default function AccountPage() {
                           </div>
                           {latestInsDoc ? (
                             <a href={latestInsDoc} target="_blank" rel="noopener noreferrer" className="block">
-                              <img src={latestInsDoc} alt="Insurance Proof" className="rounded-lg border max-h-32 w-full object-contain bg-white" />
+                              <img src={latestInsDoc} alt="Insurance Proof" loading="lazy" className="rounded-lg border max-h-32 w-full object-contain bg-white" />
                               <p className="text-xs text-purple-600 mt-2 font-medium">Click to view full size</p>
                             </a>
                           ) : (

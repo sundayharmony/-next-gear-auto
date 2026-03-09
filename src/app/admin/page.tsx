@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
+import { statusColors } from "@/lib/utils/status-colors";
 
 interface DashboardData {
   totalBookings: number;
@@ -29,15 +30,6 @@ interface DashboardData {
     created_at: string;
   }>;
 }
-
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
-  confirmed: "bg-green-100 text-green-700",
-  active: "bg-blue-100 text-blue-700",
-  completed: "bg-gray-100 text-gray-600",
-  cancelled: "bg-red-100 text-red-700",
-  "no-show": "bg-orange-100 text-orange-700",
-};
 
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);

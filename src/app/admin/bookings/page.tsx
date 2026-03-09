@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
+import { statusColors } from "@/lib/utils/status-colors";
 
 interface BookingRow {
   id: string;
@@ -54,15 +55,6 @@ interface Vehicle {
   dailyRate: number;
   isAvailable: boolean;
 }
-
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-700",
-  confirmed: "bg-green-100 text-green-700",
-  active: "bg-blue-100 text-blue-700",
-  completed: "bg-gray-100 text-gray-600",
-  cancelled: "bg-red-100 text-red-700",
-  "no-show": "bg-orange-100 text-orange-700",
-};
 
 // Pre-generate time slot options (8:00 AM – 4:00 AM, 30-min intervals)
 const TIME_SLOTS = Array.from({ length: 41 }, (_, i) => {
@@ -939,6 +931,7 @@ export default function AdminBookingsPage() {
                     <img
                       src={selectedBooking.id_document_url}
                       alt="Customer ID"
+                      loading="lazy"
                       className="rounded-lg border max-h-48 object-contain"
                     />
                     <p className="text-xs text-purple-600 mt-1">Click to view full size</p>
@@ -1080,6 +1073,7 @@ export default function AdminBookingsPage() {
                         <img
                           src={selectedBooking.insurance_proof_url}
                           alt="Insurance Proof"
+                          loading="lazy"
                           className="rounded-lg border max-h-48 object-contain"
                         />
                         <p className="text-xs text-purple-600 mt-1">Click to view full size</p>

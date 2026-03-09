@@ -240,6 +240,7 @@ function FleetContent() {
                         <img
                           src={vehicle.images[0]}
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                          loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       ) : (

@@ -15,6 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatTime, formatDate } from "@/lib/utils/date-helpers";
+import { statusColors, statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
 
 interface BookingRow {
   id: string;
@@ -45,30 +46,6 @@ interface Vehicle {
   make: string;
   model: string;
 }
-
-const statusColors: Record<string, string> = {
-  pending: "bg-yellow-200 text-yellow-800",
-  confirmed: "bg-green-200 text-green-800",
-  active: "bg-blue-200 text-blue-800",
-  completed: "bg-gray-200 text-gray-700",
-  cancelled: "bg-red-200 text-red-800",
-};
-
-const statusBgColors: Record<string, string> = {
-  pending: "bg-yellow-100",
-  confirmed: "bg-green-100",
-  active: "bg-blue-100",
-  completed: "bg-gray-100",
-  cancelled: "bg-red-100",
-};
-
-const statusBorderColors: Record<string, string> = {
-  pending: "border-yellow-400",
-  confirmed: "border-green-400",
-  active: "border-blue-400",
-  completed: "border-gray-400",
-  cancelled: "border-red-400",
-};
 
 export default function AdminCalendarPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
@@ -192,24 +169,29 @@ export default function AdminCalendarPage() {
 
   return (
     <>
-      <PageContainer>
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
+      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-4xl font-bold text-gray-900 mb-2">Booking Calendar</h1>
-              <p className="text-gray-600">Manage all vehicle reservations</p>
+              <h1 className="text-3xl font-bold">Booking Calendar</h1>
+              <p className="mt-1 text-purple-200">Manage all vehicle reservations</p>
             </div>
             <Button
               onClick={handleRefresh}
               disabled={loading}
               variant="outline"
               size="sm"
-              className="gap-2"
+              className="gap-2 border-purple-400 text-purple-200 hover:bg-purple-800 hover:text-white"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
           </div>
+        </div>
+      </section>
+
+      <PageContainer className="py-8">
+        <div className="mb-8">
 
           {/* Controls */}
           <div className="flex flex-col gap-4 mb-6">
@@ -272,8 +254,9 @@ export default function AdminCalendarPage() {
           </div>
 
           {loading && (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+            <div className="text-center py-12">
+              <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
+              <p className="mt-4 text-gray-500">Loading calendar...</p>
             </div>
           )}
 
@@ -371,6 +354,7 @@ export default function AdminCalendarPage() {
                     <img
                       src={selectedBooking.id_document_url}
                       alt="Customer ID"
+                      loading="lazy"
                       className="rounded-lg border max-h-48 object-contain"
                     />
                     <p className="text-xs text-purple-600 mt-1">Click to view full size</p>
@@ -416,6 +400,7 @@ export default function AdminCalendarPage() {
                         <img
                           src={selectedBooking.insurance_proof_url}
                           alt="Insurance Proof"
+                          loading="lazy"
                           className="rounded-lg border max-h-48 object-contain"
                         />
                         <p className="text-xs text-purple-600 mt-1">Click to view full size</p>

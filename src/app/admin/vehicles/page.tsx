@@ -749,6 +749,7 @@ export default function AdminVehiclesPage() {
                   <img
                     src={img}
                     alt={`Vehicle ${idx + 1}`}
+                    loading="lazy"
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
@@ -1182,6 +1183,7 @@ export default function AdminVehiclesPage() {
                     <img
                       src={vehicle.images[0]}
                       alt={getVehicleDisplayName(vehicle)}
+                      loading="lazy"
                       className="w-full h-full object-cover"
                     />
                   ) : (

@@ -217,7 +217,7 @@ export default function AdminInstagramPage() {
               <Card key={post.id} className="p-4 flex items-center gap-4">
                 {post.thumbnail_url ? (
                   <div className="relative h-14 w-14 rounded-lg overflow-hidden shrink-0 bg-gray-100">
-                    <img src={post.thumbnail_url} alt="" className="h-full w-full object-cover" />
+                    <img src={post.thumbnail_url} alt={`Instagram post ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
                     {post.media_type === "video" && (
                       <div className="absolute inset-0 flex items-center justify-center bg-black/20">
                         <span className="text-white text-xs font-bold">▶</span>
