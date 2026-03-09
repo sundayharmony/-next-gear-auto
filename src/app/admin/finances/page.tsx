@@ -17,6 +17,8 @@ import {
   RefreshCw,
   AlertCircle,
   ArrowLeft,
+  X,
+  ChevronRight,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,6 +38,9 @@ import {
   Pie,
   Cell,
   Legend,
+  LineChart,
+  Line,
+  CartesianGrid,
 } from "recharts";
 
 interface Booking {
@@ -88,6 +93,7 @@ interface SummaryCardProps {
   icon: React.ReactNode;
   color: "green" | "red" | "purple" | "blue";
   format?: "currency" | "percentage";
+  onClick?: () => void;
 }
 
 function SummaryCard({
@@ -96,6 +102,7 @@ function SummaryCard({
   icon,
   color,
   format = "currency",
+  onClick,
 }: SummaryCardProps) {
   const bgColors = {
     green: "bg-green-50",
@@ -119,7 +126,10 @@ function SummaryCard({
   };
 
   return (
-    <Card>
+    <Card
+      className={onClick ? "cursor-pointer hover:shadow-md transition-shadow group" : ""}
+      onClick={onClick}
+    >
       <CardContent className="pt-6">
         <div className="flex items-center justify-between">
           <div className="flex-1">
@@ -130,10 +140,15 @@ function SummaryCard({
               {format === "percentage" ? "%" : ""}
             </p>
           </div>
-          <div
-            className={`p-3 rounded-lg ${bgColors[color]} ${iconColors[color]}`}
-          >
-            {icon}
+          <div className="flex items-center gap-2">
+            <div
+              className={`p-3 rounded-lg ${bgColors[color]} ${iconColors[color]}`}
+            >
+              {icon}
+            </div>
+            {onClick && (
+              <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-gray-600 transition-colors" />
+            )}
           </div>
         </div>
       </CardContent>
@@ -203,6 +218,7 @@ export default function AdminFinancesPage() {
   );
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [detailView, setDetailView] = useState<"revenue" | "expenses" | "profit" | "occupancy" | null>(null);
 
   const fetchData = async () => {
     setLoading(true);
@@ -341,6 +357,69 @@ export default function AdminFinancesPage() {
       }))
       .sort((a, b) => b.value - a.value);
   }, [expenses, vehicles]);
+
+  // Daily earnings (last 14 days)
+  const dailyEarningsData = useMemo(() => {
+    const today = new Date();
+    const days: { date: string; label: string; earnings: number }[] = [];
+
+    for (let i = 13; i >= 0; i--) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split("T")[0];
+      days.push({
+        date: dateStr,
+        label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
+        earnings: 0,
+      });
+    }
+
+    bookings
+      .filter((b) => ["confirmed", "active", "completed"].includes(b.status))
+      .forEach((booking) => {
+        const createdDate = new Date(booking.created_at).toISOString().split("T")[0];
+        const dayEntry = days.find((d) => d.date === createdDate);
+        if (dayEntry) {
+          dayEntry.earnings += booking.total_price ?? 0;
+        }
+      });
+
+    return days.map((d) => ({ ...d, earnings: Math.round(d.earnings) }));
+  }, [bookings]);
+
+  // Weekly earnings (last 8 weeks)
+  const weeklyEarningsData = useMemo(() => {
+    const today = new Date();
+    const weeks: { weekStart: string; weekEnd: string; label: string; earnings: number }[] = [];
+
+    for (let i = 7; i >= 0; i--) {
+      const weekEnd = new Date(today);
+      weekEnd.setDate(weekEnd.getDate() - i * 7);
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekStart.getDate() - 6);
+
+      weeks.push({
+        weekStart: weekStart.toISOString().split("T")[0],
+        weekEnd: weekEnd.toISOString().split("T")[0],
+        label: `${weekStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })}`,
+        earnings: 0,
+      });
+    }
+
+    bookings
+      .filter((b) => ["confirmed", "active", "completed"].includes(b.status))
+      .forEach((booking) => {
+        const createdDate = booking.created_at.split("T")[0];
+        const weekEntry = weeks.find(
+          (w) => createdDate >= w.weekStart && createdDate <= w.weekEnd
+        );
+        if (weekEntry) {
+          weekEntry.earnings += booking.total_price ?? 0;
+        }
+      });
+
+    return weeks.map((w) => ({ ...w, earnings: Math.round(w.earnings) }));
+  }, [bookings]);
 
   const vehicleAnalytics = useMemo(() => {
     const analytics: VehicleAnalytics[] = [];
@@ -989,18 +1068,21 @@ export default function AdminFinancesPage() {
             value={summaryData.totalRevenue}
             icon={<TrendingUp className="w-6 h-6" />}
             color="green"
+            onClick={() => setDetailView("revenue")}
           />
           <SummaryCard
             title="Total Expenses"
             value={summaryData.totalExpenses}
             icon={<TrendingDown className="w-6 h-6" />}
             color="red"
+            onClick={() => setDetailView("expenses")}
           />
           <SummaryCard
             title="Net Profit"
             value={summaryData.netProfit}
             icon={<DollarSign className="w-6 h-6" />}
             color="purple"
+            onClick={() => setDetailView("profit")}
           />
           <SummaryCard
             title="Fleet Occupancy Rate"
@@ -1008,85 +1090,98 @@ export default function AdminFinancesPage() {
             icon={<Calendar className="w-6 h-6" />}
             color="blue"
             format="percentage"
+            onClick={() => setDetailView("occupancy")}
           />
         </div>
 
-        {/* Charts */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Revenue Over Time */}
-          <Card className="lg:col-span-2">
+        {/* Earnings Charts */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Daily Earnings */}
+          <Card>
             <CardContent className="pt-6">
               <div className="mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
                   <BarChart3 className="w-5 h-5 text-purple-600" />
-                  Revenue Over Time
+                  Daily Earnings
                 </h2>
+                <p className="text-sm text-gray-500 mt-1">Last 14 days</p>
               </div>
-              {revenueChartData.length > 0 ? (
+              {dailyEarningsData.some((d) => d.earnings > 0) ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={revenueChartData}>
-                    <XAxis dataKey="month" stroke="#9CA3AF" />
-                    <YAxis stroke="#9CA3AF" />
+                  <BarChart data={dailyEarningsData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                    <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} angle={-45} textAnchor="end" height={60} />
+                    <YAxis stroke="#9CA3AF" tickFormatter={(v) => `$${v}`} />
                     <Tooltip
                       contentStyle={{
                         backgroundColor: "#fff",
                         border: "1px solid #e5e7eb",
                         borderRadius: "8px",
                       }}
-                      formatter={(value) => `$${value.toLocaleString()}`}
+                      formatter={(value: number) => [`$${value.toLocaleString()}`, "Earnings"]}
                     />
-                    <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} />
+                    <Bar dataKey="earnings" fill="#10B981" radius={[6, 6, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="h-[300px] flex items-center justify-center text-gray-500">
-                  No revenue data available
+                  No earnings in the last 14 days
                 </div>
               )}
+              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between text-sm">
+                <span className="text-gray-500">14-Day Total</span>
+                <span className="font-bold text-green-600">
+                  ${dailyEarningsData.reduce((s, d) => s + d.earnings, 0).toLocaleString()}
+                </span>
+              </div>
             </CardContent>
           </Card>
 
-          {/* Expense Breakdown */}
+          {/* Weekly Earnings */}
           <Card>
             <CardContent className="pt-6">
               <div className="mb-4">
                 <h2 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
-                  <PieIcon className="w-5 h-5 text-purple-600" />
-                  Expense Breakdown
+                  <TrendingUp className="w-5 h-5 text-purple-600" />
+                  Weekly Earnings
                 </h2>
+                <p className="text-sm text-gray-500 mt-1">Last 8 weeks</p>
               </div>
-              {expenseCategoryData.length > 0 ? (
+              {weeklyEarningsData.some((w) => w.earnings > 0) ? (
                 <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={expenseCategoryData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={100}
-                      paddingAngle={2}
-                      dataKey="value"
-                    >
-                      {expenseCategoryData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={
-                            CATEGORY_COLORS[entry.name.toLowerCase()] ||
-                            "#6B7280"
-                          }
-                        />
-                      ))}
-                    </Pie>
+                  <LineChart data={weeklyEarningsData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                    <XAxis dataKey="label" stroke="#9CA3AF" fontSize={11} angle={-45} textAnchor="end" height={60} />
+                    <YAxis stroke="#9CA3AF" tickFormatter={(v) => `$${v}`} />
                     <Tooltip
-                      formatter={(value) => `$${value.toLocaleString()}`}
+                      contentStyle={{
+                        backgroundColor: "#fff",
+                        border: "1px solid #e5e7eb",
+                        borderRadius: "8px",
+                      }}
+                      formatter={(value: number) => [`$${value.toLocaleString()}`, "Earnings"]}
                     />
-                  </PieChart>
+                    <Line
+                      type="monotone"
+                      dataKey="earnings"
+                      stroke="#7C3AED"
+                      strokeWidth={3}
+                      dot={{ fill: "#7C3AED", r: 5 }}
+                      activeDot={{ r: 7 }}
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="h-[300px] flex items-center justify-center text-gray-500">
-                  No expense data available
+                  No earnings in the last 8 weeks
                 </div>
               )}
+              <div className="mt-4 pt-4 border-t border-gray-100 flex justify-between text-sm">
+                <span className="text-gray-500">8-Week Total</span>
+                <span className="font-bold text-purple-600">
+                  ${weeklyEarningsData.reduce((s, w) => s + w.earnings, 0).toLocaleString()}
+                </span>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1589,6 +1684,328 @@ export default function AdminFinancesPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Detail Breakdown Panel */}
+      {detailView && (
+        <div className="fixed inset-0 z-50 flex">
+          <div
+            className="flex-1 bg-black/50"
+            onClick={() => setDetailView(null)}
+          />
+          <div className="w-full max-w-2xl bg-white shadow-xl overflow-y-auto">
+            {/* Panel Header */}
+            <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex items-center justify-between z-10">
+              <h2 className="text-xl font-bold text-gray-900">
+                {detailView === "revenue" && "Revenue Breakdown"}
+                {detailView === "expenses" && "Expense Breakdown"}
+                {detailView === "profit" && "Profit Breakdown"}
+                {detailView === "occupancy" && "Fleet Occupancy Breakdown"}
+              </h2>
+              <button
+                onClick={() => setDetailView(null)}
+                className="p-2 hover:bg-gray-100 rounded-lg transition-colors"
+              >
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+
+            <div className="p-6 space-y-6">
+              {/* REVENUE BREAKDOWN */}
+              {detailView === "revenue" && (() => {
+                const revenueBookings = bookings
+                  .filter((b) => ["confirmed", "active", "completed"].includes(b.status))
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+
+                // Per-vehicle revenue
+                const vehicleRevenues = vehicles.map((v) => {
+                  const vBookings = revenueBookings.filter((b) => b.vehicle_id === v.id);
+                  const total = vBookings.reduce((s, b) => s + (b.total_price ?? 0), 0);
+                  return { vehicle: v, total, count: vBookings.length };
+                }).sort((a, b) => b.total - a.total);
+
+                return (
+                  <>
+                    {/* Summary header */}
+                    <div className="bg-green-50 rounded-lg p-4">
+                      <p className="text-sm text-green-700 font-medium">Total Revenue</p>
+                      <p className="text-3xl font-bold text-green-600">${summaryData.totalRevenue.toLocaleString()}</p>
+                      <p className="text-sm text-green-600 mt-1">{revenueBookings.length} qualifying bookings</p>
+                    </div>
+
+                    {/* Revenue by vehicle */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3">Revenue by Vehicle</h3>
+                      <div className="space-y-2">
+                        {vehicleRevenues.map(({ vehicle, total, count }) => (
+                          <div
+                            key={vehicle.id}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                            onClick={() => { setDetailView(null); setSelectedVehicleId(vehicle.id); }}
+                          >
+                            <div>
+                              <p className="font-medium text-gray-900">{vehicle.year} {vehicle.make} {vehicle.model}</p>
+                              <p className="text-sm text-gray-500">{count} booking{count !== 1 ? "s" : ""}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-green-600">${total.toLocaleString()}</p>
+                              <p className="text-xs text-gray-400">
+                                {summaryData.totalRevenue > 0 ? ((total / summaryData.totalRevenue) * 100).toFixed(1) : 0}%
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Monthly trend */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3">Monthly Trend</h3>
+                      {revenueChartData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={200}>
+                          <BarChart data={revenueChartData}>
+                            <CartesianGrid strokeDasharray="3 3" stroke="#F3F4F6" />
+                            <XAxis dataKey="month" stroke="#9CA3AF" fontSize={11} />
+                            <YAxis stroke="#9CA3AF" tickFormatter={(v) => `$${v}`} />
+                            <Tooltip formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]} />
+                            <Bar dataKey="revenue" fill="#10B981" radius={[4, 4, 0, 0]} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <p className="text-gray-500 text-sm text-center py-4">No monthly data</p>
+                      )}
+                    </div>
+
+                    {/* Recent bookings */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3">Recent Bookings</h3>
+                      <div className="space-y-2 max-h-80 overflow-y-auto">
+                        {revenueBookings.slice(0, 20).map((booking) => {
+                          const v = vehicles.find((veh) => veh.id === booking.vehicle_id);
+                          return (
+                            <div key={booking.id} className="flex items-center justify-between p-3 border border-gray-100 rounded-lg">
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">
+                                  {v ? `${v.year} ${v.make} ${v.model}` : "Unknown"}
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  {formatDate(booking.pickup_date)} - {formatDate(booking.return_date)}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-semibold text-green-600">${(booking.total_price ?? 0).toLocaleString()}</p>
+                                <Badge className={statusColors[booking.status] || "bg-gray-100 text-gray-600"} variant="secondary">
+                                  {booking.status}
+                                </Badge>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+
+              {/* EXPENSE BREAKDOWN */}
+              {detailView === "expenses" && (() => {
+                return (
+                  <>
+                    <div className="bg-red-50 rounded-lg p-4">
+                      <p className="text-sm text-red-700 font-medium">Total Expenses</p>
+                      <p className="text-3xl font-bold text-red-600">${summaryData.totalExpenses.toLocaleString()}</p>
+                      <p className="text-sm text-red-600 mt-1">{expenses.length} expense records</p>
+                    </div>
+
+                    {/* By category */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3">By Category</h3>
+                      <div className="space-y-2">
+                        {expenseCategoryData.map((cat) => (
+                          <div key={cat.name} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                            <div className="flex items-center gap-3">
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: CATEGORY_COLORS[cat.name.toLowerCase()] || "#6B7280" }}
+                              />
+                              <span className="font-medium text-gray-900">{cat.name}</span>
+                            </div>
+                            <div className="text-right">
+                              <span className="font-bold text-red-600">${cat.value.toLocaleString()}</span>
+                              <p className="text-xs text-gray-400">
+                                {summaryData.totalExpenses > 0 ? ((cat.value / (summaryData.totalExpenses + expenseCategoryData.filter(c => c.name === "Financing").reduce((s, c) => s + c.value, 0))) * 100).toFixed(1) : 0}%
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Donut chart */}
+                    {expenseCategoryData.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold text-gray-900 mb-3">Category Distribution</h3>
+                        <ResponsiveContainer width="100%" height={250}>
+                          <PieChart>
+                            <Pie data={expenseCategoryData} cx="50%" cy="50%" innerRadius={50} outerRadius={90} paddingAngle={2} dataKey="value">
+                              {expenseCategoryData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={CATEGORY_COLORS[entry.name.toLowerCase()] || "#6B7280"} />
+                              ))}
+                            </Pie>
+                            <Tooltip formatter={(value: number) => `$${value.toLocaleString()}`} />
+                            <Legend />
+                          </PieChart>
+                        </ResponsiveContainer>
+                      </div>
+                    )}
+
+                    {/* By vehicle */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3">By Vehicle</h3>
+                      <div className="space-y-2">
+                        {vehicles.map((v) => {
+                          const vExpenses = expenses.filter((e) => e.vehicle_id === v.id);
+                          const total = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
+                          if (total === 0) return null;
+                          return (
+                            <div
+                              key={v.id}
+                              className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                              onClick={() => { setDetailView(null); setSelectedVehicleId(v.id); }}
+                            >
+                              <p className="font-medium text-gray-900">{v.year} {v.make} {v.model}</p>
+                              <p className="font-bold text-red-600">${total.toLocaleString()}</p>
+                            </div>
+                          );
+                        })}
+                        {(() => {
+                          const unassigned = expenses.filter((e) => !e.vehicle_id);
+                          const total = unassigned.reduce((s, e) => s + (e.amount ?? 0), 0);
+                          if (total === 0) return null;
+                          return (
+                            <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                              <p className="font-medium text-gray-500">General (unassigned)</p>
+                              <p className="font-bold text-red-600">${total.toLocaleString()}</p>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+
+              {/* PROFIT BREAKDOWN */}
+              {detailView === "profit" && (() => {
+                const totalVehicleCosts = vehicles.reduce((sum, v) => {
+                  return sum + getEffectiveVehicleCost(v);
+                }, 0);
+
+                return (
+                  <>
+                    <div className={`rounded-lg p-4 ${summaryData.netProfit >= 0 ? "bg-purple-50" : "bg-red-50"}`}>
+                      <p className={`text-sm font-medium ${summaryData.netProfit >= 0 ? "text-purple-700" : "text-red-700"}`}>Net Profit</p>
+                      <p className={`text-3xl font-bold ${summaryData.netProfit >= 0 ? "text-purple-600" : "text-red-600"}`}>
+                        ${summaryData.netProfit.toLocaleString()}
+                      </p>
+                    </div>
+
+                    {/* P&L breakdown */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3">Profit & Loss</h3>
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                          <span className="font-medium text-green-800">Revenue</span>
+                          <span className="font-bold text-green-600">+${summaryData.totalRevenue.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                          <span className="font-medium text-red-800">Operating Expenses</span>
+                          <span className="font-bold text-red-600">-${summaryData.totalExpenses.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
+                          <span className="font-medium text-red-800">Vehicle Costs / Financing</span>
+                          <span className="font-bold text-red-600">-${totalVehicleCosts.toLocaleString()}</span>
+                        </div>
+                        <div className="flex items-center justify-between p-4 bg-gray-100 rounded-lg border-2 border-gray-300">
+                          <span className="font-bold text-gray-900">Net Profit</span>
+                          <span className={`text-xl font-bold ${summaryData.netProfit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            ${summaryData.netProfit.toLocaleString()}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Per-vehicle profit */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3">Profit by Vehicle</h3>
+                      <div className="space-y-2">
+                        {vehicleAnalytics.map((va) => (
+                          <div
+                            key={va.vehicleId}
+                            className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                            onClick={() => { setDetailView(null); setSelectedVehicleId(va.vehicleId); }}
+                          >
+                            <div>
+                              <p className="font-medium text-gray-900">{va.year} {va.make} {va.model}</p>
+                              <div className="flex gap-3 text-xs text-gray-500 mt-1">
+                                <span className="text-green-600">Rev: ${va.revenue.toLocaleString()}</span>
+                                <span className="text-red-600">Exp: ${va.expenses.toLocaleString()}</span>
+                              </div>
+                            </div>
+                            <p className={`font-bold ${va.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                              ${va.profit.toLocaleString()}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+
+              {/* OCCUPANCY BREAKDOWN */}
+              {detailView === "occupancy" && (() => {
+                return (
+                  <>
+                    <div className="bg-blue-50 rounded-lg p-4">
+                      <p className="text-sm text-blue-700 font-medium">Fleet Occupancy Rate</p>
+                      <p className="text-3xl font-bold text-blue-600">{summaryData.occupancyRate.toFixed(1)}%</p>
+                      <p className="text-sm text-blue-600 mt-1">{vehicles.length} vehicles in fleet</p>
+                    </div>
+
+                    {/* Per-vehicle occupancy */}
+                    <div>
+                      <h3 className="font-semibold text-gray-900 mb-3">Occupancy by Vehicle</h3>
+                      <div className="space-y-3">
+                        {occupancyData.map((v) => (
+                          <div
+                            key={v.vehicleId}
+                            className="p-3 bg-gray-50 rounded-lg hover:bg-gray-100 cursor-pointer transition-colors"
+                            onClick={() => { setDetailView(null); setSelectedVehicleId(v.vehicleId); }}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <p className="font-medium text-gray-900">{v.year} {v.make} {v.model}</p>
+                              <div className="text-right">
+                                <span className="font-bold text-blue-600">{v.occupancyRate.toFixed(1)}%</span>
+                                <p className="text-xs text-gray-500">{v.bookedDays} days</p>
+                              </div>
+                            </div>
+                            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full"
+                                style={{ width: `${v.occupancyRate}%` }}
+                              />
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </PageContainer>
   );
 }
