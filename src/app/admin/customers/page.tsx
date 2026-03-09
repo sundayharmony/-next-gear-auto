@@ -543,7 +543,7 @@ export default function AdminCustomersPage() {
                   </Card>
 
                   {/* Document Status Card */}
-                  <Card>
+                  <Card className="overflow-hidden">
                     <CardContent className="p-5">
                       <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Documents</h3>
                       <div className="space-y-3">
@@ -649,14 +649,14 @@ export default function AdminCustomersPage() {
 
                       {/* ID Document Preview */}
                       {latestIdUrl && (
-                        <div className="mt-4 pt-3 border-t">
+                        <div className="mt-4 pt-3 border-t overflow-hidden">
                           <p className="text-xs text-gray-400 mb-2">ID Document Preview</p>
-                          <a href={latestIdUrl} target="_blank" rel="noopener noreferrer" className="block">
+                          <a href={latestIdUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={latestIdUrl}
                               alt="Customer ID"
-                              className="rounded-lg border w-full max-h-40 object-cover hover:opacity-80 transition-opacity"
+                              className="w-full max-h-40 object-contain bg-gray-50 hover:opacity-80 transition-opacity"
                               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                             />
                           </a>
@@ -665,14 +665,14 @@ export default function AdminCustomersPage() {
 
                       {/* Insurance Preview */}
                       {latestInsuranceUrl && (
-                        <div className="mt-3 pt-3 border-t">
+                        <div className="mt-3 pt-3 border-t overflow-hidden">
                           <p className="text-xs text-gray-400 mb-2">Insurance Proof Preview</p>
-                          <a href={latestInsuranceUrl} target="_blank" rel="noopener noreferrer" className="block">
+                          <a href={latestInsuranceUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={latestInsuranceUrl}
                               alt="Insurance Proof"
-                              className="rounded-lg border w-full max-h-40 object-cover hover:opacity-80 transition-opacity"
+                              className="w-full max-h-40 object-contain bg-gray-50 hover:opacity-80 transition-opacity"
                               onError={(e) => { (e.target as HTMLImageElement).style.display = "none"; }}
                             />
                           </a>
