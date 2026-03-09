@@ -14,9 +14,10 @@ export async function GET(req: NextRequest) {
     const status = searchParams.get("status");
     const vehicleId = searchParams.get("vehicle_id");
 
+    // Single query with vehicle JOIN — eliminates the second DB round-trip
     let query = supabase
       .from("bookings")
-      .select("*")
+      .select("*, vehicles(year, make, model)")
       .order("created_at", { ascending: false });
 
     if (status && status !== "all") {
@@ -36,30 +37,15 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Fetch vehicle names for all bookings
-    const vehicleIds = [
-      ...new Set((bookings || []).map((b) => b.vehicle_id).filter(Boolean)),
-    ];
-    let vehicleMap: Record<string, string> = {};
-
-    if (vehicleIds.length > 0) {
-      const { data: vehicles } = await supabase
-        .from("vehicles")
-        .select("id, year, make, model")
-        .in("id", vehicleIds);
-
-      if (vehicles) {
-        vehicleMap = Object.fromEntries(
-          vehicles.map((v) => [v.id, `${v.year} ${v.make} ${v.model}`])
-        );
-      }
-    }
-
-    const enriched = (bookings || []).map((b) => ({
-      ...b,
-      vehicleName: vehicleMap[b.vehicle_id] || "Unknown",
-      customerName: b.customer_name || "Guest",
-    }));
+    const enriched = (bookings || []).map((b) => {
+      const v = b.vehicles as unknown as { year: number; make: string; model: string } | null;
+      const { vehicles: _v, ...rest } = b;
+      return {
+        ...rest,
+        vehicleName: v ? `${v.year} ${v.make} ${v.model}` : "Unknown",
+        customerName: b.customer_name || "Guest",
+      };
+    });
 
     return NextResponse.json({ data: enriched, success: true });
   } catch {

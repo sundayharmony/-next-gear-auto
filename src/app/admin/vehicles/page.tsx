@@ -13,7 +13,6 @@ import {
   RefreshCw,
   Upload,
   Wrench,
-  Eye,
   Search,
   Filter,
   ChevronLeft,

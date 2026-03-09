@@ -689,7 +689,6 @@ export default function AdminMaintenancePage() {
                     <th className="px-6 py-3 text-left font-semibold text-gray-900">Start Date</th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-900">Completed</th>
                     <th className="px-6 py-3 text-left font-semibold text-gray-900">Photos</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -728,22 +727,6 @@ export default function AdminMaintenancePage() {
                         ) : (
                           <span className="text-gray-400 text-xs">No photos</span>
                         )}
-                      </td>
-                      <td className="px-6 py-3" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex gap-2">
-                          <button
-                            onClick={() => openDetail(record)}
-                            className="text-purple-600 hover:text-purple-700 font-medium text-xs"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            onClick={() => deleteRecord(record.id)}
-                            className="text-red-600 hover:text-red-700 font-medium text-xs"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
                       </td>
                     </tr>
                   ))}

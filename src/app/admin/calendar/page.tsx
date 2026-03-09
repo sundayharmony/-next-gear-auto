@@ -1,13 +1,10 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import Link from "next/link";
 import {
-  CalendarDays,
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  Filter,
   LayoutList,
   Calendar,
   X,
@@ -17,12 +14,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { formatTime } from "@/lib/utils/date-helpers";
+import { formatTime, formatDate } from "@/lib/utils/date-helpers";
 
 interface BookingRow {
   id: string;
   customer_name: string;
   customer_email: string;
+  customer_phone?: string;
   vehicleName: string;
   vehicle_id: string;
   pickup_date: string;
@@ -33,6 +31,12 @@ interface BookingRow {
   deposit: number;
   status: string;
   created_at: string;
+  id_document_url?: string;
+  insurance_proof_url?: string;
+  insurance_opted_out?: boolean;
+  signed_name?: string;
+  agreement_signed_at?: string;
+  rental_agreement_url?: string;
 }
 
 interface Vehicle {
@@ -89,21 +93,55 @@ export default function AdminCalendarPage() {
   });
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
-  // Fetch data
+  // Booking detail panel state
+  const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
+  const [showBookingDetail, setShowBookingDetail] = useState(false);
+
+  const openBookingDetail = (booking: BookingRow) => {
+    setSelectedBooking(booking);
+    setShowBookingDetail(true);
+  };
+
+  const closeBookingDetail = () => {
+    setShowBookingDetail(false);
+    setSelectedBooking(null);
+  };
+
+  // Build date range for API filtering (3 months window around current view)
+  const getDateRange = () => {
+    const from = new Date(view === "timeline" ? timelineStart : calendarMonth);
+    from.setMonth(from.getMonth() - 1);
+    const to = new Date(view === "timeline" ? timelineStart : calendarMonth);
+    to.setMonth(to.getMonth() + 2);
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return {
+      from: `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`,
+      to: `${to.getFullYear()}-${pad(to.getMonth() + 1)}-${pad(to.getDate())}`,
+    };
+  };
+
+  const fetchBookings = async () => {
+    const { from, to } = getDateRange();
+    try {
+      const res = await fetch(`/api/bookings?from=${from}&to=${to}`);
+      if (res.ok) {
+        const data = await res.json();
+        setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
+      }
+    } catch (error) {
+      console.error("Failed to fetch bookings:", error);
+    }
+  };
+
+  // Fetch data on mount and when view/date range changes
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [bookingsRes, vehiclesRes] = await Promise.all([
-          fetch("/api/bookings"),
+        const [, vehiclesRes] = await Promise.all([
+          fetchBookings(),
           adminFetch("/api/admin/vehicles"),
         ]);
-
-        if (bookingsRes.ok) {
-          const data = await bookingsRes.json();
-          // Exclude cancelled bookings from calendar
-          setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
-        }
 
         if (vehiclesRes.ok) {
           const data = await vehiclesRes.json();
@@ -119,13 +157,16 @@ export default function AdminCalendarPage() {
     fetchData();
   }, []);
 
+  // Re-fetch bookings when navigating timeline or calendar
+  useEffect(() => {
+    fetchBookings();
+  }, [timelineStart, calendarMonth]);
+
   // Filter bookings
   const filteredBookings = useMemo(() => {
     return bookings.filter((booking) => {
-      const statusMatch =
-        statusFilter === "all" || booking.status === statusFilter;
-      const vehicleMatch =
-        vehicleFilter === "all" || booking.vehicle_id === vehicleFilter;
+      const statusMatch = statusFilter === "all" || booking.status === statusFilter;
+      const vehicleMatch = vehicleFilter === "all" || booking.vehicle_id === vehicleFilter;
       return statusMatch && vehicleMatch;
     });
   }, [bookings, statusFilter, vehicleFilter]);
@@ -133,15 +174,10 @@ export default function AdminCalendarPage() {
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      const [bookingsRes, vehiclesRes] = await Promise.all([
-        fetch("/api/bookings"),
+      const [, vehiclesRes] = await Promise.all([
+        fetchBookings(),
         adminFetch("/api/admin/vehicles"),
       ]);
-
-      if (bookingsRes.ok) {
-        const data = await bookingsRes.json();
-        setBookings(data.data || []);
-      }
 
       if (vehiclesRes.ok) {
         const data = await vehiclesRes.json();
@@ -155,57 +191,55 @@ export default function AdminCalendarPage() {
   };
 
   return (
-    <PageContainer>
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-2">
-              Booking Calendar
-            </h1>
-            <p className="text-gray-600">Manage all vehicle reservations</p>
-          </div>
-          <Button
-            onClick={handleRefresh}
-            disabled={loading}
-            variant="outline"
-            size="sm"
-            className="gap-2"
-          >
-            <RefreshCw className="w-4 h-4" />
-            Refresh
-          </Button>
-        </div>
-
-        {/* Controls */}
-        <div className="flex flex-col gap-4 mb-6">
-          {/* View Toggle */}
-          <div className="flex gap-2">
+    <>
+      <PageContainer>
+        <div className="mb-8">
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-4xl font-bold text-gray-900 mb-2">Booking Calendar</h1>
+              <p className="text-gray-600">Manage all vehicle reservations</p>
+            </div>
             <Button
-              onClick={() => setView("timeline")}
-              variant={view === "timeline" ? "default" : "outline"}
+              onClick={handleRefresh}
+              disabled={loading}
+              variant="outline"
               size="sm"
               className="gap-2"
             >
-              <LayoutList className="w-4 h-4" />
-              Timeline
-            </Button>
-            <Button
-              onClick={() => setView("calendar")}
-              variant={view === "calendar" ? "default" : "outline"}
-              size="sm"
-              className="gap-2"
-            >
-              <Calendar className="w-4 h-4" />
-              Calendar
+              <RefreshCw className="w-4 h-4" />
+              Refresh
             </Button>
           </div>
 
-          {/* Filters */}
-          <div className="flex flex-wrap gap-2 items-center">
-            <span className="text-sm font-medium text-gray-700">Status:</span>
-            <div className="flex flex-wrap gap-2">
-              {["all", "pending", "confirmed", "active", "completed"].map(
-                (status) => (
+          {/* Controls */}
+          <div className="flex flex-col gap-4 mb-6">
+            {/* View Toggle */}
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setView("timeline")}
+                variant={view === "timeline" ? "default" : "outline"}
+                size="sm"
+                className="gap-2"
+              >
+                <LayoutList className="w-4 h-4" />
+                Timeline
+              </Button>
+              <Button
+                onClick={() => setView("calendar")}
+                variant={view === "calendar" ? "default" : "outline"}
+                size="sm"
+                className="gap-2"
+              >
+                <Calendar className="w-4 h-4" />
+                Calendar
+              </Button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap gap-2 items-center">
+              <span className="text-sm font-medium text-gray-700">Status:</span>
+              <div className="flex flex-wrap gap-2">
+                {["all", "pending", "confirmed", "active", "completed"].map((status) => (
                   <Button
                     key={status}
                     onClick={() => setStatusFilter(status)}
@@ -215,80 +249,237 @@ export default function AdminCalendarPage() {
                   >
                     {status === "all" ? "All" : status}
                   </Button>
-                )
-              )}
+                ))}
+              </div>
+            </div>
+
+            {/* Vehicle Filter */}
+            <div className="flex gap-2 items-center">
+              <span className="text-sm font-medium text-gray-700">Vehicle:</span>
+              <select
+                value={vehicleFilter}
+                onChange={(e) => setVehicleFilter(e.target.value)}
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+              >
+                <option value="all">All Vehicles</option>
+                {vehicles.map((vehicle) => (
+                  <option key={vehicle.id} value={vehicle.id}>
+                    {vehicle.year} {vehicle.make} {vehicle.model}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 
-          {/* Vehicle Filter */}
-          <div className="flex gap-2 items-center">
-            <span className="text-sm font-medium text-gray-700">Vehicle:</span>
-            <select
-              value={vehicleFilter}
-              onChange={(e) => setVehicleFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-            >
-              <option value="all">All Vehicles</option>
-              {vehicles.map((vehicle) => (
-                <option key={vehicle.id} value={vehicle.id}>
-                  {vehicle.year} {vehicle.make} {vehicle.model}
-                </option>
-              ))}
-            </select>
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
+            </div>
+          )}
+
+          {!loading && view === "timeline" && (
+            <TimelineView
+              bookings={filteredBookings}
+              vehicles={vehicles}
+              start={timelineStart}
+              onPrevious={() => {
+                const newStart = new Date(timelineStart);
+                newStart.setDate(newStart.getDate() - 14);
+                setTimelineStart(newStart);
+              }}
+              onNext={() => {
+                const newStart = new Date(timelineStart);
+                newStart.setDate(newStart.getDate() + 14);
+                setTimelineStart(newStart);
+              }}
+              onToday={() => {
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                setTimelineStart(today);
+              }}
+              onBookingClick={openBookingDetail}
+            />
+          )}
+
+          {!loading && view === "calendar" && (
+            <CalendarView
+              bookings={filteredBookings}
+              currentMonth={calendarMonth}
+              onPreviousMonth={() => {
+                const newMonth = new Date(calendarMonth);
+                newMonth.setMonth(newMonth.getMonth() - 1);
+                setCalendarMonth(newMonth);
+                setSelectedDay(null);
+              }}
+              onNextMonth={() => {
+                const newMonth = new Date(calendarMonth);
+                newMonth.setMonth(newMonth.getMonth() + 1);
+                setCalendarMonth(newMonth);
+                setSelectedDay(null);
+              }}
+              selectedDay={selectedDay}
+              onSelectDay={setSelectedDay}
+              onBookingClick={openBookingDetail}
+            />
+          )}
+        </div>
+      </PageContainer>
+
+      {/* Booking Detail Panel */}
+      {showBookingDetail && selectedBooking && (
+        <div className="fixed inset-0 z-50 flex">
+          {/* Backdrop */}
+          <div className="flex-1 bg-black/50" onClick={closeBookingDetail} />
+          {/* Panel */}
+          <div className="w-full max-w-lg bg-white shadow-xl overflow-y-auto">
+            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
+              <h2 className="text-lg font-semibold">Booking Details</h2>
+              <button onClick={closeBookingDetail} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-6">
+              {/* Booking ID & Status */}
+              <div>
+                <p className="text-xs text-gray-500">Booking ID</p>
+                <p className="font-mono text-purple-600 font-bold">{selectedBooking.id}</p>
+                <Badge className={`mt-1 ${statusColors[selectedBooking.status] || "bg-gray-100"}`}>
+                  {selectedBooking.status}
+                </Badge>
+              </div>
+
+              {/* Customer Info */}
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Customer</h3>
+                <p className="font-medium">{selectedBooking.customer_name}</p>
+                <p className="text-sm text-gray-500">{selectedBooking.customer_email}</p>
+                {selectedBooking.customer_phone && (
+                  <p className="text-sm text-gray-500">{selectedBooking.customer_phone}</p>
+                )}
+              </div>
+
+              {/* ID Document */}
+              {selectedBooking.id_document_url && (
+                <div>
+                  <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">ID Document</h3>
+                  <a
+                    href={selectedBooking.id_document_url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                  >
+                    <img
+                      src={selectedBooking.id_document_url}
+                      alt="Customer ID"
+                      className="rounded-lg border max-h-48 object-contain"
+                    />
+                    <p className="text-xs text-purple-600 mt-1">Click to view full size</p>
+                  </a>
+                </div>
+              )}
+
+              {/* Vehicle */}
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Vehicle</h3>
+                <p className="font-medium">{selectedBooking.vehicleName || selectedBooking.vehicle_id}</p>
+              </div>
+
+              {/* Dates and Times */}
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500">Pickup Date</p>
+                  <p className="text-lg font-bold text-gray-900">{formatDate(selectedBooking.pickup_date)}</p>
+                  <p className="text-xs text-gray-500 mt-1">Time</p>
+                  <p className="text-xl font-bold text-purple-600">{formatTime(selectedBooking.pickup_time)}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Return Date</p>
+                  <p className="text-lg font-bold text-gray-900">{formatDate(selectedBooking.return_date)}</p>
+                  <p className="text-xs text-gray-500 mt-1">Time</p>
+                  <p className="text-xl font-bold text-purple-600">{formatTime(selectedBooking.return_time)}</p>
+                </div>
+              </div>
+
+              {/* Insurance Status */}
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Insurance</h3>
+                {selectedBooking.insurance_opted_out ? (
+                  <div>
+                    <Badge className="bg-yellow-100 text-yellow-700">Opted Out (Own Coverage)</Badge>
+                    {selectedBooking.insurance_proof_url && (
+                      <a
+                        href={selectedBooking.insurance_proof_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="block mt-2"
+                      >
+                        <img
+                          src={selectedBooking.insurance_proof_url}
+                          alt="Insurance Proof"
+                          className="rounded-lg border max-h-48 object-contain"
+                        />
+                        <p className="text-xs text-purple-600 mt-1">Click to view full size</p>
+                      </a>
+                    )}
+                  </div>
+                ) : (
+                  <Badge className="bg-green-100 text-green-700">NextGearAuto Insurance Included</Badge>
+                )}
+              </div>
+
+              {/* Payment */}
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Payment</h3>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Total</span>
+                  <span className="font-bold text-lg">${selectedBooking.total_price?.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between py-2 border-b">
+                  <span className="text-gray-500">Paid</span>
+                  <span className="text-green-600 font-semibold">${selectedBooking.deposit?.toFixed(2)}</span>
+                </div>
+              </div>
+
+              {/* Agreement */}
+              <div>
+                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Agreement</h3>
+                {selectedBooking.signed_name || selectedBooking.rental_agreement_url ? (
+                  <>
+                    {selectedBooking.signed_name && (
+                      <p className="font-serif italic">{selectedBooking.signed_name}</p>
+                    )}
+                    <p className="text-xs text-gray-400">
+                      {selectedBooking.agreement_signed_at
+                        ? new Date(selectedBooking.agreement_signed_at).toLocaleString()
+                        : ""}
+                    </p>
+                    {selectedBooking.rental_agreement_url && (
+                      <a
+                        href={selectedBooking.rental_agreement_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="mt-2 inline-flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-800 font-medium"
+                      >
+                        View Signed Agreement &rarr;
+                      </a>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-xs text-gray-400">Not yet signed</p>
+                )}
+              </div>
+
+              {/* Created at */}
+              <div className="pt-4 border-t">
+                <p className="text-xs text-gray-400">
+                  Created {new Date(selectedBooking.created_at).toLocaleDateString()}
+                </p>
+              </div>
+            </div>
           </div>
         </div>
-
-        {loading && (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600"></div>
-          </div>
-        )}
-
-        {!loading && view === "timeline" && (
-          <TimelineView
-            bookings={filteredBookings}
-            vehicles={vehicles}
-            start={timelineStart}
-            onPrevious={() => {
-              const newStart = new Date(timelineStart);
-              newStart.setDate(newStart.getDate() - 14);
-              setTimelineStart(newStart);
-            }}
-            onNext={() => {
-              const newStart = new Date(timelineStart);
-              newStart.setDate(newStart.getDate() + 14);
-              setTimelineStart(newStart);
-            }}
-            onToday={() => {
-              const today = new Date();
-              today.setHours(0, 0, 0, 0);
-              setTimelineStart(today);
-            }}
-          />
-        )}
-
-        {!loading && view === "calendar" && (
-          <CalendarView
-            bookings={filteredBookings}
-            currentMonth={calendarMonth}
-            onPreviousMonth={() => {
-              const newMonth = new Date(calendarMonth);
-              newMonth.setMonth(newMonth.getMonth() - 1);
-              setCalendarMonth(newMonth);
-              setSelectedDay(null);
-            }}
-            onNextMonth={() => {
-              const newMonth = new Date(calendarMonth);
-              newMonth.setMonth(newMonth.getMonth() + 1);
-              setCalendarMonth(newMonth);
-              setSelectedDay(null);
-            }}
-            selectedDay={selectedDay}
-            onSelectDay={setSelectedDay}
-          />
-        )}
-      </div>
-    </PageContainer>
+      )}
+    </>
   );
 }
 
@@ -299,6 +490,7 @@ interface TimelineViewProps {
   onPrevious: () => void;
   onNext: () => void;
   onToday: () => void;
+  onBookingClick: (booking: BookingRow) => void;
 }
 
 function TimelineView({
@@ -308,6 +500,7 @@ function TimelineView({
   onPrevious,
   onNext,
   onToday,
+  onBookingClick,
 }: TimelineViewProps) {
   const days = 14;
   const dateRange = Array.from({ length: days }, (_, i) => {
@@ -316,13 +509,6 @@ function TimelineView({
     return date;
   });
 
-  // Helper: parse "YYYY-MM-DD" as local date (no timezone shift)
-  const parseLocalDate = (dateStr: string) => {
-    const [y, m, d] = dateStr.split("-").map(Number);
-    return new Date(y, m - 1, d);
-  };
-
-  // Helper: format date as "YYYY-MM-DD" in local time
   const toDateKey = (date: Date) => {
     const y = date.getFullYear();
     const m = String(date.getMonth() + 1).padStart(2, "0");
@@ -347,7 +533,6 @@ function TimelineView({
     return map;
   }, [bookings, vehicles]);
 
-  // Get visible bookings for a vehicle (only those overlapping the visible range)
   const getVisibleBookings = (vehicleId: string) => {
     const vehicleBookings = bookingsByVehicle[vehicleId] || [];
     const rangeStart = dateKeys[0];
@@ -358,10 +543,8 @@ function TimelineView({
         const pickupKey = booking.pickup_date.split("T")[0];
         const returnKey = booking.return_date.split("T")[0];
 
-        // Skip bookings entirely outside the visible range
         if (returnKey < rangeStart || pickupKey > rangeEnd) return null;
 
-        // Clamp to visible range
         const clampedStart = pickupKey < rangeStart ? rangeStart : pickupKey;
         const clampedEnd = returnKey > rangeEnd ? rangeEnd : returnKey;
 
@@ -445,22 +628,12 @@ function TimelineView({
                     <td className="sticky left-0 z-10 bg-white border-b border-r border-gray-200 p-3 text-sm font-medium text-gray-900 whitespace-nowrap">
                       {vehicle.year} {vehicle.make} {vehicle.model}
                     </td>
-                    {/* Render cells with booking bars */}
                     {dateRange.map((date, dateIdx) => {
                       const isToday = toDateKey(date) === today;
-
-                      // Check if any booking starts on this cell
                       const bookingStartingHere = visibleBookings.filter(
                         (vb) => vb.startIdx === dateIdx
                       );
 
-                      // Check if this cell is covered by a booking (but not the start)
-                      const coveredByBooking = visibleBookings.some(
-                        (vb) => dateIdx > vb.startIdx && dateIdx <= vb.endIdx
-                      );
-
-                      // If covered by a booking bar (not start), skip rendering (colSpan handles it)
-                      // We can't use colSpan in a simple way, so use relative positioning instead
                       return (
                         <td
                           key={dateIdx}
@@ -473,11 +646,12 @@ function TimelineView({
                             return (
                               <div
                                 key={booking.id}
+                                onClick={() => onBookingClick(booking)}
                                 className={`absolute top-1 bottom-1 left-0.5 ${statusBgColors[booking.status]} border-2 ${statusBorderColors[booking.status]} rounded-md px-2 flex items-center overflow-hidden cursor-pointer hover:shadow-lg hover:brightness-95 transition-all z-[5]`}
                                 style={{
                                   width: `calc(${span * 100}% - 4px)`,
                                 }}
-                                title={`${booking.customer_name}\n${booking.pickup_date} at ${formatTime(booking.pickup_time)} → ${booking.return_date} at ${formatTime(booking.return_time)}\n$${booking.total_price.toFixed(2)} • ${booking.status}`}
+                                title={`${booking.customer_name} — Click to view details`}
                               >
                                 <span className="text-xs font-bold text-gray-800 truncate">
                                   {booking.customer_name}
@@ -533,6 +707,7 @@ interface CalendarViewProps {
   onNextMonth: () => void;
   selectedDay: string | null;
   onSelectDay: (day: string | null) => void;
+  onBookingClick: (booking: BookingRow) => void;
 }
 
 function CalendarView({
@@ -542,15 +717,14 @@ function CalendarView({
   onNextMonth,
   selectedDay,
   onSelectDay,
+  onBookingClick,
 }: CalendarViewProps) {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
-  // Get first day of month and number of days
-  const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const daysInMonth = lastDay.getDate();
-  const startingDayOfWeek = firstDay.getDay();
+  const startingDayOfWeek = new Date(year, month, 1).getDay();
 
   // Create calendar grid
   const calendarDays: (number | null)[] = [];
@@ -560,8 +734,6 @@ function CalendarView({
   for (let i = 1; i <= daysInMonth; i++) {
     calendarDays.push(i);
   }
-
-  // Pad to complete weeks
   while (calendarDays.length % 7 !== 0) {
     calendarDays.push(null);
   }
@@ -582,7 +754,7 @@ function CalendarView({
       returnDate.getDate()
     );
 
-    let currentDate = new Date(pickupDateOnly);
+    const currentDate = new Date(pickupDateOnly);
     while (currentDate <= returnDateOnly) {
       const dateKey = currentDate.toISOString().split("T")[0];
       if (!bookingsByDay[dateKey]) {
@@ -702,7 +874,8 @@ function CalendarView({
               {selectedDayBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className="border border-gray-200 rounded-lg p-4 bg-gray-50"
+                  onClick={() => onBookingClick(booking)}
+                  className="border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 hover:border-purple-300 transition-colors"
                 >
                   <div className="flex items-start justify-between mb-2">
                     <div>

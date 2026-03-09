@@ -15,14 +15,17 @@ export async function GET(request: NextRequest) {
   const customerId = searchParams.get("customer_id");
   const customerEmail = searchParams.get("customer_email");
   const status = searchParams.get("status");
+  const limitParam = searchParams.get("limit");
+  const fromDate = searchParams.get("from");
+  const toDate = searchParams.get("to");
   const supabase = getServiceSupabase();
 
   try {
-    // Single booking lookup (used by success page)
+    // Single booking lookup (used by success page) — single query with JOIN
     if (bookingId) {
       const { data: booking, error } = await supabase
         .from("bookings")
-        .select("*")
+        .select("*, vehicles(year, make, model)")
         .eq("id", bookingId)
         .single();
 
@@ -33,30 +36,22 @@ export async function GET(request: NextRequest) {
         );
       }
 
-      // Fetch vehicle name
-      let vehicleName = "Vehicle";
-      if (booking.vehicle_id) {
-        const { data: vehicle } = await supabase
-          .from("vehicles")
-          .select("year, make, model")
-          .eq("id", booking.vehicle_id)
-          .single();
-        if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
-      }
+      const v = booking.vehicles as unknown as { year: number; make: string; model: string } | null;
+      const { vehicles: _v, ...rest } = booking;
 
       return NextResponse.json({
         success: true,
         data: {
-          ...booking,
-          vehicle_name: vehicleName,
+          ...rest,
+          vehicle_name: v ? `${v.year} ${v.make} ${v.model}` : "Vehicle",
         },
       });
     }
 
-    // List bookings with optional filters
+    // List bookings with optional filters — single query with vehicle JOIN
     let query = supabase
       .from("bookings")
-      .select("*")
+      .select("*, vehicles(year, make, model)")
       .order("created_at", { ascending: false });
 
     if (customerId) {
@@ -67,6 +62,19 @@ export async function GET(request: NextRequest) {
     }
     if (status) {
       query = query.eq("status", status);
+    }
+    // Date range filter: return bookings overlapping [from, to]
+    if (fromDate) {
+      query = query.gte("return_date", fromDate);
+    }
+    if (toDate) {
+      query = query.lte("pickup_date", toDate);
+    }
+    if (limitParam) {
+      const limit = parseInt(limitParam, 10);
+      if (!isNaN(limit) && limit > 0) {
+        query = query.limit(limit);
+      }
     }
 
     const { data: bookings, error } = await query;
@@ -79,26 +87,15 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    // Fetch vehicle names for all bookings
-    const vehicleIds = [...new Set(bookings?.map((b) => b.vehicle_id).filter(Boolean))];
-    let vehicleMap: Record<string, string> = {};
-
-    if (vehicleIds.length > 0) {
-      const { data: vehicles } = await supabase
-        .from("vehicles")
-        .select("id, year, make, model")
-        .in("id", vehicleIds);
-
-      if (vehicles) {
-        vehicleMap = Object.fromEntries(vehicles.map((v) => [v.id, `${v.year} ${v.make} ${v.model}`]));
-      }
-    }
-
-    const enriched = (bookings || []).map((b) => ({
-      ...b,
-      vehicleName: vehicleMap[b.vehicle_id] || "Unknown",
-      customerName: b.customer_name || "Guest",
-    }));
+    const enriched = (bookings || []).map((b) => {
+      const v = b.vehicles as unknown as { year: number; make: string; model: string } | null;
+      const { vehicles: _v, ...rest } = b;
+      return {
+        ...rest,
+        vehicleName: v ? `${v.year} ${v.make} ${v.model}` : "Unknown",
+        customerName: b.customer_name || "Guest",
+      };
+    });
 
     return NextResponse.json({ data: enriched, success: true });
   } catch {

@@ -49,24 +49,6 @@ body {
   }
 }
 
-/* Smooth link underline */
-.link-underline {
-  position: relative;
-}
-.link-underline::after {
-  content: "";
-  position: absolute;
-  bottom: -1px;
-  left: 0;
-  width: 0;
-  height: 1px;
-  background: #A78BFA;
-  transition: width 0.2s ease;
-}
-.link-underline:hover::after {
-  width: 100%;
-}
-
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
