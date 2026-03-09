@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save, User, UserPlus } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -86,6 +87,19 @@ const emptyNewBooking = {
 };
 
 export default function AdminBookingsPage() {
+  return (
+    <Suspense fallback={
+      <div className="flex items-center justify-center py-24">
+        <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" />
+      </div>
+    }>
+      <AdminBookingsContent />
+    </Suspense>
+  );
+}
+
+function AdminBookingsContent() {
+  const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -102,6 +116,25 @@ export default function AdminBookingsPage() {
   const [editData, setEditData] = useState<Partial<BookingRow>>({});
   const [saving, setSaving] = useState(false);
   const [addingCustomer, setAddingCustomer] = useState(false);
+  const [prefillApplied, setPrefillApplied] = useState(false);
+
+  // Auto-open create form with prefilled customer data from URL params
+  // (e.g. navigated from customer panel "Create Booking" button)
+  useEffect(() => {
+    if (prefillApplied) return;
+    const customerName = searchParams.get("customerName");
+    const customerEmail = searchParams.get("customerEmail");
+    if (customerName || customerEmail) {
+      setNewBooking((prev) => ({
+        ...prev,
+        customerName: customerName || prev.customerName,
+        customerEmail: customerEmail || prev.customerEmail,
+        customerPhone: searchParams.get("customerPhone") || prev.customerPhone,
+      }));
+      setShowCreateForm(true);
+      setPrefillApplied(true);
+    }
+  }, [searchParams, prefillApplied]);
 
   // Auto-clear error after 5 seconds
   useEffect(() => {

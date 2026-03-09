@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import {
   Search,
@@ -112,15 +112,34 @@ export default function AdminCustomersPage() {
 
   const handleSearch = () => fetchCustomers(searchInput);
 
+  const router = useRouter();
+
   const openCustomer = async (customer: CustomerRow) => {
     setSelectedCustomer(customer);
     setLoadingBookings(true);
     try {
-      const res = await adminFetch(`/api/bookings?customer_email=${encodeURIComponent(customer.email)}`);
-      const data = await res.json();
-      if (data.success) {
-        setCustomerBookings(data.data || []);
+      // Fetch by customer_id (primary) and customer_email (fallback), then merge & dedupe
+      const [byIdRes, byEmailRes] = await Promise.all([
+        adminFetch(`/api/bookings?customer_id=${encodeURIComponent(customer.id)}`),
+        adminFetch(`/api/bookings?customer_email=${encodeURIComponent(customer.email)}`),
+      ]);
+      const byIdData = await byIdRes.json();
+      const byEmailData = await byEmailRes.json();
+
+      const byId: BookingRow[] = byIdData.success ? (byIdData.data || []) : [];
+      const byEmail: BookingRow[] = byEmailData.success ? (byEmailData.data || []) : [];
+
+      // Merge and deduplicate by booking id
+      const seen = new Set<string>();
+      const merged: BookingRow[] = [];
+      for (const b of [...byId, ...byEmail]) {
+        if (!seen.has(b.id)) {
+          seen.add(b.id);
+          merged.push(b);
+        }
       }
+
+      setCustomerBookings(merged);
     } catch (err) {
       console.error("Failed to fetch customer bookings:", err);
     }
@@ -331,6 +350,22 @@ export default function AdminCustomersPage() {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                <Button
+                  onClick={() => {
+                    const params = new URLSearchParams({
+                      customerId: selectedCustomer.id,
+                      customerName: selectedCustomer.name,
+                      customerEmail: selectedCustomer.email,
+                      ...(selectedCustomer.phone ? { customerPhone: selectedCustomer.phone } : {}),
+                    });
+                    router.push(`/admin/bookings?${params.toString()}`);
+                  }}
+                  variant="outline"
+                  className="border-green-300 text-green-600 hover:bg-green-50"
+                  size="sm"
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1" /> Create Booking
+                </Button>
                 <Button
                   onClick={deleteCustomer}
                   disabled={deletingCustomer}
