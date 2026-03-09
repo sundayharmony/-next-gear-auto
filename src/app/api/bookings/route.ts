@@ -110,21 +110,40 @@ export async function POST(request: Request) {
   const supabase = getServiceSupabase();
   try {
     const body = await request.json();
-    // Double-booking check
-    if (body.vehicleId && body.pickupDate && body.returnDate) {
+    // Double-booking check — admins can always overlap; clients need 60min gap
+    if (!body.adminCreated && body.vehicleId && body.pickupDate && body.returnDate) {
       const { data: conflicting } = await supabase
         .from("bookings")
-        .select("id")
+        .select("id, pickup_date, return_date, pickup_time, return_time")
         .eq("vehicle_id", body.vehicleId)
         .in("status", ["confirmed", "active", "pending"])
         .lte("pickup_date", body.returnDate)
         .gte("return_date", body.pickupDate);
 
       if (conflicting && conflicting.length > 0) {
-        return NextResponse.json(
-          { success: false, message: "This vehicle is already booked for the selected dates." },
-          { status: 409 }
-        );
+        // Allow same-day turnovers if pickups/returns are 60+ minutes apart
+        const newPickup = new Date(`${body.pickupDate}T${body.pickupTime || "00:00"}`);
+        const newReturn = new Date(`${body.returnDate}T${body.returnTime || "23:59"}`);
+
+        const hasRealConflict = conflicting.some((existing) => {
+          const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time || "00:00"}`);
+          const existReturn = new Date(`${existing.return_date}T${existing.return_time || "23:59"}`);
+
+          // Check if there is at least 60 minutes gap between the two bookings
+          const gapAfterExisting = (newPickup.getTime() - existReturn.getTime()) / 60000;
+          const gapAfterNew = (existPickup.getTime() - newReturn.getTime()) / 60000;
+
+          // No conflict if new booking starts 60+ min after existing ends,
+          // or existing starts 60+ min after new booking ends
+          return gapAfterExisting < 60 && gapAfterNew < 60;
+        });
+
+        if (hasRealConflict) {
+          return NextResponse.json(
+            { success: false, message: "This vehicle is already booked for the selected dates. Bookings on the same day must be at least 60 minutes apart." },
+            { status: 409 }
+          );
+        }
       }
     }
 
@@ -337,23 +356,8 @@ export async function PATCH(request: Request) {
     const datesOrVehicleChanged =
       updateFields.vehicle_id || updateFields.pickup_date || updateFields.return_date;
 
-    if (datesOrVehicleChanged) {
-      const { data: conflicting } = await supabase
-        .from("bookings")
-        .select("id")
-        .eq("vehicle_id", newVehicleId)
-        .in("status", ["confirmed", "active", "pending"])
-        .neq("id", bookingId) // Exclude this booking
-        .lte("pickup_date", newReturnDate)
-        .gte("return_date", newPickupDate);
-
-      if (conflicting && conflicting.length > 0) {
-        return NextResponse.json(
-          { success: false, message: "This vehicle is already booked for the selected dates." },
-          { status: 409 }
-        );
-      }
-    }
+    // Skip overlap check for PATCH — edits are admin-only and admins can overlap
+    // (conflict check is only enforced for client-created bookings via POST)
 
     const { error } = await supabase
       .from("bookings")

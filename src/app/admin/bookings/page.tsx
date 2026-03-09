@@ -245,6 +245,7 @@ export default function AdminBookingsPage() {
           totalPrice: newBooking.totalPrice,
           extras: selectedExtrasData,
           insuranceOptedOut: !hasInsurance,
+          adminCreated: true,
         }),
       });
 
