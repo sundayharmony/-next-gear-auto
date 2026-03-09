@@ -191,6 +191,9 @@ export async function POST(request: Request) {
       }
     }
 
+    // Admin can set initial status directly (e.g. "confirmed"); clients always start as "pending"
+    const bookingStatus = body.adminCreated && body.initialStatus ? body.initialStatus : "pending";
+
     const { error } = await supabase.from("bookings").insert({
       id: bookingId,
       customer_id: customerId,
@@ -205,7 +208,7 @@ export async function POST(request: Request) {
       extras: body.extras || [],
       total_price: body.totalPrice ?? 0,
       deposit: body.totalPrice ?? 0,
-      status: "pending",
+      status: bookingStatus,
       signed_name: body.signedName || null,
       agreement_signed_at: body.signedName ? new Date().toISOString() : null,
       insurance_proof_url: body.insuranceProofUrl || null,
@@ -257,10 +260,16 @@ export async function POST(request: Request) {
         needsPassword,
       };
 
-      // Send pending email to customer (booking starts as pending)
-      sendBookingPendingEmail(emailData).catch(console.error);
-      // Always notify admin of new booking
-      sendAdminNewBooking(emailData).catch(console.error);
+      // Send the right email based on booking status
+      if (bookingStatus === "confirmed") {
+        sendBookingConfirmation(emailData).catch(console.error);
+      } else {
+        sendBookingPendingEmail(emailData).catch(console.error);
+      }
+      // Always notify admin of new booking (unless admin created it themselves)
+      if (!body.adminCreated) {
+        sendAdminNewBooking(emailData).catch(console.error);
+      }
     }
 
     // Auto-sign rental agreement with client initials (admin-created bookings)
@@ -349,15 +358,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // If vehicle or dates changed, check for double-booking conflicts
-    const newVehicleId = updateFields.vehicle_id || booking.vehicle_id;
-    const newPickupDate = updateFields.pickup_date || booking.pickup_date;
-    const newReturnDate = updateFields.return_date || booking.return_date;
-    const datesOrVehicleChanged =
-      updateFields.vehicle_id || updateFields.pickup_date || updateFields.return_date;
-
     // Skip overlap check for PATCH — edits are admin-only and admins can overlap
-    // (conflict check is only enforced for client-created bookings via POST)
 
     const { error } = await supabase
       .from("bookings")
@@ -372,11 +373,13 @@ export async function PATCH(request: Request) {
       );
     }
 
-    // Send emails based on status change
+    // Detect if customer email was changed
+    const emailChanged = updateFields.customer_email &&
+      updateFields.customer_email.toLowerCase().trim() !== (booking.customer_email || "").toLowerCase().trim();
     const statusChanged = body.status && body.status !== booking.status;
     const emailAddress = updateFields.customer_email || booking.customer_email;
 
-    if (statusChanged && emailAddress) {
+    if ((statusChanged || emailChanged) && emailAddress) {
       let vehicleName = "Vehicle";
       const vId = updateFields.vehicle_id || booking.vehicle_id;
       if (vId) {
@@ -388,23 +391,15 @@ export async function PATCH(request: Request) {
         if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
       }
 
-      // Check if customer needs a password
+      // Check if the (new) customer needs a password
       let needsPassword = false;
-      if (booking.customer_id) {
-        const { data: cust } = await supabase
-          .from("customers")
-          .select("password_hash")
-          .eq("id", booking.customer_id)
-          .single();
-        needsPassword = !cust?.password_hash;
-      } else if (emailAddress) {
-        const { data: cust } = await supabase
-          .from("customers")
-          .select("password_hash")
-          .eq("email", emailAddress.toLowerCase().trim())
-          .single();
-        needsPassword = !cust?.password_hash;
-      }
+      const lookupEmail = emailAddress.toLowerCase().trim();
+      const { data: cust } = await supabase
+        .from("customers")
+        .select("password_hash")
+        .eq("email", lookupEmail)
+        .single();
+      needsPassword = !cust?.password_hash;
 
       const emailData = {
         bookingId: booking.id,
@@ -422,8 +417,47 @@ export async function PATCH(request: Request) {
 
       if (body.status === "cancelled") {
         sendCancellationEmail(emailData).catch(console.error);
+      } else if (emailChanged) {
+        // Email was changed — send confirmation to the new email address
+        // so the new recipient knows about their booking and can set up their password
+        sendBookingConfirmation(emailData).catch(console.error);
       } else if (body.status === "confirmed" && booking.status === "pending") {
         sendBookingConfirmation(emailData).catch(console.error);
+      }
+    }
+
+    // If email changed, also find-or-create the customer record for the new email
+    if (emailChanged && emailAddress) {
+      const newEmail = emailAddress.toLowerCase().trim();
+      const custName = (updateFields.customer_name || booking.customer_name || "Customer").slice(0, 100);
+      const custPhone = (updateFields.customer_phone || booking.customer_phone || "").slice(0, 20);
+
+      const { data: existingCust } = await supabase
+        .from("customers")
+        .select("id")
+        .eq("email", newEmail)
+        .single();
+
+      if (existingCust) {
+        // Link booking to existing customer
+        await supabase.from("bookings").update({ customer_id: existingCust.id }).eq("id", bookingId);
+      } else {
+        // Create new customer for this email
+        const newCustId = "c" + Date.now();
+        const { data: newCust } = await supabase
+          .from("customers")
+          .insert({
+            id: newCustId,
+            name: custName,
+            email: newEmail,
+            phone: custPhone,
+            role: "customer",
+          })
+          .select("id")
+          .single();
+        if (newCust) {
+          await supabase.from("bookings").update({ customer_id: newCust.id }).eq("id", bookingId);
+        }
       }
     }
 

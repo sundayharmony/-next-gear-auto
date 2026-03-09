@@ -184,7 +184,7 @@ export default async function HomePage() {
           </div>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
             {[
-              { icon: DollarSign, title: "Competitive Pricing", desc: "Transparent pricing with no hidden fees. Daily, weekly, and monthly rates available." },
+              { icon: DollarSign, title: "Competitive Pricing", desc: "Transparent daily rates with no hidden fees. What you see is what you pay." },
               { icon: Shield, title: "Well-Maintained Fleet", desc: "Every vehicle is thoroughly inspected and cleaned between rentals." },
               { icon: Clock, title: "Easy Booking", desc: "Book online in minutes with our simple 7-step process. Instant confirmation." },
               { icon: Star, title: "Local Expertise", desc: "Friendly, knowledgeable staff ready to help you find the perfect vehicle." },

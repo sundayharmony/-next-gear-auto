@@ -114,22 +114,15 @@ export async function POST(request: Request) {
         );
       }
 
-      // Check if email already exists
+      // Check if email already exists (single query instead of two)
       const { data: existing } = await adminDb
         .from("customers")
-        .select("id")
+        .select("id, password_hash")
         .eq("email", body.email.toLowerCase().trim())
         .single();
 
       if (existing) {
-        // Check if this customer has a password already
-        const { data: existingFull } = await adminDb
-          .from("customers")
-          .select("id, password_hash")
-          .eq("email", body.email.toLowerCase().trim())
-          .single();
-
-        if (existingFull && !existingFull.password_hash) {
+        if (!existing.password_hash) {
           // Customer was auto-created during booking, set their password
           const passwordHash = await bcrypt.hash(body.password, 12);
           await adminDb
@@ -139,12 +132,12 @@ export async function POST(request: Request) {
               name: body.name,
               phone: body.phone || "",
             })
-            .eq("id", existingFull.id);
+            .eq("id", existing.id);
 
           const { data: updated } = await adminDb
             .from("customers")
             .select("*")
-            .eq("id", existingFull.id)
+            .eq("id", existing.id)
             .single();
 
           if (updated) {

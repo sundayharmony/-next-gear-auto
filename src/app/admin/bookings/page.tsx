@@ -187,7 +187,7 @@ export default function AdminBookingsPage() {
         const start = new Date(newBooking.pickupDate);
         const end = new Date(newBooking.returnDate);
         const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
-        let baseTotal = days * vehicle.dailyRate;
+        const baseTotal = days * vehicle.dailyRate;
 
         // Add extras cost
         let extrasTotal = 0;
@@ -246,22 +246,13 @@ export default function AdminBookingsPage() {
           extras: selectedExtrasData,
           insuranceOptedOut: !hasInsurance,
           adminCreated: true,
+          initialStatus: newBooking.status || "pending",
         }),
       });
 
       if (!res.ok) throw new Error(`Failed to create booking: ${res.status}`);
       const data = await res.json();
       if (data.success) {
-        // If admin wants it confirmed immediately, update status
-        if (newBooking.status === "confirmed" && data.data?.id) {
-          const statusRes = await fetch("/api/bookings", {
-            method: "PATCH",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ bookingId: data.data.id, status: "confirmed" }),
-          });
-          if (!statusRes.ok) throw new Error("Failed to confirm booking status");
-          await statusRes.json();
-        }
         setShowCreateForm(false);
         setNewBooking(emptyNewBooking);
         fetchBookings();
@@ -450,7 +441,7 @@ export default function AdminBookingsPage() {
     const days = Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
 
     // Calculate base + extras (use selected booking's extras if available)
-    let baseTotal = days * vehicle.dailyRate;
+    const baseTotal = days * vehicle.dailyRate;
     let extrasTotal = 0;
     if (selectedBooking?.extras && selectedBooking.extras.length > 0) {
       for (const extra of selectedBooking.extras) {

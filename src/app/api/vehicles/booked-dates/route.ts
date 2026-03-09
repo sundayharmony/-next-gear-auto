@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // Return booking date ranges with 12-hour buffer info
+    // Return booking date ranges with time info for 60-minute gap checks
     const bookedRanges = (bookings || []).map((b) => ({
       id: b.id,
       pickupDate: b.pickup_date,

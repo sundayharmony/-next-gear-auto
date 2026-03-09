@@ -31,14 +31,14 @@ const generalFaqs = [
   },
   {
     question: "Do you offer long-term rentals?",
-    answer: "Yes! We offer daily, weekly, and monthly rates. For rentals of 30 days or more, our monthly rate provides the best value. The system automatically applies the best rate based on your rental duration.",
+    answer: "Yes! We offer competitive daily rates for any rental duration. Whether you need a vehicle for a day, a week, or longer, our transparent per-day pricing makes it easy to plan your trip. Contact us for special long-term rental arrangements.",
   },
 ];
 
 const pricingFaqs = [
   {
     question: "How is the rental price calculated?",
-    answer: "Our pricing engine automatically applies the best rate based on your rental duration. Rentals of 30+ days get the monthly rate, 7-29 days get the weekly rate for full weeks plus daily for remaining days, and 1-6 days get the daily rate. Extras, taxes, and fees are added to the base rate.",
+    answer: "Our pricing is straightforward — you pay a simple daily rate multiplied by the number of rental days. Extras (insurance, child seat, roadside assistance, fuel pre-pay), taxes (8%), and any applicable fees are added to the base rate. Your total is shown clearly before you confirm.",
   },
   {
     question: "What payment is required at booking?",

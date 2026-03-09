@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
     // Check for overlapping confirmed/active bookings in Supabase
     const { data: conflicting, error } = await supabase
       .from("bookings")
-      .select("id, pickup_date, return_date, status")
+      .select("id, pickup_date, return_date, pickup_time, return_time, status")
       .eq("vehicle_id", vehicleId)
       .in("status", ["confirmed", "active", "pending"])
       .lte("pickup_date", endDate)
@@ -52,7 +52,24 @@ export async function GET(req: NextRequest) {
       }, { status: 503 });
     }
 
-    const available = !conflicting || conflicting.length === 0;
+    // Allow same-day turnovers with at least 60-minute gap
+    let available = true;
+    if (conflicting && conflicting.length > 0) {
+      const pickupTime = searchParams.get("pickupTime") || "00:00";
+      const returnTime = searchParams.get("returnTime") || "23:59";
+      const newPickup = new Date(`${startDate}T${pickupTime}`);
+      const newReturn = new Date(`${endDate}T${returnTime}`);
+
+      const hasRealConflict = conflicting.some((existing) => {
+        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time || "00:00"}`);
+        const existReturn = new Date(`${existing.return_date}T${existing.return_time || "23:59"}`);
+        const gapAfterExisting = (newPickup.getTime() - existReturn.getTime()) / 60000;
+        const gapAfterNew = (existPickup.getTime() - newReturn.getTime()) / 60000;
+        return gapAfterExisting < 60 && gapAfterNew < 60;
+      });
+
+      available = !hasRealConflict;
+    }
 
     return NextResponse.json({
       success: true,

@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
+import { getTransporter } from "@/lib/email/mailer";
 
 export async function POST(request: Request) {
   try {
@@ -36,15 +36,7 @@ export async function POST(request: Request) {
     const safePhone = clean(phone || "Not provided");
     const safeMessage = clean(message);
 
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || "smtp.hostinger.com",
-      port: parseInt(process.env.SMTP_PORT || "465"),
-      secure: true,
-      auth: {
-        user: process.env.SMTP_USER || "contact@rentnextgearauto.com",
-        pass: process.env.SMTP_PASS,
-      },
-    });
+    const transporter = getTransporter();
 
     // Send to admin
     await transporter.sendMail({

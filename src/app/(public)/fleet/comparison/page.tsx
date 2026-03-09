@@ -265,7 +265,7 @@ function ComparisonContent() {
                 <p className="text-2xl font-bold text-purple-600 mt-1">
                   ${v.dailyRate}<span className="text-sm text-gray-400">/day</span>
                 </p>
-                <Link href="/booking" className="block mt-3">
+                <Link href={`/booking?vehicleId=${v.id}`} className="block mt-3">
                   <Button className="w-full gap-2" size="sm">
                     <Calendar className="h-4 w-4" /> Book Now
                   </Button>

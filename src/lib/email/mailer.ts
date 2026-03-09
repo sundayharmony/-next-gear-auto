@@ -17,7 +17,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com";
 
 // Lazy-initialized singleton transporter
 let _transporter: nodemailer.Transporter | null = null;
-function getTransporter() {
+export function getTransporter() {
   if (!_transporter) {
     _transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.hostinger.com",

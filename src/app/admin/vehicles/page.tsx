@@ -87,7 +87,6 @@ export default function AdminVehiclesPage() {
   const [uploadingImage, setUploadingImage] = useState<{
     [key: string]: boolean;
   }>({});
-  const [source, setSource] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<VehicleCategory | "">("");
@@ -107,7 +106,7 @@ export default function AdminVehiclesPage() {
       const data = await res.json();
       if (data.success) {
         setVehicles(data.data);
-        setSource(data.source);
+        // source field removed (legacy JSON data hint)
       } else {
         setError("Failed to load vehicles");
       }
@@ -1020,7 +1019,6 @@ export default function AdminVehiclesPage() {
               <h1 className="text-3xl font-bold">Fleet Management</h1>
               <p className="mt-1 text-purple-200">
                 Manage your rental vehicle fleet
-                {source === "json" ? " (from static data)" : ""}
               </p>
             </div>
             <Button

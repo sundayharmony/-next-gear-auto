@@ -73,26 +73,33 @@ export async function POST(request: Request) {
     // Sanitize customer name
     const safeName = (customerDetails.name || "").replace(/<[^>]*>/g, "").trim().slice(0, 100);
 
-    // Double-booking check with 12-hour buffer
-    const BUFFER_HOURS = 12;
-    const bufferPickup = new Date(pickup);
-    bufferPickup.setHours(bufferPickup.getHours() - BUFFER_HOURS);
-    const bufferReturn = new Date(returnDt);
-    bufferReturn.setHours(bufferReturn.getHours() + BUFFER_HOURS);
-
+    // Double-booking check — allow same-day turnovers with 60-minute gap
     const { data: conflicting } = await supabase
       .from("bookings")
-      .select("id, pickup_date, return_date")
+      .select("id, pickup_date, return_date, pickup_time, return_time")
       .eq("vehicle_id", vehicleId)
       .in("status", ["confirmed", "active", "pending"])
-      .lte("pickup_date", bufferReturn.toISOString())
-      .gte("return_date", bufferPickup.toISOString());
+      .lte("pickup_date", returnDate)
+      .gte("return_date", pickupDate);
 
     if (conflicting && conflicting.length > 0) {
-      return NextResponse.json(
-        { success: false, message: "This vehicle is already booked for the selected dates. Please choose different dates or another vehicle." },
-        { status: 409 }
-      );
+      const newPickupDt = new Date(`${pickupDate}T${pickupTime || "00:00"}`);
+      const newReturnDt = new Date(`${returnDate}T${returnTime || "23:59"}`);
+
+      const hasRealConflict = conflicting.some((existing) => {
+        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time || "00:00"}`);
+        const existReturn = new Date(`${existing.return_date}T${existing.return_time || "23:59"}`);
+        const gapAfterExisting = (newPickupDt.getTime() - existReturn.getTime()) / 60000;
+        const gapAfterNew = (existPickup.getTime() - newReturnDt.getTime()) / 60000;
+        return gapAfterExisting < 60 && gapAfterNew < 60;
+      });
+
+      if (hasRealConflict) {
+        return NextResponse.json(
+          { success: false, message: "This vehicle is already booked for the selected dates. Bookings on the same day must be at least 60 minutes apart." },
+          { status: 409 }
+        );
+      }
     }
 
     // Charge full rental amount upfront
@@ -247,7 +254,17 @@ export async function POST(request: Request) {
       .eq("id", bookingId);
 
     // 6. Send pending payment email to customer and admin
-    // This ensures notification even if webhook fails
+    // Check if customer needs a password for the pending email too
+    let needsPasswordForPending = false;
+    if (customerId) {
+      const { data: custCheck } = await supabase
+        .from("customers")
+        .select("password_hash")
+        .eq("id", customerId)
+        .single();
+      needsPasswordForPending = !custCheck?.password_hash;
+    }
+
     const emailData = {
       bookingId,
       customerName: safeName || "Customer",
@@ -259,7 +276,7 @@ export async function POST(request: Request) {
       returnTime: returnTime || undefined,
       totalPrice: totalPrice ?? 0,
       deposit: chargeAmount,
-      needsPassword: false,
+      needsPassword: needsPasswordForPending,
     };
 
     // Fire and forget - don't block the response
