@@ -356,8 +356,17 @@ export default async function VehicleDetailPage({ params }: PageProps) {
               {similarVehicles.map((sv) => (
                 <Link key={sv.id} href={`/fleet/${sv.id}`}>
                   <Card className="group h-full transition-shadow hover:shadow-md">
-                    <div className="aspect-[16/10] rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100 flex items-center justify-center">
-                      <Car className="h-16 w-16 text-purple-200 group-hover:text-purple-400 transition-colors" />
+                    <div className="aspect-[16/10] rounded-t-xl overflow-hidden bg-gradient-to-br from-purple-50 to-gray-100 flex items-center justify-center">
+                      {sv.images && sv.images.length > 0 ? (
+                        <img
+                          src={sv.images[0]}
+                          alt={`${sv.year} ${sv.make} ${sv.model}`}
+                          loading="lazy"
+                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                      ) : (
+                        <Car className="h-16 w-16 text-purple-200 group-hover:text-purple-400 transition-colors" />
+                      )}
                     </div>
                     <CardContent className="p-5">
                       <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{sv.year} {sv.make} {sv.model}</h3>

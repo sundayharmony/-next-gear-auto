@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate } from "@/lib/utils/date-helpers";
+import { statusColors } from "@/lib/utils/status-colors";
 import {
   BarChart,
   Bar,
@@ -748,13 +749,7 @@ export default function AdminFinancesPage() {
                             </td>
                             <td className="px-4 py-3">
                               <Badge
-                                className={
-                                  booking.status === "completed"
-                                    ? "bg-green-100 text-green-700"
-                                    : booking.status === "active"
-                                    ? "bg-blue-100 text-blue-700"
-                                    : "bg-gray-100 text-gray-700"
-                                }
+                                className={statusColors[booking.status] || "bg-gray-100 text-gray-600"}
                               >
                                 {booking.status.charAt(0).toUpperCase() +
                                   booking.status.slice(1)}

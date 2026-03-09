@@ -147,8 +147,17 @@ function ComparisonContent() {
                 {selectedVehicles.map((v) => (
                   <th key={v.id} className="p-3 text-center">
                     <Link href={`/fleet/${v.id}`} className="group">
-                      <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center rounded-xl bg-purple-50 group-hover:bg-purple-100 transition-colors">
-                        <Car className="h-10 w-10 text-purple-400" />
+                      <div className="mx-auto mb-3 flex h-20 w-20 items-center justify-center rounded-xl overflow-hidden bg-purple-50 group-hover:bg-purple-100 transition-colors">
+                        {v.images && v.images.length > 0 ? (
+                          <img
+                            src={v.images[0]}
+                            alt={`${v.year} ${v.make} ${v.model}`}
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <Car className="h-10 w-10 text-purple-400" />
+                        )}
                       </div>
                       <p className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">
                         {v.year} {v.make} {v.model}
