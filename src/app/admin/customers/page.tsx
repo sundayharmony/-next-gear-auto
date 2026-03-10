@@ -444,7 +444,7 @@ export default function AdminCustomersPage() {
 
               <div className="grid lg:grid-cols-3 gap-6">
                 {/* Left Column: Customer Info */}
-                <div className="space-y-4">
+                <div className="space-y-4 min-w-0">
                   {/* Customer Info Card */}
                   <Card>
                     <CardContent className="p-5">
@@ -600,11 +600,11 @@ export default function AdminCustomersPage() {
                         <div className="mt-4 pt-3 border-t">
                           <p className="text-xs font-semibold text-gray-600 mb-2">Admin: Upload Documents</p>
                           <div className="space-y-2">
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 w-full min-w-0">
                               <select
                                 value={uploadDocType}
                                 onChange={(e) => setUploadDocType(e.target.value as "id_document" | "insurance_proof")}
-                                className="text-xs border rounded px-2 py-1 flex-1"
+                                className="text-xs border rounded px-2 py-1 flex-1 min-w-0 truncate"
                               >
                                 <option value="id_document">ID Document</option>
                                 <option value="insurance_proof">Insurance Proof</option>
@@ -612,7 +612,7 @@ export default function AdminCustomersPage() {
                               <select
                                 value={selectedBookingForUpload || ""}
                                 onChange={(e) => setSelectedBookingForUpload(e.target.value)}
-                                className="text-xs border rounded px-2 py-1 flex-1"
+                                className="text-xs border rounded px-2 py-1 flex-1 min-w-0 truncate"
                               >
                                 <option value="">Select Booking</option>
                                 {customerBookings.map((b) => (
@@ -724,7 +724,7 @@ export default function AdminCustomersPage() {
                 </div>
 
                 {/* Right Column: Booking History */}
-                <div className="lg:col-span-2">
+                <div className="lg:col-span-2 min-w-0">
                   <Card>
                     <CardContent className="p-5">
                       <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4">
