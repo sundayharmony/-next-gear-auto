@@ -699,12 +699,12 @@ export default function AdminMaintenancePage() {
                       className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
                       onClick={() => openDetail(record)}
                     >
-                      <td className="px-6 py-3">
-                        <span className="font-medium text-gray-900">
+                      <td className="px-6 py-3 max-w-[180px]">
+                        <span className="font-medium text-gray-900 truncate block">
                           {record.vehicleName || "—"}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-gray-700">{record.title}</td>
+                      <td className="px-6 py-3 text-gray-700 max-w-[200px] truncate">{record.title}</td>
                       <td className="px-6 py-3">
                         <Badge className={getStatusBadgeColor(record.status)}>
                           {getStatusIcon(record.status)}
@@ -929,7 +929,7 @@ export default function AdminMaintenancePage() {
                   {/* Status & ID */}
                   <div>
                     <p className="text-xs text-gray-500">Record ID</p>
-                    <p className="font-mono text-purple-600 font-bold text-sm">{selectedRecord.id}</p>
+                    <p className="font-mono text-purple-600 font-bold text-sm break-all">{selectedRecord.id}</p>
                     <Badge className={`mt-1 ${getStatusBadgeColor(selectedRecord.status)}`}>
                       {getStatusIcon(selectedRecord.status)}
                       {formatStatusLabel(selectedRecord.status)}

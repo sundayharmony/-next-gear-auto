@@ -781,11 +781,11 @@ function AdminBookingsContent() {
                 ) : (
                   bookings.map((b) => (
                     <tr key={b.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedBooking(b); setShowDetail(true); }}>
-                      <td className="px-4 py-3">
-                        <div className="text-gray-900">{b.customer_name || "—"}</div>
-                        <div className="text-xs text-gray-400">{b.customer_email}</div>
+                      <td className="px-4 py-3 max-w-[200px]">
+                        <div className="text-gray-900 truncate">{b.customer_name || "—"}</div>
+                        <div className="text-xs text-gray-400 truncate">{b.customer_email}</div>
                       </td>
-                      <td className="px-4 py-3 text-gray-600">{b.vehicleName}</td>
+                      <td className="px-4 py-3 text-gray-600 max-w-[180px] truncate">{b.vehicleName}</td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-bold text-gray-900">{formatDate(b.pickup_date)}</div>
                         <div className="text-lg font-bold text-purple-600">{formatTime(b.pickup_time)}</div>
@@ -881,7 +881,7 @@ function AdminBookingsContent() {
               {/* Booking ID & Status */}
               <div>
                 <p className="text-xs text-gray-500">Booking ID</p>
-                <p className="font-mono text-purple-600 font-bold">{selectedBooking.id}</p>
+                <p className="font-mono text-purple-600 font-bold break-all">{selectedBooking.id}</p>
                 <Badge className={statusColors[selectedBooking.status] || "bg-gray-100"}>
                   {selectedBooking.status}
                 </Badge>

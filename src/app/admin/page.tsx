@@ -202,9 +202,9 @@ export default function AdminDashboardPage() {
                     ) : (
                       data.recentBookings.map((booking) => (
                         <tr key={booking.id} className="border-b last:border-0 hover:bg-gray-50">
-                          <td className="px-4 py-3 font-mono text-xs text-purple-600">{booking.id}</td>
-                          <td className="px-4 py-3 text-gray-900">{booking.customer_name || "—"}</td>
-                          <td className="px-4 py-3 text-gray-600">{booking.vehicleName}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-purple-600 max-w-[120px] truncate">{booking.id}</td>
+                          <td className="px-4 py-3 text-gray-900 max-w-[150px] truncate">{booking.customer_name || "—"}</td>
+                          <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate">{booking.vehicleName}</td>
                           <td className="px-4 py-3">
                             <div><span className="text-sm font-bold text-black">{formatDate(booking.pickup_date)}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
                             <div><span className="text-sm font-bold text-black">{formatDate(booking.return_date)}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>

@@ -747,10 +747,10 @@ export default function AdminCustomersPage() {
                                   key={b.id}
                                   className="rounded-lg border p-4 hover:border-purple-200 transition-colors"
                                 >
-                                  <div className="flex items-start justify-between mb-2">
-                                    <div>
-                                      <p className="font-semibold text-gray-900">{vehicle}</p>
-                                      <p className="text-xs font-mono text-gray-400">{b.id}</p>
+                                  <div className="flex items-start justify-between mb-2 min-w-0">
+                                    <div className="min-w-0 flex-1 mr-2">
+                                      <p className="font-semibold text-gray-900 truncate">{vehicle}</p>
+                                      <p className="text-xs font-mono text-gray-400 truncate">{b.id}</p>
                                     </div>
                                     <Badge className={statusColors[b.status] || "bg-gray-100 text-gray-600"}>
                                       {b.status}
@@ -985,15 +985,15 @@ export default function AdminCustomersPage() {
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <div
-                      className="flex items-center gap-3 flex-1 cursor-pointer"
+                      className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
                       onClick={() => openCustomer(c)}
                     >
                       <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-700 font-bold text-sm flex-shrink-0">
                         {c.name?.charAt(0)?.toUpperCase() || "?"}
                       </div>
-                      <div>
-                        <p className="font-semibold text-gray-900">{c.name}</p>
-                        <p className="text-xs text-gray-500">{c.email}</p>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-gray-900 truncate">{c.name}</p>
+                        <p className="text-xs text-gray-500 truncate">{c.email}</p>
                       </div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
