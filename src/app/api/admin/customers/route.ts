@@ -13,7 +13,7 @@ export async function GET(req: NextRequest) {
   try {
     let query = supabase
       .from("customers")
-      .select("id, name, email, phone, role, created_at")
+      .select("id, name, email, phone, role, profile_picture_url, created_at")
       .order("created_at", { ascending: false });
 
     if (search) {
@@ -33,6 +33,7 @@ export async function GET(req: NextRequest) {
       email: c.email,
       phone: c.phone || "",
       role: c.role || "customer",
+      profilePictureUrl: c.profile_picture_url || null,
       createdAt: c.created_at,
     }));
 
@@ -133,7 +134,7 @@ export async function PATCH(req: NextRequest) {
       .from("customers")
       .update(updateData)
       .eq("id", id)
-      .select("id, name, email, phone, role, created_at");
+      .select("id, name, email, phone, role, profile_picture_url, created_at");
 
     if (error) {
       console.error("Customer update error:", error);
@@ -146,6 +147,7 @@ export async function PATCH(req: NextRequest) {
       email: data[0].email,
       phone: data[0].phone || "",
       role: data[0].role || "customer",
+      profilePictureUrl: data[0].profile_picture_url || null,
       createdAt: data[0].created_at,
     } : null;
 

@@ -26,6 +26,7 @@ export interface DbCustomer {
   password_hash: string | null;
   role: "customer" | "admin";
   driver_license: Record<string, unknown> | null;
+  profile_picture_url: string | null;
   created_at: string;
 }
 

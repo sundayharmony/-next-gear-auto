@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import {
@@ -28,6 +28,11 @@ import {
   Plus,
   Trash2,
   KeyRound,
+  Crop,
+  User,
+  Move,
+  ZoomIn,
+  ZoomOut,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -45,6 +50,7 @@ interface CustomerRow {
   phone: string;
   role: string;
   createdAt: string;
+  profilePictureUrl?: string;
 }
 
 interface BookingRow {
@@ -85,6 +91,21 @@ export default function AdminCustomersPage() {
   const [uploadDocType, setUploadDocType] = useState<"id_document" | "insurance_proof">("id_document");
   const [deletingCustomer, setDeletingCustomer] = useState(false);
   const [sendingPasswordLink, setSendingPasswordLink] = useState(false);
+
+  // Profile picture crop state
+  const [showCropModal, setShowCropModal] = useState(false);
+  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropPreview, setCropPreview] = useState<string | null>(null);
+  const [savingProfilePic, setSavingProfilePic] = useState(false);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
+  const [cropPosition, setCropPosition] = useState({ x: 0, y: 0 });
+  const [cropSize, setCropSize] = useState(200);
+  const [isDraggingCrop, setIsDraggingCrop] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [imageNaturalSize, setImageNaturalSize] = useState({ w: 0, h: 0 });
+  const [imageDisplaySize, setImageDisplaySize] = useState({ w: 0, h: 0 });
+  const cropCanvasRef = useRef<HTMLCanvasElement>(null);
+  const cropImageRef = useRef<HTMLImageElement>(null);
 
   const fetchCustomers = async (query = "") => {
     setLoading(true);
@@ -306,6 +327,167 @@ export default function AdminCustomersPage() {
     }
   };
 
+  // --- Profile Picture Crop Functions ---
+
+  const openCropModal = async (imageUrl: string) => {
+    setCropImageSrc(imageUrl);
+    setCropPreview(null);
+    setCropPosition({ x: 0, y: 0 });
+    setCropSize(200);
+    setShowCropModal(true);
+
+    // Try face detection after image loads
+    try {
+      const img = new Image();
+      img.crossOrigin = "anonymous";
+      img.src = imageUrl;
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve();
+        img.onerror = () => reject(new Error("Image load failed"));
+      });
+
+      setImageNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+
+      // Try browser FaceDetector API (Chromium browsers)
+      if ("FaceDetector" in window) {
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const detector = new (window as any).FaceDetector();
+          const faces = await detector.detect(img);
+          if (faces.length > 0) {
+            const face = faces[0].boundingBox;
+            const padding = Math.max(face.width, face.height) * 0.5;
+            const size = Math.max(face.width, face.height) + padding * 2;
+            const cx = face.x + face.width / 2;
+            const cy = face.y + face.height / 2;
+            setCropPosition({
+              x: Math.max(0, cx - size / 2),
+              y: Math.max(0, cy - size / 2),
+            });
+            setCropSize(Math.min(size, img.naturalWidth, img.naturalHeight));
+            return;
+          }
+        } catch {
+          // FaceDetector not available or failed
+        }
+      }
+
+      // Fallback: assume face is in the left portion of the ID
+      // (standard driver's license layout)
+      const heurSize = Math.min(img.naturalWidth * 0.4, img.naturalHeight * 0.7);
+      setCropPosition({
+        x: img.naturalWidth * 0.03,
+        y: img.naturalHeight * 0.15,
+      });
+      setCropSize(heurSize);
+    } catch {
+      // Image failed to load — user can still manually position
+    }
+  };
+
+  const handleCropMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDraggingCrop(true);
+    setDragStart({ x: e.clientX - cropPosition.x * (imageDisplaySize.w / imageNaturalSize.w), y: e.clientY - cropPosition.y * (imageDisplaySize.h / imageNaturalSize.h) });
+  };
+
+  const handleCropMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDraggingCrop || !imageNaturalSize.w || !imageDisplaySize.w) return;
+    const scaleX = imageNaturalSize.w / imageDisplaySize.w;
+    const scaleY = imageNaturalSize.h / imageDisplaySize.h;
+    const newX = Math.max(0, Math.min(imageNaturalSize.w - cropSize, (e.clientX - dragStart.x) * scaleX));
+    const newY = Math.max(0, Math.min(imageNaturalSize.h - cropSize, (e.clientY - dragStart.y) * scaleY));
+    setCropPosition({ x: newX, y: newY });
+  }, [isDraggingCrop, dragStart, cropSize, imageNaturalSize, imageDisplaySize]);
+
+  const handleCropMouseUp = useCallback(() => {
+    setIsDraggingCrop(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDraggingCrop) {
+      window.addEventListener("mousemove", handleCropMouseMove);
+      window.addEventListener("mouseup", handleCropMouseUp);
+      return () => {
+        window.removeEventListener("mousemove", handleCropMouseMove);
+        window.removeEventListener("mouseup", handleCropMouseUp);
+      };
+    }
+  }, [isDraggingCrop, handleCropMouseMove, handleCropMouseUp]);
+
+  const generateCropPreview = () => {
+    if (!cropImageRef.current) return;
+    const canvas = document.createElement("canvas");
+    canvas.width = 300;
+    canvas.height = 300;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(
+      cropImageRef.current,
+      cropPosition.x, cropPosition.y, cropSize, cropSize,
+      0, 0, 300, 300
+    );
+
+    setCropPreview(canvas.toDataURL("image/jpeg", 0.92));
+  };
+
+  const adjustCropSize = (delta: number) => {
+    const newSize = Math.max(80, Math.min(
+      Math.min(imageNaturalSize.w, imageNaturalSize.h),
+      cropSize + delta
+    ));
+    setCropSize(newSize);
+    // Keep centered when resizing
+    setCropPosition((prev) => ({
+      x: Math.max(0, Math.min(imageNaturalSize.w - newSize, prev.x - delta / 2)),
+      y: Math.max(0, Math.min(imageNaturalSize.h - newSize, prev.y - delta / 2)),
+    }));
+  };
+
+  const saveProfilePicture = async () => {
+    if (!cropPreview || !selectedCustomer) return;
+
+    setSavingProfilePic(true);
+    try {
+      // Convert data URL to blob
+      const res = await fetch(cropPreview);
+      const blob = await res.blob();
+
+      const formData = new FormData();
+      formData.append("file", blob, `profile_${selectedCustomer.id}.jpg`);
+      formData.append("customerId", selectedCustomer.id);
+
+      const uploadRes = await adminFetch("/api/admin/profile-picture", {
+        method: "POST",
+        body: formData,
+      });
+
+      const data = await uploadRes.json();
+      if (data.success) {
+        setProfilePictureUrl(data.url);
+        setShowCropModal(false);
+        setCropPreview(null);
+        alert("Profile picture saved!");
+      } else {
+        alert("Failed to save: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      logger.error("Failed to save profile picture:", err);
+      alert("Error saving profile picture");
+    }
+    setSavingProfilePic(false);
+  };
+
+  // Load profile picture when customer is opened
+  useEffect(() => {
+    if (selectedCustomer?.profilePictureUrl) {
+      setProfilePictureUrl(selectedCustomer.profilePictureUrl);
+    } else {
+      setProfilePictureUrl(null);
+    }
+  }, [selectedCustomer]);
+
   // Customer statistics
   const stats = useMemo(() => {
     if (!customerBookings.length) return null;
@@ -363,8 +545,28 @@ export default function AdminCustomersPage() {
             </button>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-purple-600 text-xl font-bold">
-                  {selectedCustomer.name?.charAt(0)?.toUpperCase() || "?"}
+                <div className="relative group">
+                  {profilePictureUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={profilePictureUrl}
+                      alt={selectedCustomer.name}
+                      className="h-14 w-14 rounded-full object-cover border-2 border-purple-400"
+                    />
+                  ) : (
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-purple-600 text-xl font-bold">
+                      {selectedCustomer.name?.charAt(0)?.toUpperCase() || "?"}
+                    </div>
+                  )}
+                  {latestIdUrl && (
+                    <button
+                      onClick={() => openCropModal(latestIdUrl)}
+                      className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-white text-purple-700 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
+                      title="Crop profile picture from ID"
+                    >
+                      <Crop className="h-3 w-3" />
+                    </button>
+                  )}
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -689,7 +891,17 @@ export default function AdminCustomersPage() {
                       {/* ID Document Preview */}
                       {latestIdUrl && (
                         <div className="mt-4 pt-3 border-t overflow-hidden">
-                          <p className="text-xs text-gray-400 mb-2">ID Document Preview</p>
+                          <div className="flex items-center justify-between mb-2">
+                            <p className="text-xs text-gray-400">ID Document Preview</p>
+                            <Button
+                              onClick={() => openCropModal(latestIdUrl)}
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-purple-600 hover:text-purple-800 hover:bg-purple-50 px-2"
+                            >
+                              <Crop className="h-3 w-3 mr-1" /> Crop Profile Pic
+                            </Button>
+                          </div>
                           <a href={latestIdUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
@@ -1027,9 +1239,18 @@ export default function AdminCustomersPage() {
                       className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
                       onClick={() => openCustomer(c)}
                     >
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-700 font-bold text-sm flex-shrink-0">
-                        {c.name?.charAt(0)?.toUpperCase() || "?"}
-                      </div>
+                      {c.profilePictureUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img
+                          src={c.profilePictureUrl}
+                          alt={c.name}
+                          className="h-10 w-10 rounded-full object-cover border border-purple-200 flex-shrink-0"
+                        />
+                      ) : (
+                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-700 font-bold text-sm flex-shrink-0">
+                          {c.name?.charAt(0)?.toUpperCase() || "?"}
+                        </div>
+                      )}
                       <div className="min-w-0">
                         <p className="font-semibold text-gray-900 truncate">{c.name}</p>
                         <p className="text-xs text-gray-500 truncate">{c.email}</p>
@@ -1074,6 +1295,140 @@ export default function AdminCustomersPage() {
       </PageContainer>
 
       {showAddCustomerModal && <AddCustomerModal />}
+
+      {/* Crop Profile Picture Modal */}
+      {showCropModal && cropImageSrc && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-bold flex items-center gap-2">
+                  <Crop className="h-5 w-5 text-purple-600" /> Crop Profile Picture
+                </h2>
+                <button
+                  onClick={() => { setShowCropModal(false); setCropPreview(null); }}
+                  className="rounded-full p-1 hover:bg-gray-100"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              <p className="text-sm text-gray-500 mb-4">
+                Drag the crop area over the face. Use zoom controls to resize the crop area, then click &quot;Preview Crop&quot; to see the result.
+              </p>
+
+              {/* Crop workspace */}
+              <div className="relative bg-gray-100 rounded-lg overflow-hidden mb-4" style={{ maxHeight: "400px" }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  ref={cropImageRef}
+                  src={cropImageSrc}
+                  alt="ID to crop"
+                  crossOrigin="anonymous"
+                  className="w-full h-auto"
+                  onLoad={(e) => {
+                    const img = e.target as HTMLImageElement;
+                    setImageDisplaySize({ w: img.clientWidth, h: img.clientHeight });
+                    setImageNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+                  }}
+                />
+                {/* Crop overlay */}
+                {imageNaturalSize.w > 0 && imageDisplaySize.w > 0 && (
+                  <div
+                    onMouseDown={handleCropMouseDown}
+                    className="absolute border-2 border-white rounded-full shadow-lg cursor-move"
+                    style={{
+                      left: `${(cropPosition.x / imageNaturalSize.w) * imageDisplaySize.w}px`,
+                      top: `${(cropPosition.y / imageNaturalSize.h) * imageDisplaySize.h}px`,
+                      width: `${(cropSize / imageNaturalSize.w) * imageDisplaySize.w}px`,
+                      height: `${(cropSize / imageNaturalSize.h) * imageDisplaySize.h}px`,
+                      boxShadow: "0 0 0 9999px rgba(0,0,0,0.5)",
+                    }}
+                  >
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <Move className="h-6 w-6 text-white/70" />
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Controls */}
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-2">
+                  <Button
+                    onClick={() => adjustCropSize(-30)}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    title="Shrink crop area"
+                  >
+                    <ZoomOut className="h-4 w-4" />
+                  </Button>
+                  <span className="text-xs text-gray-500 w-16 text-center">
+                    {Math.round(cropSize)}px
+                  </span>
+                  <Button
+                    onClick={() => adjustCropSize(30)}
+                    variant="outline"
+                    size="sm"
+                    className="h-8 w-8 p-0"
+                    title="Enlarge crop area"
+                  >
+                    <ZoomIn className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                <Button
+                  onClick={generateCropPreview}
+                  variant="outline"
+                  size="sm"
+                >
+                  <Crop className="h-3.5 w-3.5 mr-1" /> Preview Crop
+                </Button>
+              </div>
+
+              {/* Preview */}
+              {cropPreview && (
+                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg mb-4">
+                  <div className="flex-shrink-0">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={cropPreview}
+                      alt="Cropped preview"
+                      className="h-24 w-24 rounded-full object-cover border-2 border-purple-400"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900">Preview</p>
+                    <p className="text-xs text-gray-500 mt-1">
+                      This is how the profile picture will look. If it doesn&apos;t look right, adjust the crop area and preview again.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className="flex gap-2">
+                <Button
+                  onClick={saveProfilePicture}
+                  disabled={!cropPreview || savingProfilePic}
+                  className="flex-1"
+                >
+                  <User className="h-4 w-4 mr-1" />
+                  {savingProfilePic ? "Saving..." : "Save as Profile Picture"}
+                </Button>
+                <Button
+                  onClick={() => { setShowCropModal(false); setCropPreview(null); }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </>
   );
 }
