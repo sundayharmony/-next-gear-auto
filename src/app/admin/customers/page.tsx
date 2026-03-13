@@ -94,7 +94,7 @@ export default function AdminCustomersPage() {
 
   // Profile picture crop state
   const [showCropModal, setShowCropModal] = useState(false);
-  const [cropImageSrc, setCropImageSrc] = useState<string | null>(null);
+  const [cropBlobUrl, setCropBlobUrl] = useState<string | null>(null);
   const [cropPreview, setCropPreview] = useState<string | null>(null);
   const [savingProfilePic, setSavingProfilePic] = useState(false);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
@@ -104,8 +104,11 @@ export default function AdminCustomersPage() {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const [imageNaturalSize, setImageNaturalSize] = useState({ w: 0, h: 0 });
   const [imageDisplaySize, setImageDisplaySize] = useState({ w: 0, h: 0 });
+  const [cropLoading, setCropLoading] = useState(false);
+  const [cropError, setCropError] = useState<string | null>(null);
   const cropCanvasRef = useRef<HTMLCanvasElement>(null);
   const cropImageRef = useRef<HTMLImageElement>(null);
+  const cropContainerRef = useRef<HTMLDivElement>(null);
 
   const fetchCustomers = async (query = "") => {
     setLoading(true);
@@ -329,26 +332,49 @@ export default function AdminCustomersPage() {
 
   // --- Profile Picture Crop Functions ---
 
+  // Clean up blob URL when modal closes or component unmounts
+  useEffect(() => {
+    return () => {
+      if (cropBlobUrl) URL.revokeObjectURL(cropBlobUrl);
+    };
+  }, [cropBlobUrl]);
+
   const openCropModal = async (imageUrl: string) => {
-    setCropImageSrc(imageUrl);
+    // Reset all crop state
     setCropPreview(null);
+    setCropError(null);
     setCropPosition({ x: 0, y: 0 });
     setCropSize(200);
+    setImageNaturalSize({ w: 0, h: 0 });
+    setImageDisplaySize({ w: 0, h: 0 });
+    setCropLoading(true);
     setShowCropModal(true);
 
-    // Try face detection after image loads
+    // Revoke old blob URL if any
+    if (cropBlobUrl) URL.revokeObjectURL(cropBlobUrl);
+
+    // Fetch image as blob to bypass CORS restrictions on canvas operations
     try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const blob = await response.blob();
+      const blobUrl = URL.createObjectURL(blob);
+      setCropBlobUrl(blobUrl);
+
+      // Load the blob URL into an Image to get dimensions and do face detection
       const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.src = imageUrl;
+      img.src = blobUrl;
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
-        img.onerror = () => reject(new Error("Image load failed"));
+        img.onerror = () => reject(new Error("Image decode failed"));
       });
 
-      setImageNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+      const natW = img.naturalWidth;
+      const natH = img.naturalHeight;
+      setImageNaturalSize({ w: natW, h: natH });
 
-      // Try browser FaceDetector API (Chromium browsers)
+      // Try browser FaceDetector API (Chromium only)
+      let faceFound = false;
       if ("FaceDetector" in window) {
         try {
           // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -360,44 +386,73 @@ export default function AdminCustomersPage() {
             const size = Math.max(face.width, face.height) + padding * 2;
             const cx = face.x + face.width / 2;
             const cy = face.y + face.height / 2;
+            const clampedSize = Math.min(size, natW, natH);
             setCropPosition({
-              x: Math.max(0, cx - size / 2),
-              y: Math.max(0, cy - size / 2),
+              x: Math.max(0, Math.min(natW - clampedSize, cx - clampedSize / 2)),
+              y: Math.max(0, Math.min(natH - clampedSize, cy - clampedSize / 2)),
             });
-            setCropSize(Math.min(size, img.naturalWidth, img.naturalHeight));
-            return;
+            setCropSize(clampedSize);
+            faceFound = true;
           }
         } catch {
-          // FaceDetector not available or failed
+          // FaceDetector not available or failed — use heuristic
         }
       }
 
-      // Fallback: assume face is in the left portion of the ID
-      // (standard driver's license layout)
-      const heurSize = Math.min(img.naturalWidth * 0.4, img.naturalHeight * 0.7);
-      setCropPosition({
-        x: img.naturalWidth * 0.03,
-        y: img.naturalHeight * 0.15,
-      });
-      setCropSize(heurSize);
-    } catch {
-      // Image failed to load — user can still manually position
+      // Heuristic fallback: face is typically in the left portion of a driver's license
+      if (!faceFound) {
+        const heurSize = Math.min(natW * 0.4, natH * 0.7);
+        setCropPosition({
+          x: natW * 0.03,
+          y: natH * 0.15,
+        });
+        setCropSize(heurSize);
+      }
+
+      setCropLoading(false);
+    } catch (err) {
+      logger.error("Failed to load image for cropping:", err);
+      setCropError("Could not load the ID image. Try refreshing the page.");
+      setCropLoading(false);
     }
   };
 
+  // Drag handling — all coordinates in DISPLAY (screen) pixels
+  // We convert to natural coordinates only when generating the crop preview
   const handleCropMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
     e.preventDefault();
+    e.stopPropagation();
     setIsDraggingCrop(true);
-    setDragStart({ x: e.clientX - cropPosition.x * (imageDisplaySize.w / imageNaturalSize.w), y: e.clientY - cropPosition.y * (imageDisplaySize.h / imageNaturalSize.h) });
+    // Store the offset between mouse position and current crop overlay position
+    const scaleX = imageDisplaySize.w / imageNaturalSize.w;
+    const scaleY = imageDisplaySize.h / imageNaturalSize.h;
+    const displayX = cropPosition.x * scaleX;
+    const displayY = cropPosition.y * scaleY;
+    setDragStart({
+      x: e.clientX - displayX,
+      y: e.clientY - displayY,
+    });
   };
 
   const handleCropMouseMove = useCallback((e: MouseEvent) => {
     if (!isDraggingCrop || !imageNaturalSize.w || !imageDisplaySize.w) return;
-    const scaleX = imageNaturalSize.w / imageDisplaySize.w;
-    const scaleY = imageNaturalSize.h / imageDisplaySize.h;
-    const newX = Math.max(0, Math.min(imageNaturalSize.w - cropSize, (e.clientX - dragStart.x) * scaleX));
-    const newY = Math.max(0, Math.min(imageNaturalSize.h - cropSize, (e.clientY - dragStart.y) * scaleY));
-    setCropPosition({ x: newX, y: newY });
+    const scaleX = imageDisplaySize.w / imageNaturalSize.w;
+    const scaleY = imageDisplaySize.h / imageNaturalSize.h;
+    const displayCropSize = cropSize * scaleX;
+
+    // Calculate new position in display coordinates
+    const displayX = e.clientX - dragStart.x;
+    const displayY = e.clientY - dragStart.y;
+
+    // Clamp to image bounds in display coordinates
+    const clampedDisplayX = Math.max(0, Math.min(imageDisplaySize.w - displayCropSize, displayX));
+    const clampedDisplayY = Math.max(0, Math.min(imageDisplaySize.h - displayCropSize * (scaleY / scaleX), displayY));
+
+    // Convert back to natural coordinates
+    setCropPosition({
+      x: clampedDisplayX / scaleX,
+      y: clampedDisplayY / scaleY,
+    });
   }, [isDraggingCrop, dragStart, cropSize, imageNaturalSize, imageDisplaySize]);
 
   const handleCropMouseUp = useCallback(() => {
@@ -416,20 +471,34 @@ export default function AdminCustomersPage() {
   }, [isDraggingCrop, handleCropMouseMove, handleCropMouseUp]);
 
   const generateCropPreview = () => {
-    if (!cropImageRef.current) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = 300;
-    canvas.height = 300;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+    if (!cropImageRef.current) {
+      setCropError("Image not loaded yet. Please wait.");
+      return;
+    }
 
-    ctx.drawImage(
-      cropImageRef.current,
-      cropPosition.x, cropPosition.y, cropSize, cropSize,
-      0, 0, 300, 300
-    );
+    try {
+      const canvas = document.createElement("canvas");
+      canvas.width = 300;
+      canvas.height = 300;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) {
+        setCropError("Canvas not supported in this browser.");
+        return;
+      }
 
-    setCropPreview(canvas.toDataURL("image/jpeg", 0.92));
+      ctx.drawImage(
+        cropImageRef.current,
+        cropPosition.x, cropPosition.y, cropSize, cropSize,
+        0, 0, 300, 300
+      );
+
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.92);
+      setCropPreview(dataUrl);
+      setCropError(null);
+    } catch (err) {
+      logger.error("Canvas crop failed:", err);
+      setCropError("Failed to crop image. The image may have CORS restrictions.");
+    }
   };
 
   const adjustCropSize = (delta: number) => {
@@ -443,6 +512,16 @@ export default function AdminCustomersPage() {
       x: Math.max(0, Math.min(imageNaturalSize.w - newSize, prev.x - delta / 2)),
       y: Math.max(0, Math.min(imageNaturalSize.h - newSize, prev.y - delta / 2)),
     }));
+  };
+
+  const closeCropModal = () => {
+    setShowCropModal(false);
+    setCropPreview(null);
+    setCropError(null);
+    if (cropBlobUrl) {
+      URL.revokeObjectURL(cropBlobUrl);
+      setCropBlobUrl(null);
+    }
   };
 
   const saveProfilePicture = async () => {
@@ -466,17 +545,30 @@ export default function AdminCustomersPage() {
       const data = await uploadRes.json();
       if (data.success) {
         setProfilePictureUrl(data.url);
-        setShowCropModal(false);
-        setCropPreview(null);
-        alert("Profile picture saved!");
+        // Also update the customer in the list so the avatar updates everywhere
+        setCustomers((prev) =>
+          prev.map((c) =>
+            c.id === selectedCustomer.id ? { ...c, profilePictureUrl: data.url } : c
+          )
+        );
+        closeCropModal();
       } else {
-        alert("Failed to save: " + (data.error || "Unknown error"));
+        setCropError("Failed to save: " + (data.error || "Unknown error"));
       }
     } catch (err) {
       logger.error("Failed to save profile picture:", err);
-      alert("Error saving profile picture");
+      setCropError("Network error saving profile picture. Please try again.");
     }
     setSavingProfilePic(false);
+  };
+
+  // Update imageDisplaySize when the crop image loads in the modal
+  const handleCropImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.target as HTMLImageElement;
+    setImageDisplaySize({ w: img.clientWidth, h: img.clientHeight });
+    if (!imageNaturalSize.w) {
+      setImageNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+    }
   };
 
   // Load profile picture when customer is opened
@@ -1297,7 +1389,7 @@ export default function AdminCustomersPage() {
       {showAddCustomerModal && <AddCustomerModal />}
 
       {/* Crop Profile Picture Modal */}
-      {showCropModal && cropImageSrc && (
+      {showCropModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <CardContent className="p-6">
@@ -1306,125 +1398,144 @@ export default function AdminCustomersPage() {
                   <Crop className="h-5 w-5 text-purple-600" /> Crop Profile Picture
                 </h2>
                 <button
-                  onClick={() => { setShowCropModal(false); setCropPreview(null); }}
+                  onClick={closeCropModal}
                   className="rounded-full p-1 hover:bg-gray-100"
                 >
                   <X className="h-5 w-5" />
                 </button>
               </div>
 
-              <p className="text-sm text-gray-500 mb-4">
-                Drag the crop area over the face. Use zoom controls to resize the crop area, then click &quot;Preview Crop&quot; to see the result.
-              </p>
-
-              {/* Crop workspace */}
-              <div className="relative bg-gray-100 rounded-lg overflow-hidden mb-4" style={{ maxHeight: "400px" }}>
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  ref={cropImageRef}
-                  src={cropImageSrc}
-                  alt="ID to crop"
-                  crossOrigin="anonymous"
-                  className="w-full h-auto"
-                  onLoad={(e) => {
-                    const img = e.target as HTMLImageElement;
-                    setImageDisplaySize({ w: img.clientWidth, h: img.clientHeight });
-                    setImageNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
-                  }}
-                />
-                {/* Crop overlay */}
-                {imageNaturalSize.w > 0 && imageDisplaySize.w > 0 && (
-                  <div
-                    onMouseDown={handleCropMouseDown}
-                    className="absolute border-2 border-white rounded-full shadow-lg cursor-move"
-                    style={{
-                      left: `${(cropPosition.x / imageNaturalSize.w) * imageDisplaySize.w}px`,
-                      top: `${(cropPosition.y / imageNaturalSize.h) * imageDisplaySize.h}px`,
-                      width: `${(cropSize / imageNaturalSize.w) * imageDisplaySize.w}px`,
-                      height: `${(cropSize / imageNaturalSize.h) * imageDisplaySize.h}px`,
-                      boxShadow: "0 0 0 9999px rgba(0,0,0,0.5)",
-                    }}
-                  >
-                    <div className="absolute inset-0 flex items-center justify-center">
-                      <Move className="h-6 w-6 text-white/70" />
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Controls */}
-              <div className="flex items-center justify-between gap-4 mb-4">
-                <div className="flex items-center gap-2">
-                  <Button
-                    onClick={() => adjustCropSize(-30)}
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    title="Shrink crop area"
-                  >
-                    <ZoomOut className="h-4 w-4" />
-                  </Button>
-                  <span className="text-xs text-gray-500 w-16 text-center">
-                    {Math.round(cropSize)}px
-                  </span>
-                  <Button
-                    onClick={() => adjustCropSize(30)}
-                    variant="outline"
-                    size="sm"
-                    className="h-8 w-8 p-0"
-                    title="Enlarge crop area"
-                  >
-                    <ZoomIn className="h-4 w-4" />
-                  </Button>
-                </div>
-
-                <Button
-                  onClick={generateCropPreview}
-                  variant="outline"
-                  size="sm"
-                >
-                  <Crop className="h-3.5 w-3.5 mr-1" /> Preview Crop
-                </Button>
-              </div>
-
-              {/* Preview */}
-              {cropPreview && (
-                <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg mb-4">
-                  <div className="flex-shrink-0">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      src={cropPreview}
-                      alt="Cropped preview"
-                      className="h-24 w-24 rounded-full object-cover border-2 border-purple-400"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900">Preview</p>
-                    <p className="text-xs text-gray-500 mt-1">
-                      This is how the profile picture will look. If it doesn&apos;t look right, adjust the crop area and preview again.
-                    </p>
-                  </div>
+              {cropError && (
+                <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                  {cropError}
                 </div>
               )}
 
-              {/* Action buttons */}
-              <div className="flex gap-2">
-                <Button
-                  onClick={saveProfilePicture}
-                  disabled={!cropPreview || savingProfilePic}
-                  className="flex-1"
-                >
-                  <User className="h-4 w-4 mr-1" />
-                  {savingProfilePic ? "Saving..." : "Save as Profile Picture"}
-                </Button>
-                <Button
-                  onClick={() => { setShowCropModal(false); setCropPreview(null); }}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-              </div>
+              {cropLoading ? (
+                <div className="flex items-center justify-center py-12">
+                  <RefreshCw className="h-6 w-6 animate-spin text-purple-600" />
+                  <span className="ml-2 text-sm text-gray-500">Loading image...</span>
+                </div>
+              ) : cropBlobUrl ? (
+                <>
+                  <p className="text-sm text-gray-500 mb-4">
+                    Drag the crop area over the face. Use zoom controls to resize the crop area, then click &quot;Preview Crop&quot; to see the result.
+                  </p>
+
+                  {/* Crop workspace */}
+                  <div
+                    ref={cropContainerRef}
+                    className="relative bg-gray-100 rounded-lg overflow-hidden mb-4 select-none"
+                    style={{ maxHeight: "400px" }}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      ref={cropImageRef}
+                      src={cropBlobUrl}
+                      alt="ID to crop"
+                      className="w-full h-auto"
+                      draggable={false}
+                      onLoad={handleCropImageLoad}
+                    />
+                    {/* Crop overlay */}
+                    {imageNaturalSize.w > 0 && imageDisplaySize.w > 0 && (
+                      <div
+                        onMouseDown={handleCropMouseDown}
+                        className="absolute border-2 border-white rounded-full shadow-lg cursor-move"
+                        style={{
+                          left: `${(cropPosition.x / imageNaturalSize.w) * imageDisplaySize.w}px`,
+                          top: `${(cropPosition.y / imageNaturalSize.h) * imageDisplaySize.h}px`,
+                          width: `${(cropSize / imageNaturalSize.w) * imageDisplaySize.w}px`,
+                          height: `${(cropSize / imageNaturalSize.h) * imageDisplaySize.h}px`,
+                          boxShadow: "0 0 0 9999px rgba(0,0,0,0.5)",
+                        }}
+                      >
+                        <div className="absolute inset-0 flex items-center justify-center">
+                          <Move className="h-6 w-6 text-white/70" />
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Controls */}
+                  <div className="flex items-center justify-between gap-4 mb-4">
+                    <div className="flex items-center gap-2">
+                      <Button
+                        onClick={() => adjustCropSize(-30)}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        title="Shrink crop area"
+                      >
+                        <ZoomOut className="h-4 w-4" />
+                      </Button>
+                      <span className="text-xs text-gray-500 w-16 text-center">
+                        {Math.round(cropSize)}px
+                      </span>
+                      <Button
+                        onClick={() => adjustCropSize(30)}
+                        variant="outline"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        title="Enlarge crop area"
+                      >
+                        <ZoomIn className="h-4 w-4" />
+                      </Button>
+                    </div>
+
+                    <Button
+                      onClick={generateCropPreview}
+                      variant="outline"
+                      size="sm"
+                    >
+                      <Crop className="h-3.5 w-3.5 mr-1" /> Preview Crop
+                    </Button>
+                  </div>
+
+                  {/* Preview */}
+                  {cropPreview && (
+                    <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg mb-4">
+                      <div className="flex-shrink-0">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={cropPreview}
+                          alt="Cropped preview"
+                          className="h-24 w-24 rounded-full object-cover border-2 border-purple-400"
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-semibold text-gray-900">Preview</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          This is how the profile picture will look. If it doesn&apos;t look right, adjust the crop area and preview again.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Action buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      onClick={saveProfilePicture}
+                      disabled={!cropPreview || savingProfilePic}
+                      className="flex-1"
+                    >
+                      <User className="h-4 w-4 mr-1" />
+                      {savingProfilePic ? "Saving..." : "Save as Profile Picture"}
+                    </Button>
+                    <Button
+                      onClick={closeCropModal}
+                      variant="outline"
+                      className="flex-1"
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="py-8 text-center text-gray-500">
+                  <p>No image to crop. Make sure the customer has an ID document uploaded.</p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
