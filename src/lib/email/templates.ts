@@ -339,6 +339,35 @@ export function returnReminderTemplate(data: EmailData): string {
   `);
 }
 
+export function bookingSignAgreementTemplate(data: EmailData): string {
+  return wrapEmail(`
+    ${headerBlock('Your Booking Details', 'Please review & sign your rental agreement')}
+    <tr>
+      <td style="padding: 32px 32px 0;">
+        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${data.customerName},</p>
+        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Thank you for choosing <strong style="color: #111827;">NextGearAuto</strong>! Below are your booking details. Please review everything and sign the rental agreement before your pickup.</p>
+      </td>
+    </tr>
+    ${bookingIdBlock(data.bookingId)}
+    <tr>
+      <td style="padding: 0 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${detailRow('Vehicle', data.vehicleName, true)}
+        </table>
+        ${dateTimeBlock('Pick-up', data.pickupDate, data.pickupTime, '#7C3AED', 'linear-gradient(135deg, #f5f3ff, #ede9fe)')}
+        ${dateTimeBlock('Return', data.returnDate, data.returnTime, '#f59e0b', 'linear-gradient(135deg, #fffbeb, #fef3c7)')}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${detailRow('Total Amount', '$' + data.totalPrice.toFixed(2), true)}
+          ${data.deposit > 0 ? detailRow('Deposit Paid', '$' + data.deposit.toFixed(2)) : ''}
+        </table>
+        ${infoBox('Pick-up Location', '92 Forrest Street, Jersey City, NJ 07304<br>Please bring a valid driver\'s license and the credit card used for payment.', '#7C3AED', '#f5f3ff')}
+        ${ctaButton('Sign Rental Agreement', 'https://rentnextgearauto.com/booking/agreement/' + data.bookingId)}
+        <p style="margin: 16px 0 0; color: #9ca3af; font-size: 12px; line-height: 1.6; text-align: center;">If the button above doesn't work, copy and paste this link into your browser:<br><a href="https://rentnextgearauto.com/booking/agreement/${data.bookingId}" style="color: #7C3AED; word-break: break-all;">https://rentnextgearauto.com/booking/agreement/${data.bookingId}</a></p>
+      </td>
+    </tr>
+  `);
+}
+
 export function passwordResetTemplate(data: { customerName: string; customerEmail: string }): string {
   const encodedEmail = encodeURIComponent(data.customerEmail);
   return wrapEmail(`

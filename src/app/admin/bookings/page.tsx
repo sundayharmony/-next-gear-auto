@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save, User, UserPlus } from "lucide-react";
+import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save, User, UserPlus, Mail } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -124,6 +124,7 @@ function AdminBookingsContent() {
   const [editData, setEditData] = useState<Partial<BookingRow>>({});
   const [saving, setSaving] = useState(false);
   const [addingCustomer, setAddingCustomer] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
   const [allCustomers, setAllCustomers] = useState<CustomerOption[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
@@ -419,6 +420,30 @@ function AdminBookingsContent() {
       setError("Network error — could not add customer");
     }
     setAddingCustomer(false);
+  };
+
+  const handleSendBookingEmail = async () => {
+    if (!selectedBooking) return;
+    if (!selectedBooking.customer_email) {
+      setError("Cannot send email — no customer email on this booking.");
+      return;
+    }
+    setSendingEmail(true);
+    try {
+      const res = await adminFetch("/api/admin/send-booking-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: selectedBooking.id }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) throw new Error(data.message || "Failed to send email");
+      setError(null);
+      alert(`Booking email sent to ${selectedBooking.customer_email}`);
+    } catch (err) {
+      logger.error("Failed to send booking email:", err);
+      setError(err instanceof Error ? err.message : "Failed to send booking email");
+    }
+    setSendingEmail(false);
   };
 
   const startEditing = () => {
@@ -977,6 +1002,17 @@ function AdminBookingsContent() {
             <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
               <h2 className="text-lg font-semibold">{editMode ? "Edit Booking" : "Booking Details"}</h2>
               <div className="flex items-center gap-2">
+                {!editMode && (
+                  <button
+                    onClick={handleSendBookingEmail}
+                    disabled={sendingEmail}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50"
+                    title="Send booking details & sign agreement link to customer"
+                  >
+                    {sendingEmail ? <RefreshCw className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                    {sendingEmail ? "Sending..." : "Send Email"}
+                  </button>
+                )}
                 {!editMode && !["completed", "cancelled"].includes(selectedBooking.status) && (
                   <button
                     onClick={startEditing}

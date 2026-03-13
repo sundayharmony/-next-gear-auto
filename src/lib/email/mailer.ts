@@ -7,6 +7,7 @@ import {
   pickupReminderTemplate,
   returnReminderTemplate,
   passwordResetTemplate,
+  bookingSignAgreementTemplate,
   fmtDate,
   fmtTime,
 } from "./templates";
@@ -217,6 +218,22 @@ export async function sendReturnReminder(data: BookingEmailData) {
     console.log("Return reminder sent to:", data.customerEmail);
   } catch (error) {
     console.error("Failed to send return reminder:", error);
+    throw error;
+  }
+}
+
+export async function sendBookingSignAgreement(data: BookingEmailData) {
+  try {
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: FROM_CUSTOMER,
+      to: data.customerEmail,
+      subject: `Your Booking Details - Please Sign Agreement | ${data.bookingId}`,
+      html: bookingSignAgreementTemplate(data),
+    });
+    console.log("Booking sign-agreement email sent to:", data.customerEmail);
+  } catch (error) {
+    console.error("Failed to send booking sign-agreement email:", error);
     throw error;
   }
 }
