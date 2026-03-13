@@ -73,17 +73,17 @@ export default async function HomePage() {
               find the perfect ride for any occasion.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Button size="lg" className="bg-white text-purple-900 hover:bg-gray-100" asChild>
-                <Link href="/fleet">
+              <Link href="/fleet">
+                <Button size="lg" className="bg-white text-purple-900 hover:bg-gray-100">
                   View Our Fleet
                   <ArrowRight className="h-4 w-4" />
-                </Link>
-              </Button>
-              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" asChild>
-                <Link href="/booking">
+                </Button>
+              </Link>
+              <Link href="/booking">
+                <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
                   Book Now
-                </Link>
-              </Button>
+                </Button>
+              </Link>
             </div>
           </div>
 
@@ -168,11 +168,11 @@ export default async function HomePage() {
           )}
         </div>
         <div className="mt-8 text-center">
-          <Button variant="outline" size="lg" asChild>
-            <Link href="/fleet">
+          <Link href="/fleet">
+            <Button variant="outline" size="lg">
               View All Vehicles <ArrowRight className="h-4 w-4" />
-            </Link>
-          </Button>
+            </Button>
+          </Link>
         </div>
       </PageContainer>
 
@@ -219,16 +219,16 @@ export default async function HomePage() {
             Browse our fleet and book your perfect vehicle in minutes.
           </p>
           <div className="mt-8 flex justify-center gap-4">
-            <Button size="lg" className="bg-white text-purple-900 hover:bg-gray-100" asChild>
-              <Link href="/fleet">
+            <Link href="/fleet">
+              <Button size="lg" className="bg-white text-purple-900 hover:bg-gray-100">
                 View Fleet
-              </Link>
-            </Button>
-            <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" asChild>
-              <Link href="/booking">
+              </Button>
+            </Link>
+            <Link href="/booking">
+              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
                 Book Now
-              </Link>
-            </Button>
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
