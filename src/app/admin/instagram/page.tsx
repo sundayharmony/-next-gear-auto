@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { logger } from "@/lib/utils/logger";
 
 interface InstaPost {
   id: string;
@@ -43,7 +44,7 @@ export default function AdminInstagramPage() {
       const data = await res.json();
       if (data.success) setPosts(data.data || []);
     } catch {
-      console.error("Failed to fetch posts");
+      logger.error("Failed to fetch posts");
     }
     setLoading(false);
   };

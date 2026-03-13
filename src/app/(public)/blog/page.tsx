@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout/page-container";
+import { logger } from "@/lib/utils/logger";
 
 interface InstaPost {
   id: string;
@@ -48,8 +49,8 @@ export default function SocialPage() {
         if (data.success) {
           setPosts(data.data || []);
         }
-      } catch {
-        console.error("Failed to fetch Instagram posts");
+      } catch (error) {
+        logger.error("Failed to fetch Instagram posts", error);
       }
       setLoading(false);
     }

@@ -27,6 +27,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
+import { logger } from "@/lib/utils/logger";
 import {
   BarChart,
   Bar,
@@ -244,7 +245,7 @@ export default function AdminFinancesPage() {
       setExpenses(expensesData.data || []);
       setVehicles(vehiclesData.data || []);
     } catch (err) {
-      console.error("Error fetching data:", err);
+      logger.error("Error fetching data:", err);
       setError(
         err instanceof Error ? err.message : "Failed to load dashboard data"
       );
@@ -534,7 +535,7 @@ export default function AdminFinancesPage() {
       setAddingExpense(false);
       fetchData();
     } catch (err) {
-      console.error("Error creating expense:", err);
+      logger.error("Error creating expense:", err);
       alert("Failed to create expense");
     }
   };
@@ -564,7 +565,7 @@ export default function AdminFinancesPage() {
       setEditingExpense(null);
       fetchData();
     } catch (err) {
-      console.error("Error updating expense:", err);
+      logger.error("Error updating expense:", err);
       alert("Failed to update expense");
     }
   };
@@ -580,7 +581,7 @@ export default function AdminFinancesPage() {
       setDeleteConfirm(null);
       fetchData();
     } catch (err) {
-      console.error("Error deleting expense:", err);
+      logger.error("Error deleting expense:", err);
       alert("Failed to delete expense");
     }
   };

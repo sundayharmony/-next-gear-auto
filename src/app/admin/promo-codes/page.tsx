@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { logger } from "@/lib/utils/logger";
 
 interface PromoCode {
   code: string;
@@ -54,7 +55,7 @@ export default function AdminPromoCodesPage() {
       const data = await res.json();
       if (data.success) setCodes(data.data);
     } catch (err) {
-      console.error("Failed to fetch promo codes:", err);
+      logger.error("Failed to fetch promo codes:", err);
     }
     setLoading(false);
   };

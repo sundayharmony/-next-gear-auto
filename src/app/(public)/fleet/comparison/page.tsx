@@ -11,6 +11,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { logger } from "@/lib/utils/logger";
 
 interface Vehicle {
   id: string;
@@ -47,7 +48,7 @@ function ComparisonContent() {
           setVehicles(result.data);
         }
       } catch (error) {
-        console.error("Failed to fetch vehicles:", error);
+        logger.error("Failed to fetch vehicles:", error);
       } finally {
         setLoading(false);
       }

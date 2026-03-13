@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import { Card } from "@/components/ui/card";
+import { logger } from "@/lib/utils/logger";
 
 interface Review {
   id: string;
@@ -28,7 +29,7 @@ export function HomeReviews() {
           setReviews(sorted.slice(0, 3));
         }
       } catch (err) {
-        console.error("Failed to fetch reviews:", err);
+        logger.error("Failed to fetch reviews:", err);
       }
       setLoading(false);
     }

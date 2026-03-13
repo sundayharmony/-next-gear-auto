@@ -12,6 +12,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
+import { logger } from "@/lib/utils/logger";
 
 interface BookingRow {
   id: string;
@@ -98,6 +99,13 @@ export default function AdminBookingsPage() {
   );
 }
 
+interface CustomerOption {
+  id: string;
+  name: string;
+  email: string;
+  phone: string;
+}
+
 function AdminBookingsContent() {
   const searchParams = useSearchParams();
   const [bookings, setBookings] = useState<BookingRow[]>([]);
@@ -117,6 +125,10 @@ function AdminBookingsContent() {
   const [saving, setSaving] = useState(false);
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
+  const [allCustomers, setAllCustomers] = useState<CustomerOption[]>([]);
+  const [customerSearch, setCustomerSearch] = useState("");
+  const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const customerDropdownRef = React.useRef<HTMLDivElement>(null);
 
   // Auto-open create form with prefilled customer data from URL params
   // (e.g. navigated from customer panel "Create Booking" button)
@@ -135,6 +147,20 @@ function AdminBookingsContent() {
       setPrefillApplied(true);
     }
   }, [searchParams, prefillApplied]);
+
+  // Close customer dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (customerDropdownRef.current && !customerDropdownRef.current.contains(event.target as Node)) {
+        setShowCustomerDropdown(false);
+      }
+    };
+
+    if (showCustomerDropdown) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [showCustomerDropdown]);
 
   // Auto-clear error after 5 seconds
   useEffect(() => {
@@ -161,7 +187,7 @@ function AdminBookingsContent() {
         }
       }
     } catch (err) {
-      console.error("Failed to fetch bookings:", err);
+      logger.error("Failed to fetch bookings:", err);
     }
     setLoading(false);
   };
@@ -172,7 +198,25 @@ function AdminBookingsContent() {
       const data = await res.json();
       if (data.success) setVehicles(data.data || []);
     } catch (err) {
-      console.error("Failed to fetch vehicles:", err);
+      logger.error("Failed to fetch vehicles:", err);
+    }
+  };
+
+  const fetchCustomers = async () => {
+    try {
+      const res = await adminFetch("/api/admin/customers");
+      const data = await res.json();
+      if (data.success) {
+        const customerOptions: CustomerOption[] = (data.data || []).map((c: any) => ({
+          id: c.id,
+          name: c.name,
+          email: c.email,
+          phone: c.phone || "",
+        }));
+        setAllCustomers(customerOptions);
+      }
+    } catch (err) {
+      logger.error("Failed to fetch customers:", err);
     }
   };
 
@@ -182,6 +226,7 @@ function AdminBookingsContent() {
 
   useEffect(() => {
     fetchVehicles();
+    fetchCustomers();
   }, []);
 
   const updateStatus = async (bookingId: string, newStatus: string) => {
@@ -336,7 +381,7 @@ function AdminBookingsContent() {
         setError(data.error || "Failed to upload document");
       }
     } catch (err) {
-      console.error("Upload error:", err);
+      logger.error("Upload error:", err);
       setError("Network error — could not upload document");
     }
     setUploadingDoc(null);
@@ -563,6 +608,74 @@ function AdminBookingsContent() {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {/* Select Existing Customer Dropdown */}
+                <div className="lg:col-span-3" ref={customerDropdownRef}>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Select Existing Customer</label>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      value={customerSearch}
+                      onChange={(e) => {
+                        setCustomerSearch(e.target.value);
+                        setShowCustomerDropdown(true);
+                      }}
+                      onFocus={() => setShowCustomerDropdown(true)}
+                      placeholder="Search by name or email..."
+                      className="w-full"
+                    />
+                    {showCustomerDropdown && (
+                      <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-300 rounded-md shadow-lg z-10 max-h-64 overflow-y-auto">
+                        {allCustomers
+                          .filter(
+                            (c) =>
+                              c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                              c.email.toLowerCase().includes(customerSearch.toLowerCase())
+                          )
+                          .slice(0, 8)
+                          .map((customer) => (
+                            <button
+                              key={customer.id}
+                              type="button"
+                              onClick={() => {
+                                setNewBooking((prev) => ({
+                                  ...prev,
+                                  customerName: customer.name,
+                                  customerEmail: customer.email,
+                                  customerPhone: customer.phone,
+                                }));
+                                setCustomerSearch("");
+                                setShowCustomerDropdown(false);
+                              }}
+                              className="w-full px-4 py-2 text-left hover:bg-purple-50 border-b border-gray-100 last:border-b-0 transition-colors"
+                            >
+                              <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                              <div className="text-xs text-gray-500">{customer.email}</div>
+                            </button>
+                          ))}
+                        {allCustomers.filter(
+                          (c) =>
+                            c.name.toLowerCase().includes(customerSearch.toLowerCase()) ||
+                            c.email.toLowerCase().includes(customerSearch.toLowerCase())
+                        ).length === 0 && (
+                          <div className="px-4 py-3 text-sm text-gray-500 text-center">No customers found</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                  {customerSearch === "" && !showCustomerDropdown && newBooking.customerName === "" && (
+                    <p className="text-xs text-gray-400 mt-2">Start typing to find an existing customer, or enter details below</p>
+                  )}
+                </div>
+
+                {/* Divider */}
+                <div className="lg:col-span-3">
+                  <div className="flex items-center gap-3 my-2">
+                    <div className="flex-1 border-t border-gray-200" />
+                    <span className="text-xs text-gray-400 font-medium">Or enter new customer details below</span>
+                    <div className="flex-1 border-t border-gray-200" />
+                  </div>
+                </div>
+
                 {/* Customer Info */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name *</label>

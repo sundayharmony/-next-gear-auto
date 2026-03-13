@@ -24,6 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { Vehicle, VehicleCategory, getVehicleDisplayName } from "@/lib/types";
+import { logger } from "@/lib/utils/logger";
 
 const CATEGORIES: VehicleCategory[] = [
   "compact",
@@ -111,7 +112,7 @@ export default function AdminVehiclesPage() {
         setError("Failed to load vehicles");
       }
     } catch (err) {
-      console.error("Failed to fetch vehicles:", err);
+      logger.error("Failed to fetch vehicles:", err);
       setError("Network error — could not load vehicles");
     }
     setLoading(false);
@@ -210,7 +211,7 @@ export default function AdminVehiclesPage() {
         }
       }
     } catch (err) {
-      console.error("Image upload error:", err);
+      logger.error("Image upload error:", err);
       setError(
         err instanceof Error ? err.message : "Network error — could not upload image"
       );

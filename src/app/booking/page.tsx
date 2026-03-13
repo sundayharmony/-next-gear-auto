@@ -19,6 +19,7 @@ import { RentalAgreementInline, getPageForStep } from "@/components/rental-agree
 import { cn } from "@/lib/utils/cn";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { useAuth } from "@/lib/context/auth-context";
+import { logger } from "@/lib/utils/logger";
 import extras from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
@@ -144,7 +145,7 @@ function BookingPageInner() {
           setVehiclesError("Failed to load vehicles. Please try again.");
         }
       } catch (error) {
-        console.error("Failed to fetch vehicles:", error);
+        logger.error("Failed to fetch vehicles:", error);
         setVehiclesError("Failed to load vehicles. Please try again.");
       } finally {
         setVehiclesLoading(false);
@@ -338,7 +339,7 @@ function BookingPageInner() {
         setUploadedFile(null);
       }
     } catch (err) {
-      console.error("ID upload error:", err);
+      logger.error("ID upload error:", err);
       setUploadError("Failed to upload ID document");
       setUploadedFile(null);
     }
@@ -691,7 +692,7 @@ function BookingPageInner() {
                                     return;
                                   }
                                 } catch (err) {
-                                  console.error("Insurance upload error:", err);
+                                  logger.error("Insurance upload error:", err);
                                   alert("Failed to upload insurance proof");
                                   setUploadingInsuranceProof(false);
                                   return;

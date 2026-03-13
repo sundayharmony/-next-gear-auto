@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { logger } from "@/lib/utils/logger";
 
 interface Review {
   id: string;
@@ -43,7 +44,7 @@ export default function AdminReviewsPage() {
       const data = await res.json();
       if (data.success) setReviews(data.data);
     } catch (err) {
-      console.error("Failed to fetch reviews:", err);
+      logger.error("Failed to fetch reviews:", err);
     }
     setLoading(false);
   };

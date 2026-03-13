@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useReducer, useCallback } from "react";
 import type { Vehicle, BookingExtra, BookingStep, PricingBreakdown } from "@/lib/types";
 import { calculatePricing, calculateRentalDays, applyDiscount, type PromoDiscount } from "@/lib/utils/price-calculator";
+import { logger } from "@/lib/utils/logger";
 
 interface BookingState {
   currentStep: BookingStep;
@@ -275,7 +276,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
               JSON.stringify(state.agreementSignatures)
             );
           } catch (e) {
-            console.warn("Failed to save agreement signatures to localStorage:", e);
+            logger.warn("Failed to save agreement signatures to localStorage:", e);
           }
         }
         // Redirect to Stripe Checkout hosted page

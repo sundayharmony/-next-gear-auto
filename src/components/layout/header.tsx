@@ -79,7 +79,7 @@ export function Header() {
                     </Button>
                   </Link>
                 )}
-                <Button variant="outline" size="sm" onClick={() => { logout(); router.push("/"); }}>
+                <Button variant="outline" size="sm" onClick={() => { logout(); router.push("/"); }} aria-label="Sign out">
                   <LogOut className="h-3.5 w-3.5" />
                 </Button>
               </div>
@@ -92,6 +92,7 @@ export function Header() {
               className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle menu"
+              aria-expanded={isMobileMenuOpen}
             >
               {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
             </button>

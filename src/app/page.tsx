@@ -7,6 +7,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { HomeReviews } from "@/components/home/home-reviews";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { generateLocalBusinessSchema } from "@/lib/utils/schema-generators";
+import { logger } from "@/lib/utils/logger";
 
 interface Vehicle {
   id: string;
@@ -43,7 +44,7 @@ export default async function HomePage() {
       featuredVehicles = data;
     }
   } catch (error) {
-    console.error("Failed to fetch featured vehicles:", error);
+    logger.error("Failed to fetch featured vehicles:", error);
   }
 
   return (
@@ -72,17 +73,17 @@ export default async function HomePage() {
               find the perfect ride for any occasion.
             </p>
             <div className="mt-8 flex flex-wrap gap-4">
-              <Link href="/fleet">
-                <Button size="lg" className="bg-white text-purple-900 hover:bg-gray-100">
+              <Button size="lg" className="bg-white text-purple-900 hover:bg-gray-100" asChild>
+                <Link href="/fleet">
                   View Our Fleet
                   <ArrowRight className="h-4 w-4" />
-                </Button>
-              </Link>
-              <Link href="/booking">
-                <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                </Link>
+              </Button>
+              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" asChild>
+                <Link href="/booking">
                   Book Now
-                </Button>
-              </Link>
+                </Link>
+              </Button>
             </div>
           </div>
 
@@ -152,7 +153,7 @@ export default async function HomePage() {
                           <span className="text-lg font-bold text-purple-600">${vehicle.daily_rate}</span>
                           <span className="text-sm text-gray-400">/day</span>
                         </div>
-                        <Button size="sm" variant="outline">Details</Button>
+                        <Button size="sm" variant="outline" aria-label={`View details for ${vehicle.year} ${vehicle.make} ${vehicle.model}`}>Details</Button>
                       </div>
                     </CardContent>
                   </Card>
@@ -167,11 +168,11 @@ export default async function HomePage() {
           )}
         </div>
         <div className="mt-8 text-center">
-          <Link href="/fleet">
-            <Button variant="outline" size="lg">
+          <Button variant="outline" size="lg" asChild>
+            <Link href="/fleet">
               View All Vehicles <ArrowRight className="h-4 w-4" />
-            </Button>
-          </Link>
+            </Link>
+          </Button>
         </div>
       </PageContainer>
 
@@ -218,16 +219,16 @@ export default async function HomePage() {
             Browse our fleet and book your perfect vehicle in minutes.
           </p>
           <div className="mt-8 flex justify-center gap-4">
-            <Link href="/fleet">
-              <Button size="lg" className="bg-white text-purple-900 hover:bg-gray-100">
+            <Button size="lg" className="bg-white text-purple-900 hover:bg-gray-100" asChild>
+              <Link href="/fleet">
                 View Fleet
-              </Button>
-            </Link>
-            <Link href="/booking">
-              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
+              </Link>
+            </Button>
+            <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10" asChild>
+              <Link href="/booking">
                 Book Now
-              </Button>
-            </Link>
+              </Link>
+            </Button>
           </div>
         </div>
       </section>

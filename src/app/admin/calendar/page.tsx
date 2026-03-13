@@ -16,6 +16,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatTime, formatDate } from "@/lib/utils/date-helpers";
 import { statusColors, statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
+import { logger } from "@/lib/utils/logger";
 
 interface BookingRow {
   id: string;
@@ -106,7 +107,7 @@ export default function AdminCalendarPage() {
         setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
       }
     } catch (error) {
-      console.error("Failed to fetch bookings:", error);
+      logger.error("Failed to fetch bookings:", error);
     }
   };
 
@@ -125,7 +126,7 @@ export default function AdminCalendarPage() {
           setVehicles(data.data || []);
         }
       } catch (error) {
-        console.error("Failed to fetch calendar data:", error);
+        logger.error("Failed to fetch calendar data:", error);
       } finally {
         setLoading(false);
       }
@@ -161,7 +162,7 @@ export default function AdminCalendarPage() {
         setVehicles(data.data || []);
       }
     } catch (error) {
-      console.error("Failed to refresh calendar data:", error);
+      logger.error("Failed to refresh calendar data:", error);
     } finally {
       setLoading(false);
     }

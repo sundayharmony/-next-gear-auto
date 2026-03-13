@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { useComparison } from "@/lib/hooks/use-comparison";
 import { VEHICLE_CATEGORIES } from "@/lib/constants";
+import { logger } from "@/lib/utils/logger";
 
 interface Vehicle {
   id: string;
@@ -65,7 +66,7 @@ function FleetContent() {
           setError(null);
         }
       } catch (err) {
-        console.error("Failed to fetch vehicles:", err);
+        logger.error("Failed to fetch vehicles:", err);
         setError("Failed to load vehicles. Please try again later.");
       } finally {
         setLoading(false);
@@ -140,9 +141,9 @@ function FleetContent() {
 
         {/* Loading state */}
         {loading && (
-          <div className="flex items-center justify-center py-16">
+          <div className="flex items-center justify-center py-16" role="status" aria-live="polite" aria-label="Loading vehicles">
             <div className="flex flex-col items-center gap-4">
-              <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" />
+              <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" aria-hidden="true" />
               <p className="text-gray-500">Loading vehicles...</p>
             </div>
           </div>
@@ -166,7 +167,7 @@ function FleetContent() {
 
           <div className="flex flex-wrap items-center justify-between gap-4">
             {/* Category filters */}
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by vehicle category">
               {VEHICLE_CATEGORIES.map((cat) => (
                 <button
                   key={cat.value}
@@ -176,6 +177,8 @@ function FleetContent() {
                       ? "bg-purple-600 text-white"
                       : "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   }`}
+                  aria-pressed={activeCategory === cat.value}
+                  aria-label={`Filter by ${cat.label} category`}
                 >
                   {cat.label}
                 </button>
@@ -184,11 +187,14 @@ function FleetContent() {
 
             {/* Sort */}
             <div className="flex items-center gap-2">
-              <ArrowUpDown className="h-4 w-4 text-gray-400" />
+              <label htmlFor="sort-select" className="sr-only">Sort vehicles by</label>
+              <ArrowUpDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
               <select
+                id="sort-select"
                 value={sortBy}
                 onChange={(e) => setSortBy(e.target.value as SortOption)}
                 className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                aria-label="Sort vehicles by"
               >
                 <option value="price-low">Price: Low to High</option>
                 <option value="price-high">Price: High to Low</option>
@@ -228,6 +234,7 @@ function FleetContent() {
                     onChange={() => comparison.toggleCompare(vehicle.id)}
                     disabled={!comparison.isComparing(vehicle.id) && !comparison.canAddMore}
                     className="h-3.5 w-3.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                    aria-label={`Compare ${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                   />
                   Compare
                 </label>
@@ -353,8 +360,8 @@ export default function FleetPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex items-center justify-center py-24">
-          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" />
+        <div className="flex items-center justify-center py-24" role="status" aria-label="Loading fleet page">
+          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" aria-hidden="true" />
         </div>
       }
     >

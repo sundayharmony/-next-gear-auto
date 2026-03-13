@@ -17,6 +17,7 @@ import { ReviewForm } from "@/components/review-form";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/context/auth-context";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
+import { logger } from "@/lib/utils/logger";
 
 interface Vehicle {
   id: string;
@@ -90,7 +91,7 @@ export default function AccountPage() {
           setVehicles(result.data);
         }
       } catch (error) {
-        console.error("Failed to fetch vehicles:", error);
+        logger.error("Failed to fetch vehicles:", error);
       }
     };
 
@@ -107,7 +108,7 @@ export default function AccountPage() {
         setBookings(data.data);
       }
     } catch (err) {
-      console.error("Failed to fetch bookings:", err);
+      logger.error("Failed to fetch bookings:", err);
     }
     setLoading(false);
   }, [user?.email]);
@@ -160,7 +161,7 @@ export default function AccountPage() {
         setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, status: "cancelled" } : b));
       }
     } catch (err) {
-      console.error("Cancel error:", err);
+      logger.error("Cancel error:", err);
     }
     setCancelling(null);
   }, []);

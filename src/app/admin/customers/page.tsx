@@ -27,6 +27,7 @@ import {
   Upload,
   Plus,
   Trash2,
+  KeyRound,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
+import { logger } from "@/lib/utils/logger";
 
 interface CustomerRow {
   id: string;
@@ -82,6 +84,7 @@ export default function AdminCustomersPage() {
   const [selectedBookingForUpload, setSelectedBookingForUpload] = useState<string | null>(null);
   const [uploadDocType, setUploadDocType] = useState<"id_document" | "insurance_proof">("id_document");
   const [deletingCustomer, setDeletingCustomer] = useState(false);
+  const [sendingPasswordLink, setSendingPasswordLink] = useState(false);
 
   const fetchCustomers = async (query = "") => {
     setLoading(true);
@@ -91,7 +94,7 @@ export default function AdminCustomersPage() {
       const data = await res.json();
       if (data.success) setCustomers(data.data);
     } catch (err) {
-      console.error("Failed to fetch customers:", err);
+      logger.error("Failed to fetch customers:", err);
     }
     setLoading(false);
   };
@@ -141,7 +144,7 @@ export default function AdminCustomersPage() {
 
       setCustomerBookings(merged);
     } catch (err) {
-      console.error("Failed to fetch customer bookings:", err);
+      logger.error("Failed to fetch customer bookings:", err);
     }
     setLoadingBookings(false);
   };
@@ -189,7 +192,7 @@ export default function AdminCustomersPage() {
         alert("Failed to update customer: " + (data.error || "Unknown error"));
       }
     } catch (err) {
-      console.error("Failed to update customer:", err);
+      logger.error("Failed to update customer:", err);
       alert("Error updating customer");
     }
     setSavingEdit(false);
@@ -220,10 +223,37 @@ export default function AdminCustomersPage() {
         alert("Failed to delete customer: " + (data.error || "Unknown error"));
       }
     } catch (err) {
-      console.error("Failed to delete customer:", err);
+      logger.error("Failed to delete customer:", err);
       alert("Error deleting customer");
     }
     setDeletingCustomer(false);
+  };
+
+  const sendPasswordLink = async () => {
+    if (!selectedCustomer) return;
+
+    setSendingPasswordLink(true);
+    try {
+      const res = await adminFetch("/api/admin/send-password-link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          email: selectedCustomer.email,
+          customerId: selectedCustomer.id,
+        }),
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert(`Password link sent to ${selectedCustomer.email}`);
+      } else {
+        alert("Failed to send password link: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      logger.error("Failed to send password link:", err);
+      alert("Error sending password link");
+    }
+    setSendingPasswordLink(false);
   };
 
   const handleDocumentUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -254,7 +284,7 @@ export default function AdminCustomersPage() {
         alert("Failed to upload document: " + (data.error || "Unknown error"));
       }
     } catch (err) {
-      console.error("Failed to upload document:", err);
+      logger.error("Failed to upload document:", err);
       alert("Error uploading document");
     }
     setUploadingDoc(false);
@@ -271,7 +301,7 @@ export default function AdminCustomersPage() {
         alert("Failed to delete customer");
       }
     } catch (err) {
-      console.error("Failed to delete:", err);
+      logger.error("Failed to delete:", err);
       alert("Error deleting customer");
     }
   };
@@ -365,6 +395,15 @@ export default function AdminCustomersPage() {
                   size="sm"
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" /> Create Booking
+                </Button>
+                <Button
+                  onClick={sendPasswordLink}
+                  disabled={sendingPasswordLink}
+                  variant="outline"
+                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                  size="sm"
+                >
+                  <KeyRound className="h-3.5 w-3.5 mr-1" /> {sendingPasswordLink ? "Sending..." : "Send Password Link"}
                 </Button>
                 <Button
                   onClick={deleteCustomer}
@@ -856,7 +895,7 @@ export default function AdminCustomersPage() {
           alert("Failed to create customer: " + (data.error || "Unknown error"));
         }
       } catch (err) {
-        console.error("Failed to create customer:", err);
+        logger.error("Failed to create customer:", err);
         alert("Error creating customer");
       }
       setSubmitting(false);

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
+import { logger } from "@/lib/utils/logger";
 
 interface BookingDetails {
   id: string;
@@ -65,11 +66,11 @@ function SuccessContent() {
           // Clean up localStorage
           localStorage.removeItem(storageKey);
         } else {
-          console.error("Agreement sign failed:", data.error);
+          logger.error("Agreement sign failed:", data.error);
           setAgreementStatus("error");
         }
       } catch (err) {
-        console.error("Failed to submit agreement signatures:", err);
+        logger.error("Failed to submit agreement signatures:", err);
         setAgreementStatus("error");
       }
     }
@@ -90,7 +91,7 @@ function SuccessContent() {
           setBooking(data.data);
         }
       } catch (err) {
-        console.error("Failed to fetch booking:", err);
+        logger.error("Failed to fetch booking:", err);
       }
       setLoading(false);
     }

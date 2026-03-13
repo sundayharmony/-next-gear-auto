@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
+import { logger } from "@/lib/utils/logger";
 
 interface DashboardData {
   totalBookings: number;
@@ -65,7 +66,7 @@ export default function AdminDashboardPage() {
           });
         }
       } catch (err) {
-        console.error("Failed to fetch dashboard data:", err);
+        logger.error("Failed to fetch dashboard data:", err);
       }
       setLoading(false);
     }

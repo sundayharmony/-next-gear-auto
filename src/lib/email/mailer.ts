@@ -6,6 +6,7 @@ import {
   cancellationTemplate,
   pickupReminderTemplate,
   returnReminderTemplate,
+  passwordResetTemplate,
   fmtDate,
   fmtTime,
 } from "./templates";
@@ -216,6 +217,22 @@ export async function sendReturnReminder(data: BookingEmailData) {
     console.log("Return reminder sent to:", data.customerEmail);
   } catch (error) {
     console.error("Failed to send return reminder:", error);
+    throw error;
+  }
+}
+
+export async function sendPasswordResetLink(data: { customerName: string; customerEmail: string }) {
+  try {
+    const transporter = getTransporter();
+    await transporter.sendMail({
+      from: FROM_CUSTOMER,
+      to: data.customerEmail,
+      subject: "Set Your Password - NextGearAuto",
+      html: passwordResetTemplate(data),
+    });
+    console.log("Password reset link sent to:", data.customerEmail);
+  } catch (error) {
+    console.error("Failed to send password reset link:", error);
     throw error;
   }
 }

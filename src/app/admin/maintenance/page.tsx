@@ -21,6 +21,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { Vehicle, getVehicleDisplayName } from "@/lib/types";
 import { MaintenancePhotoGallery } from "@/components/maintenance-photo-gallery";
+import { logger } from "@/lib/utils/logger";
 
 interface MaintenanceRecord {
   id: string;
@@ -101,7 +102,7 @@ export default function AdminMaintenancePage() {
         setVehicles(vehiclesData.data);
       }
     } catch (err) {
-      console.error("Failed to fetch data:", err);
+      logger.error("Failed to fetch data:", err);
       setError("Network error — could not load data");
     }
     setLoading(false);
@@ -235,7 +236,7 @@ export default function AdminMaintenancePage() {
                 body: formData,
               });
             } catch (err) {
-              console.error("Failed to upload photo for new record:", err);
+              logger.error("Failed to upload photo for new record:", err);
             }
           }
         }
@@ -297,7 +298,7 @@ export default function AdminMaintenancePage() {
           photoUrls: [...prev.photoUrls, previewUrl],
         }));
       } catch (err) {
-        console.error("Photo compression error:", err);
+        logger.error("Photo compression error:", err);
         setError("Failed to process photo");
       }
       // Reset the input so the same file can be selected again
@@ -343,7 +344,7 @@ export default function AdminMaintenancePage() {
         setError(data.error || "Failed to upload photo");
       }
     } catch (err) {
-      console.error("Photo upload error:", err);
+      logger.error("Photo upload error:", err);
       setError("Network error — could not upload photo");
     } finally {
       setUploadingPhoto((prev) => ({ ...prev, [recordId]: false }));
