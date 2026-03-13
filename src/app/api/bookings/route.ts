@@ -54,11 +54,14 @@ export async function GET(request: NextRequest) {
       .select("*, vehicles(year, make, model)")
       .order("created_at", { ascending: false });
 
-    if (customerId) {
+    if (customerId && customerEmail) {
+      // Search by both — return bookings matching EITHER (covers mismatches)
+      query = query.or(`customer_id.eq.${customerId},customer_email.ilike.${customerEmail}`);
+    } else if (customerId) {
       query = query.eq("customer_id", customerId);
-    }
-    if (customerEmail) {
-      query = query.eq("customer_email", customerEmail);
+    } else if (customerEmail) {
+      // Case-insensitive email match
+      query = query.ilike("customer_email", customerEmail);
     }
     if (status) {
       query = query.eq("status", status);
@@ -149,10 +152,13 @@ export async function POST(request: Request) {
 
     const bookingId = "bk" + Date.now() + Math.floor(Math.random() * 1000);
 
+    // Normalize email for consistent matching
+    const normalizedEmail = body.customerDetails?.email?.toLowerCase().trim() || null;
+
     // If customer details provided, find or create customer in the customers table
     let customerId = body.customerId || null;
-    if (!customerId && body.customerDetails?.email) {
-      const customerEmail = body.customerDetails.email.toLowerCase().trim();
+    if (!customerId && normalizedEmail) {
+      const customerEmail = normalizedEmail;
       const customerName = (body.customerDetails.name || "Customer").slice(0, 100);
       const customerPhone = (body.customerDetails.phone || "").slice(0, 20);
 
@@ -191,6 +197,23 @@ export async function POST(request: Request) {
       }
     }
 
+    // If admin provided customerId but no email, look up the customer's email for consistent matching
+    let bookingEmail = normalizedEmail;
+    let bookingName = body.customerDetails?.name || null;
+    let bookingPhone = body.customerDetails?.phone || null;
+    if (customerId && !bookingEmail) {
+      const { data: custLookup } = await supabase
+        .from("customers")
+        .select("email, name, phone")
+        .eq("id", customerId)
+        .single();
+      if (custLookup) {
+        bookingEmail = custLookup.email?.toLowerCase().trim() || null;
+        if (!bookingName) bookingName = custLookup.name;
+        if (!bookingPhone) bookingPhone = custLookup.phone;
+      }
+    }
+
     // Admin can set initial status directly (e.g. "confirmed"); clients always start as "pending"
     const bookingStatus = body.adminCreated && body.initialStatus ? body.initialStatus : "pending";
 
@@ -198,9 +221,9 @@ export async function POST(request: Request) {
       id: bookingId,
       customer_id: customerId,
       vehicle_id: body.vehicleId,
-      customer_name: body.customerDetails?.name,
-      customer_email: body.customerDetails?.email,
-      customer_phone: body.customerDetails?.phone,
+      customer_name: bookingName,
+      customer_email: bookingEmail,
+      customer_phone: bookingPhone,
       pickup_date: body.pickupDate,
       return_date: body.returnDate,
       pickup_time: body.pickupTime || null,

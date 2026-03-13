@@ -102,7 +102,10 @@ export default function AccountPage() {
     if (!user?.email) return;
     setLoading(true);
     try {
-      const res = await fetch(`/api/bookings?customer_email=${encodeURIComponent(user.email)}`);
+      // Query by both customer_id and email to catch all bookings
+      const params = new URLSearchParams({ customer_email: user.email.toLowerCase().trim() });
+      if (user.id) params.set("customer_id", user.id);
+      const res = await fetch(`/api/bookings?${params.toString()}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setBookings(data.data);
@@ -111,7 +114,7 @@ export default function AccountPage() {
       logger.error("Failed to fetch bookings:", err);
     }
     setLoading(false);
-  }, [user?.email]);
+  }, [user?.email, user?.id]);
 
   useEffect(() => {
     if (isAuthenticated && user) {
