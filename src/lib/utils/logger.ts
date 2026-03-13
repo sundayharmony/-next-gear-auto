@@ -4,12 +4,12 @@ interface LogEntry {
   level: LogLevel;
   message: string;
   timestamp: string;
-  context?: Record<string, unknown>;
+  context?: unknown;
 }
 
 const isDev = process.env.NODE_ENV === "development";
 
-function createLogEntry(level: LogLevel, message: string, context?: Record<string, unknown>): LogEntry {
+function createLogEntry(level: LogLevel, message: string, context?: unknown): LogEntry {
   return {
     level,
     message,
@@ -40,8 +40,8 @@ function log(entry: LogEntry): void {
 }
 
 export const logger = {
-  debug: (message: string, context?: Record<string, unknown>) => log(createLogEntry("debug", message, context)),
-  info: (message: string, context?: Record<string, unknown>) => log(createLogEntry("info", message, context)),
-  warn: (message: string, context?: Record<string, unknown>) => log(createLogEntry("warn", message, context)),
-  error: (message: string, context?: Record<string, unknown>) => log(createLogEntry("error", message, context)),
+  debug: (message: string, context?: unknown) => log(createLogEntry("debug", message, context)),
+  info: (message: string, context?: unknown) => log(createLogEntry("info", message, context)),
+  warn: (message: string, context?: unknown) => log(createLogEntry("warn", message, context)),
+  error: (message: string, context?: unknown) => log(createLogEntry("error", message, context)),
 };
