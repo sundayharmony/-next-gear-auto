@@ -1158,6 +1158,159 @@ export default function AdminCustomersPage() {
             </>
           )}
         </PageContainer>
+
+        {/* Crop Profile Picture Modal — must be inside detail-view return */}
+        {showCropModal && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <Card className="w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-bold flex items-center gap-2">
+                    <Crop className="h-5 w-5 text-purple-600" /> Crop Profile Picture
+                  </h2>
+                  <button
+                    onClick={closeCropModal}
+                    className="rounded-full p-1 hover:bg-gray-100"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                {cropError && (
+                  <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+                    {cropError}
+                  </div>
+                )}
+
+                {cropLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="h-6 w-6 animate-spin text-purple-600" />
+                    <span className="ml-2 text-sm text-gray-500">Loading image...</span>
+                  </div>
+                ) : cropBlobUrl ? (
+                  <>
+                    <p className="text-sm text-gray-500 mb-4">
+                      Drag the crop area over the face. Use zoom controls to resize the crop area, then click &quot;Preview Crop&quot; to see the result.
+                    </p>
+
+                    {/* Crop workspace */}
+                    <div
+                      ref={cropContainerRef}
+                      className="relative bg-gray-100 rounded-lg overflow-hidden mb-4 select-none"
+                      style={{ maxHeight: "400px" }}
+                    >
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        ref={cropImageRef}
+                        src={cropBlobUrl}
+                        alt="ID to crop"
+                        className="w-full h-auto"
+                        draggable={false}
+                        onLoad={handleCropImageLoad}
+                      />
+                      {/* Crop overlay */}
+                      {imageNaturalSize.w > 0 && imageDisplaySize.w > 0 && (
+                        <div
+                          onMouseDown={handleCropMouseDown}
+                          className="absolute border-2 border-white rounded-full shadow-lg cursor-move"
+                          style={{
+                            left: `${(cropPosition.x / imageNaturalSize.w) * imageDisplaySize.w}px`,
+                            top: `${(cropPosition.y / imageNaturalSize.h) * imageDisplaySize.h}px`,
+                            width: `${(cropSize / imageNaturalSize.w) * imageDisplaySize.w}px`,
+                            height: `${(cropSize / imageNaturalSize.h) * imageDisplaySize.h}px`,
+                            boxShadow: "0 0 0 9999px rgba(0,0,0,0.5)",
+                          }}
+                        >
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <Move className="h-6 w-6 text-white/70" />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Controls */}
+                    <div className="flex items-center justify-between gap-4 mb-4">
+                      <div className="flex items-center gap-2">
+                        <Button
+                          onClick={() => adjustCropSize(-30)}
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          title="Shrink crop area"
+                        >
+                          <ZoomOut className="h-4 w-4" />
+                        </Button>
+                        <span className="text-xs text-gray-500 w-16 text-center">
+                          {Math.round(cropSize)}px
+                        </span>
+                        <Button
+                          onClick={() => adjustCropSize(30)}
+                          variant="outline"
+                          size="sm"
+                          className="h-8 w-8 p-0"
+                          title="Enlarge crop area"
+                        >
+                          <ZoomIn className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <Button
+                        onClick={generateCropPreview}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Crop className="h-3.5 w-3.5 mr-1" /> Preview Crop
+                      </Button>
+                    </div>
+
+                    {/* Preview */}
+                    {cropPreview && (
+                      <div className="flex items-start gap-4 p-4 bg-gray-50 rounded-lg mb-4">
+                        <div className="flex-shrink-0">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={cropPreview}
+                            alt="Cropped preview"
+                            className="h-24 w-24 rounded-full object-cover border-2 border-purple-400"
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm font-semibold text-gray-900">Preview</p>
+                          <p className="text-xs text-gray-500 mt-1">
+                            This is how the profile picture will look. If it doesn&apos;t look right, adjust the crop area and preview again.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Action buttons */}
+                    <div className="flex gap-2">
+                      <Button
+                        onClick={saveProfilePicture}
+                        disabled={!cropPreview || savingProfilePic}
+                        className="flex-1"
+                      >
+                        <User className="h-4 w-4 mr-1" />
+                        {savingProfilePic ? "Saving..." : "Save as Profile Picture"}
+                      </Button>
+                      <Button
+                        onClick={closeCropModal}
+                        variant="outline"
+                        className="flex-1"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </>
+                ) : (
+                  <div className="py-8 text-center text-gray-500">
+                    <p>No image to crop. Make sure the customer has an ID document uploaded.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
       </>
     );
   }
