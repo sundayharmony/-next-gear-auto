@@ -529,9 +529,17 @@ export default function AdminCustomersPage() {
 
     setSavingProfilePic(true);
     try {
-      // Convert data URL to blob
-      const res = await fetch(cropPreview);
-      const blob = await res.blob();
+      // Convert data URL to blob without fetch (CSP blocks fetch on data: URIs)
+      const [header, base64Data] = cropPreview.split(",");
+      const mimeMatch = header.match(/:(.*?);/);
+      const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
+      const byteString = atob(base64Data);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const blob = new Blob([ab], { type: mime });
 
       const formData = new FormData();
       formData.append("file", blob, `profile_${selectedCustomer.id}.jpg`);
