@@ -150,11 +150,8 @@ export default function AdminVehiclesPage() {
     return matchesSearch && matchesCategory;
   });
 
-  const handleImageUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    formKey: "new" | string
-  ) => {
-    const rawFiles = Array.from(e.target.files || []);
+  // Core upload logic — accepts raw File[] so both input change and drag-and-drop can share it
+  const uploadImageFiles = async (rawFiles: File[], formKey: "new" | string) => {
     if (!rawFiles.length) return;
 
     setUploadingImage((prev) => ({ ...prev, [formKey]: true }));
@@ -216,9 +213,47 @@ export default function AdminVehiclesPage() {
         err instanceof Error ? err.message : "Network error — could not upload image"
       );
     } finally {
-      e.target.value = "";
       setUploadingImage((prev) => ({ ...prev, [formKey]: false }));
     }
+  };
+
+  const handleImageUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    formKey: "new" | string
+  ) => {
+    const rawFiles = Array.from(e.target.files || []);
+    await uploadImageFiles(rawFiles, formKey);
+    e.target.value = "";
+  };
+
+  // Drag-and-drop state
+  const [dragOver, setDragOver] = useState<Record<string, boolean>>({});
+
+  const handleDragOver = (e: React.DragEvent, formKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver((prev) => ({ ...prev, [formKey]: true }));
+  };
+
+  const handleDragLeave = (e: React.DragEvent, formKey: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver((prev) => ({ ...prev, [formKey]: false }));
+  };
+
+  const handleDrop = async (e: React.DragEvent, formKey: "new" | string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver((prev) => ({ ...prev, [formKey]: false }));
+
+    const droppedFiles = Array.from(e.dataTransfer.files).filter((f) =>
+      f.type.startsWith("image/")
+    );
+    if (!droppedFiles.length) {
+      setError("Only image files are accepted.");
+      return;
+    }
+    await uploadImageFiles(droppedFiles, formKey);
   };
 
   const toggleAvailability = async (vehicle: Vehicle) => {
@@ -785,22 +820,34 @@ export default function AdminVehiclesPage() {
                 </div>
               ))}
             </div>
-            <div className="flex items-center gap-2">
-              <label className="cursor-pointer">
-                <div className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">
-                  <Upload className="h-4 w-4" />
-                  {uploadingImage[formKey] ? "Uploading..." : "Upload Image"}
-                </div>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={(e) => handleImageUpload(e, formKey)}
-                  disabled={uploadingImage[formKey]}
-                  className="hidden"
-                />
-              </label>
-            </div>
+            <label
+              onDragOver={(e) => handleDragOver(e, formKey)}
+              onDragLeave={(e) => handleDragLeave(e, formKey)}
+              onDrop={(e) => handleDrop(e, formKey)}
+              className={`cursor-pointer block rounded-lg border-2 border-dashed p-4 text-center transition-colors ${
+                dragOver[formKey]
+                  ? "border-purple-500 bg-purple-50"
+                  : "border-gray-300 hover:border-purple-400 hover:bg-gray-50"
+              } ${uploadingImage[formKey] ? "opacity-60 pointer-events-none" : ""}`}
+            >
+              <Upload className="h-5 w-5 mx-auto mb-1 text-gray-400" />
+              <p className="text-sm text-gray-600">
+                {uploadingImage[formKey]
+                  ? "Uploading..."
+                  : dragOver[formKey]
+                    ? "Drop images here"
+                    : "Drag & drop images or click to browse"}
+              </p>
+              <p className="text-xs text-gray-400 mt-0.5">JPEG, PNG, WebP up to 5MB</p>
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                onChange={(e) => handleImageUpload(e, formKey)}
+                disabled={uploadingImage[formKey]}
+                className="hidden"
+              />
+            </label>
           </div>
 
           {/* Features Section */}
