@@ -69,13 +69,13 @@ interface Booking {
 
 interface MaintenanceRecord {
   id: string;
-  vehicle_id: string;
+  vehicleId: string;
   title: string;
   status: string;
   cost: number | null;
-  scheduled_date: string;
-  completed_date: string | null;
-  created_at: string;
+  scheduledDate: string;
+  completedDate: string | null;
+  createdAt: string;
 }
 
 interface Expense {
@@ -305,12 +305,12 @@ export default function AdminFinancesPage() {
       .filter((m) => m.status === "completed")
       .map((m) => ({
         id: m.id,
-        vehicle_id: m.vehicle_id,
+        vehicle_id: m.vehicleId,
         category: "maintenance" as const,
         amount: m.cost ?? 0,
         description: m.title,
-        date: m.completed_date || m.scheduled_date || m.created_at,
-        created_at: m.created_at,
+        date: m.completedDate || m.scheduledDate || m.createdAt,
+        created_at: m.createdAt,
         fromMaintenance: true,
       }));
   }, [maintenance]);
