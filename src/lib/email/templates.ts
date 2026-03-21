@@ -409,17 +409,23 @@ export function bookingSignAgreementTemplate(data: EmailData): string {
 export function passwordResetTemplate(data: { customerName: string; customerEmail: string }): string {
   const encodedEmail = encodeURIComponent(data.customerEmail);
   return wrapEmail(`
-    ${headerBlock('Reset Your Password', 'Set up a new password for your account')}
     <tr>
-      <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${data.customerName},</p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">An admin has sent you a link to set up your password for your NextGearAuto account.</p>
+      <td style="padding: 40px 32px 24px; text-align: center;">
+        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
+        <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Set Your Password</h1>
       </td>
     </tr>
-    ${ctaButton('Set My Password', `https://rentnextgearauto.com/set-password?email=${encodedEmail}`)}
     <tr>
       <td style="padding: 0 32px;">
-        ${infoBox('Secure Your Account', 'This link will allow you to create a new password. If you didn\'t request this, you can safely ignore this email.', '#7C3AED', '#f5f3ff')}
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${data.customerName}, use the button below to set up your password for your NextGearAuto account.</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 20px;">
+          <tr>
+            <td align="center">
+              <a href="https://rentnextgearauto.com/set-password?email=${encodedEmail}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Set My Password</a>
+            </td>
+          </tr>
+        </table>
+        <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">If you didn't request this, you can safely ignore this email.</p>
       </td>
     </tr>
   `);
