@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save, User, UserPlus, Mail } from "lucide-react";
+import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save, User, UserPlus, Mail, Ticket, MapPin, Car } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -129,6 +129,7 @@ function AdminBookingsContent() {
   const [allCustomers, setAllCustomers] = useState<CustomerOption[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
+  const [bookingTickets, setBookingTickets] = useState<Array<{ id: string; ticketType: string; violationDate: string; municipality: string; state: string; prefix: string; ticketNumber: string; amountDue: number; status: string; licensePlate: string }>>([]);
   const customerDropdownRef = React.useRef<HTMLDivElement>(null);
 
   // Auto-open create form with prefilled customer data from URL params
@@ -563,6 +564,18 @@ function AdminBookingsContent() {
     const total = parseFloat((subtotal + tax).toFixed(2));
     setEditData((prev) => ({ ...prev, total_price: total }));
   }, [editMode, editData.vehicle_id, editData.pickup_date, editData.return_date, vehicles, selectedBooking]);
+
+  // Fetch tickets for the selected booking
+  useEffect(() => {
+    if (!selectedBooking?.id || !showDetail) {
+      setBookingTickets([]);
+      return;
+    }
+    adminFetch(`/api/admin/tickets?booking_id=${selectedBooking.id}`)
+      .then((r) => (r.ok ? r.json() : { data: [] }))
+      .then((d) => setBookingTickets(d.data || []))
+      .catch(() => setBookingTickets([]));
+  }, [selectedBooking?.id, showDetail]);
 
   return (
     <>
@@ -1348,6 +1361,47 @@ function AdminBookingsContent() {
                   <p className="text-xs text-gray-400">Not yet signed</p>
                 </div>
               )}
+
+              {/* Tickets for this booking */}
+              <div>
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-semibold text-sm text-gray-500 uppercase">
+                    Tickets ({bookingTickets.length})
+                  </h3>
+                  <Link
+                    href={`/admin/tickets`}
+                    className="text-xs text-purple-600 hover:text-purple-800"
+                  >
+                    View All &rarr;
+                  </Link>
+                </div>
+                {bookingTickets.length === 0 ? (
+                  <p className="text-xs text-gray-400">No tickets for this trip</p>
+                ) : (
+                  <div className="space-y-2">
+                    {bookingTickets.map((t) => (
+                      <div
+                        key={t.id}
+                        className="flex items-center gap-2 p-2 rounded-lg bg-red-50 border border-red-100"
+                      >
+                        <Ticket className="h-4 w-4 text-red-500 shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs font-medium">
+                            {t.prefix && t.ticketNumber ? `${t.prefix}-${t.ticketNumber}` : t.ticketType}
+                          </p>
+                          <p className="text-xs text-gray-500">
+                            {t.municipality}{t.state ? `, ${t.state}` : ""} · {formatDate(t.violationDate)}
+                          </p>
+                        </div>
+                        <div className="text-right shrink-0">
+                          <p className="text-xs font-bold text-red-600">${t.amountDue}</p>
+                          <Badge variant="secondary" className="text-[10px] capitalize">{t.status}</Badge>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
 
               {/* Edit Mode Save/Cancel Buttons */}
               {editMode && (
