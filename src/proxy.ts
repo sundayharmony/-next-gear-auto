@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
 /**
- * Next.js Middleware — runs on every matching request before the route handler.
+ * Next.js Proxy — runs on every matching request before the route handler.
+ * (Renamed from middleware.ts to proxy.ts for Next.js 16 compatibility.)
  *
  * Responsibilities:
  *   1. Validate JWT on /admin/* pages (redirect to login if missing/invalid)
@@ -41,7 +42,7 @@ function generateCsrfToken(): string {
   return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export async function middleware(req: NextRequest) {
+export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // ── CSRF Token Management ───────────────────────────────────────
@@ -105,7 +106,7 @@ export async function middleware(req: NextRequest) {
 }
 
 /**
- * Matcher: run middleware on admin pages/APIs, and all API routes for CSRF.
+ * Matcher: run proxy on admin pages/APIs, and all API routes for CSRF.
  * Skip static assets and Next.js internals.
  */
 export const config = {
