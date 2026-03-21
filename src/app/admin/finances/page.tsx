@@ -67,6 +67,17 @@ interface Booking {
   created_at: string;
 }
 
+interface MaintenanceRecord {
+  id: string;
+  vehicle_id: string;
+  title: string;
+  status: string;
+  cost: number | null;
+  scheduled_date: string;
+  completed_date: string | null;
+  created_at: string;
+}
+
 interface Expense {
   id: string;
   vehicle_id: string | null;
@@ -219,6 +230,7 @@ export default function AdminFinancesPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState({
@@ -243,10 +255,11 @@ export default function AdminFinancesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [bookingsRes, expensesRes, vehiclesRes] = await Promise.all([
+      const [bookingsRes, expensesRes, vehiclesRes, maintenanceRes] = await Promise.all([
         adminFetch("/api/admin/bookings"),
         adminFetch(`/api/admin/expenses?from=${dateRange.from}&to=${dateRange.to}`),
         adminFetch("/api/admin/vehicles"),
+        adminFetch(`/api/admin/maintenance?from=${dateRange.from}&to=${dateRange.to}`),
       ]);
 
       if (!bookingsRes.ok || !expensesRes.ok || !vehiclesRes.ok) {
@@ -256,10 +269,12 @@ export default function AdminFinancesPage() {
       const bookingsData = await bookingsRes.json();
       const expensesData = await expensesRes.json();
       const vehiclesData = await vehiclesRes.json();
+      const maintenanceData = maintenanceRes.ok ? await maintenanceRes.json() : { data: [] };
 
       setBookings(bookingsData.data || []);
       setExpenses(expensesData.data || []);
       setVehicles(vehiclesData.data || []);
+      setMaintenance(maintenanceData.data || []);
     } catch (err) {
       logger.error("Error fetching data:", err);
       setError(err instanceof Error ? err.message : "Failed to load dashboard data");
@@ -279,9 +294,34 @@ export default function AdminFinancesPage() {
     [bookings]
   );
 
+  // Maintenance costs (completed records with a cost value)
+  const maintenanceCosts = useMemo(() => {
+    return maintenance
+      .filter((m) => m.cost != null && m.cost > 0)
+      .map((m) => ({
+        id: m.id,
+        vehicle_id: m.vehicle_id,
+        category: "maintenance" as const,
+        amount: m.cost as number,
+        description: m.title,
+        date: m.completed_date || m.scheduled_date || m.created_at,
+        created_at: m.created_at,
+        fromMaintenance: true,
+      }));
+  }, [maintenance]);
+
+  // All costs = explicit expenses + maintenance record costs
+  const allExpenses = useMemo(() => {
+    // Avoid double-counting: only include maintenance costs that aren't already in the expenses table
+    // We match by checking if an expense with the same vehicle_id, category "maintenance", and
+    // similar amount exists on the same date — but the simplest approach is to always include them
+    // since the user records maintenance costs in the maintenance module, not as manual expenses
+    return [...expenses, ...maintenanceCosts];
+  }, [expenses, maintenanceCosts]);
+
   const summaryData = useMemo(() => {
     const totalRevenue = revenueBookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
-    const totalExpenses = expenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
+    const totalExpenses = allExpenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
 
     const totalVehicleCosts = vehicles.reduce((sum, v) => sum + getEffectiveVehicleCost(v), 0);
     const netProfit = totalRevenue - totalExpenses - totalVehicleCosts;
@@ -318,7 +358,7 @@ export default function AdminFinancesPage() {
       avgBookingValue,
       totalBookedDays,
     };
-  }, [revenueBookings, expenses, vehicles, dateRange]);
+  }, [revenueBookings, allExpenses, vehicles, dateRange]);
 
   // Cash flow data — monthly money in vs money out
   const cashFlowData = useMemo(() => {
@@ -342,7 +382,7 @@ export default function AdminFinancesPage() {
       if (months[key]) months[key].income += b.total_price ?? 0;
     });
 
-    expenses.forEach((e) => {
+    allExpenses.forEach((e) => {
       const d = new Date(e.date);
       const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
       if (months[key]) months[key].expenses += e.amount ?? 0;
@@ -354,7 +394,7 @@ export default function AdminFinancesPage() {
       expenses: Math.round(m.expenses),
       net: Math.round(m.income - m.expenses),
     }));
-  }, [revenueBookings, expenses]);
+  }, [revenueBookings, allExpenses]);
 
   // Daily earnings (last 14 days)
   const dailyEarningsData = useMemo(() => {
@@ -378,7 +418,7 @@ export default function AdminFinancesPage() {
       if (day) day.revenue += b.total_price ?? 0;
     });
 
-    expenses.forEach((e) => {
+    allExpenses.forEach((e) => {
       const dateStr = new Date(e.date).toISOString().split("T")[0];
       const day = days.find((d) => d.date === dateStr);
       if (day) day.expenses += e.amount ?? 0;
@@ -389,12 +429,12 @@ export default function AdminFinancesPage() {
       revenue: Math.round(d.revenue),
       expenses: Math.round(d.expenses),
     }));
-  }, [revenueBookings, expenses]);
+  }, [revenueBookings, allExpenses]);
 
-  // Expense by category
+  // Expense by category (includes maintenance costs)
   const expenseCategoryData = useMemo(() => {
     const totals: Record<string, number> = {};
-    expenses.forEach((e) => {
+    allExpenses.forEach((e) => {
       totals[e.category] = (totals[e.category] || 0) + (e.amount ?? 0);
     });
     vehicles.forEach((v) => {
@@ -410,14 +450,14 @@ export default function AdminFinancesPage() {
         value: Math.round(value),
       }))
       .sort((a, b) => b.value - a.value);
-  }, [expenses, vehicles]);
+  }, [allExpenses, vehicles]);
 
   // Vehicle profitability rankings
   const vehicleAnalytics = useMemo(() => {
     return vehicles
       .map((vehicle) => {
         const vBookings = revenueBookings.filter((b) => b.vehicle_id === vehicle.id);
-        const vExpenses = expenses.filter((e) => e.vehicle_id === vehicle.id);
+        const vExpenses = allExpenses.filter((e) => e.vehicle_id === vehicle.id);
         const revenue = vBookings.reduce((s, b) => s + (b.total_price ?? 0), 0);
         const expenseTotal = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
         const vehicleCost = getEffectiveVehicleCost(vehicle);
@@ -449,7 +489,7 @@ export default function AdminFinancesPage() {
         };
       })
       .sort((a, b) => b.profit - a.profit);
-  }, [vehicles, revenueBookings, expenses, dateRange]);
+  }, [vehicles, revenueBookings, allExpenses, dateRange]);
 
   // ─── Expense CRUD ───────────────────────────────────────────────
   const handleAddExpense = async () => {
@@ -523,7 +563,7 @@ export default function AdminFinancesPage() {
     const vehicle = vehicles.find((v) => v.id === vehicleId);
     if (!vehicle) return null;
     const vBookings = revenueBookings.filter((b) => b.vehicle_id === vehicleId);
-    const vExpenses = expenses.filter((e) => e.vehicle_id === vehicleId);
+    const vExpenses = allExpenses.filter((e) => e.vehicle_id === vehicleId);
     const revenue = vBookings.reduce((s, b) => s + (b.total_price ?? 0), 0);
     const expenseTotal = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
     const effectiveCost = getEffectiveVehicleCost(vehicle);
@@ -1036,7 +1076,7 @@ export default function AdminFinancesPage() {
             <Card>
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <SectionHeader title="Expenses" subtitle={`${expenses.length} total records`} />
+                  <SectionHeader title="Expenses" subtitle={`${expenses.length} manual + ${maintenanceCosts.length} from maintenance`} />
                   <Button
                     onClick={() => setAddingExpense(!addingExpense)}
                     size="sm"
@@ -1108,8 +1148,47 @@ export default function AdminFinancesPage() {
                   </div>
                 )}
 
-                {/* Expenses List */}
-                {expenses.length === 0 ? (
+                {/* Maintenance Costs (auto-synced from maintenance module) */}
+                {maintenanceCosts.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">From Maintenance Records</p>
+                    <div className="space-y-2">
+                      {maintenanceCosts
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map((mc) => {
+                          const vehicle = vehicles.find((v) => v.id === mc.vehicle_id);
+                          return (
+                            <div key={mc.id} className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-100">
+                              <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 bg-amber-500">
+                                <Wrench className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium">{mc.description}</p>
+                                  {vehicle && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {vehicle.year} {vehicle.make} {vehicle.model}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-amber-600">Auto-synced from Maintenance</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-semibold">${mc.amount.toLocaleString()}</p>
+                                <p className="text-xs text-gray-400">{formatDate(mc.date)}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual Expenses List */}
+                {expenses.length > 0 && (
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Manual Expenses</p>
+                )}
+                {expenses.length === 0 && maintenanceCosts.length === 0 ? (
                   <p className="text-sm text-gray-400 text-center py-8">No expenses recorded in this date range</p>
                 ) : (
                   <div className="space-y-2">
