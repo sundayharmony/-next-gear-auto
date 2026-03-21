@@ -299,15 +299,15 @@ export default function AdminFinancesPage() {
     [bookings]
   );
 
-  // Maintenance costs (completed records with a cost value)
+  // Maintenance costs (all completed maintenance records show as expenses)
   const maintenanceCosts = useMemo(() => {
     return maintenance
-      .filter((m) => m.cost != null && m.cost > 0)
+      .filter((m) => m.status === "completed")
       .map((m) => ({
         id: m.id,
         vehicle_id: m.vehicle_id,
         category: "maintenance" as const,
-        amount: m.cost as number,
+        amount: m.cost ?? 0,
         description: m.title,
         date: m.completed_date || m.scheduled_date || m.created_at,
         created_at: m.created_at,
