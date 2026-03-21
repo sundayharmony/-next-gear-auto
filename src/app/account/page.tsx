@@ -56,6 +56,7 @@ interface BookingData {
   signed_name?: string | null;
   id_document_url?: string | null;
   insurance_proof_url?: string | null;
+  rental_agreement_url?: string | null;
 }
 
 const statusColors: Record<string, string> = {
@@ -363,7 +364,16 @@ export default function AccountPage() {
                             </Link>
                           )}
                           {booking.agreement_signed_at && (
-                            <Badge className="bg-green-100 text-green-700 border-green-200">Agreement Signed</Badge>
+                            <>
+                              <Badge className="bg-green-100 text-green-700 border-green-200">Agreement Signed</Badge>
+                              {booking.rental_agreement_url && (
+                                <a href={booking.rental_agreement_url} target="_blank" rel="noopener noreferrer">
+                                  <Button size="sm" variant="outline" className="text-purple-600 hover:bg-purple-50">
+                                    <Download className="h-3.5 w-3.5 mr-1" /> View Agreement
+                                  </Button>
+                                </a>
+                              )}
+                            </>
                           )}
                           {(booking.status === "pending" || booking.status === "confirmed") && (
                             <Button
@@ -671,7 +681,16 @@ export default function AccountPage() {
                                 </Link>
                               )}
                               {next.agreement_signed_at && (
-                                <Badge className="bg-green-100 text-green-700 border-green-200">Agreement Signed</Badge>
+                                <>
+                                  <Badge className="bg-green-100 text-green-700 border-green-200">Agreement Signed</Badge>
+                                  {next.rental_agreement_url && (
+                                    <a href={next.rental_agreement_url} target="_blank" rel="noopener noreferrer">
+                                      <Button size="sm" variant="outline" className="text-purple-600 hover:bg-purple-50">
+                                        <Download className="h-3.5 w-3.5 mr-1" /> View Agreement
+                                      </Button>
+                                    </a>
+                                  )}
+                                </>
                               )}
                             </div>
                           </div>

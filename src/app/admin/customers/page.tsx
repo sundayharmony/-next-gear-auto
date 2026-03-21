@@ -1091,9 +1091,76 @@ export default function AdminCustomersPage() {
                   )}
                 </div>
 
-                {/* Right Column: Booking History */}
+                {/* Right Column: Tickets & Booking History */}
                 <div className="lg:col-span-2 min-w-0">
+                  {/* Tickets Section */}
                   <Card>
+                    <CardContent className="p-5">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-sm font-semibold text-gray-500 uppercase">
+                          Tickets ({customerTickets.length})
+                        </h3>
+                        {customerTickets.length > 0 && (
+                          <span className="text-xs font-bold text-red-600">
+                            ${customerTickets.filter((t) => t.status === "unpaid").reduce((s, t) => s + (t.amountDue ?? 0), 0).toLocaleString()} unpaid
+                          </span>
+                        )}
+                      </div>
+                      {customerTickets.length === 0 ? (
+                        <p className="text-sm text-gray-400 text-center py-4">No tickets for this customer</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {customerTickets
+                            .sort((a, b) => new Date(b.violationDate).getTime() - new Date(a.violationDate).getTime())
+                            .map((t) => (
+                              <div
+                                key={t.id}
+                                className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
+                                  t.status === "unpaid"
+                                    ? "bg-red-50 border-red-100"
+                                    : t.status === "paid"
+                                      ? "bg-green-50 border-green-100"
+                                      : "bg-gray-50 border-gray-100"
+                                }`}
+                              >
+                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                                  t.ticketType === "traffic" ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"
+                                }`}>
+                                  <Ticket className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm font-medium">
+                                      {t.prefix && t.ticketNumber ? `${t.prefix}-${t.ticketNumber}` : t.ticketType === "traffic" ? "Traffic Violation" : "Parking Violation"}
+                                    </span>
+                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize ${
+                                      t.status === "unpaid" ? "bg-red-100 text-red-700"
+                                        : t.status === "paid" ? "bg-green-100 text-green-700"
+                                        : t.status === "disputed" ? "bg-amber-100 text-amber-700"
+                                        : "bg-gray-100 text-gray-600"
+                                    }`}>
+                                      {t.status}
+                                    </span>
+                                  </div>
+                                  <p className="text-xs text-gray-500 mt-0.5">
+                                    {t.municipality}{t.state ? `, ${t.state}` : ""} · {formatDate(t.violationDate)}
+                                    {t.vehicleName ? ` · ${t.vehicleName}` : ""}
+                                  </p>
+                                </div>
+                                <div className="text-right shrink-0">
+                                  <p className={`text-sm font-bold ${t.status === "unpaid" ? "text-red-600" : "text-gray-600"}`}>
+                                    ${t.amountDue.toLocaleString()}
+                                  </p>
+                                </div>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Booking History */}
+                  <Card className="mt-4">
                     <CardContent className="p-5">
                       <h3 className="text-sm font-semibold text-gray-500 uppercase mb-4">
                         Booking History ({customerBookings.length})
@@ -1179,71 +1246,6 @@ export default function AdminCustomersPage() {
                     </CardContent>
                   </Card>
 
-                  {/* Tickets Section */}
-                  <Card className="mt-4">
-                    <CardContent className="p-5">
-                      <div className="flex items-center justify-between mb-4">
-                        <h3 className="text-sm font-semibold text-gray-500 uppercase">
-                          Tickets ({customerTickets.length})
-                        </h3>
-                        {customerTickets.length > 0 && (
-                          <span className="text-xs font-bold text-red-600">
-                            ${customerTickets.filter((t) => t.status === "unpaid").reduce((s, t) => s + (t.amountDue ?? 0), 0).toLocaleString()} unpaid
-                          </span>
-                        )}
-                      </div>
-                      {customerTickets.length === 0 ? (
-                        <p className="text-sm text-gray-400 text-center py-4">No tickets for this customer</p>
-                      ) : (
-                        <div className="space-y-2">
-                          {customerTickets
-                            .sort((a, b) => new Date(b.violationDate).getTime() - new Date(a.violationDate).getTime())
-                            .map((t) => (
-                              <div
-                                key={t.id}
-                                className={`flex items-center gap-3 p-3 rounded-lg border transition-colors ${
-                                  t.status === "unpaid"
-                                    ? "bg-red-50 border-red-100"
-                                    : t.status === "paid"
-                                      ? "bg-green-50 border-green-100"
-                                      : "bg-gray-50 border-gray-100"
-                                }`}
-                              >
-                                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                                  t.ticketType === "traffic" ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"
-                                }`}>
-                                  <Ticket className="h-4 w-4" />
-                                </div>
-                                <div className="flex-1 min-w-0">
-                                  <div className="flex items-center gap-2">
-                                    <span className="text-sm font-medium">
-                                      {t.prefix && t.ticketNumber ? `${t.prefix}-${t.ticketNumber}` : t.ticketType === "traffic" ? "Traffic Violation" : "Parking Violation"}
-                                    </span>
-                                    <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium capitalize ${
-                                      t.status === "unpaid" ? "bg-red-100 text-red-700"
-                                        : t.status === "paid" ? "bg-green-100 text-green-700"
-                                        : t.status === "disputed" ? "bg-amber-100 text-amber-700"
-                                        : "bg-gray-100 text-gray-600"
-                                    }`}>
-                                      {t.status}
-                                    </span>
-                                  </div>
-                                  <p className="text-xs text-gray-500 mt-0.5">
-                                    {t.municipality}{t.state ? `, ${t.state}` : ""} · {formatDate(t.violationDate)}
-                                    {t.vehicleName ? ` · ${t.vehicleName}` : ""}
-                                  </p>
-                                </div>
-                                <div className="text-right shrink-0">
-                                  <p className={`text-sm font-bold ${t.status === "unpaid" ? "text-red-600" : "text-gray-600"}`}>
-                                    ${t.amountDue.toLocaleString()}
-                                  </p>
-                                </div>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </CardContent>
-                  </Card>
                 </div>
               </div>
             </>

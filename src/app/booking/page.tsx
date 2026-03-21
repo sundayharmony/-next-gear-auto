@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Search, Car, Package, UserCheck, ShieldCheck, FileText, CreditCard,
   Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight, Tag, X, Upload,
-  Shield, CheckCircle, PenLine, CheckCircle2,
+  Shield, CheckCircle, PenLine, CheckCircle2, Maximize2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -268,6 +268,13 @@ function BookingPageInner() {
   const allAgreementsSigned = agreementCompletedCount === AGREEMENT_SIGNATURE_FIELDS.length;
   const currentAgreementField = AGREEMENT_SIGNATURE_FIELDS[agreementStep];
   const [searchDates, setSearchDates] = useState({ pickup: "", return: "", pickupTime: "10:00", returnTime: "10:00" });
+  const [showPickupCalendar, setShowPickupCalendar] = useState(false);
+  const [showReturnCalendar, setShowReturnCalendar] = useState(false);
+  const [showPickupTimePicker, setShowPickupTimePicker] = useState(false);
+  const [showReturnTimePicker, setShowReturnTimePicker] = useState(false);
+  const [calendarViewDate, setCalendarViewDate] = useState(new Date());
+  const [showFullAgreement, setShowFullAgreement] = useState(false);
+  const [fullAgreementPage, setFullAgreementPage] = useState(1);
   const [promoInput, setPromoInput] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
@@ -428,6 +435,152 @@ function BookingPageInner() {
     booking.nextStep();
   };
 
+  // Helper functions for calendar
+  const getDaysInMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+  };
+
+  const getFirstDayOfMonth = (date: Date) => {
+    return new Date(date.getFullYear(), date.getMonth(), 1).getDay();
+  };
+
+  const formatDateForInput = (dateStr: string) => {
+    if (!dateStr) return "";
+    const date = new Date(dateStr + "T00:00:00");
+    return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
+  };
+
+  // CalendarOverlay Component
+  const CalendarOverlay = ({ isOpen, onClose, onSelectDate, isPickup }: { isOpen: boolean; onClose: () => void; onSelectDate: (date: string) => void; isPickup: boolean }) => {
+    if (!isOpen) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const minDate = new Date(today);
+    if (!isPickup && searchDates.pickup) {
+      const pickupDate = new Date(searchDates.pickup + "T00:00:00");
+      minDate.setTime(Math.max(minDate.getTime(), pickupDate.getTime()));
+    }
+
+    const daysInMonth = getDaysInMonth(calendarViewDate);
+    const firstDay = getFirstDayOfMonth(calendarViewDate);
+    const days = [];
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth(), i));
+    }
+
+    const monthYear = calendarViewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+    const handleDayClick = (day: Date) => {
+      const dateStr = day.toISOString().split("T")[0];
+      onSelectDate(dateStr);
+      onClose();
+    };
+
+    const previousMonth = () => {
+      setCalendarViewDate(new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() - 1));
+    };
+
+    const nextMonth = () => {
+      setCalendarViewDate(new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() + 1));
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-xl" onClick={onClose}>
+        <div className="bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl max-w-sm w-full mx-4 shadow-2xl p-6 animate-in" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center justify-between mb-6">
+            <button onClick={previousMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h3 className="text-lg font-semibold text-gray-900">{monthYear}</h3>
+            <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
+              <ArrowRight className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-7 gap-2 mb-4">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+              <div key={day} className="text-center text-xs font-semibold text-gray-500 h-11 flex items-center justify-center">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-2">
+            {days.map((day, idx) => {
+              const isDisabled = day === null || day < minDate;
+              const isSelected = day && day.toISOString().split("T")[0] === (isPickup ? searchDates.pickup : searchDates.return);
+              return (
+                <button
+                  key={idx}
+                  onClick={() => day && !isDisabled && handleDayClick(day)}
+                  disabled={isDisabled}
+                  className={cn(
+                    "h-11 w-11 rounded-lg font-medium transition flex items-center justify-center text-sm",
+                    isDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-900 hover:bg-gray-100",
+                    isSelected ? "bg-purple-600 text-white font-semibold hover:bg-purple-700" : ""
+                  )}
+                >
+                  {day ? day.getDate() : ""}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // TimePickerOverlay Component
+  const TimePickerOverlay = ({ isOpen, onClose, onSelectTime, selectedTime }: { isOpen: boolean; onClose: () => void; onSelectTime: (time: string) => void; selectedTime: string }) => {
+    if (!isOpen) return null;
+
+    const timeListRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+      if (isOpen && timeListRef.current) {
+        const selectedElement = timeListRef.current.querySelector("[data-selected='true']");
+        if (selectedElement) {
+          selectedElement.scrollIntoView({ behavior: "instant", block: "center" });
+        }
+      }
+    }, [isOpen]);
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-xl" onClick={onClose}>
+        <div className="bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl max-w-sm w-full mx-4 shadow-2xl animate-in" onClick={(e) => e.stopPropagation()}>
+          <div className="p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Time</h3>
+          </div>
+          <div ref={timeListRef} className="max-h-80 overflow-y-auto">
+            {timeOptions.map((opt) => (
+              <button
+                key={opt.value}
+                data-selected={opt.value === selectedTime}
+                onClick={() => {
+                  onSelectTime(opt.value);
+                  onClose();
+                }}
+                className={cn(
+                  "w-full px-6 py-4 text-left font-medium transition border-l-4",
+                  opt.value === selectedTime
+                    ? "bg-purple-50 border-purple-600 text-purple-700 font-semibold"
+                    : "bg-white border-transparent text-gray-900 hover:bg-gray-50"
+                )}
+              >
+                {opt.display}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       {/* Header */}
@@ -474,6 +627,7 @@ function BookingPageInner() {
         <div className="mx-auto max-w-3xl">
           {/* Step 1: Search */}
           {booking.currentStep === 1 && (
+            <>
             <Card>
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-1">Select Your Dates</h2>
@@ -481,23 +635,41 @@ function BookingPageInner() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700">Pick-up Date</label>
-                    <Input type="date" value={searchDates.pickup} onChange={(e) => setSearchDates((p) => ({ ...p, pickup: e.target.value }))} min={new Date().toISOString().split("T")[0]} />
+                    <button
+                      onClick={() => {
+                        setCalendarViewDate(searchDates.pickup ? new Date(searchDates.pickup + "T00:00:00") : new Date());
+                        setShowPickupCalendar(true);
+                      }}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white text-left hover:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                    >
+                      {searchDates.pickup ? formatDateForInput(searchDates.pickup) : "Select date"}
+                    </button>
                     <label className="mt-3 mb-1.5 block text-sm font-medium text-gray-700">Pick-up Time</label>
-                    <select value={searchDates.pickupTime} onChange={(e) => setSearchDates((p) => ({ ...p, pickupTime: e.target.value }))} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                      {timeOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.display}</option>
-                      ))}
-                    </select>
+                    <button
+                      onClick={() => setShowPickupTimePicker(true)}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white text-left hover:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                    >
+                      {timeOptions.find((opt) => opt.value === searchDates.pickupTime)?.display || "Select time"}
+                    </button>
                   </div>
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700">Return Date</label>
-                    <Input type="date" value={searchDates.return} onChange={(e) => setSearchDates((p) => ({ ...p, return: e.target.value }))} min={searchDates.pickup || new Date().toISOString().split("T")[0]} />
+                    <button
+                      onClick={() => {
+                        setCalendarViewDate(searchDates.return ? new Date(searchDates.return + "T00:00:00") : new Date());
+                        setShowReturnCalendar(true);
+                      }}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white text-left hover:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                    >
+                      {searchDates.return ? formatDateForInput(searchDates.return) : "Select date"}
+                    </button>
                     <label className="mt-3 mb-1.5 block text-sm font-medium text-gray-700">Return Time</label>
-                    <select value={searchDates.returnTime} onChange={(e) => setSearchDates((p) => ({ ...p, returnTime: e.target.value }))} className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
-                      {timeOptions.map((opt) => (
-                        <option key={opt.value} value={opt.value}>{opt.display}</option>
-                      ))}
-                    </select>
+                    <button
+                      onClick={() => setShowReturnTimePicker(true)}
+                      className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white text-left hover:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
+                    >
+                      {timeOptions.find((opt) => opt.value === searchDates.returnTime)?.display || "Select time"}
+                    </button>
                   </div>
                 </div>
                 {searchDates.pickup && searchDates.return && (
@@ -508,6 +680,35 @@ function BookingPageInner() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Calendar Overlays */}
+            <CalendarOverlay
+              isOpen={showPickupCalendar}
+              onClose={() => setShowPickupCalendar(false)}
+              onSelectDate={(date) => setSearchDates((p) => ({ ...p, pickup: date }))}
+              isPickup={true}
+            />
+            <CalendarOverlay
+              isOpen={showReturnCalendar}
+              onClose={() => setShowReturnCalendar(false)}
+              onSelectDate={(date) => setSearchDates((p) => ({ ...p, return: date }))}
+              isPickup={false}
+            />
+
+            {/* Time Picker Overlays */}
+            <TimePickerOverlay
+              isOpen={showPickupTimePicker}
+              onClose={() => setShowPickupTimePicker(false)}
+              onSelectTime={(time) => setSearchDates((p) => ({ ...p, pickupTime: time }))}
+              selectedTime={searchDates.pickupTime}
+            />
+            <TimePickerOverlay
+              isOpen={showReturnTimePicker}
+              onClose={() => setShowReturnTimePicker(false)}
+              onSelectTime={(time) => setSearchDates((p) => ({ ...p, returnTime: time }))}
+              selectedTime={searchDates.returnTime}
+            />
+            </>
           )}
 
           {/* Step 2: Select Vehicle */}
@@ -949,25 +1150,104 @@ function BookingPageInner() {
                     Rental Agreement
                   </h3>
                   <p className="text-sm text-gray-500 mb-4">
-                    Review the rental agreement below, then provide your initials and signature to proceed.
+                    Review the rental agreement, then provide your initials and signature to proceed.
                   </p>
 
-                  {/* Inline Rental Agreement — page advances with signature step */}
+                  {/* Read Agreement Button + Compact Preview */}
                   {booking.selectedVehicle && (
                     <div className="mb-4">
-                      <RentalAgreementInline
-                        vehicle={booking.selectedVehicle}
-                        customerName={details.name}
-                        customerEmail={details.email}
-                        customerPhone={details.phone}
-                        pickupDate={booking.pickupDate}
-                        returnDate={booking.returnDate}
-                        pickupTime={booking.pickupTime}
-                        returnTime={booking.returnTime}
-                        totalPrice={booking.pricing?.total || 0}
-                        totalDays={booking.pricing ? Math.max(1, Math.ceil((new Date(booking.returnDate + "T00:00:00").getTime() - new Date(booking.pickupDate + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))) : 1}
-                        currentPage={getPageForStep(agreementStep)}
-                      />
+                      <button
+                        onClick={() => { setFullAgreementPage(getPageForStep(agreementStep)); setShowFullAgreement(true); }}
+                        className="w-full rounded-xl border-2 border-dashed border-purple-200 bg-purple-50/50 p-4 flex items-center justify-between hover:border-purple-400 hover:bg-purple-50 transition-all group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
+                            <FileText className="h-5 w-5 text-purple-600" />
+                          </div>
+                          <div className="text-left">
+                            <p className="text-sm font-semibold text-gray-900">Vehicle Rental Agreement</p>
+                            <p className="text-xs text-gray-500">Tap to read full agreement — Page {getPageForStep(agreementStep)} of 3</p>
+                          </div>
+                        </div>
+                        <Maximize2 className="h-5 w-5 text-purple-400 group-hover:text-purple-600 transition-colors" />
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Full-Screen Agreement Reader Overlay */}
+                  {showFullAgreement && booking.selectedVehicle && (
+                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowFullAgreement(false)}>
+                      <div className="absolute inset-0 bg-black/40 backdrop-blur-xl" />
+                      <div
+                        className="relative bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg mx-0 sm:mx-4 shadow-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {/* Header */}
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+                          <h3 className="font-bold text-gray-900">Rental Agreement</h3>
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs text-gray-400">Page {fullAgreementPage} of 3</span>
+                            <button onClick={() => setShowFullAgreement(false)} className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+                              <X className="h-4 w-4 text-gray-600" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Scrollable Agreement Content */}
+                        <div className="flex-1 overflow-y-auto overscroll-contain">
+                          <div className="text-[15px] leading-relaxed">
+                            <RentalAgreementInline
+                              vehicle={booking.selectedVehicle}
+                              customerName={details.name}
+                              customerEmail={details.email}
+                              customerPhone={details.phone}
+                              pickupDate={booking.pickupDate}
+                              returnDate={booking.returnDate}
+                              pickupTime={booking.pickupTime}
+                              returnTime={booking.returnTime}
+                              totalPrice={booking.pricing?.total || 0}
+                              totalDays={booking.pricing ? Math.max(1, Math.ceil((new Date(booking.returnDate + "T00:00:00").getTime() - new Date(booking.pickupDate + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))) : 1}
+                              currentPage={fullAgreementPage}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Page Navigation Footer */}
+                        <div className="shrink-0 px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-white/80">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setFullAgreementPage((p) => Math.max(1, p - 1))}
+                            disabled={fullAgreementPage === 1}
+                          >
+                            <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Previous
+                          </Button>
+                          <div className="flex gap-1.5">
+                            {[1, 2, 3].map((p) => (
+                              <button
+                                key={p}
+                                onClick={() => setFullAgreementPage(p)}
+                                className={`h-2.5 w-8 rounded-full transition-colors ${p === fullAgreementPage ? "bg-purple-600" : "bg-gray-200 hover:bg-gray-300"}`}
+                              />
+                            ))}
+                          </div>
+                          {fullAgreementPage < 3 ? (
+                            <Button
+                              size="sm"
+                              onClick={() => setFullAgreementPage((p) => p + 1)}
+                            >
+                              Next <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                            </Button>
+                          ) : (
+                            <Button
+                              size="sm"
+                              onClick={() => setShowFullAgreement(false)}
+                            >
+                              Done <Check className="h-3.5 w-3.5 ml-1" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   )}
 
