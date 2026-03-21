@@ -335,25 +335,33 @@ export default function AdminFinancesPage() {
       if (!financing || financing.paymentsProcessed === 0) return;
 
       const startDate = new Date(vehicle.financingStartDate);
+      if (isNaN(startDate.getTime())) return; // skip if invalid date
+
       const paymentDay = Math.min(Math.max(vehicle.paymentDayOfMonth || 1, 1), 31);
 
       for (let i = 0; i < financing.paymentsProcessed; i++) {
-        const payMonth = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
-        const daysInMonth = new Date(payMonth.getFullYear(), payMonth.getMonth() + 1, 0).getDate();
-        const actualDay = Math.min(paymentDay, daysInMonth);
-        const actualDate = new Date(payMonth.getFullYear(), payMonth.getMonth(), actualDay);
-        const dateStr = actualDate.toISOString().split("T")[0];
+        try {
+          const payMonth = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+          const daysInMonth = new Date(payMonth.getFullYear(), payMonth.getMonth() + 1, 0).getDate();
+          const actualDay = Math.min(paymentDay, daysInMonth);
+          const actualDate = new Date(payMonth.getFullYear(), payMonth.getMonth(), actualDay);
+          if (isNaN(actualDate.getTime())) continue; // skip invalid dates
+          const dateStr = actualDate.toISOString().split("T")[0];
 
-        entries.push({
-          id: `financing-${vehicle.id}-${i}`,
-          vehicle_id: vehicle.id,
-          category: "financing",
-          amount: financing.monthlyPayment,
-          description: `Monthly payment — ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
-          date: dateStr,
-          created_at: dateStr,
-          fromFinancing: true,
-        });
+          entries.push({
+            id: `financing-${vehicle.id}-${i}`,
+            vehicle_id: vehicle.id,
+            category: "financing",
+            amount: financing.monthlyPayment,
+            description: `Monthly payment — ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+            date: dateStr,
+            created_at: dateStr,
+            fromFinancing: true,
+          });
+        } catch {
+          // Skip any date that fails
+          continue;
+        }
       }
     });
 
