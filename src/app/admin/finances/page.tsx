@@ -264,7 +264,7 @@ export default function AdminFinancesPage() {
         adminFetch("/api/admin/bookings"),
         adminFetch(`/api/admin/expenses?from=${dateRange.from}&to=${dateRange.to}`),
         adminFetch("/api/admin/vehicles"),
-        adminFetch(`/api/admin/maintenance?from=${dateRange.from}&to=${dateRange.to}`),
+        adminFetch("/api/admin/maintenance"),
       ]);
 
       if (!bookingsRes.ok || !expensesRes.ok || !vehiclesRes.ok) {
@@ -1129,6 +1129,42 @@ export default function AdminFinancesPage() {
         {/* ═══════════════════════════════════════════════════════════ */}
         {activeTab === "expenses" && (
           <div className="space-y-6">
+            {/* Category Totals */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+              {expenseCategoryData.map((cat) => (
+                <div
+                  key={cat.key}
+                  className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <div
+                      className="w-8 h-8 rounded-lg flex items-center justify-center text-white"
+                      style={{ backgroundColor: CATEGORY_COLORS[cat.key] || "#6B7280" }}
+                    >
+                      {CATEGORY_ICONS[cat.key] || <MoreHorizontal className="h-4 w-4" />}
+                    </div>
+                    <span className="text-sm font-medium text-gray-600 capitalize">{cat.name}</span>
+                  </div>
+                  <p className="text-xl font-bold text-gray-900">${cat.value.toLocaleString()}</p>
+                  {cat.key === "financing" && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      ${Math.round(cat.value / Math.max(1, new Set(financingCosts.map((f) => f.vehicle_id)).size)).toLocaleString()}/vehicle avg
+                    </p>
+                  )}
+                  {cat.key === "maintenance" && (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {maintenanceCosts.length} completed records
+                    </p>
+                  )}
+                </div>
+              ))}
+              <div className="bg-gradient-to-br from-gray-900 to-purple-900 rounded-xl p-4 text-white">
+                <p className="text-xs font-medium text-gray-300 uppercase tracking-wider mb-2">Total Expenses</p>
+                <p className="text-xl font-bold">${allExpenses.reduce((s, e) => s + (e.amount ?? 0), 0).toLocaleString()}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{allExpenses.length} total entries</p>
+              </div>
+            </div>
+
             {/* Add Expense */}
             <Card>
               <CardContent className="p-5">
