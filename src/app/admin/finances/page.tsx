@@ -119,6 +119,7 @@ const CATEGORY_COLORS: Record<string, string> = {
   parking: "#8B5CF6",
   registration: "#EC4899",
   financing: "#7C3AED",
+  tickets: "#F97316",
   other: "#6B7280",
 };
 
@@ -130,6 +131,7 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   parking: <ParkingCircle className="h-4 w-4" />,
   registration: <FileText className="h-4 w-4" />,
   financing: <Wallet className="h-4 w-4" />,
+  tickets: <Receipt className="h-4 w-4" />,
   other: <MoreHorizontal className="h-4 w-4" />,
 };
 
@@ -254,18 +256,20 @@ export default function AdminFinancesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [showDailyRevenue, setShowDailyRevenue] = useState(false);
-  const [activeTab, setActiveTab] = useState<"overview" | "expenses" | "vehicles">("overview");
+  const [tickets, setTickets] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<"overview" | "expenses" | "revenue" | "profit" | "vehicles">("overview");
 
   // ─── Data Fetching ──────────────────────────────────────────────
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
-      const [bookingsRes, expensesRes, vehiclesRes, maintenanceRes] = await Promise.all([
+      const [bookingsRes, expensesRes, vehiclesRes, maintenanceRes, ticketsRes] = await Promise.all([
         adminFetch("/api/admin/bookings"),
         adminFetch(`/api/admin/expenses?from=${dateRange.from}&to=${dateRange.to}`),
         adminFetch("/api/admin/vehicles"),
         adminFetch("/api/admin/maintenance"),
+        adminFetch("/api/admin/tickets"),
       ]);
 
       if (!bookingsRes.ok || !expensesRes.ok || !vehiclesRes.ok) {
@@ -276,11 +280,13 @@ export default function AdminFinancesPage() {
       const expensesData = await expensesRes.json();
       const vehiclesData = await vehiclesRes.json();
       const maintenanceData = maintenanceRes.ok ? await maintenanceRes.json() : { data: [] };
+      const ticketsData = ticketsRes.ok ? await ticketsRes.json() : { data: [] };
 
       setBookings(bookingsData.data || []);
       setExpenses(expensesData.data || []);
       setVehicles(vehiclesData.data || []);
       setMaintenance(maintenanceData.data || []);
+      setTickets(ticketsData.data || []);
     } catch (err) {
       logger.error("Error fetching data:", err);
       setError(err instanceof Error ? err.message : "Failed to load dashboard data");
@@ -369,10 +375,24 @@ export default function AdminFinancesPage() {
     return entries;
   }, [vehicles]);
 
-  // All costs = explicit expenses + maintenance record costs + financing payments
+  // Ticket costs (traffic violations converted to expense entries)
+  const ticketCosts = useMemo(() => {
+    return tickets.map((ticket) => ({
+      id: ticket.id,
+      vehicle_id: ticket.vehicle_id,
+      category: "tickets" as const,
+      amount: ticket.amount_due ?? 0,
+      description: `${ticket.ticket_type} — ${ticket.municipality}, ${ticket.state}`,
+      date: ticket.violation_date || ticket.created_at || new Date().toISOString().split("T")[0],
+      created_at: ticket.created_at || new Date().toISOString(),
+      fromTickets: true,
+    }));
+  }, [tickets]);
+
+  // All costs = explicit expenses + maintenance record costs + financing payments + tickets
   const allExpenses = useMemo(() => {
-    return [...expenses, ...maintenanceCosts, ...financingCosts];
-  }, [expenses, maintenanceCosts, financingCosts]);
+    return [...expenses, ...maintenanceCosts, ...financingCosts, ...ticketCosts];
+  }, [expenses, maintenanceCosts, financingCosts, ticketCosts]);
 
   const summaryData = useMemo(() => {
     const totalRevenue = revenueBookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
@@ -543,6 +563,75 @@ export default function AdminFinancesPage() {
       })
       .sort((a, b) => b.profit - a.profit);
   }, [vehicles, revenueBookings, allExpenses, dateRange]);
+
+  // Revenue by month
+  const revenueByMonth = useMemo(() => {
+    const months: Record<string, { month: string; date: string; revenue: number; bookings: number }> = {};
+
+    // Build last 12 months
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      months[key] = {
+        month: d.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        date: key,
+        revenue: 0,
+        bookings: 0,
+      };
+    }
+
+    revenueBookings.forEach((b) => {
+      const d = new Date(b.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (months[key]) {
+        months[key].revenue += b.total_price ?? 0;
+        months[key].bookings += 1;
+      }
+    });
+
+    return Object.values(months).map((m) => ({
+      ...m,
+      revenue: Math.round(m.revenue),
+    }));
+  }, [revenueBookings]);
+
+  // Monthly profit data (revenue, expenses, profit)
+  const monthlyProfitData = useMemo(() => {
+    const months: Record<string, { month: string; date: string; revenue: number; expenses: number }> = {};
+
+    // Build last 12 months
+    const now = new Date();
+    for (let i = 11; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      months[key] = {
+        month: d.toLocaleDateString("en-US", { month: "short" }),
+        date: key,
+        revenue: 0,
+        expenses: 0,
+      };
+    }
+
+    revenueBookings.forEach((b) => {
+      const d = new Date(b.created_at);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (months[key]) months[key].revenue += b.total_price ?? 0;
+    });
+
+    allExpenses.forEach((e) => {
+      const d = new Date(e.date);
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      if (months[key]) months[key].expenses += e.amount ?? 0;
+    });
+
+    return Object.values(months).map((m) => ({
+      ...m,
+      revenue: Math.round(m.revenue),
+      expenses: Math.round(m.expenses),
+      profit: Math.round(m.revenue - m.expenses),
+    }));
+  }, [revenueBookings, allExpenses]);
 
   // ─── Expense CRUD ───────────────────────────────────────────────
   const handleAddExpense = async () => {
@@ -1003,7 +1092,7 @@ export default function AdminFinancesPage() {
               </button>
             </div>
             <div className="flex gap-1 bg-white/10 rounded-lg p-1">
-              {(["overview", "expenses", "vehicles"] as const).map((tab) => (
+              {(["overview", "expenses", "revenue", "profit", "vehicles"] as const).map((tab) => (
                 <button
                   key={tab}
                   onClick={() => setActiveTab(tab)}
@@ -1042,7 +1131,7 @@ export default function AdminFinancesPage() {
                 icon={<DollarSign className="h-4 w-4" />}
                 accent="green"
                 trend={summaryData.totalRevenue > 0 ? "up" : "neutral"}
-                onClick={() => setActiveTab("vehicles")}
+                onClick={() => setActiveTab("revenue")}
               />
               <StatCard
                 label="Total Expenses"
@@ -1057,7 +1146,7 @@ export default function AdminFinancesPage() {
                 icon={summaryData.netProfit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                 accent={summaryData.netProfit >= 0 ? "purple" : "red"}
                 trend={summaryData.netProfit > 0 ? "up" : summaryData.netProfit < 0 ? "down" : "neutral"}
-                onClick={() => setActiveTab("vehicles")}
+                onClick={() => setActiveTab("profit")}
               />
               <StatCard
                 label="Fleet Occupancy"
@@ -1440,6 +1529,45 @@ export default function AdminFinancesPage() {
                   </div>
                 )}
 
+                {/* Tickets (traffic violations) */}
+                {ticketCosts.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Traffic Tickets</p>
+                    <div className="space-y-2">
+                      {ticketCosts
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .map((ticket) => {
+                          const vehicle = vehicles.find((v) => v.id === ticket.vehicle_id);
+                          return (
+                            <div
+                              key={ticket.id}
+                              className="flex items-center gap-3 p-3 rounded-lg bg-orange-50 border border-orange-100"
+                            >
+                              <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 bg-orange-500">
+                                <Receipt className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium">{ticket.description}</p>
+                                  {vehicle && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {vehicle.year} {vehicle.make} {vehicle.model}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-orange-600">Traffic violation</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-semibold">${ticket.amount.toLocaleString()}</p>
+                                <p className="text-xs text-gray-400">{formatDate(ticket.date)}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                    </div>
+                  </div>
+                )}
+
                 {/* Manual Expenses List */}
                 {expenses.length > 0 && (
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Manual Expenses</p>
@@ -1583,6 +1711,235 @@ export default function AdminFinancesPage() {
                       })}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* REVENUE TAB                                                */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {activeTab === "revenue" && (
+          <div className="space-y-6">
+            {/* Summary Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <StatCard
+                label="Total Revenue"
+                value={`$${summaryData.totalRevenue.toLocaleString()}`}
+                icon={<DollarSign className="h-4 w-4" />}
+                accent="green"
+              />
+              <StatCard
+                label="Total Bookings"
+                value={`${summaryData.totalBookings}`}
+                icon={<Car className="h-4 w-4" />}
+                accent="blue"
+              />
+              <StatCard
+                label="Avg per Booking"
+                value={`$${Math.round(summaryData.avgBookingValue).toLocaleString()}`}
+                icon={<BarChart3 className="h-4 w-4" />}
+                accent="purple"
+              />
+              <StatCard
+                label="Best Month"
+                value={`$${Math.max(0, ...revenueByMonth.map((m) => m.revenue)).toLocaleString()}`}
+                icon={<TrendingUp className="h-4 w-4" />}
+                accent="amber"
+              />
+            </div>
+
+            {/* Revenue by Month Chart */}
+            <Card>
+              <CardContent className="p-5">
+                <SectionHeader
+                  title="Revenue by Month"
+                  subtitle="Last 12 months of booking revenue"
+                />
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={revenueByMonth} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                      <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                      <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Detailed Bookings List */}
+            <Card>
+              <CardContent className="p-5">
+                <SectionHeader
+                  title="Recent Bookings"
+                  subtitle="Click any booking to view vehicle details"
+                />
+                {revenueBookings.length === 0 ? (
+                  <p className="text-sm text-gray-400 text-center py-8">No revenue bookings found</p>
+                ) : (
+                  <div className="space-y-2 max-h-96 overflow-y-auto">
+                    {revenueBookings
+                      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                      .map((booking) => {
+                        const vehicle = vehicles.find((v) => v.id === booking.vehicle_id);
+                        return (
+                          <div
+                            key={booking.id}
+                            className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+                            onClick={() => vehicle && setSelectedVehicleId(vehicle.id)}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-3">
+                                <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 bg-green-500">
+                                  <DollarSign className="h-4 w-4" />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-sm font-medium">
+                                    {vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Unknown Vehicle"}
+                                  </p>
+                                  <p className="text-xs text-gray-500">{formatDate(booking.created_at)}</p>
+                                </div>
+                              </div>
+                            </div>
+                            <div className="flex items-center gap-3 shrink-0">
+                              <div>
+                                <Badge
+                                  variant="secondary"
+                                  className={`text-xs ${
+                                    booking.status === "completed"
+                                      ? "bg-green-100 text-green-700"
+                                      : booking.status === "active"
+                                      ? "bg-blue-100 text-blue-700"
+                                      : "bg-gray-100 text-gray-700"
+                                  }`}
+                                >
+                                  {booking.status}
+                                </Badge>
+                              </div>
+                              <p className="text-sm font-semibold text-green-600 whitespace-nowrap">
+                                ${booking.total_price.toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {/* PROFIT TAB                                                 */}
+        {/* ═══════════════════════════════════════════════════════════ */}
+        {activeTab === "profit" && (
+          <div className="space-y-6">
+            {/* Summary Stats */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <StatCard
+                label="Total Revenue"
+                value={`$${summaryData.totalRevenue.toLocaleString()}`}
+                icon={<TrendingUp className="h-4 w-4" />}
+                accent="green"
+              />
+              <StatCard
+                label="Total Expenses"
+                value={`$${summaryData.totalExpenses.toLocaleString()}`}
+                icon={<TrendingDown className="h-4 w-4" />}
+                accent="red"
+              />
+              <StatCard
+                label="Net Profit"
+                value={`$${summaryData.netProfit.toLocaleString()}`}
+                icon={summaryData.netProfit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
+                accent={summaryData.netProfit >= 0 ? "purple" : "red"}
+              />
+              <StatCard
+                label="Profit Margin"
+                value={`${summaryData.totalRevenue > 0 ? ((summaryData.netProfit / summaryData.totalRevenue) * 100).toFixed(1) : 0}%`}
+                icon={<BarChart3 className="h-4 w-4" />}
+                accent="blue"
+              />
+            </div>
+
+            {/* Monthly Profit Trend Chart */}
+            <Card>
+              <CardContent className="p-5">
+                <SectionHeader
+                  title="Monthly Profit Trend"
+                  subtitle="Revenue (green), Expenses (red), and Net Profit (blue line) over the last 12 months"
+                />
+                <div className="h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={monthlyProfitData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                      <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                      <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} />
+                      <Bar dataKey="expenses" fill="#EF4444" radius={[8, 8, 0, 0]} />
+                      <Line type="monotone" dataKey="profit" stroke="#3B82F6" strokeWidth={2} dot={{ fill: "#3B82F6", r: 4 }} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Monthly Breakdown Table */}
+            <Card>
+              <CardContent className="p-5">
+                <SectionHeader
+                  title="Monthly Breakdown"
+                  subtitle="Detailed profit analysis by month"
+                />
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-gray-200">
+                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Month</th>
+                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Revenue</th>
+                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Expenses</th>
+                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Profit</th>
+                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Margin %</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {monthlyProfitData.map((month, idx) => (
+                        <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                          <td className="py-3 px-4 text-gray-700">{month.month}</td>
+                          <td className="py-3 px-4 text-right text-green-600 font-medium">
+                            ${month.revenue.toLocaleString()}
+                          </td>
+                          <td className="py-3 px-4 text-right text-red-600 font-medium">
+                            ${month.expenses.toLocaleString()}
+                          </td>
+                          <td
+                            className={`py-3 px-4 text-right font-semibold ${
+                              month.profit >= 0 ? "text-purple-600" : "text-red-600"
+                            }`}
+                          >
+                            ${month.profit.toLocaleString()}
+                          </td>
+                          <td
+                            className={`py-3 px-4 text-right font-semibold ${
+                              month.revenue > 0 && month.profit >= 0
+                                ? "text-green-600"
+                                : month.revenue > 0 && month.profit < 0
+                                ? "text-red-600"
+                                : "text-gray-500"
+                            }`}
+                          >
+                            {month.revenue > 0 ? ((month.profit / month.revenue) * 100).toFixed(1) : "0"}%
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -364,28 +364,43 @@ export function returnReminderTemplate(data: EmailData): string {
 
 export function bookingSignAgreementTemplate(data: EmailData): string {
   return wrapEmail(`
-    ${headerBlock('Your Booking Details', 'Please review & sign your rental agreement')}
     <tr>
-      <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${data.customerName},</p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Thank you for choosing <strong style="color: #111827;">NextGearAuto</strong>! Below are your booking details. Please review everything and sign the rental agreement before your pickup.</p>
+      <td style="padding: 40px 32px 24px; text-align: center;">
+        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
+        <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Your Booking Details</h1>
       </td>
     </tr>
-    ${bookingIdBlock(data.bookingId)}
     <tr>
       <td style="padding: 0 32px;">
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          ${detailRow('Vehicle', data.vehicleName, true)}
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${data.customerName}, please review your details and sign the rental agreement before pickup.</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
+          <tr>
+            <td style="padding: 20px 24px;">
+              <p style="margin: 0 0 4px; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Booking ID</p>
+              <p style="margin: 0 0 16px; color: #111827; font-size: 14px; font-weight: 600; font-family: monospace;">${data.bookingId}</p>
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${detailRow('Vehicle', data.vehicleName, true)}
+                ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
+                ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
+                ${detailRow('Total', '$' + data.totalPrice.toFixed(2), true)}
+                ${data.deposit > 0 ? detailRow('Deposit Paid', '$' + data.deposit.toFixed(2)) : ''}
+              </table>
+            </td>
+          </tr>
         </table>
-        ${dateTimeBlock('Pick-up', data.pickupDate, data.pickupTime, '#7C3AED', 'linear-gradient(135deg, #f5f3ff, #ede9fe)')}
-        ${dateTimeBlock('Return', data.returnDate, data.returnTime, '#f59e0b', 'linear-gradient(135deg, #fffbeb, #fef3c7)')}
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          ${detailRow('Total Amount', '$' + data.totalPrice.toFixed(2), true)}
-          ${data.deposit > 0 ? detailRow('Deposit Paid', '$' + data.deposit.toFixed(2)) : ''}
+        <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">Pick-up at 92 Forrest Street, Jersey City, NJ 07304.<br>Please bring a valid driver's license and the credit card used for payment.</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 8px;">
+          <tr>
+            <td align="center" style="padding: 0 0 8px;">
+              <a href="https://rentnextgearauto.com/booking/agreement/${data.bookingId}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Sign Rental Agreement</a>
+            </td>
+          </tr>
+          <tr>
+            <td align="center">
+              <a href="https://rentnextgearauto.com/account" style="color: #6b7280; text-decoration: underline; font-size: 13px;">View Bookings</a>
+            </td>
+          </tr>
         </table>
-        ${infoBox('Pick-up Location', '92 Forrest Street, Jersey City, NJ 07304<br>Please bring a valid driver\'s license and the credit card used for payment.', '#7C3AED', '#f5f3ff')}
-        ${ctaButton('Sign Rental Agreement', 'https://rentnextgearauto.com/booking/agreement/' + data.bookingId)}
-        <p style="margin: 16px 0 0; color: #9ca3af; font-size: 12px; line-height: 1.6; text-align: center;">If the button above doesn't work, copy and paste this link into your browser:<br><a href="https://rentnextgearauto.com/booking/agreement/${data.bookingId}" style="color: #7C3AED; word-break: break-all;">https://rentnextgearauto.com/booking/agreement/${data.bookingId}</a></p>
       </td>
     </tr>
   `);

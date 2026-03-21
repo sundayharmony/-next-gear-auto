@@ -273,6 +273,8 @@ function BookingPageInner() {
   const [showPickupTimePicker, setShowPickupTimePicker] = useState(false);
   const [showReturnTimePicker, setShowReturnTimePicker] = useState(false);
   const [calendarViewDate, setCalendarViewDate] = useState(new Date());
+  const [showDobCalendar, setShowDobCalendar] = useState(false);
+  const [dobViewDate, setDobViewDate] = useState(new Date(new Date().getFullYear() - 25, new Date().getMonth(), 1));
   const [showFullAgreement, setShowFullAgreement] = useState(false);
   const [fullAgreementPage, setFullAgreementPage] = useState(1);
   const [promoInput, setPromoInput] = useState("");
@@ -576,6 +578,116 @@ function BookingPageInner() {
               </button>
             ))}
           </div>
+        </div>
+      </div>
+    );
+  };
+
+  // BirthdayCalendarOverlay Component — Apple-style DOB picker
+  const BirthdayCalendarOverlay = ({ isOpen, onClose, onSelectDate, selectedDate }: { isOpen: boolean; onClose: () => void; onSelectDate: (date: string) => void; selectedDate: string }) => {
+    if (!isOpen) return null;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const maxDate = new Date(today.getFullYear() - 18, today.getMonth(), today.getDate()); // Must be 18+
+
+    const daysInMonth = getDaysInMonth(dobViewDate);
+    const firstDay = getFirstDayOfMonth(dobViewDate);
+    const days: (Date | null)[] = [];
+    for (let i = 0; i < firstDay; i++) {
+      days.push(null);
+    }
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push(new Date(dobViewDate.getFullYear(), dobViewDate.getMonth(), i));
+    }
+
+    const monthYear = dobViewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
+
+    const handleDayClick = (day: Date) => {
+      const dateStr = day.toISOString().split("T")[0];
+      onSelectDate(dateStr);
+      onClose();
+    };
+
+    const previousMonth = () => {
+      setDobViewDate(new Date(dobViewDate.getFullYear(), dobViewDate.getMonth() - 1));
+    };
+    const nextMonth = () => {
+      const next = new Date(dobViewDate.getFullYear(), dobViewDate.getMonth() + 1);
+      if (next <= maxDate) setDobViewDate(next);
+    };
+    const previousYear = () => {
+      setDobViewDate(new Date(dobViewDate.getFullYear() - 1, dobViewDate.getMonth()));
+    };
+    const nextYear = () => {
+      const next = new Date(dobViewDate.getFullYear() + 1, dobViewDate.getMonth());
+      if (next <= maxDate) setDobViewDate(next);
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-xl" onClick={onClose}>
+        <div className="bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl max-w-sm w-full mx-4 shadow-2xl p-6 animate-in" onClick={(e) => e.stopPropagation()}>
+          {/* Year navigation */}
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <button onClick={previousYear} className="px-2 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition">
+              ‹‹ Year
+            </button>
+            <span className="text-sm font-bold text-gray-900 min-w-[3rem] text-center">{dobViewDate.getFullYear()}</span>
+            <button
+              onClick={nextYear}
+              disabled={new Date(dobViewDate.getFullYear() + 1, dobViewDate.getMonth()) > maxDate}
+              className="px-2 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              Year ››
+            </button>
+          </div>
+
+          {/* Month navigation */}
+          <div className="flex items-center justify-between mb-6">
+            <button onClick={previousMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <h3 className="text-lg font-semibold text-gray-900">{monthYear}</h3>
+            <button
+              onClick={nextMonth}
+              disabled={new Date(dobViewDate.getFullYear(), dobViewDate.getMonth() + 1) > maxDate}
+              className="p-2 hover:bg-gray-100 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
+            >
+              <ArrowRight className="h-5 w-5" />
+            </button>
+          </div>
+
+          <div className="grid grid-cols-7 gap-2 mb-4">
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+              <div key={day} className="text-center text-xs font-semibold text-gray-500 h-11 flex items-center justify-center">
+                {day}
+              </div>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-7 gap-2">
+            {days.map((day, idx) => {
+              const isFuture = day !== null && day > maxDate;
+              const isDisabled = day === null || isFuture;
+              const isSelected = day && day.toISOString().split("T")[0] === selectedDate;
+              return (
+                <button
+                  key={idx}
+                  onClick={() => day && !isDisabled && handleDayClick(day)}
+                  disabled={isDisabled}
+                  className={cn(
+                    "h-11 w-11 rounded-lg font-medium transition flex items-center justify-center text-sm",
+                    isDisabled ? "text-gray-300 cursor-not-allowed" : "text-gray-900 hover:bg-gray-100",
+                    isSelected ? "bg-purple-600 text-white font-semibold hover:bg-purple-700" : ""
+                  )}
+                >
+                  {day ? day.getDate() : ""}
+                </button>
+              );
+            })}
+          </div>
+
+          <p className="text-xs text-gray-400 text-center mt-4">Must be 18 years or older</p>
         </div>
       </div>
     );
@@ -939,8 +1051,34 @@ function BookingPageInner() {
                   </div>
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700">Date of Birth</label>
-                    <Input type="date" value={details.dob} onChange={(e) => setDetails((p) => ({ ...p, dob: e.target.value }))} />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (details.dob) {
+                          const d = new Date(details.dob + "T00:00:00");
+                          setDobViewDate(new Date(d.getFullYear(), d.getMonth(), 1));
+                        }
+                        setShowDobCalendar(true);
+                      }}
+                      className="w-full flex items-center justify-between rounded-lg border border-gray-200 bg-white px-3 py-2.5 text-left text-sm hover:border-purple-300 hover:bg-purple-50/30 transition-all"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-purple-500" />
+                        <span className={details.dob ? "text-gray-900 font-medium" : "text-gray-400"}>
+                          {details.dob
+                            ? new Date(details.dob + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                            : "Select your birthday"}
+                        </span>
+                      </div>
+                      <Maximize2 className="h-3.5 w-3.5 text-gray-400" />
+                    </button>
                     <p className="mt-1 text-xs text-gray-400">You must be at least 18 years old to rent.</p>
+                    <BirthdayCalendarOverlay
+                      isOpen={showDobCalendar}
+                      onClose={() => setShowDobCalendar(false)}
+                      onSelectDate={(date) => setDetails((p) => ({ ...p, dob: date }))}
+                      selectedDate={details.dob}
+                    />
                   </div>
                 </div>
               </CardContent>
