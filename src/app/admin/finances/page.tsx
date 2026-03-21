@@ -253,6 +253,7 @@ export default function AdminFinancesPage() {
   const [editingExpense, setEditingExpense] = useState<EditingExpense | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [showDailyRevenue, setShowDailyRevenue] = useState(false);
   const [activeTab, setActiveTab] = useState<"overview" | "expenses" | "vehicles">("overview");
 
   // ─── Data Fetching ──────────────────────────────────────────────
@@ -635,6 +636,122 @@ export default function AdminFinancesPage() {
 
   const selectedVehicleDetail = selectedVehicleId ? getVehicleDetail(selectedVehicleId) : null;
 
+  // All-time daily revenue breakdown
+  const allTimeDailyRevenue = useMemo(() => {
+    const dayMap: Record<string, { date: string; revenue: number; bookingCount: number; bookings: Booking[] }> = {};
+
+    revenueBookings.forEach((b) => {
+      const dateStr = new Date(b.created_at).toISOString().split("T")[0];
+      if (!dayMap[dateStr]) {
+        dayMap[dateStr] = { date: dateStr, revenue: 0, bookingCount: 0, bookings: [] };
+      }
+      dayMap[dateStr].revenue += b.total_price ?? 0;
+      dayMap[dateStr].bookingCount += 1;
+      dayMap[dateStr].bookings.push(b);
+    });
+
+    return Object.values(dayMap).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [revenueBookings]);
+
+  // ─── Daily Revenue Detail View ────────────────────────────────
+  if (showDailyRevenue) {
+    const totalAllTime = allTimeDailyRevenue.reduce((s, d) => s + d.revenue, 0);
+    const totalBookings = allTimeDailyRevenue.reduce((s, d) => s + d.bookingCount, 0);
+    const avgPerDay = allTimeDailyRevenue.length > 0 ? totalAllTime / allTimeDailyRevenue.length : 0;
+    const bestDay = allTimeDailyRevenue.length > 0
+      ? allTimeDailyRevenue.reduce((best, d) => d.revenue > best.revenue ? d : best, allTimeDailyRevenue[0])
+      : null;
+
+    return (
+      <PageContainer>
+        <div className="space-y-6">
+          <div className="flex items-center gap-3">
+            <button onClick={() => setShowDailyRevenue(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+              <ArrowLeft className="h-5 w-5" />
+            </button>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Daily Revenue</h1>
+              <p className="text-sm text-gray-500">Day-by-day revenue breakdown — all time</p>
+            </div>
+          </div>
+
+          {/* Summary stats */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <StatCard label="Total Revenue" value={`$${totalAllTime.toLocaleString()}`} icon={<DollarSign className="h-4 w-4" />} accent="green" />
+            <StatCard label="Total Bookings" value={`${totalBookings}`} icon={<Car className="h-4 w-4" />} accent="blue" />
+            <StatCard label="Avg / Day" value={`$${Math.round(avgPerDay).toLocaleString()}`} icon={<BarChart3 className="h-4 w-4" />} accent="purple" />
+            <StatCard label="Best Day" value={bestDay ? `$${bestDay.revenue.toLocaleString()}` : "$0"} subtext={bestDay ? formatDate(bestDay.date) : ""} icon={<TrendingUp className="h-4 w-4" />} accent="amber" />
+          </div>
+
+          {/* Chart */}
+          <Card>
+            <CardContent className="p-5">
+              <SectionHeader title="Revenue Over Time" subtitle={`${allTimeDailyRevenue.length} days with revenue`} />
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={[...allTimeDailyRevenue].reverse().slice(-30)} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                    <XAxis
+                      dataKey="date"
+                      tick={{ fontSize: 10 }}
+                      tickFormatter={(d) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      interval={Math.max(0, Math.floor(Math.min(30, allTimeDailyRevenue.length) / 8))}
+                    />
+                    <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
+                    <Tooltip
+                      formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                      labelFormatter={(d) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                      contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
+                    />
+                    <Bar dataKey="revenue" fill="#7C3AED" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Day-by-day table */}
+          <Card>
+            <CardContent className="p-5">
+              <SectionHeader title="All Revenue by Day" subtitle={`${allTimeDailyRevenue.length} days`} />
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left text-gray-500 text-xs uppercase tracking-wider">
+                      <th className="pb-3 font-medium">Date</th>
+                      <th className="pb-3 font-medium text-center">Bookings</th>
+                      <th className="pb-3 font-medium text-right">Revenue</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y">
+                    {allTimeDailyRevenue.map((day) => (
+                      <tr key={day.date} className="hover:bg-gray-50 transition-colors">
+                        <td className="py-3 font-medium text-gray-900">
+                          {new Date(day.date + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                        </td>
+                        <td className="py-3 text-center">
+                          <Badge variant="secondary" className="text-xs">{day.bookingCount}</Badge>
+                        </td>
+                        <td className="py-3 text-right font-bold text-green-600">${day.revenue.toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t-2 border-gray-200">
+                      <td className="py-3 font-bold text-gray-900">Total</td>
+                      <td className="py-3 text-center font-bold">{totalBookings}</td>
+                      <td className="py-3 text-right font-bold text-green-600">${totalAllTime.toLocaleString()}</td>
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </PageContainer>
+    );
+  }
+
   // ─── Vehicle Detail Render ──────────────────────────────────────
   if (selectedVehicleDetail) {
     const { vehicle, bookings: vBookings, expenses: vExpenses, revenue, expenseTotal, effectiveCost, financingInfo, profit, roi, occupancy, bookedDays } = selectedVehicleDetail;
@@ -995,9 +1112,9 @@ export default function AdminFinancesPage() {
             {/* Daily Revenue + Expense Breakdown side by side */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Daily revenue */}
-              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setActiveTab("vehicles")}>
+              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setShowDailyRevenue(true)}>
                 <CardContent className="p-5">
-                  <SectionHeader title="Daily Revenue" subtitle="Last 14 days — click for vehicle breakdown" />
+                  <SectionHeader title="Daily Revenue" subtitle="Last 14 days — click for full breakdown" />
                   <div className="h-52">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={dailyEarningsData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
