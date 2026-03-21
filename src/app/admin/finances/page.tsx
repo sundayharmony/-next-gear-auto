@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState, useMemo } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { calculateFinancing, getEffectiveVehicleCost } from "@/lib/utils/financing";
+import { calculateFinancing } from "@/lib/utils/financing";
 import {
   DollarSign,
   TrendingUp,
@@ -151,6 +151,7 @@ function StatCard({
   icon,
   trend,
   accent = "gray",
+  onClick,
 }: {
   label: string;
   value: string;
@@ -158,6 +159,7 @@ function StatCard({
   icon: React.ReactNode;
   trend?: "up" | "down" | "neutral";
   accent?: "green" | "red" | "purple" | "blue" | "amber" | "gray";
+  onClick?: () => void;
 }) {
   const accentMap = {
     green: "from-green-500 to-emerald-600",
@@ -169,7 +171,10 @@ function StatCard({
   };
 
   return (
-    <div className="bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow">
+    <div
+      className={`bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow ${onClick ? "cursor-pointer hover:border-purple-200" : ""}`}
+      onClick={onClick}
+    >
       <div className="flex items-start justify-between mb-3">
         <div
           className={`p-2.5 rounded-lg bg-gradient-to-br ${accentMap[accent]} text-white`}
@@ -310,21 +315,65 @@ export default function AdminFinancesPage() {
       }));
   }, [maintenance]);
 
-  // All costs = explicit expenses + maintenance record costs
+  // Financing costs (monthly payments for financed vehicles, generated as individual expense entries)
+  const financingCosts = useMemo(() => {
+    const entries: Array<{
+      id: string;
+      vehicle_id: string;
+      category: string;
+      amount: number;
+      description: string;
+      date: string;
+      created_at: string;
+      fromFinancing: boolean;
+    }> = [];
+
+    vehicles.forEach((vehicle) => {
+      if (!vehicle.isFinanced || !vehicle.monthlyPayment || !vehicle.financingStartDate) return;
+
+      const financing = calculateFinancing(vehicle);
+      if (!financing || financing.paymentsProcessed === 0) return;
+
+      const startDate = new Date(vehicle.financingStartDate);
+      const paymentDay = Math.min(Math.max(vehicle.paymentDayOfMonth || 1, 1), 31);
+
+      for (let i = 0; i < financing.paymentsProcessed; i++) {
+        const payMonth = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
+        const daysInMonth = new Date(payMonth.getFullYear(), payMonth.getMonth() + 1, 0).getDate();
+        const actualDay = Math.min(paymentDay, daysInMonth);
+        const actualDate = new Date(payMonth.getFullYear(), payMonth.getMonth(), actualDay);
+        const dateStr = actualDate.toISOString().split("T")[0];
+
+        entries.push({
+          id: `financing-${vehicle.id}-${i}`,
+          vehicle_id: vehicle.id,
+          category: "financing",
+          amount: financing.monthlyPayment,
+          description: `Monthly payment — ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+          date: dateStr,
+          created_at: dateStr,
+          fromFinancing: true,
+        });
+      }
+    });
+
+    return entries;
+  }, [vehicles]);
+
+  // All costs = explicit expenses + maintenance record costs + financing payments
   const allExpenses = useMemo(() => {
-    // Avoid double-counting: only include maintenance costs that aren't already in the expenses table
-    // We match by checking if an expense with the same vehicle_id, category "maintenance", and
-    // similar amount exists on the same date — but the simplest approach is to always include them
-    // since the user records maintenance costs in the maintenance module, not as manual expenses
-    return [...expenses, ...maintenanceCosts];
-  }, [expenses, maintenanceCosts]);
+    return [...expenses, ...maintenanceCosts, ...financingCosts];
+  }, [expenses, maintenanceCosts, financingCosts]);
 
   const summaryData = useMemo(() => {
     const totalRevenue = revenueBookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
     const totalExpenses = allExpenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
 
-    const totalVehicleCosts = vehicles.reduce((sum, v) => sum + getEffectiveVehicleCost(v), 0);
-    const netProfit = totalRevenue - totalExpenses - totalVehicleCosts;
+    // Non-financed vehicle purchase prices (financed vehicles are already in allExpenses as monthly payments)
+    const nonFinancedCosts = vehicles
+      .filter((v) => !v.isFinanced)
+      .reduce((sum, v) => sum + (v.purchasePrice ?? 0), 0);
+    const netProfit = totalRevenue - totalExpenses - nonFinancedCosts;
 
     const totalDaysInRange = Math.max(
       1,
@@ -351,7 +400,7 @@ export default function AdminFinancesPage() {
 
     return {
       totalRevenue,
-      totalExpenses: totalExpenses + totalVehicleCosts,
+      totalExpenses: totalExpenses + nonFinancedCosts,
       netProfit,
       occupancyRate,
       totalBookings: revenueBookings.length,
@@ -431,17 +480,11 @@ export default function AdminFinancesPage() {
     }));
   }, [revenueBookings, allExpenses]);
 
-  // Expense by category (includes maintenance costs)
+  // Expense by category (includes maintenance + financing costs)
   const expenseCategoryData = useMemo(() => {
     const totals: Record<string, number> = {};
     allExpenses.forEach((e) => {
       totals[e.category] = (totals[e.category] || 0) + (e.amount ?? 0);
-    });
-    vehicles.forEach((v) => {
-      if (v.isFinanced) {
-        const cost = getEffectiveVehicleCost(v);
-        if (cost > 0) totals["financing"] = (totals["financing"] || 0) + cost;
-      }
     });
     return Object.entries(totals)
       .map(([name, value]) => ({
@@ -460,7 +503,8 @@ export default function AdminFinancesPage() {
         const vExpenses = allExpenses.filter((e) => e.vehicle_id === vehicle.id);
         const revenue = vBookings.reduce((s, b) => s + (b.total_price ?? 0), 0);
         const expenseTotal = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
-        const vehicleCost = getEffectiveVehicleCost(vehicle);
+        // For financed vehicles, costs are already in allExpenses as financing entries
+        const vehicleCost = vehicle.isFinanced ? 0 : (vehicle.purchasePrice ?? 0);
 
         const totalDaysInRange = Math.max(
           1,
@@ -566,10 +610,12 @@ export default function AdminFinancesPage() {
     const vExpenses = allExpenses.filter((e) => e.vehicle_id === vehicleId);
     const revenue = vBookings.reduce((s, b) => s + (b.total_price ?? 0), 0);
     const expenseTotal = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
-    const effectiveCost = getEffectiveVehicleCost(vehicle);
+    // For financed vehicles, costs are already in allExpenses as financing entries
+    const effectiveCost = vehicle.isFinanced ? 0 : (vehicle.purchasePrice ?? 0);
     const financingInfo = vehicle.isFinanced ? calculateFinancing(vehicle) : null;
     const profit = revenue - expenseTotal - effectiveCost;
-    const roi = effectiveCost > 0 ? ((profit / effectiveCost) * 100).toFixed(1) : "0.0";
+    const totalCost = expenseTotal + effectiveCost;
+    const roi = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(1) : "0.0";
     const totalDays = Math.max(1, Math.ceil((new Date(dateRange.to).getTime() - new Date(dateRange.from).getTime()) / (1000 * 60 * 60 * 24)));
     let bookedDays = 0;
     vBookings.forEach((b) => {
@@ -589,9 +635,6 @@ export default function AdminFinancesPage() {
     vExpenses.forEach((e) => {
       catBreakdown[e.category] = (catBreakdown[e.category] || 0) + (e.amount ?? 0);
     });
-    if (financingInfo && financingInfo.totalPaid > 0) {
-      catBreakdown["financing"] = (catBreakdown["financing"] || 0) + financingInfo.totalPaid;
-    }
 
     return (
       <PageContainer>
@@ -874,12 +917,14 @@ export default function AdminFinancesPage() {
                 icon={<DollarSign className="h-4 w-4" />}
                 accent="green"
                 trend={summaryData.totalRevenue > 0 ? "up" : "neutral"}
+                onClick={() => setActiveTab("vehicles")}
               />
               <StatCard
                 label="Total Expenses"
                 value={`$${summaryData.totalExpenses.toLocaleString()}`}
                 icon={<Receipt className="h-4 w-4" />}
                 accent="red"
+                onClick={() => setActiveTab("expenses")}
               />
               <StatCard
                 label="Net Profit"
@@ -887,12 +932,14 @@ export default function AdminFinancesPage() {
                 icon={summaryData.netProfit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                 accent={summaryData.netProfit >= 0 ? "purple" : "red"}
                 trend={summaryData.netProfit > 0 ? "up" : summaryData.netProfit < 0 ? "down" : "neutral"}
+                onClick={() => setActiveTab("vehicles")}
               />
               <StatCard
                 label="Fleet Occupancy"
                 value={`${summaryData.occupancyRate.toFixed(0)}%`}
                 icon={<Target className="h-4 w-4" />}
                 accent="blue"
+                onClick={() => setActiveTab("vehicles")}
               />
               <StatCard
                 label="Bookings"
@@ -900,21 +947,23 @@ export default function AdminFinancesPage() {
                 icon={<Car className="h-4 w-4" />}
                 accent="amber"
                 subtext={`${summaryData.totalBookedDays} days booked`}
+                onClick={() => setActiveTab("vehicles")}
               />
               <StatCard
                 label="Avg. Booking"
                 value={`$${Math.round(summaryData.avgBookingValue).toLocaleString()}`}
                 icon={<BarChart3 className="h-4 w-4" />}
                 accent="gray"
+                onClick={() => setActiveTab("vehicles")}
               />
             </div>
 
             {/* Cash Flow Chart */}
-            <Card>
+            <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setActiveTab("expenses")}>
               <CardContent className="p-5">
                 <SectionHeader
                   title="Cash Flow"
-                  subtitle="Monthly income vs. expenses (last 6 months)"
+                  subtitle="Monthly income vs. expenses (last 6 months) — click for details"
                 />
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
@@ -938,9 +987,9 @@ export default function AdminFinancesPage() {
             {/* Daily Revenue + Expense Breakdown side by side */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Daily revenue */}
-              <Card>
+              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setActiveTab("vehicles")}>
                 <CardContent className="p-5">
-                  <SectionHeader title="Daily Revenue" subtitle="Last 14 days" />
+                  <SectionHeader title="Daily Revenue" subtitle="Last 14 days — click for vehicle breakdown" />
                   <div className="h-52">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={dailyEarningsData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
@@ -965,9 +1014,9 @@ export default function AdminFinancesPage() {
               </Card>
 
               {/* Expense categories */}
-              <Card>
+              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setActiveTab("expenses")}>
                 <CardContent className="p-5">
-                  <SectionHeader title="Expense Categories" />
+                  <SectionHeader title="Expense Categories" subtitle="Click for full expense list" />
                   {expenseCategoryData.length === 0 ? (
                     <p className="text-sm text-gray-400 text-center py-10">No expenses recorded</p>
                   ) : (
@@ -1076,7 +1125,7 @@ export default function AdminFinancesPage() {
             <Card>
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <SectionHeader title="Expenses" subtitle={`${expenses.length} manual + ${maintenanceCosts.length} from maintenance`} />
+                  <SectionHeader title="Expenses" subtitle={`${expenses.length} manual + ${maintenanceCosts.length} maintenance + ${financingCosts.length} financing`} />
                   <Button
                     onClick={() => setAddingExpense(!addingExpense)}
                     size="sm"
@@ -1145,6 +1194,52 @@ export default function AdminFinancesPage() {
                     <Button onClick={handleAddExpense} className="w-full sm:w-auto">
                       <Plus className="h-4 w-4 mr-1" /> Save Expense
                     </Button>
+                  </div>
+                )}
+
+                {/* Financing Payments (auto-generated from financed vehicles) */}
+                {financingCosts.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Financing Payments</p>
+                    <div className="space-y-2">
+                      {financingCosts
+                        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                        .slice(0, 12) // Show last 12 payments max
+                        .map((fc) => {
+                          const vehicle = vehicles.find((v) => v.id === fc.vehicle_id);
+                          return (
+                            <div
+                              key={fc.id}
+                              className="flex items-center gap-3 p-3 rounded-lg bg-purple-50 border border-purple-100 cursor-pointer hover:bg-purple-100 transition-colors"
+                              onClick={() => setSelectedVehicleId(fc.vehicle_id)}
+                            >
+                              <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 bg-purple-600">
+                                <Wallet className="h-4 w-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <p className="text-sm font-medium">{fc.description}</p>
+                                  {vehicle && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      {vehicle.year} {vehicle.make} {vehicle.model}
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-xs text-purple-600">Monthly financing payment</p>
+                              </div>
+                              <div className="text-right shrink-0">
+                                <p className="text-sm font-semibold">${fc.amount.toLocaleString()}</p>
+                                <p className="text-xs text-gray-400">{formatDate(fc.date)}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      {financingCosts.length > 12 && (
+                        <p className="text-xs text-gray-400 text-center py-1">
+                          + {financingCosts.length - 12} more payments
+                        </p>
+                      )}
+                    </div>
                   </div>
                 )}
 
