@@ -323,7 +323,7 @@ export default function AdminTicketsPage() {
               </Button>
               {deleteConfirm === selectedTicket.id ? (
                 <div className="flex gap-1">
-                  <Button size="sm" variant="destructive" onClick={() => handleDelete(selectedTicket.id)}>
+                  <Button size="sm" variant="danger" onClick={() => handleDelete(selectedTicket.id)}>
                     Confirm Delete
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setDeleteConfirm(null)}>
