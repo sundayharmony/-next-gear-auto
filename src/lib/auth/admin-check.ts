@@ -1,16 +1,36 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { getAuthFromRequest } from "@/lib/auth/jwt";
 
 /**
  * Verify the request comes from an authenticated admin.
- * Checks the x-admin-id header against the admins table.
- * Returns the admin record if valid, or a 401 response if not.
+ *
+ * Authentication methods (checked in order):
+ *   1. JWT in HTTP-only cookie or Authorization header (preferred)
+ *   2. Legacy x-admin-id header (backward compat — will be removed)
+ *
+ * Returns the admin ID if valid, or a 401/403 response if not.
  */
 export async function verifyAdmin(
   req: NextRequest
 ): Promise<{ authorized: true; adminId: string } | { authorized: false; response: NextResponse }> {
-  const adminId = req.headers.get("x-admin-id");
+  // ── Method 1: JWT-based auth (preferred) ──────────────────────────
+  const tokenPayload = await getAuthFromRequest(req);
+  if (tokenPayload) {
+    if (tokenPayload.role !== "admin") {
+      return {
+        authorized: false,
+        response: NextResponse.json(
+          { success: false, message: "Admin access required" },
+          { status: 403 }
+        ),
+      };
+    }
+    return { authorized: true, adminId: tokenPayload.sub };
+  }
 
+  // ── Method 2: Legacy header-based auth (backward compat) ──────────
+  const adminId = req.headers.get("x-admin-id");
   if (!adminId) {
     return {
       authorized: false,

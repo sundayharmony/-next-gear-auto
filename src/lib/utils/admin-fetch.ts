@@ -1,32 +1,71 @@
 /**
- * Wrapper around fetch that adds admin authentication headers.
- * Reads the user ID from localStorage (set during login).
- * Redirects to admin login if authentication fails.
+ * Wrapper around fetch for admin API calls.
+ *
+ * JWT tokens are stored in HTTP-only cookies and sent automatically.
+ * This wrapper handles:
+ *   - Automatic token refresh on 401 responses
+ *   - Redirect to admin login if refresh fails
+ *   - Legacy x-admin-id header (will be removed after full migration)
  */
+/** Read the CSRF token from the nga_csrf cookie */
+function getCsrfToken(): string {
+  if (typeof document === "undefined") return "";
+  const match = document.cookie.match(/(?:^|;\s*)nga_csrf=([^;]*)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
 export async function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  // Get admin ID from localStorage
-  let adminId = "";
+  const headers = new Headers(options.headers || {});
+
+  // Add CSRF token for state-changing requests
+  const csrf = getCsrfToken();
+  if (csrf) {
+    headers.set("x-csrf-token", csrf);
+  }
+
+  // Legacy fallback: still send x-admin-id header during migration period
   if (typeof window !== "undefined") {
     try {
       const stored = localStorage.getItem("nga_user");
       if (stored) {
         const parsed = JSON.parse(stored);
-        adminId = parsed.id || "";
+        if (parsed.id) {
+          headers.set("x-admin-id", parsed.id);
+        }
       }
     } catch {
       // ignore parse errors
     }
   }
 
-  const headers = new Headers(options.headers || {});
-  if (adminId) {
-    headers.set("x-admin-id", adminId);
-  }
+  // Ensure cookies are sent with the request
+  const res = await fetch(url, {
+    ...options,
+    headers,
+    credentials: "same-origin",
+  });
 
-  const res = await fetch(url, { ...options, headers });
-
-  // If unauthorized, redirect to admin login
+  // If 401, try refreshing the token
   if (res.status === 401 && typeof window !== "undefined") {
+    try {
+      const refreshRes = await fetch("/api/auth/refresh", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+
+      if (refreshRes.ok) {
+        // Retry the original request with fresh tokens
+        return fetch(url, {
+          ...options,
+          headers,
+          credentials: "same-origin",
+        });
+      }
+    } catch {
+      // Refresh failed — fall through to redirect
+    }
+
+    // Refresh failed — clear state and redirect to login
     localStorage.removeItem("nga_user");
     window.location.href = "/admin";
   }

@@ -1,8 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { promoLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 
 export async function POST(req: NextRequest) {
   try {
+    // Rate limit promo validation
+    const ip = getClientIp(req);
+    const rateCheck = promoLimiter.check(ip);
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(rateCheck.resetAt);
+    }
+
     const { code, bookingAmount } = await req.json();
 
     if (!code) {
@@ -128,11 +136,21 @@ export async function POST(req: NextRequest) {
       discountAmount = promo.discount_value;
     }
 
-    // Increment usage count
-    await supabase
+    // Atomic increment — prevents race condition where two concurrent requests
+    // could both read the same used_count and both succeed past the max_uses check.
+    // Uses a conditional update: only increment if used_count < max_uses.
+    const { error: incrementError, count: updatedCount } = await supabase
       .from("promo_codes")
       .update({ used_count: (promo.used_count ?? 0) + 1 })
-      .eq("id", promo.id);
+      .eq("id", promo.id)
+      .lt("used_count", promo.max_uses || 999999);
+
+    if (incrementError || updatedCount === 0) {
+      return NextResponse.json(
+        { success: false, error: "This promo code has reached its usage limit" },
+        { status: 400 }
+      );
+    }
 
     return NextResponse.json({
       success: true,

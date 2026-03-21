@@ -1,8 +1,16 @@
 import { NextResponse } from "next/server";
 import { getTransporter } from "@/lib/email/mailer";
+import { contactLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    // Rate limit contact form submissions
+    const ip = getClientIp(request);
+    const rateCheck = contactLimiter.check(ip);
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(rateCheck.resetAt);
+    }
+
     const body = await request.json();
     const { name, email, phone, message } = body;
 

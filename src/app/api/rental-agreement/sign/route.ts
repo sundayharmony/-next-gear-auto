@@ -56,6 +56,28 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate signature data format — each value must be a valid base64 PNG
+    for (const [key, value] of Object.entries(signatures)) {
+      if (value && typeof value === "string") {
+        const cleaned = (value as string).replace(/^data:image\/png;base64,/, "");
+        // Check it's valid base64 and not excessively large (max 500KB per signature)
+        if (cleaned.length > 500 * 1024) {
+          return NextResponse.json(
+            { success: false, error: `Signature ${key} exceeds maximum size` },
+            { status: 400 }
+          );
+        }
+        try {
+          Buffer.from(cleaned, "base64");
+        } catch {
+          return NextResponse.json(
+            { success: false, error: `Invalid signature data for ${key}` },
+            { status: 400 }
+          );
+        }
+      }
+    }
+
     // Fetch booking to verify it exists
     const { data: booking, error: bookingErr } = await supabase
       .from("bookings")
@@ -67,6 +89,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: "Booking not found" },
         { status: 404 }
+      );
+    }
+
+    // Verify booking hasn't already been signed
+    if (booking.agreement_signed_at) {
+      return NextResponse.json(
+        { success: false, error: "This agreement has already been signed" },
+        { status: 409 }
+      );
+    }
+
+    // Verify booking is in a valid state for signing (confirmed or active)
+    const validStatuses = ["confirmed", "active", "pending"];
+    if (booking.status && !validStatuses.includes(booking.status)) {
+      return NextResponse.json(
+        { success: false, error: "This booking is not in a valid state for signing" },
+        { status: 400 }
       );
     }
 

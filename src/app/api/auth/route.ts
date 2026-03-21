@@ -1,9 +1,20 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
+import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
+import { createAccessToken, createRefreshToken, setAuthCookies, clearAuthCookies } from "@/lib/auth/jwt";
+import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
+import { auditLog } from "@/lib/security/audit-log";
 
 export async function POST(request: Request) {
   try {
+    // Rate limit login/signup attempts
+    const ip = getClientIp(request);
+    const rateCheck = loginLimiter.check(ip);
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(rateCheck.resetAt);
+    }
+
     const body = await request.json();
     const { email, password, action } = body;
 
@@ -30,12 +41,20 @@ export async function POST(request: Request) {
       if (admin) {
         const passwordMatch = await bcrypt.compare(password, admin.password_hash);
         if (!passwordMatch) {
+          auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Invalid password", role: "admin" } });
           return NextResponse.json(
             { success: false, message: "Invalid email or password." },
             { status: 401 }
           );
         }
-        return NextResponse.json({
+
+        auditLog("LOGIN_SUCCESS", { ip, userId: admin.id, email: normalizedEmail, details: { role: "admin" } });
+
+        // Issue JWT tokens
+        const accessToken = await createAccessToken({ userId: admin.id, role: "admin", email: admin.email });
+        const refreshToken = await createRefreshToken({ userId: admin.id, role: "admin", email: admin.email });
+
+        const response = NextResponse.json({
           data: {
             id: admin.id,
             name: admin.name,
@@ -50,6 +69,8 @@ export async function POST(request: Request) {
           },
           success: true,
         });
+
+        return setAuthCookies(response, accessToken, refreshToken);
       }
 
       // Then check customers table
@@ -60,6 +81,7 @@ export async function POST(request: Request) {
         .single();
 
       if (error || !customer) {
+        auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Account not found" } });
         return NextResponse.json(
           { success: false, message: "Invalid email or password." },
           { status: 401 }
@@ -76,11 +98,14 @@ export async function POST(request: Request) {
 
       const passwordMatch = await bcrypt.compare(password, customer.password_hash);
       if (!passwordMatch) {
+        auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Invalid password", role: "customer" } });
         return NextResponse.json(
           { success: false, message: "Invalid email or password." },
           { status: 401 }
         );
       }
+
+      auditLog("LOGIN_SUCCESS", { ip, userId: customer.id, email: normalizedEmail, details: { role: "customer" } });
 
       // Map DB fields to frontend expected format
       const mapped = {
@@ -96,7 +121,13 @@ export async function POST(request: Request) {
         role: customer.role || "customer",
       };
 
-      return NextResponse.json({ data: mapped, success: true });
+      // Issue JWT tokens
+      const customerRole = (customer.role || "customer") as "admin" | "customer";
+      const accessToken = await createAccessToken({ userId: customer.id, role: customerRole, email: customer.email });
+      const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
+
+      const response = NextResponse.json({ data: mapped, success: true });
+      return setAuthCookies(response, accessToken, refreshToken);
     }
 
     if (action === "signup") {
@@ -107,9 +138,10 @@ export async function POST(request: Request) {
         );
       }
 
-      if (body.password.length < 6) {
+      const pwCheck = validatePassword(body.password);
+      if (!pwCheck.valid) {
         return NextResponse.json(
-          { success: false, message: "Password must be at least 6 characters." },
+          { success: false, message: pwCheck.message, requirements: PASSWORD_REQUIREMENTS },
           { status: 400 }
         );
       }

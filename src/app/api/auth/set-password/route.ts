@@ -1,9 +1,18 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
+import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
+import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 
 export async function POST(request: Request) {
   try {
+    // Rate limit password set attempts (uses login limiter)
+    const ip = getClientIp(request);
+    const rateCheck = loginLimiter.check(ip);
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(rateCheck.resetAt);
+    }
+
     const body = await request.json();
     const { email, password } = body;
 
@@ -14,9 +23,10 @@ export async function POST(request: Request) {
       );
     }
 
-    if (password.length < 6) {
+    const pwCheck = validatePassword(password);
+    if (!pwCheck.valid) {
       return NextResponse.json(
-        { success: false, message: "Password must be at least 6 characters." },
+        { success: false, message: pwCheck.message, requirements: PASSWORD_REQUIREMENTS },
         { status: 400 }
       );
     }
@@ -31,18 +41,23 @@ export async function POST(request: Request) {
       .eq("email", normalizedEmail)
       .single();
 
+    // Timing attack mitigation: always perform a bcrypt hash to ensure
+    // consistent response time whether the account exists or not.
+    // This prevents attackers from enumerating valid email addresses.
     if (findError || !customer) {
+      await bcrypt.hash(password, 12); // constant-time dummy operation
       return NextResponse.json(
-        { success: false, message: "No account found with that email address." },
-        { status: 404 }
+        { success: false, message: "Unable to set password. Please check the link in your email and try again." },
+        { status: 400 }
       );
     }
 
     // Only allow setting password if one doesn't exist yet
     if (customer.password_hash) {
+      await bcrypt.hash(password, 12); // constant-time dummy operation
       return NextResponse.json(
-        { success: false, message: "This account already has a password. Please use the login page instead." },
-        { status: 409 }
+        { success: false, message: "Unable to set password. Please check the link in your email and try again." },
+        { status: 400 }
       );
     }
 

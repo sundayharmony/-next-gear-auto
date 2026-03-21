@@ -40,7 +40,7 @@ export async function POST(request: NextRequest) {
     // Generate unique filename
     const ext = file.name.split(".").pop() || "pdf";
     const folder = maintenanceId || "temp";
-    const fileName = `${folder}/${Date.now()}.${ext}`;
+    const fileName = `${folder}/${crypto.randomUUID()}.${ext}`;
 
     // Convert File to ArrayBuffer then to Buffer for upload
     const arrayBuffer = await file.arrayBuffer();
