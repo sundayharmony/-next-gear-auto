@@ -1,53 +1,17 @@
 // ─── Shared types for the admin bookings module ───────────────────
+// Re-exports canonical types from @/lib/types; adds booking-module-specific types.
 
-export interface BookingRow {
-  id: string;
-  customer_id?: string;
-  customer_name: string;
-  customer_email: string;
-  customer_phone?: string;
-  vehicleName: string;
-  vehicle_id: string;
-  pickup_date: string;
-  return_date: string;
-  pickup_time?: string;
-  return_time?: string;
-  total_price: number;
-  deposit: number;
-  status: string;
-  created_at: string;
-  id_document_url?: string;
-  insurance_proof_url?: string;
-  insurance_opted_out?: boolean;
-  signed_name?: string;
-  agreement_signed_at?: string;
-  rental_agreement_url?: string;
-  extras?: ExtraItem[];
-  admin_notes?: string;
-  payment_method?: string;
-  promo_code?: string;
-  discount_amount?: number;
-  is_overdue?: boolean;
-}
+// Re-export shared types so booking components can import from one place
+export type { BookingDbRow as BookingRow, BookingExtra as ExtraItem, VehicleListItem as Vehicle } from "@/lib/types";
+export { TIME_SLOTS, PAYMENT_METHODS, STATUS_STEPS } from "@/lib/types";
 
-export interface ExtraItem {
-  id: string;
-  name: string;
-  pricePerDay: number;
-  maxPrice: number | null;
-  billingType: "per-day" | "per-day-capped" | "one-time";
-  description: string;
-  selected?: boolean;
-}
+// Re-export extras from the single source of truth (data/extras.json)
+// We import and re-export so components don't need to know about the JSON file.
+import extrasData from "@/data/extras.json";
+import type { BookingExtra } from "@/lib/types";
+export const AVAILABLE_EXTRAS: BookingExtra[] = extrasData as BookingExtra[];
 
-export interface Vehicle {
-  id: string;
-  year: number;
-  make: string;
-  model: string;
-  dailyRate: number;
-  isAvailable: boolean;
-}
+// ─── Booking-module-specific types (not shared elsewhere) ─────────
 
 export interface CustomerOption {
   id: string;
@@ -89,32 +53,3 @@ export interface TicketRecord {
 
 export type SortField = "customer_name" | "pickup_date" | "return_date" | "total_price" | "status" | "created_at";
 export type SortOrder = "asc" | "desc";
-
-export const AVAILABLE_EXTRAS: ExtraItem[] = [
-  { id: "e1", name: "Insurance Coverage", pricePerDay: 11.25, maxPrice: null, billingType: "per-day", description: "Basic collision damage waiver" },
-  { id: "e2", name: "Child Seat", pricePerDay: 10, maxPrice: 50, billingType: "per-day-capped", description: "Infant and toddler car seat" },
-  { id: "e3", name: "Roadside Assistance", pricePerDay: 8, maxPrice: null, billingType: "per-day", description: "24/7 emergency roadside assistance" },
-  { id: "e4", name: "Fuel Pre-Pay", pricePerDay: 45, maxPrice: null, billingType: "one-time", description: "Pre-pay for a full tank" },
-];
-
-export const PAYMENT_METHODS = [
-  { value: "stripe", label: "Stripe / Card" },
-  { value: "cash", label: "Cash" },
-  { value: "zelle", label: "Zelle" },
-  { value: "venmo", label: "Venmo" },
-  { value: "check", label: "Check" },
-  { value: "other", label: "Other" },
-];
-
-export const STATUS_STEPS = ["pending", "confirmed", "active", "completed"] as const;
-
-// Pre-generate time slot options (8:00 AM – 4:00 AM next day, 30-min intervals)
-export const TIME_SLOTS = Array.from({ length: 41 }, (_, i) => {
-  const hour = 8 + Math.floor(i / 2);
-  const minute = i % 2 === 0 ? 0 : 30;
-  const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-  const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-  const ampm = hour >= 12 && hour < 24 ? "PM" : "AM";
-  const label = `${h12}:${String(minute).padStart(2, "0")} ${ampm}`;
-  return { value, label };
-});

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,7 +62,7 @@ export async function POST(request: NextRequest) {
       .upload(fileName, buffer, { contentType: file.type, upsert: true });
 
     if (uploadError) {
-      console.error("Storage upload error:", JSON.stringify(uploadError));
+      logger.error("Storage upload error:", JSON.stringify(uploadError));
       // If bucket doesn't exist, try creating it
       if (uploadError.message?.includes("not found") || uploadError.message?.includes("Bucket")) {
         await supabase.storage.createBucket("booking-documents", {
@@ -73,7 +74,7 @@ export async function POST(request: NextRequest) {
           .from("booking-documents")
           .upload(fileName, buffer, { contentType: file.type, upsert: true });
         if (retryError) {
-          console.error("Retry upload error:", JSON.stringify(retryError));
+          logger.error("Retry upload error:", JSON.stringify(retryError));
           return NextResponse.json(
             { success: false, error: `Upload failed after retry: ${retryError.message}` },
             { status: 500 }
@@ -98,7 +99,7 @@ export async function POST(request: NextRequest) {
 
     return updateBookingAndRespond(supabase, bookingId, docType, urlData.publicUrl);
   } catch (error) {
-    console.error("Booking upload error:", error);
+    logger.error("Booking upload error:", error);
     return NextResponse.json(
       { success: false, error: `Internal server error: ${error instanceof Error ? error.message : "Unknown"}` },
       { status: 500 }
@@ -120,7 +121,7 @@ async function updateBookingAndRespond(supabase: ReturnType<typeof import("@/lib
     .eq("id", bookingId);
 
   if (updateError) {
-    console.error("Database update error:", JSON.stringify(updateError));
+    logger.error("Database update error:", JSON.stringify(updateError));
     return NextResponse.json(
       { success: false, url: publicUrl, message: `File uploaded but failed to link to booking: ${updateError.message}` },
       { status: 500 }

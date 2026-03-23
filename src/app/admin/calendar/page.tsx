@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo } from "react";
+import type { BookingDbRow, VehicleListItem } from "@/lib/types";
 import {
   ChevronLeft,
   ChevronRight,
@@ -18,35 +19,8 @@ import { formatTime, formatDate } from "@/lib/utils/date-helpers";
 import { statusColors, statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
 
-interface BookingRow {
-  id: string;
-  customer_name: string;
-  customer_email: string;
-  customer_phone?: string;
-  vehicleName: string;
-  vehicle_id: string;
-  pickup_date: string;
-  return_date: string;
-  pickup_time?: string;
-  return_time?: string;
-  total_price: number;
-  deposit: number;
-  status: string;
-  created_at: string;
-  id_document_url?: string;
-  insurance_proof_url?: string;
-  insurance_opted_out?: boolean;
-  signed_name?: string;
-  agreement_signed_at?: string;
-  rental_agreement_url?: string;
-}
-
-interface Vehicle {
-  id: string;
-  year: number;
-  make: string;
-  model: string;
-}
+type BookingRow = BookingDbRow;
+type Vehicle = VehicleListItem;
 
 export default function AdminCalendarPage() {
   const [bookings, setBookings] = useState<BookingRow[]>([]);

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 // GET: List all maintenance records with optional filters
 export async function GET(req: NextRequest) {
@@ -80,7 +81,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: [] });
   } catch (error) {
-    console.error("Admin maintenance GET error:", error);
+    logger.error("Admin maintenance GET error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch records" },
       { status: 500 }
@@ -128,7 +129,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Maintenance create error:", error);
+      logger.error("Maintenance create error:", error);
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }
@@ -215,7 +216,7 @@ export async function PUT(req: NextRequest) {
       .eq("id", id);
 
     if (error) {
-      console.error("Maintenance update error:", error);
+      logger.error("Maintenance update error:", error);
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }
@@ -270,7 +271,7 @@ export async function DELETE(req: NextRequest) {
       .eq("id", id);
 
     if (error) {
-      console.error("Maintenance delete error:", error);
+      logger.error("Maintenance delete error:", error);
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }

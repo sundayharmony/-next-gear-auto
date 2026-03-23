@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(request: NextRequest) {
   const auth = await verifyAdmin(request);
@@ -55,7 +56,7 @@ export async function POST(request: NextRequest) {
       });
 
     if (uploadError) {
-      console.error("Supabase storage upload error:", uploadError);
+      logger.error("Supabase storage upload error:", uploadError);
       return NextResponse.json(
         { success: false, error: "Failed to upload photo: " + uploadError.message },
         { status: 500 }
@@ -78,7 +79,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (fetchError) {
-        console.error("Error fetching maintenance record:", fetchError);
+        logger.error("Error fetching maintenance record:", fetchError);
         return NextResponse.json({
           success: true,
           url: publicUrl,
@@ -95,7 +96,7 @@ export async function POST(request: NextRequest) {
         .eq("id", maintenanceId);
 
       if (updateError) {
-        console.error("Error updating maintenance photo_urls:", updateError);
+        logger.error("Error updating maintenance photo_urls:", updateError);
         return NextResponse.json({
           success: true,
           url: publicUrl,
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
       url: publicUrl,
     });
   } catch (error) {
-    console.error("Unexpected error in POST /api/admin/maintenance/upload:", error);
+    logger.error("Unexpected error in POST /api/admin/maintenance/upload:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { sendPasswordResetLink } from "@/lib/email/mailer";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(req: NextRequest) {
   const auth = await verifyAdmin(req);
@@ -42,7 +43,7 @@ export async function POST(req: NextRequest) {
         .eq("id", customerId);
 
       if (updateError) {
-        console.error("Failed to clear password_hash:", updateError);
+        logger.error("Failed to clear password_hash:", updateError);
         return NextResponse.json(
           { success: false, message: "Failed to reset password hash" },
           { status: 500 }
@@ -61,7 +62,7 @@ export async function POST(req: NextRequest) {
       message: "Password reset link sent successfully",
     });
   } catch (error) {
-    console.error("Send password link error:", error);
+    logger.error("Send password link error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to send password reset link" },
       { status: 500 }

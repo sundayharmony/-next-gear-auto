@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 // GET: List all promo codes (Supabase with JSON fallback)
 export async function GET(req: NextRequest) {
@@ -28,7 +29,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: codes, source: "supabase" });
     }
   } catch (err) {
-    console.error("Promo codes fetch error:", err);
+    logger.error("Promo codes fetch error:", err);
   }
 
   // Return empty array if no codes found in database
@@ -75,7 +76,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Promo code create error:", error);
+      logger.error("Promo code create error:", error);
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 
@@ -112,7 +113,7 @@ export async function PUT(request: NextRequest) {
       .eq("code", body.code.toUpperCase());
 
     if (error) {
-      console.error("Promo code update error:", error);
+      logger.error("Promo code update error:", error);
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 
@@ -141,7 +142,7 @@ export async function DELETE(request: NextRequest) {
       .eq("code", code.toUpperCase());
 
     if (error) {
-      console.error("Promo code delete error:", error);
+      logger.error("Promo code delete error:", error);
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 

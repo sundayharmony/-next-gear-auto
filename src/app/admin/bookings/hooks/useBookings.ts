@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { logger } from "@/lib/utils/logger";
 import type { BookingRow, Vehicle, CustomerOption, SortField, SortOrder } from "../types";
 
@@ -35,21 +36,12 @@ export function useBookings(): UseBookingsReturn {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [allCustomers, setAllCustomers] = useState<CustomerOption[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { error, setError, success, setSuccess } = useAutoToast();
   const [statusFilter, setStatusFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("pickup_date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [updating, setUpdating] = useState<string | null>(null);
-
-  // Auto-clear messages
-  useEffect(() => {
-    if (error) { const t = setTimeout(() => setError(null), 5000); return () => clearTimeout(t); }
-  }, [error]);
-  useEffect(() => {
-    if (success) { const t = setTimeout(() => setSuccess(null), 3000); return () => clearTimeout(t); }
-  }, [success]);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);

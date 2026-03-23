@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 // GET: List tickets with optional filters
 export async function GET(req: NextRequest) {
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Tickets GET error:", error);
+      logger.error("Tickets GET error:", error);
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }
@@ -96,7 +97,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: records });
   } catch (error) {
-    console.error("Tickets GET error:", error);
+    logger.error("Tickets GET error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to fetch tickets" },
       { status: 500 }
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Ticket create error:", error);
+      logger.error("Ticket create error:", error);
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }
@@ -219,7 +220,7 @@ export async function PUT(req: NextRequest) {
       .eq("id", id);
 
     if (error) {
-      console.error("Ticket update error:", error);
+      logger.error("Ticket update error:", error);
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }
@@ -256,7 +257,7 @@ export async function DELETE(req: NextRequest) {
     const { error } = await supabase.from("tickets").delete().eq("id", id);
 
     if (error) {
-      console.error("Ticket delete error:", error);
+      logger.error("Ticket delete error:", error);
       return NextResponse.json(
         { success: false, message: error.message },
         { status: 500 }

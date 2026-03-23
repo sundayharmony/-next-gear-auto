@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { logger } from "@/lib/utils/logger";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -59,7 +60,7 @@ export async function GET(request: Request) {
       return NextResponse.json({ data: vehicles, success: true });
     }
   } catch (error) {
-    console.error("Vehicles API error:", error);
+    logger.error("Vehicles API error:", error);
   }
 
   // Return empty array if no vehicles found or error

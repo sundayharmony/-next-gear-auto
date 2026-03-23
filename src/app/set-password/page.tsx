@@ -7,6 +7,7 @@ import { Car, Lock, Eye, EyeOff, Check, ArrowRight, CheckCircle } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
 function SetPasswordForm() {
   const router = useRouter();
@@ -51,7 +52,7 @@ function SetPasswordForm() {
 
     setIsLoading(true);
     try {
-      const res = await fetch("/api/auth/set-password", {
+      const res = await csrfFetch("/api/auth/set-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendBookingConfirmation, sendBookingPendingEmail, sendAdminNewBooking } from "@/lib/email/mailer";
+import { logger } from "@/lib/utils/logger";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -161,7 +162,7 @@ export async function POST(request: Request) {
     });
 
     if (bookingError) {
-      console.error("Supabase booking error:", bookingError);
+      logger.error("Supabase booking error:", bookingError);
       return NextResponse.json(
         { success: false, message: "Failed to create booking" },
         { status: 500 }
@@ -203,8 +204,8 @@ export async function POST(request: Request) {
         needsPassword,
       };
 
-      sendBookingConfirmation(emailData).catch(console.error);
-      sendAdminNewBooking(emailData).catch(console.error);
+      sendBookingConfirmation(emailData).catch(logger.error);
+      sendAdminNewBooking(emailData).catch(logger.error);
 
       return NextResponse.json({
         success: true,
@@ -281,10 +282,10 @@ export async function POST(request: Request) {
 
     // Fire and forget - don't block the response
     sendBookingPendingEmail(emailData).catch((error) => {
-      console.error("Failed to send pending email to customer:", error);
+      logger.error("Failed to send pending email to customer:", error);
     });
     sendAdminNewBooking(emailData).catch((error) => {
-      console.error("Failed to send admin notification for pending booking:", error);
+      logger.error("Failed to send admin notification for pending booking:", error);
     });
 
     return NextResponse.json({
@@ -296,7 +297,7 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    console.error("Checkout error:", error);
+    logger.error("Checkout error:", error);
     return NextResponse.json(
       { success: false, message: "Checkout failed" },
       { status: 500 }

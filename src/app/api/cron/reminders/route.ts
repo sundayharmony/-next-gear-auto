@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendPickupReminder, sendReturnReminder } from "@/lib/email/mailer";
+import { logger } from "@/lib/utils/logger";
 
 // This endpoint runs daily via Vercel Cron
 // Sends pickup reminders (24h before) and return reminders (day of return)
@@ -54,7 +55,7 @@ export async function GET(request: Request) {
           });
           pickupCount++;
         } catch (err) {
-          console.error(`Failed to send pickup reminder for booking ${booking.id}:`, err);
+          logger.error(`Failed to send pickup reminder for booking ${booking.id}:`, err);
         }
       }
     }
@@ -88,7 +89,7 @@ export async function GET(request: Request) {
           });
           returnCount++;
         } catch (err) {
-          console.error(`Failed to send return reminder for booking ${booking.id}:`, err);
+          logger.error(`Failed to send return reminder for booking ${booking.id}:`, err);
         }
       }
     }
@@ -99,7 +100,7 @@ export async function GET(request: Request) {
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
-    console.error("Cron reminder error:", error);
+    logger.error("Cron reminder error:", error);
     return NextResponse.json({ error: "Failed to send reminders" }, { status: 500 });
   }
 }

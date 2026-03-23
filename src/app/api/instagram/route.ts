@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 // Fetch thumbnail from Instagram post by scraping og:image meta tag
 async function fetchThumbnail(postUrl: string): Promise<{
@@ -51,7 +52,7 @@ async function fetchThumbnail(postUrl: string): Promise<{
 
     return { thumbnail_url, title, media_type };
   } catch (err) {
-    console.error("Instagram thumbnail fetch failed:", err);
+    logger.error("Instagram thumbnail fetch failed:", err);
     return { thumbnail_url: null, title: null, media_type };
   }
 }
@@ -67,7 +68,7 @@ export async function GET() {
       .order("sort_order", { ascending: true });
 
     if (error) {
-      console.error("Instagram posts fetch error:", error);
+      logger.error("Instagram posts fetch error:", error);
       return NextResponse.json({ data: [], success: true });
     }
 
@@ -118,7 +119,7 @@ export async function POST(req: NextRequest) {
     });
 
     if (error) {
-      console.error("Instagram post insert error:", error);
+      logger.error("Instagram post insert error:", error);
       return NextResponse.json(
         { success: false, error: "Failed to add post" },
         { status: 500 }
@@ -212,7 +213,7 @@ export async function DELETE(req: NextRequest) {
     const { error } = await supabase.from("instagram_posts").delete().eq("id", id);
 
     if (error) {
-      console.error("Instagram post delete error:", error);
+      logger.error("Instagram post delete error:", error);
       return NextResponse.json(
         { success: false, error: "Failed to delete post" },
         { status: 500 }

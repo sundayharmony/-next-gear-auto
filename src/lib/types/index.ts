@@ -246,3 +246,70 @@ export interface Expense {
   date: string;
   createdAt: string;
 }
+
+// ─── Admin DB Row Types (snake_case — matches Supabase columns) ──────────
+
+/** Booking as returned by the API / Supabase (snake_case columns) */
+export interface BookingDbRow {
+  id: string;
+  customer_id?: string;
+  customer_name: string;
+  customer_email: string;
+  customer_phone?: string;
+  vehicleName: string;          // enriched by API join
+  vehicle_id: string;
+  pickup_date: string;
+  return_date: string;
+  pickup_time?: string;
+  return_time?: string;
+  total_price: number;
+  deposit: number;
+  status: string;
+  created_at: string;
+  id_document_url?: string;
+  insurance_proof_url?: string;
+  insurance_opted_out?: boolean;
+  signed_name?: string;
+  agreement_signed_at?: string;
+  rental_agreement_url?: string;
+  extras?: BookingExtra[];
+  admin_notes?: string;
+  payment_method?: string;
+  promo_code?: string;
+  discount_amount?: number;
+  is_overdue?: boolean;
+}
+
+/** Minimal vehicle info used in admin list views */
+export interface VehicleListItem {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+  dailyRate: number;
+  isAvailable: boolean;
+}
+
+/** Pre-generated time slot options (8 AM – 4 AM, 30-min intervals) */
+export const TIME_SLOTS = Array.from({ length: 41 }, (_, i) => {
+  const hour = 8 + Math.floor(i / 2);
+  const minute = i % 2 === 0 ? 0 : 30;
+  const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+  const ampm = hour >= 12 && hour < 24 ? "PM" : "AM";
+  const label = `${h12}:${String(minute).padStart(2, "0")} ${ampm}`;
+  return { value, label };
+});
+
+/** Payment method options for admin booking forms */
+export const PAYMENT_METHODS = [
+  { value: "stripe", label: "Stripe / Card" },
+  { value: "cash", label: "Cash" },
+  { value: "zelle", label: "Zelle" },
+  { value: "venmo", label: "Venmo" },
+  { value: "check", label: "Check" },
+  { value: "other", label: "Other" },
+] as const;
+
+/** Booking status progression steps */
+export const STATUS_STEPS = ["pending", "confirmed", "active", "completed"] as const;

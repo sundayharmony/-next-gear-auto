@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendBookingConfirmation, sendAdminNewBooking } from "@/lib/email/mailer";
+import { logger } from "@/lib/utils/logger";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -19,14 +20,14 @@ export async function POST(request: Request) {
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
     } else if (process.env.NODE_ENV === "development") {
       // Allow unverified events in development only
-      console.warn("DEV WARNING: Webhook secret not configured - parsing unverified event");
+      logger.warn("DEV WARNING: Webhook secret not configured - parsing unverified event");
       event = JSON.parse(body) as Stripe.Event;
     } else {
-      console.error("SECURITY: Webhook secret not configured in production - rejecting request");
+      logger.error("SECURITY: Webhook secret not configured in production - rejecting request");
       return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
     }
   } catch (err) {
-    console.error("Webhook signature verification failed:", err);
+    logger.error("Webhook signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
   }
 
@@ -55,7 +56,7 @@ export async function POST(request: Request) {
               .eq("id", bookingId);
 
             if (updateError) {
-              console.error("Error updating booking status:", updateError);
+              logger.error("Error updating booking status:", updateError);
             }
           }
 
@@ -70,7 +71,7 @@ export async function POST(request: Request) {
           });
 
           if (paymentError) {
-            console.error("Error creating payment record:", paymentError);
+            logger.error("Error creating payment record:", paymentError);
           }
 
           // Fetch booking details for email
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
           if (booking) {
             // Only send confirmation emails if customer email exists
             if (!booking.customer_email) {
-              console.warn("Booking has no customer email, skipping email notification:", bookingId);
+              logger.warn("Booking has no customer email, skipping email notification:", bookingId);
             } else {
               // Fetch vehicle name
               const { data: vehicle } = await supabase
@@ -119,11 +120,11 @@ export async function POST(request: Request) {
 
               // Send confirmation emails (don't await - fire and forget)
               sendBookingConfirmation(emailData)
-                .then(() => console.log("Confirmation email sent via webhook for booking:", bookingId))
-                .catch((error) => console.error("Failed to send confirmation email via webhook:", error));
+                .then(() => logger.info("Confirmation email sent via webhook for booking:", bookingId))
+                .catch((error) => logger.error("Failed to send confirmation email via webhook:", error));
               sendAdminNewBooking(emailData)
-                .then(() => console.log("Admin confirmation email sent via webhook for booking:", bookingId))
-                .catch((error) => console.error("Failed to send admin confirmation email via webhook:", error));
+                .then(() => logger.info("Admin confirmation email sent via webhook for booking:", bookingId))
+                .catch((error) => logger.error("Failed to send admin confirmation email via webhook:", error));
             }
           }
         }
@@ -142,7 +143,7 @@ export async function POST(request: Request) {
             .eq("status", "pending");
 
           if (expireError) {
-            console.error("Error cancelling expired booking:", expireError);
+            logger.error("Error cancelling expired booking:", expireError);
           }
         }
         break;
@@ -150,14 +151,14 @@ export async function POST(request: Request) {
 
       case "payment_intent.payment_failed": {
         const intent = event.data.object as Stripe.PaymentIntent;
-        console.error("Payment failed:", intent.id, intent.last_payment_error?.message);
+        logger.error(`Payment failed: ${intent.id}`, intent.last_payment_error?.message);
         break;
       }
     }
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    console.error("Webhook processing error:", error);
+    logger.error("Webhook processing error:", error);
     return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }

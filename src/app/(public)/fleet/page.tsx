@@ -10,27 +10,10 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { useComparison } from "@/lib/hooks/use-comparison";
+import { useVehicles } from "@/lib/hooks/useVehicles";
 import { VEHICLE_CATEGORIES } from "@/lib/constants";
 import { logger } from "@/lib/utils/logger";
-
-interface Vehicle {
-  id: string;
-  year: number;
-  make: string;
-  model: string;
-  category: string;
-  images: string[];
-  specs: Record<string, any>;
-  dailyRate: number;
-  features: string[];
-  isAvailable: boolean;
-  description: string;
-  color: string;
-  mileage: number;
-  licensePlate: string;
-  vin: string;
-  maintenanceStatus: string;
-}
+import type { Vehicle } from "@/lib/types";
 
 type SortOption = "price-low" | "price-high" | "name";
 
@@ -39,8 +22,7 @@ function FleetContent() {
   const router = useRouter();
   const categoryParam = searchParams.get("category");
 
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { vehicles, loading, error: vehicleError } = useVehicles();
   const [activeCategory, setActiveCategory] = useState(
     categoryParam && VEHICLE_CATEGORIES.some((c) => c.value === categoryParam)
       ? categoryParam
@@ -49,32 +31,6 @@ function FleetContent() {
   const [sortBy, setSortBy] = useState<SortOption>("price-low");
   const [searchQuery, setSearchQuery] = useState("");
   const comparison = useComparison();
-
-  const [error, setError] = useState<string | null>(null);
-
-  // Fetch vehicles from API
-  useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        const response = await fetch("/api/vehicles");
-        if (!response.ok) {
-          throw new Error(`API error: ${response.status} ${response.statusText}`);
-        }
-        const result = await response.json();
-        if (result.success && Array.isArray(result.data)) {
-          setVehicles(result.data);
-          setError(null);
-        }
-      } catch (err) {
-        logger.error("Failed to fetch vehicles:", err);
-        setError("Failed to load vehicles. Please try again later.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchVehicles();
-  }, []);
 
   // Sync category when URL param changes
   useEffect(() => {
@@ -133,9 +89,9 @@ function FleetContent() {
 
       <PageContainer className="py-8">
         {/* Error state */}
-        {error && (
+        {vehicleError && (
           <div className="mb-8 rounded-lg bg-red-50 border border-red-200 p-4">
-            <p className="text-red-700 font-medium">{error}</p>
+            <p className="text-red-700 font-medium">{vehicleError}</p>
           </div>
         )}
 

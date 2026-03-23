@@ -3,6 +3,8 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { calculateFinancing } from "@/lib/utils/financing";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
+import type { Vehicle as SharedVehicle } from "@/lib/types";
 import {
   DollarSign,
   TrendingUp,
@@ -90,18 +92,8 @@ interface Expense {
   created_at: string;
 }
 
-interface Vehicle {
-  id: string;
-  year: number;
-  make: string;
-  model: string;
-  purchasePrice?: number;
-  isFinanced?: boolean;
-  monthlyPayment?: number;
-  paymentDayOfMonth?: number;
-  financingStartDate?: string;
-  createdAt?: string;
-}
+/** Vehicle with finance fields (matches shared Vehicle type) */
+type Vehicle = SharedVehicle;
 
 interface EditingExpense {
   id: string;
@@ -241,7 +233,7 @@ export default function AdminFinancesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { error, setError } = useAutoToast();
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     to: new Date().toISOString().split("T")[0],

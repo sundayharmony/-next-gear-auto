@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { useBooking } from "@/lib/context/booking-context";
+import { useVehicles } from "@/lib/hooks/useVehicles";
 import { SignaturePad } from "@/components/signature-pad";
 import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
 import { cn } from "@/lib/utils/cn";
@@ -22,60 +23,8 @@ import { csrfFetch } from "@/lib/utils/csrf-fetch";
 import { useAuth } from "@/lib/context/auth-context";
 import { logger } from "@/lib/utils/logger";
 import extras from "@/data/extras.json";
-import type { BookingExtra } from "@/lib/types";
-
-// Signature fields the renter must complete on the rental agreement PDF
-const AGREEMENT_SIGNATURE_FIELDS = [
-  {
-    id: "t35",
-    label: "Renter Initials — Page 1 (Terms & Conditions)",
-    description: "By initialing, you acknowledge the vehicle condition and rental terms on page 1.",
-    isInitials: true,
-  },
-  {
-    id: "t42",
-    label: "GPS Tracking Acknowledgement Initials",
-    description: "By initialing, you acknowledge and consent to GPS tracking during the rental period.",
-    isInitials: true,
-  },
-  {
-    id: "t43",
-    label: "Renter Initials — Page 2 (Insurance & Liability)",
-    description: "By initialing, you acknowledge the insurance and liability terms on page 2.",
-    isInitials: true,
-  },
-  {
-    id: "t47",
-    label: "Renter Full Signature",
-    description: "Your full signature confirming agreement to all rental terms and conditions.",
-    isInitials: false,
-  },
-  {
-    id: "t57",
-    label: "Renter Initials — Page 3 (Final Acknowledgement)",
-    description: "By initialing, you confirm you have read and agree to all terms in this agreement.",
-    isInitials: true,
-  },
-];
-
-interface Vehicle {
-  id: string;
-  year: number;
-  make: string;
-  model: string;
-  category: string;
-  images: string[];
-  specs: Record<string, any>;
-  dailyRate: number;
-  features: string[];
-  isAvailable: boolean;
-  description: string;
-  color: string;
-  mileage: number;
-  licensePlate: string;
-  vin: string;
-  maintenanceStatus: string;
-}
+import type { BookingExtra, Vehicle } from "@/lib/types";
+import { AGREEMENT_SIGNATURE_FIELDS } from "@/data/agreement-fields";
 
 const STEPS = [
   { num: 1, label: "Search", icon: Search },
@@ -134,27 +83,14 @@ function BookingPageInner() {
   const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   // Fetch vehicles from API
-  useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        const response = await fetch("/api/vehicles");
-        const result = await response.json();
-        if (result.success && Array.isArray(result.data)) {
-          setVehicles(result.data);
-          setVehiclesError(null);
-        } else {
-          setVehiclesError("Failed to load vehicles. Please try again.");
-        }
-      } catch (error) {
-        logger.error("Failed to fetch vehicles:", error);
-        setVehiclesError("Failed to load vehicles. Please try again.");
-      } finally {
-        setVehiclesLoading(false);
-      }
-    };
+  const { vehicles: hookVehicles, loading: hookLoading, error: hookError } = useVehicles();
 
-    fetchVehicles();
-  }, []);
+  // Sync hook state to component state
+  useEffect(() => {
+    setVehicles(hookVehicles);
+    setVehiclesLoading(hookLoading);
+    setVehiclesError(hookError);
+  }, [hookVehicles, hookLoading, hookError]);
 
   // Pre-select vehicle from URL query param (e.g. /booking?vehicleId=v1)
   const [preSelected, setPreSelected] = useState(false);

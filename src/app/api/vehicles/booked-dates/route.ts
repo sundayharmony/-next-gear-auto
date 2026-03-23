@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { logger } from "@/lib/utils/logger";
 
 export async function GET(req: NextRequest) {
   const supabase = getServiceSupabase();
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
       .order("pickup_date", { ascending: true });
 
     if (error) {
-      console.error("Booked dates fetch error:", error);
+      logger.error("Booked dates fetch error:", error);
       return NextResponse.json({
         success: true,
         data: [],
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
       data: bookedRanges,
     });
   } catch (err) {
-    console.error("Booked dates API error:", err);
+    logger.error("Booked dates API error:", err);
     return NextResponse.json(
       { success: false, error: "Failed to fetch booked dates" },
       { status: 500 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +53,7 @@ export async function POST(request: NextRequest) {
     const { data: urlData } = supabase.storage.from("booking-documents").getPublicUrl(uploadData.path);
     return NextResponse.json({ success: true, url: urlData.publicUrl });
   } catch (error) {
-    console.error("Temp upload error:", error);
+    logger.error("Temp upload error:", error);
     return NextResponse.json({ success: false, error: "Upload failed" }, { status: 500 });
   }
 }

@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { logger } from "@/lib/utils/logger";
 import {
   bookingConfirmationTemplate,
   bookingPendingTemplate,
@@ -57,9 +58,9 @@ export async function sendBookingConfirmation(data: BookingEmailData) {
       subject: `Booking Confirmed - ${data.bookingId}`,
       html: bookingConfirmationTemplate(data),
     });
-    console.log("Confirmation email sent to:", data.customerEmail);
+    logger.info("Confirmation email sent to:", data.customerEmail);
   } catch (error) {
-    console.error("Failed to send confirmation email:", error);
+    logger.error("Failed to send confirmation email:", error);
     throw error;
   }
 }
@@ -73,9 +74,9 @@ export async function sendBookingPendingEmail(data: BookingEmailData) {
       subject: `Booking Received - ${data.bookingId}`,
       html: bookingPendingTemplate(data),
     });
-    console.log("Pending booking email sent to:", data.customerEmail);
+    logger.info("Pending booking email sent to:", data.customerEmail);
   } catch (error) {
-    console.error("Failed to send pending booking email:", error);
+    logger.error("Failed to send pending booking email:", error);
     throw error;
   }
 }
@@ -89,9 +90,9 @@ export async function sendAdminNewBooking(data: BookingEmailData) {
       subject: `New Booking: ${data.bookingId} - ${data.vehicleName}`,
       html: adminNewBookingTemplate(data),
     });
-    console.log("Admin notification sent for booking:", data.bookingId);
+    logger.info("Admin notification sent for booking:", data.bookingId);
   } catch (error) {
-    console.error("Failed to send admin notification:", error);
+    logger.error("Failed to send admin notification:", error);
     throw error;
   }
 }
@@ -113,9 +114,9 @@ export async function sendCancellationEmail(data: BookingEmailData) {
       subject: `Booking Cancelled: ${data.bookingId}`,
       html: cancellationTemplate(data),
     });
-    console.log("Cancellation emails sent for booking:", data.bookingId);
+    logger.info("Cancellation emails sent for booking:", data.bookingId);
   } catch (error) {
-    console.error("Failed to send cancellation email:", error);
+    logger.error("Failed to send cancellation email:", error);
     throw error;
   }
 }
@@ -129,9 +130,9 @@ export async function sendPickupReminder(data: BookingEmailData) {
       subject: `Pickup Reminder - Your ${data.vehicleName} is Ready!`,
       html: pickupReminderTemplate(data),
     });
-    console.log("Pickup reminder sent to:", data.customerEmail);
+    logger.info("Pickup reminder sent to:", data.customerEmail);
   } catch (error) {
-    console.error("Failed to send pickup reminder:", error);
+    logger.error("Failed to send pickup reminder:", error);
     throw error;
   }
 }
@@ -152,9 +153,9 @@ export async function sendAgreementEmail(data: BookingEmailData & { pdfBytes: Ui
         },
       ],
     });
-    console.log("Agreement email sent to:", data.customerEmail);
+    logger.info("Agreement email sent to:", data.customerEmail);
   } catch (error) {
-    console.error("Failed to send agreement email:", error);
+    logger.error("Failed to send agreement email:", error);
     throw error;
   }
 }
@@ -215,9 +216,9 @@ export async function sendReturnReminder(data: BookingEmailData) {
       subject: `Return Reminder - ${data.vehicleName} due today`,
       html: returnReminderTemplate(data),
     });
-    console.log("Return reminder sent to:", data.customerEmail);
+    logger.info("Return reminder sent to:", data.customerEmail);
   } catch (error) {
-    console.error("Failed to send return reminder:", error);
+    logger.error("Failed to send return reminder:", error);
     throw error;
   }
 }
@@ -231,9 +232,9 @@ export async function sendBookingSignAgreement(data: BookingEmailData) {
       subject: `Your Booking Details - Please Sign Agreement | ${data.bookingId}`,
       html: bookingSignAgreementTemplate(data),
     });
-    console.log("Booking sign-agreement email sent to:", data.customerEmail);
+    logger.info("Booking sign-agreement email sent to:", data.customerEmail);
   } catch (error) {
-    console.error("Failed to send booking sign-agreement email:", error);
+    logger.error("Failed to send booking sign-agreement email:", error);
     throw error;
   }
 }
@@ -247,9 +248,9 @@ export async function sendPasswordResetLink(data: { customerName: string; custom
       subject: "Set Your Password - NextGearAuto",
       html: passwordResetTemplate(data),
     });
-    console.log("Password reset link sent to:", data.customerEmail);
+    logger.info("Password reset link sent to:", data.customerEmail);
   } catch (error) {
-    console.error("Failed to send password reset link:", error);
+    logger.error("Failed to send password reset link:", error);
     throw error;
   }
 }

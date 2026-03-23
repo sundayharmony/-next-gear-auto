@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { sendBookingSignAgreement } from "@/lib/email/mailer";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(req: NextRequest) {
   const auth = await verifyAdmin(req);
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
       message: `Booking email sent to ${booking.customer_email}`,
     });
   } catch (error) {
-    console.error("Send booking email error:", error);
+    logger.error("Send booking email error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to send booking email" },
       { status: 500 }

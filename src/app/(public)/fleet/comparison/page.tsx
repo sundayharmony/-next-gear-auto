@@ -11,51 +11,14 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { useVehicles } from "@/lib/hooks/useVehicles";
 import { logger } from "@/lib/utils/logger";
-
-interface Vehicle {
-  id: string;
-  year: number;
-  make: string;
-  model: string;
-  category: string;
-  images: string[];
-  specs: Record<string, any>;
-  dailyRate: number;
-  features: string[];
-  isAvailable: boolean;
-  description: string;
-  color: string;
-  mileage: number;
-  licensePlate: string;
-  vin: string;
-  maintenanceStatus: string;
-}
+import type { Vehicle } from "@/lib/types";
 
 function ComparisonContent() {
   const searchParams = useSearchParams();
   const ids = searchParams.get("ids")?.split(",").filter(Boolean) || [];
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  // Fetch all vehicles and filter by IDs
-  useEffect(() => {
-    const fetchVehicles = async () => {
-      try {
-        const response = await fetch("/api/vehicles");
-        const result = await response.json();
-        if (result.success && Array.isArray(result.data)) {
-          setVehicles(result.data);
-        }
-      } catch (error) {
-        logger.error("Failed to fetch vehicles:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchVehicles();
-  }, []);
+  const { vehicles, loading } = useVehicles();
 
   const selectedVehicles = useMemo(
     () => ids.map((id) => vehicles.find((v) => v.id === id)).filter((v): v is Vehicle => Boolean(v)),

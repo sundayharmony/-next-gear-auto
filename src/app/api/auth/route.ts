@@ -5,6 +5,7 @@ import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-pol
 import { createAccessToken, createRefreshToken, setAuthCookies, clearAuthCookies } from "@/lib/auth/jwt";
 import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { auditLog } from "@/lib/security/audit-log";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(request: Request) {
   try {
@@ -216,7 +217,7 @@ export async function POST(request: Request) {
         .single();
 
       if (error) {
-        console.error("Signup error:", error);
+        logger.error("Signup error:", error);
         return NextResponse.json(
           { success: false, message: "Failed to create account. Please try again." },
           { status: 500 }
@@ -244,7 +245,7 @@ export async function POST(request: Request) {
       { status: 400 }
     );
   } catch (err) {
-    console.error("Auth API error:", err);
+    logger.error("Auth API error:", err);
     return NextResponse.json(
       { success: false, message: "Invalid request" },
       { status: 400 }
@@ -286,7 +287,7 @@ export async function PATCH(request: Request) {
     const { error } = await adminDb.from(table).update(updates).eq("id", id);
 
     if (error) {
-      console.error("Profile update error:", error);
+      logger.error("Profile update error:", error);
       return NextResponse.json(
         { success: false, message: "Failed to update profile." },
         { status: 500 }
@@ -295,7 +296,7 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ success: true, message: "Profile updated." });
   } catch (err) {
-    console.error("Profile PATCH error:", err);
+    logger.error("Profile PATCH error:", err);
     return NextResponse.json(
       { success: false, message: "Invalid request." },
       { status: 400 }

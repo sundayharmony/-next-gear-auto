@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
 
 interface InstaPost {
   id: string;
@@ -27,15 +28,8 @@ export default function AdminInstagramPage() {
   const [newUrl, setNewUrl] = useState("");
   const [newCaption, setNewCaption] = useState("");
   const [adding, setAdding] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const { error, setError } = useAutoToast();
   const [showForm, setShowForm] = useState(false);
-
-  useEffect(() => {
-    if (error) {
-      const t = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(t);
-    }
-  }, [error]);
 
   const fetchPosts = async () => {
     setLoading(true);

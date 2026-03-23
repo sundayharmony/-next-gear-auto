@@ -18,40 +18,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { SignaturePad } from "@/components/signature-pad";
 import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
 import { csrfFetch } from "@/lib/utils/csrf-fetch";
-
-// Signature fields the renter must complete
-const SIGNATURE_FIELDS = [
-  {
-    id: "t35",
-    label: "Renter Initials — Page 1 (Terms & Conditions)",
-    description: "By initialing, you acknowledge the vehicle condition and rental terms on page 1.",
-    isInitials: true,
-  },
-  {
-    id: "t42",
-    label: "GPS Tracking Acknowledgement Initials",
-    description: "By initialing, you acknowledge and consent to GPS tracking during the rental period.",
-    isInitials: true,
-  },
-  {
-    id: "t43",
-    label: "Renter Initials — Page 2 (Insurance & Liability)",
-    description: "By initialing, you acknowledge the insurance and liability terms on page 2.",
-    isInitials: true,
-  },
-  {
-    id: "t47",
-    label: "Renter Full Signature",
-    description: "Your full signature confirming agreement to all rental terms and conditions.",
-    isInitials: false,
-  },
-  {
-    id: "t57",
-    label: "Renter Initials — Page 3 (Final Acknowledgement)",
-    description: "By initialing, you confirm you have read and agree to all terms in this agreement.",
-    isInitials: true,
-  },
-];
+import { AGREEMENT_SIGNATURE_FIELDS as SIGNATURE_FIELDS } from "@/data/agreement-fields";
 
 interface BookingInfo {
   id: string;

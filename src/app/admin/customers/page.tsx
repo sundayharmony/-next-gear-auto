@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import type { BookingDbRow } from "@/lib/types";
 import {
   Search,
   RefreshCw,
@@ -56,25 +57,7 @@ interface CustomerRow {
   profilePictureUrl?: string;
 }
 
-interface BookingRow {
-  id: string;
-  vehicle_id?: string;
-  vehicleName?: string;
-  pickup_date?: string;
-  return_date?: string;
-  pickup_time?: string;
-  return_time?: string;
-  total_price?: number;
-  deposit?: number;
-  status: string;
-  created_at?: string;
-  id_document_url?: string;
-  insurance_proof_url?: string;
-  insurance_opted_out?: boolean;
-  rental_agreement_url?: string;
-  agreement_signed_at?: string;
-  signed_name?: string;
-}
+type BookingRow = BookingDbRow;
 
 export default function AdminCustomersPage() {
   const [customers, setCustomers] = useState<CustomerRow[]>([]);

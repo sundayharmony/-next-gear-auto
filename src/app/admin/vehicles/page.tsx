@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { compressImage } from "@/lib/utils/compress-image";
 import {
@@ -89,24 +90,10 @@ export default function AdminVehiclesPage() {
   const [uploadingImage, setUploadingImage] = useState<{
     [key: string]: boolean;
   }>({});
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const { error, setError, success, setSuccess } = useAutoToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<VehicleCategory | "">("");
 
-  // Auto-clear error/success after 5 seconds
-  useEffect(() => {
-    if (error) {
-      const t = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(t);
-    }
-  }, [error]);
-  useEffect(() => {
-    if (success) {
-      const t = setTimeout(() => setSuccess(null), 3000);
-      return () => clearTimeout(t);
-    }
-  }, [success]);
 
   const fetchVehicles = async () => {
     setLoading(true);

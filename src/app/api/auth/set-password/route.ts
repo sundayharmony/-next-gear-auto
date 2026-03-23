@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
 import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
 import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(request: Request) {
   try {
@@ -69,7 +70,7 @@ export async function POST(request: Request) {
       .eq("id", customer.id);
 
     if (updateError) {
-      console.error("Set password error:", updateError);
+      logger.error("Set password error:", updateError);
       return NextResponse.json(
         { success: false, message: "Failed to set password. Please try again." },
         { status: 500 }
@@ -96,7 +97,7 @@ export async function POST(request: Request) {
       data: userData,
     });
   } catch (err) {
-    console.error("Set password API error:", err);
+    logger.error("Set password API error:", err);
     return NextResponse.json(
       { success: false, message: "Something went wrong. Please try again." },
       { status: 500 }

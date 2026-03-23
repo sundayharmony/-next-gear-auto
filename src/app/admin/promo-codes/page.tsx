@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { logger } from "@/lib/utils/logger";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
 
 interface PromoCode {
   code: string;
@@ -29,7 +30,7 @@ export default function AdminPromoCodesPage() {
   const [saving, setSaving] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<PromoCode>>({});
-  const [error, setError] = useState<string | null>(null);
+  const { error, setError } = useAutoToast();
   const [newCode, setNewCode] = useState<Partial<PromoCode>>({
     code: "",
     discountType: "percentage",
@@ -40,13 +41,6 @@ export default function AdminPromoCodesPage() {
     expiresAt: "",
   });
 
-  // Auto-clear error after 5 seconds
-  useEffect(() => {
-    if (error) {
-      const t = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(t);
-    }
-  }, [error]);
 
   const fetchCodes = async () => {
     setLoading(true);

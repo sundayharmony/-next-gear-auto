@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 // GET: Return all customers with optional search
 export async function GET(req: NextRequest) {
@@ -23,7 +24,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query;
 
     if (error) {
-      console.error("Customers fetch error:", error);
+      logger.error("Customers fetch error:", error);
       return NextResponse.json({ success: false, error: "Failed to fetch customers" }, { status: 500 });
     }
 
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: customers });
   } catch (err) {
-    console.error("Customers GET error:", err);
+    logger.error("Customers GET error:", err);
     return NextResponse.json({ success: false, error: "Failed to fetch customers" }, { status: 500 });
   }
 }
@@ -78,7 +79,7 @@ export async function POST(req: NextRequest) {
       .select("id, name, email, phone, role, created_at");
 
     if (error) {
-      console.error("Customer creation error:", error);
+      logger.error("Customer creation error:", error);
       return NextResponse.json({ success: false, error: "Failed to create customer" }, { status: 500 });
     }
 
@@ -93,7 +94,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: customer }, { status: 201 });
   } catch (err) {
-    console.error("Customers POST error:", err);
+    logger.error("Customers POST error:", err);
     return NextResponse.json({ success: false, error: "Failed to create customer" }, { status: 500 });
   }
 }
@@ -137,7 +138,7 @@ export async function PATCH(req: NextRequest) {
       .select("id, name, email, phone, role, profile_picture_url, created_at");
 
     if (error) {
-      console.error("Customer update error:", error);
+      logger.error("Customer update error:", error);
       return NextResponse.json({ success: false, error: "Failed to update customer" }, { status: 500 });
     }
 
@@ -153,7 +154,7 @@ export async function PATCH(req: NextRequest) {
 
     return NextResponse.json({ success: true, data: customer });
   } catch (err) {
-    console.error("Customers PATCH error:", err);
+    logger.error("Customers PATCH error:", err);
     return NextResponse.json({ success: false, error: "Failed to update customer" }, { status: 500 });
   }
 }
@@ -187,13 +188,13 @@ export async function DELETE(req: NextRequest) {
       .eq("id", id);
 
     if (error) {
-      console.error("Customer deletion error:", error);
+      logger.error("Customer deletion error:", error);
       return NextResponse.json({ success: false, error: "Failed to delete customer" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: "Customer deleted successfully" });
   } catch (err) {
-    console.error("Customers DELETE error:", err);
+    logger.error("Customers DELETE error:", err);
     return NextResponse.json({ success: false, error: "Failed to delete customer" }, { status: 500 });
   }
 }

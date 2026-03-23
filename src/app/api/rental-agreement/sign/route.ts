@@ -5,6 +5,7 @@ import { sendAgreementEmail } from "@/lib/email/mailer";
 import { fmtTime } from "@/lib/email/templates";
 import path from "path";
 import fs from "fs/promises";
+import { logger } from "@/lib/utils/logger";
 
 interface SignatureData {
   t35?: string; // Renter Initials (Page 1)
@@ -265,7 +266,7 @@ export async function POST(req: NextRequest) {
           });
         }
       } catch (imgErr) {
-        console.error(`Failed to embed signature for ${fieldId}:`, imgErr);
+        logger.error(`Failed to embed signature for ${fieldId}:`, imgErr);
       }
     }
 
@@ -282,7 +283,7 @@ export async function POST(req: NextRequest) {
       });
 
     if (uploadError) {
-      console.error("Upload error:", uploadError);
+      logger.error("Upload error:", uploadError);
       // Try creating the bucket if it doesn't exist
       await supabase.storage.createBucket("booking-documents", {
         public: false,
@@ -297,7 +298,7 @@ export async function POST(req: NextRequest) {
         });
 
       if (retryError) {
-        console.error("Retry upload error:", retryError);
+        logger.error("Retry upload error:", retryError);
         return NextResponse.json(
           { success: false, error: "Failed to store signed agreement" },
           { status: 500 }
@@ -338,7 +339,7 @@ export async function POST(req: NextRequest) {
         totalPrice: booking.total_price ?? 0,
         deposit: booking.deposit ?? 0,
         pdfBytes: signedPdfBytes,
-      }).catch(console.error);
+      }).catch(logger.error);
     }
 
     return NextResponse.json({
@@ -349,7 +350,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Rental agreement sign error:", error);
+    logger.error("Rental agreement sign error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to sign agreement" },
       { status: 500 }

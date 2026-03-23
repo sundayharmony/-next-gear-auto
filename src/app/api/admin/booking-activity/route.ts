@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 // GET: Fetch booking activity records
 export async function GET(request: NextRequest) {
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching booking activity:", error);
+      logger.error("Error fetching booking activity:", error);
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       data: data || [],
     });
   } catch (error) {
-    console.error("Unexpected error in GET /api/admin/booking-activity:", error);
+    logger.error("Unexpected error in GET /api/admin/booking-activity:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Error creating booking activity:", error);
+      logger.error("Error creating booking activity:", error);
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Unexpected error in POST /api/admin/booking-activity:", error);
+    logger.error("Unexpected error in POST /api/admin/booking-activity:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

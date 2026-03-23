@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { logger } from "@/lib/utils/logger";
 import {
   Vehicle,
   CustomerOption,
@@ -138,7 +139,7 @@ export default function CreateBookingForm({
         const data = await res.json();
         setHasOverlappingBookings(data.hasOverlap || false);
       } catch (err) {
-        console.error("Failed to check booking overlap:", err);
+        logger.error("Failed to check booking overlap:", err);
         setHasOverlappingBookings(false);
       }
     };

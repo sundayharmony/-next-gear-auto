@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { promoLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(req: NextRequest) {
   try {
@@ -163,7 +164,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Promo validation error:", err);
+    logger.error("Promo validation error:", err);
     return NextResponse.json(
       { success: false, error: "Failed to validate promo code" },
       { status: 500 }

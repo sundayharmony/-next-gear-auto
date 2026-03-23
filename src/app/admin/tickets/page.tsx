@@ -2,6 +2,8 @@
 
 import React, { useEffect, useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
+import type { VehicleListItem, BookingDbRow } from "@/lib/types";
 import {
   Ticket,
   Plus,
@@ -50,24 +52,8 @@ interface TicketRecord {
   bookingDates: string;
 }
 
-interface Vehicle {
-  id: string;
-  year: number;
-  make: string;
-  model: string;
-}
-
-interface Booking {
-  id: string;
-  customer_id: string;
-  customer_name: string;
-  customer_email: string;
-  vehicle_id: string;
-  vehicleName?: string;
-  pickup_date: string;
-  return_date: string;
-  status: string;
-}
+type Vehicle = VehicleListItem;
+type Booking = BookingDbRow;
 
 // ─── Constants ────────────────────────────────────────────────
 const STATUS_COLORS: Record<string, string> = {
@@ -88,7 +74,7 @@ export default function AdminTicketsPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { error, setError } = useAutoToast();
   const [statusFilter, setStatusFilter] = useState<"all" | "unpaid" | "paid" | "disputed" | "dismissed">("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "traffic" | "parking">("all");
   const [adding, setAdding] = useState(false);
@@ -208,7 +194,7 @@ export default function AdminTicketsPage() {
       let customerId = "";
       if (form.bookingId) {
         const booking = bookings.find((b) => b.id === form.bookingId);
-        if (booking) customerId = booking.customer_id;
+        if (booking) customerId = booking.customer_id ?? "";
       }
 
       const res = await adminFetch("/api/admin/tickets", {
@@ -236,7 +222,7 @@ export default function AdminTicketsPage() {
       let customerId = selectedTicket.customerId || "";
       if (form.bookingId) {
         const booking = bookings.find((b) => b.id === form.bookingId);
-        if (booking) customerId = booking.customer_id;
+        if (booking) customerId = booking.customer_id ?? "";
       }
 
       const res = await adminFetch("/api/admin/tickets", {

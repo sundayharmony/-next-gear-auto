@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getTransporter } from "@/lib/email/mailer";
 import { contactLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
+import { logger } from "@/lib/utils/logger";
 
 export async function POST(request: Request) {
   try {
@@ -98,7 +99,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, message: "Message sent successfully." });
   } catch (error) {
-    console.error("Contact form error:", error);
+    logger.error("Contact form error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to send message. Please try again." },
       { status: 500 }

@@ -3,6 +3,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { compressImage } from "@/lib/utils/compress-image";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import {
   Wrench,
   Plus,
@@ -57,7 +58,7 @@ export default function AdminMaintenancePage() {
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { error, setError } = useAutoToast();
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "in-progress" | "completed">("all");
   const [showAddForm, setShowAddForm] = useState(false);
   const [newRecord, setNewRecord] = useState<FormState>(emptyRecord);
@@ -73,13 +74,6 @@ export default function AdminMaintenancePage() {
   const [detailEditMode, setDetailEditMode] = useState(false);
   const [detailEditData, setDetailEditData] = useState<FormState>({} as FormState);
 
-  // Auto-clear error after 5 seconds
-  useEffect(() => {
-    if (error) {
-      const t = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(t);
-    }
-  }, [error]);
 
   const fetchData = async () => {
     setLoading(true);

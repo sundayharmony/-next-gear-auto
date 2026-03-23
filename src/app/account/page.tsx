@@ -14,30 +14,13 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { ReviewForm } from "@/components/review-form";
+import { useVehicles } from "@/lib/hooks/useVehicles";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/context/auth-context";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
 import { csrfFetch } from "@/lib/utils/csrf-fetch";
-
-interface Vehicle {
-  id: string;
-  year: number;
-  make: string;
-  model: string;
-  category: string;
-  images: string[];
-  specs: Record<string, any>;
-  dailyRate: number;
-  features: string[];
-  isAvailable: boolean;
-  description: string;
-  color: string;
-  mileage: number;
-  licensePlate: string;
-  vin: string;
-  maintenanceStatus: string;
-}
+import type { Vehicle } from "@/lib/types";
 
 type Tab = "overview" | "upcoming" | "past" | "profile";
 
@@ -82,23 +65,12 @@ export default function AccountPage() {
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState("");
 
-  // Fetch vehicles for vehicle name lookup
-  useEffect(() => {
-    if (!isAuthenticated) return;
-    const fetchVehicles = async () => {
-      try {
-        const response = await fetch("/api/vehicles");
-        const result = await response.json();
-        if (result.success && Array.isArray(result.data)) {
-          setVehicles(result.data);
-        }
-      } catch (error) {
-        logger.error("Failed to fetch vehicles:", error);
-      }
-    };
+  // Fetch vehicles for vehicle name lookup (only when authenticated)
+  const { vehicles: hookVehicles } = useVehicles(isAuthenticated);
 
-    fetchVehicles();
-  }, [isAuthenticated]);
+  useEffect(() => {
+    setVehicles(hookVehicles);
+  }, [hookVehicles]);
 
   const fetchBookings = useCallback(async () => {
     if (!user?.email) return;
@@ -176,7 +148,7 @@ export default function AccountPage() {
     setProfileSaving(true);
     setProfileMsg("");
     try {
-      const res = await fetch("/api/auth", {
+      const res = await csrfFetch("/api/auth", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: user.id, ...profileForm }),

@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { logger } from "@/lib/utils/logger";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
 
 interface Review {
   id: string;
@@ -27,15 +28,7 @@ export default function AdminReviewsPage() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
   const [updating, setUpdating] = useState<string | null>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  // Auto-clear error after 5 seconds
-  useEffect(() => {
-    if (error) {
-      const t = setTimeout(() => setError(null), 5000);
-      return () => clearTimeout(t);
-    }
-  }, [error]);
+  const { error, setError } = useAutoToast();
 
   const fetchReviews = async () => {
     setLoading(true);

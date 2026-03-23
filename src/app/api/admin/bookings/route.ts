@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 // GET: List all bookings for admin (with vehicle names)
 export async function GET(req: NextRequest) {
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
     const { data: bookings, error } = await query;
 
     if (error) {
-      console.error("Admin bookings fetch error:", error);
+      logger.error("Admin bookings fetch error:", error);
       return NextResponse.json(
         { success: false, message: "Failed to fetch bookings" },
         { status: 500 }

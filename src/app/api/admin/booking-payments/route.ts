@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 // GET: Fetch booking payments
 export async function GET(request: NextRequest) {
@@ -27,7 +28,7 @@ export async function GET(request: NextRequest) {
       .order("received_at", { ascending: false });
 
     if (error) {
-      console.error("Error fetching booking payments:", error);
+      logger.error("Error fetching booking payments:", error);
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -39,7 +40,7 @@ export async function GET(request: NextRequest) {
       data: data || [],
     });
   } catch (error) {
-    console.error("Unexpected error in GET /api/admin/booking-payments:", error);
+    logger.error("Unexpected error in GET /api/admin/booking-payments:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (paymentError) {
-      console.error("Error creating booking payment:", paymentError);
+      logger.error("Error creating booking payment:", paymentError);
       return NextResponse.json(
         { success: false, error: paymentError.message },
         { status: 500 }
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
       .eq("booking_id", booking_id);
 
     if (sumError) {
-      console.error("Error calculating total payments:", sumError);
+      logger.error("Error calculating total payments:", sumError);
       return NextResponse.json(
         { success: false, error: sumError.message },
         { status: 500 }
@@ -132,7 +133,7 @@ export async function POST(request: NextRequest) {
       .eq("id", booking_id);
 
     if (updateError) {
-      console.error("Error updating booking deposit:", updateError);
+      logger.error("Error updating booking deposit:", updateError);
       return NextResponse.json(
         { success: false, error: updateError.message },
         { status: 500 }
@@ -150,7 +151,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Unexpected error in POST /api/admin/booking-payments:", error);
+    logger.error("Unexpected error in POST /api/admin/booking-payments:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

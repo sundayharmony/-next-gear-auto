@@ -4,6 +4,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { fmtTime } from "@/lib/email/templates";
 import path from "path";
 import fs from "fs/promises";
+import { logger } from "@/lib/utils/logger";
 
 // GET: Generate a pre-filled rental agreement PDF
 // Supports two modes:
@@ -117,7 +118,7 @@ export async function GET(req: NextRequest) {
         const field = form.getTextField(fieldName);
         field.setText(String(value ?? ""));
       } catch {
-        console.warn(`Field ${fieldName} not found in PDF`);
+        logger.warn(`Field ${fieldName} not found in PDF`);
       }
     };
 
@@ -128,7 +129,7 @@ export async function GET(req: NextRequest) {
         if (checked) field.check();
         else field.uncheck();
       } catch {
-        console.warn(`Checkbox ${fieldName} not found in PDF`);
+        logger.warn(`Checkbox ${fieldName} not found in PDF`);
       }
     };
 
@@ -243,7 +244,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Rental agreement generate error:", error);
+    logger.error("Rental agreement generate error:", error);
     return NextResponse.json(
       { success: false, error: "Failed to generate agreement" },
       { status: 500 }

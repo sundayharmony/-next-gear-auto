@@ -8,6 +8,7 @@ import {
   sendAgreementEmail,
 } from "@/lib/email/mailer";
 import { autoSignAgreement } from "@/lib/agreement/auto-sign";
+import { logger } from "@/lib/utils/logger";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -119,7 +120,7 @@ export async function GET(request: NextRequest) {
     const { data: bookings, error, count } = await query;
 
     if (error) {
-      console.error("Bookings fetch error:", error);
+      logger.error("Bookings fetch error:", error);
       return NextResponse.json(
         { success: false, message: "Failed to fetch bookings" },
         { status: 500 }
@@ -292,7 +293,7 @@ export async function POST(request: Request) {
     });
 
     if (error) {
-      console.error("Create booking error:", error);
+      logger.error("Create booking error:", error);
       return NextResponse.json(
         { success: false, message: "Failed to create booking" },
         { status: 500 }
@@ -338,13 +339,13 @@ export async function POST(request: Request) {
 
       // Send the right email based on booking status
       if (bookingStatus === "confirmed") {
-        sendBookingConfirmation(emailData).catch(console.error);
+        sendBookingConfirmation(emailData).catch(logger.error);
       } else {
-        sendBookingPendingEmail(emailData).catch(console.error);
+        sendBookingPendingEmail(emailData).catch(logger.error);
       }
       // Always notify admin of new booking (unless admin created it themselves)
       if (!body.adminCreated) {
-        sendAdminNewBooking(emailData).catch(console.error);
+        sendAdminNewBooking(emailData).catch(logger.error);
       }
     }
 
@@ -364,10 +365,10 @@ export async function POST(request: Request) {
             totalPrice: body.totalPrice ?? 0,
             deposit: body.totalPrice ?? 0,
             pdfBytes: result.pdfBytes,
-          }).catch(console.error);
+          }).catch(logger.error);
         }
       })
-      .catch(console.error);
+      .catch(logger.error);
 
     return NextResponse.json(
       { data: { id: bookingId, customer_id: customerId }, success: true },
@@ -444,7 +445,7 @@ export async function PATCH(request: Request) {
       .eq("id", bookingId);
 
     if (error) {
-      console.error("Update booking error:", error);
+      logger.error("Update booking error:", error);
       return NextResponse.json(
         { success: false, message: "Failed to update booking" },
         { status: 500 }
@@ -494,13 +495,13 @@ export async function PATCH(request: Request) {
       };
 
       if (body.status === "cancelled") {
-        sendCancellationEmail(emailData).catch(console.error);
+        sendCancellationEmail(emailData).catch(logger.error);
       } else if (emailChanged) {
         // Email was changed — send confirmation to the new email address
         // so the new recipient knows about their booking and can set up their password
-        sendBookingConfirmation(emailData).catch(console.error);
+        sendBookingConfirmation(emailData).catch(logger.error);
       } else if (body.status === "confirmed" && booking.status === "pending") {
-        sendBookingConfirmation(emailData).catch(console.error);
+        sendBookingConfirmation(emailData).catch(logger.error);
       }
     }
 

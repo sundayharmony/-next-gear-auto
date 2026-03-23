@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { logger } from "@/lib/utils/logger";
 
 export async function GET(req: NextRequest) {
   const supabase = getServiceSupabase();
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
       .gte("return_date", startDate);
 
     if (error) {
-      console.error("Availability check error:", error);
+      logger.error("Availability check error:", error);
       // On database error, return unavailable to prevent overbooking
       return NextResponse.json({
         success: false,
@@ -79,7 +80,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Availability API error:", err);
+    logger.error("Availability API error:", err);
     return NextResponse.json(
       { success: false, error: "Failed to check availability" },
       { status: 500 }

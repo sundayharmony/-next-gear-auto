@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 // GET: List all vehicles from Supabase
 export async function GET(req: NextRequest) {
@@ -42,7 +43,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: vehicles });
     }
   } catch (error) {
-    console.error("Admin vehicles GET error:", error);
+    logger.error("Admin vehicles GET error:", error);
   }
 
   // Return empty array if no vehicles found or error
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Vehicle create error:", error);
+      logger.error("Vehicle create error:", error);
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 
@@ -140,7 +141,7 @@ export async function PUT(request: NextRequest) {
       .eq("id", id);
 
     if (error) {
-      console.error("Vehicle update error:", error);
+      logger.error("Vehicle update error:", error);
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 
@@ -166,7 +167,7 @@ export async function DELETE(request: NextRequest) {
     const { error } = await supabase.from("vehicles").delete().eq("id", id);
 
     if (error) {
-      console.error("Vehicle delete error:", error);
+      logger.error("Vehicle delete error:", error);
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 

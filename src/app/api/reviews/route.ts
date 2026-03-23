@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 // GET: Return reviews — admin=true returns all statuses, otherwise only approved
 export async function GET(req: NextRequest) {
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     const { data: dbReviews, error } = await query;
 
     if (error) {
-      console.error("Reviews fetch error:", error);
+      logger.error("Reviews fetch error:", error);
       return NextResponse.json({ data: [], success: true });
     }
 
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data: reviews, success: true });
   } catch (err) {
-    console.error("Reviews GET error:", err);
+    logger.error("Reviews GET error:", err);
     return NextResponse.json({ data: [], success: true });
   }
 }
@@ -99,7 +100,7 @@ export async function POST(req: NextRequest) {
     }).select().single();
 
     if (error) {
-      console.error("Review insert error:", error);
+      logger.error("Review insert error:", error);
       return NextResponse.json(
         { success: false, error: "Failed to submit review. Please try again." },
         { status: 500 }
@@ -114,7 +115,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (err) {
-    console.error("Review POST error:", err);
+    logger.error("Review POST error:", err);
     return NextResponse.json(
       { success: false, error: "Failed to submit review" },
       { status: 500 }
@@ -145,13 +146,13 @@ export async function PATCH(req: NextRequest) {
       .eq("id", id);
 
     if (error) {
-      console.error("Review PATCH error:", error);
+      logger.error("Review PATCH error:", error);
       return NextResponse.json({ success: false, error: "Failed to update review" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("Review PATCH error:", err);
+    logger.error("Review PATCH error:", err);
     return NextResponse.json({ success: false, error: "Failed to update review" }, { status: 500 });
   }
 }
@@ -172,13 +173,13 @@ export async function DELETE(req: NextRequest) {
     const { error } = await supabase.from("reviews").delete().eq("id", id);
 
     if (error) {
-      console.error("Review DELETE error:", error);
+      logger.error("Review DELETE error:", error);
       return NextResponse.json({ success: false, error: "Failed to delete review" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
-    console.error("Review DELETE error:", err);
+    logger.error("Review DELETE error:", err);
     return NextResponse.json({ success: false, error: "Failed to delete review" }, { status: 500 });
   }
 }

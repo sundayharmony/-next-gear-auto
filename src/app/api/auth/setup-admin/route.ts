@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
+import { logger } from "@/lib/utils/logger";
 
 // One-time setup: creates or updates the admin account with a hashed password
 // Call this once via: POST /api/auth/setup-admin with { "secret": "SUPABASE_SERVICE_KEY first 20 chars" }
@@ -78,7 +79,7 @@ export async function POST(request: Request) {
       });
     }
   } catch (err) {
-    console.error("Setup admin error:", err);
+    logger.error("Setup admin error:", err);
     return NextResponse.json(
       { success: false, message: "Setup failed" },
       { status: 500 }

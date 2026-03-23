@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
 
 const VALID_CATEGORIES = [
   "maintenance",
@@ -45,7 +46,7 @@ export async function GET(request: NextRequest) {
     const { data, error } = await query.order("date", { ascending: false });
 
     if (error) {
-      console.error("Error fetching expenses:", error);
+      logger.error("Error fetching expenses:", error);
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -57,7 +58,7 @@ export async function GET(request: NextRequest) {
       data: data || [],
     });
   } catch (error) {
-    console.error("Unexpected error in GET /api/admin/expenses:", error);
+    logger.error("Unexpected error in GET /api/admin/expenses:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
@@ -114,7 +115,7 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Error creating expense:", error);
+      logger.error("Error creating expense:", error);
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -129,7 +130,7 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error("Unexpected error in POST /api/admin/expenses:", error);
+    logger.error("Unexpected error in POST /api/admin/expenses:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
@@ -182,7 +183,7 @@ export async function PUT(request: NextRequest) {
       .single();
 
     if (error) {
-      console.error("Error updating expense:", error);
+      logger.error("Error updating expense:", error);
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -194,7 +195,7 @@ export async function PUT(request: NextRequest) {
       data,
     });
   } catch (error) {
-    console.error("Unexpected error in PUT /api/admin/expenses:", error);
+    logger.error("Unexpected error in PUT /api/admin/expenses:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
@@ -221,7 +222,7 @@ export async function DELETE(request: NextRequest) {
     const { error } = await supabase.from("expenses").delete().eq("id", id);
 
     if (error) {
-      console.error("Error deleting expense:", error);
+      logger.error("Error deleting expense:", error);
       return NextResponse.json(
         { success: false, error: error.message },
         { status: 500 }
@@ -233,7 +234,7 @@ export async function DELETE(request: NextRequest) {
       message: "Expense deleted successfully",
     });
   } catch (error) {
-    console.error("Unexpected error in DELETE /api/admin/expenses:", error);
+    logger.error("Unexpected error in DELETE /api/admin/expenses:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }

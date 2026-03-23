@@ -28,7 +28,7 @@ ALTER TABLE bookings ADD COLUMN IF NOT EXISTS discount_amount NUMERIC(10,2) DEFA
 
 CREATE TABLE IF NOT EXISTS booking_activity (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
   action TEXT NOT NULL,
   details JSONB DEFAULT '{}',
   performed_by TEXT,
@@ -46,7 +46,7 @@ CREATE INDEX IF NOT EXISTS idx_booking_activity_booking_id ON booking_activity(b
 
 CREATE TABLE IF NOT EXISTS booking_payments (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  booking_id UUID NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
+  booking_id TEXT NOT NULL REFERENCES bookings(id) ON DELETE CASCADE,
   amount NUMERIC(10,2) NOT NULL,
   method TEXT NOT NULL,
   note TEXT DEFAULT '',
