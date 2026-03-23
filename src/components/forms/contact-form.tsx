@@ -50,6 +50,7 @@ export function ContactForm() {
 
   return (
     <form onSubmit={form.handleSubmit} className="space-y-4">
+      <p className="text-xs text-gray-400 -mt-1 mb-2">We typically respond within 2-4 hours during business hours.</p>
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
         <Input {...form.register("name")} placeholder="John Doe" />

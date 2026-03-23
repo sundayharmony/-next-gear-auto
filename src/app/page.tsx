@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Car, Shield, Clock, DollarSign, Star, ArrowRight, Users, Luggage, Fuel, Settings2 } from "lucide-react";
+import { Car, Shield, Clock, DollarSign, Star, ArrowRight, Users, Luggage, Fuel, Settings2, Lock, BadgeCheck, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -214,6 +214,30 @@ export default async function HomePage() {
         </div>
         <HomeReviews />
       </PageContainer>
+
+      {/* Trust Badges */}
+      <section className="border-y border-gray-100 bg-gray-50 py-8">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-500">
+            <div className="flex items-center gap-2">
+              <Lock className="h-5 w-5 text-green-600" />
+              <span>Secure Payments via Stripe</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-purple-600" />
+              <span>Fully Insured Vehicles</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <BadgeCheck className="h-5 w-5 text-blue-600" />
+              <span>Licensed &amp; Registered</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <MapPin className="h-5 w-5 text-red-500" />
+              <span>Locally Owned in Jersey City</span>
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* CTA */}
       <section className="bg-gradient-to-r from-purple-600 to-purple-800 py-16 text-white">
