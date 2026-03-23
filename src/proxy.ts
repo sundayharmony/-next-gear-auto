@@ -65,7 +65,7 @@ export async function proxy(req: NextRequest) {
     mutatingMethods.includes(req.method) &&
     // Exempt webhook endpoints and auth (login needs to work without CSRF)
     !pathname.startsWith("/api/webhooks/") &&
-    !pathname.startsWith("/api/auth/") &&
+    !pathname.startsWith("/api/auth") &&
     !pathname.startsWith("/api/cron/")
   ) {
     const csrfCookie = req.cookies.get(CSRF_COOKIE)?.value;
