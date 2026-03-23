@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 import { Car, DollarSign, Calendar, CalendarDays, Users, TrendingUp, Clock, ArrowRight, Tag, Star, BarChart3 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -39,7 +40,7 @@ export default function AdminDashboardPage() {
   useEffect(() => {
     async function fetchData() {
       try {
-        const res = await fetch("/api/bookings");
+        const res = await adminFetch("/api/bookings");
         const result = await res.json();
         if (result.success) {
           const allBookings = result.data || [];

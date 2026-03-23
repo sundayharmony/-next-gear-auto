@@ -188,7 +188,7 @@ function AdminBookingsContent() {
     setLoading(true);
     try {
       const url = statusFilter === "all" ? "/api/bookings" : `/api/bookings?status=${statusFilter}`;
-      const res = await fetch(url);
+      const res = await adminFetch(url);
       if (!res.ok) throw new Error(`Failed to fetch bookings: ${res.status}`);
       const data = await res.json();
       if (data.success) {

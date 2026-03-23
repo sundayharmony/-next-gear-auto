@@ -101,7 +101,7 @@ export default function AdminCalendarPage() {
   const fetchBookings = async () => {
     const { from, to } = getDateRange();
     try {
-      const res = await fetch(`/api/bookings?from=${from}&to=${to}`);
+      const res = await adminFetch(`/api/bookings?from=${from}&to=${to}`);
       if (res.ok) {
         const data = await res.json();
         setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));

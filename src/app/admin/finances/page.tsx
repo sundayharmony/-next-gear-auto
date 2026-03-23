@@ -707,7 +707,7 @@ export default function AdminFinancesPage() {
       Date: formatDate(expense.date),
       Category: expense.category.charAt(0).toUpperCase() + expense.category.slice(1),
       Description: expense.description || "",
-      Vehicle: expense.vehicle_id ? vehicles.find((v) => v.id === expense.vehicle_id)?.make + " " + vehicles.find((v) => v.id === expense.vehicle_id)?.model || "N/A" : "N/A",
+      Vehicle: expense.vehicle_id ? ((() => { const v = vehicles.find((v) => v.id === expense.vehicle_id); return v ? `${v.make} ${v.model}` : "N/A"; })()) : "N/A",
       Amount: `$${expense.amount}`,
     }));
     exportToCSV(exportData, `expenses-export-${new Date().toISOString().split("T")[0]}`);

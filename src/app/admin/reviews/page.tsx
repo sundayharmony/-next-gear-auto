@@ -40,7 +40,7 @@ export default function AdminReviewsPage() {
   const fetchReviews = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/reviews?admin=true&status=${filter}`);
+      const res = await adminFetch(`/api/reviews?admin=true&status=${filter}`);
       const data = await res.json();
       if (data.success) setReviews(data.data);
     } catch (err) {

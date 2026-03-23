@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/auth-context";
 import { cn } from "@/lib/utils/cn";
 import { PageContainer } from "@/components/layout/page-container";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -36,7 +37,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   const fetchPendingBookings = useCallback(async () => {
     try {
-      const res = await fetch("/api/bookings?status=pending");
+      const res = await adminFetch("/api/bookings?status=pending");
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && data.data) {

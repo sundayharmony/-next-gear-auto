@@ -40,7 +40,7 @@ export default function AdminInstagramPage() {
   const fetchPosts = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/instagram");
+      const res = await adminFetch("/api/instagram");
       const data = await res.json();
       if (data.success) setPosts(data.data || []);
     } catch {
