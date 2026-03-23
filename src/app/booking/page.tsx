@@ -735,6 +735,64 @@ function BookingPageInner() {
         </div>
       </div>
 
+      {/* Live Price Summary — visible from step 2 onward when vehicle is selected */}
+      {booking.currentStep >= 2 && booking.selectedVehicle && booking.pickupDate && booking.returnDate && (
+        <div className="border-b border-purple-100 bg-purple-50/60">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8 py-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
+              <div className="flex flex-wrap items-center gap-3 text-gray-600">
+                <span className="font-medium text-gray-900">
+                  {booking.selectedVehicle.year} {booking.selectedVehicle.make} {booking.selectedVehicle.model}
+                </span>
+                <span className="text-gray-400">|</span>
+                <span>
+                  {(() => {
+                    const days = Math.max(
+                      Math.ceil(
+                        Math.abs(new Date(booking.returnDate).getTime() - new Date(booking.pickupDate).getTime()) /
+                          (1000 * 60 * 60 * 24)
+                      ),
+                      1
+                    );
+                    return `${days} day${days > 1 ? "s" : ""} x $${booking.selectedVehicle.dailyRate}/day`;
+                  })()}
+                </span>
+                {booking.extras.filter((e) => e.selected).length > 0 && (
+                  <>
+                    <span className="text-gray-400">+</span>
+                    <span>{booking.extras.filter((e) => e.selected).length} extra{booking.extras.filter((e) => e.selected).length > 1 ? "s" : ""}</span>
+                  </>
+                )}
+              </div>
+              <div className="text-right">
+                {booking.pricing ? (
+                  <span className="text-lg font-bold text-purple-700">
+                    ${booking.pricing.total.toFixed(2)}
+                    <span className="text-xs font-normal text-gray-500 ml-1">total</span>
+                  </span>
+                ) : (
+                  <span className="text-lg font-bold text-purple-700">
+                    ${(() => {
+                      const days = Math.max(
+                        Math.ceil(
+                          Math.abs(new Date(booking.returnDate).getTime() - new Date(booking.pickupDate).getTime()) /
+                            (1000 * 60 * 60 * 24)
+                        ),
+                        1
+                      );
+                      const base = days * booking.selectedVehicle.dailyRate;
+                      const tax = base * 0.08;
+                      return (base + tax).toFixed(2);
+                    })()}
+                    <span className="text-xs font-normal text-gray-500 ml-1">est. total</span>
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <PageContainer className="py-8">
         <div className="mx-auto max-w-3xl">
           {/* Step 1: Search */}
