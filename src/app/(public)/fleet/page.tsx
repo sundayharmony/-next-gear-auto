@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Car, Users, Briefcase, Fuel, ArrowUpDown, Search, GitCompareArrows, X } from "lucide-react";
+import { Car, Users, Briefcase, Fuel, ArrowUpDown, Search, GitCompareArrows, X, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -270,15 +270,18 @@ function FleetContent() {
                       <p className="mt-1 text-sm text-gray-500 line-clamp-2">{vehicle.description}</p>
 
                       {/* Specs */}
-                      <div className="mt-4 flex items-center gap-4 text-xs text-gray-500">
+                      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
-                          <Users className="h-3.5 w-3.5" /> {vehicle.specs.passengers} seats
+                          <Users className="h-3.5 w-3.5 text-purple-400" /> {vehicle.specs.passengers} seats
                         </span>
                         <span className="flex items-center gap-1">
-                          <Briefcase className="h-3.5 w-3.5" /> {vehicle.specs.luggage} bags
+                          <Briefcase className="h-3.5 w-3.5 text-purple-400" /> {vehicle.specs.luggage} bags
                         </span>
                         <span className="flex items-center gap-1">
-                          <Fuel className="h-3.5 w-3.5" /> {vehicle.specs.mpg} mpg
+                          <Fuel className="h-3.5 w-3.5 text-purple-400" /> {vehicle.specs.fuelType || "Gas"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Settings2 className="h-3.5 w-3.5 text-purple-400" /> {vehicle.specs.transmission || "Auto"}
                         </span>
                       </div>
 

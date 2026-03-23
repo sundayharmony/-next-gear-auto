@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Car, Shield, Clock, DollarSign, Star, ArrowRight, Users, Luggage, Fuel } from "lucide-react";
+import { Car, Shield, Clock, DollarSign, Star, ArrowRight, Users, Luggage, Fuel, Settings2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -138,15 +138,18 @@ export default async function HomePage() {
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-semibold text-gray-900">{vehicle.year} {vehicle.make} {vehicle.model}</h3>
-                      <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
-                          <Users className="h-3 w-3" /> {specs.passengers}
+                          <Users className="h-3 w-3 text-purple-400" /> {specs.passengers} seats
                         </span>
                         <span className="flex items-center gap-1">
-                          <Luggage className="h-3 w-3" /> {specs.luggage}
+                          <Luggage className="h-3 w-3 text-purple-400" /> {specs.luggage} bags
                         </span>
                         <span className="flex items-center gap-1">
-                          <Fuel className="h-3 w-3" /> {specs.mpg} mpg
+                          <Fuel className="h-3 w-3 text-purple-400" /> {specs.fuelType || "Gas"}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Settings2 className="h-3 w-3 text-purple-400" /> {specs.transmission || "Auto"}
                         </span>
                       </div>
                       <div className="mt-3 flex items-center justify-between">
