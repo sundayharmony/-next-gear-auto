@@ -25,9 +25,9 @@ import {
   DollarSign,
   Plus,
 } from "lucide-react";
-import Badge from "@/components/ui/badge";
-import Button from "@/components/ui/button";
-import Input from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import {
   BookingRow,
   Vehicle,
@@ -88,7 +88,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     note: "",
   });
 
-  const notesTimeoutRef = useRef<NodeJS.Timeout>();
+  const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Fetch tickets, activity, and payments on mount
   useEffect(() => {
@@ -519,7 +519,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 <Input
                   label="Name"
                   value={editData.customer_name || ""}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setEditData({ ...editData, customer_name: e.target.value })
                   }
                   placeholder="Customer name"
@@ -528,7 +528,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   label="Email"
                   type="email"
                   value={editData.customer_email || ""}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setEditData({
                       ...editData,
                       customer_email: e.target.value,
@@ -539,7 +539,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 <Input
                   label="Phone"
                   value={editData.customer_phone || ""}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setEditData({
                       ...editData,
                       customer_phone: e.target.value,
@@ -664,7 +664,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   <Input
                     type="date"
                     value={editData.pickup_date || ""}
-                    onChange={(e) =>
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setEditData({
                         ...editData,
                         pickup_date: e.target.value,
@@ -701,7 +701,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   <Input
                     type="date"
                     value={editData.return_date || ""}
-                    onChange={(e) =>
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setEditData({
                         ...editData,
                         return_date: e.target.value,
@@ -840,7 +840,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     type="number"
                     step="0.01"
                     value={editData.total_price || ""}
-                    onChange={(e) =>
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setEditData({
                         ...editData,
                         total_price: parseFloat(e.target.value),
@@ -856,7 +856,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     type="number"
                     step="0.01"
                     value={editData.deposit || ""}
-                    onChange={(e) =>
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setEditData({
                         ...editData,
                         deposit: parseFloat(e.target.value),
@@ -942,7 +942,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                         step="0.01"
                         placeholder="Amount"
                         value={paymentForm.amount}
-                        onChange={(e) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setPaymentForm({
                             ...paymentForm,
                             amount: e.target.value,
@@ -968,7 +968,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       <Input
                         placeholder="Note (optional)"
                         value={paymentForm.note}
-                        onChange={(e) =>
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                           setPaymentForm({
                             ...paymentForm,
                             note: e.target.value,

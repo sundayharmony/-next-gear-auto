@@ -5,9 +5,9 @@ import { ArrowUp, ArrowDown, FileText, Shield, Check, AlertTriangle, StickyNote 
 import { BookingRow, SortField, SortOrder } from "../types";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
-import Badge from "@/components/ui/badge";
-import Button from "@/components/ui/button";
-import Card from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 
 interface BookingTableProps {
   bookings: BookingRow[];
@@ -93,7 +93,6 @@ export default function BookingTable({
               <input
                 type="checkbox"
                 checked={allSelected}
-                indeterminate={someSelected}
                 onChange={onToggleSelectAll}
                 className="rounded border-gray-300 cursor-pointer"
               />
@@ -195,16 +194,16 @@ export default function BookingTable({
                 <td className="px-4 py-3">
                   <div className="flex items-center gap-1">
                     {booking.id_document_url && (
-                      <FileText size={14} className="text-gray-500" title="ID Document" />
+                      <span title="ID Document"><FileText size={14} className="text-gray-500" /></span>
                     )}
                     {booking.insurance_proof_url && (
-                      <Shield size={14} className="text-gray-500" title="Insurance Proof" />
+                      <span title="Insurance Proof"><Shield size={14} className="text-gray-500" /></span>
                     )}
                     {booking.agreement_signed_at && (
-                      <Check size={14} className="text-green-600" title="Agreement Signed" />
+                      <span title="Agreement Signed"><Check size={14} className="text-green-600" /></span>
                     )}
-                    {booking.is_overdue && <AlertTriangle size={14} className="text-red-600" title="Overdue" />}
-                    {booking.admin_notes && <StickyNote size={14} className="text-yellow-600" title="Admin Notes" />}
+                    {booking.is_overdue && <span title="Overdue"><AlertTriangle size={14} className="text-red-600" /></span>}
+                    {booking.admin_notes && <span title="Admin Notes"><StickyNote size={14} className="text-yellow-600" /></span>}
                   </div>
                 </td>
 
@@ -216,7 +215,7 @@ export default function BookingTable({
                         key={action}
                         size="sm"
                         variant="outline"
-                        onClick={(e) => {
+                        onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
                           e.stopPropagation();
                           onUpdateStatus(booking.id, action);
                         }}

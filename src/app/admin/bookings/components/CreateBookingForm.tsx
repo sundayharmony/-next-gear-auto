@@ -5,7 +5,7 @@ import { X, Check, AlertTriangle } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import adminFetch from "@/lib/utils/admin-fetch";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 import {
   Vehicle,
   CustomerOption,

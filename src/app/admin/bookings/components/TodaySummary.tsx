@@ -52,7 +52,9 @@ export function TodaySummary({
           <div className="flex items-start justify-between gap-4">
             <div className="flex-1">
               <div className="flex items-center gap-2 mb-2">
-                <Icon className="w-5 h-5" style={{ color: accentColor }} />
+                <div style={{ color: accentColor }}>
+                  <Icon className="w-5 h-5" />
+                </div>
                 <h3 className="text-sm font-semibold text-gray-700">{title}</h3>
               </div>
               <p className="text-2xl font-bold mb-3">{count}</p>
