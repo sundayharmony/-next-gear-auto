@@ -5,16 +5,28 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 import { SITE_NAME } from "@/lib/constants";
+import { getServiceSupabase } from "@/lib/db/supabase";
 
 export const metadata = {
   title: "About Us",
   description: "Learn about NextGearAuto - your trusted local car rental company. Our story, mission, and commitment to quality service.",
 };
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  // Fetch actual vehicle count from database
+  let vehicleCount = 6; // fallback
+  try {
+    const supabase = getServiceSupabase();
+    const { count } = await supabase
+      .from("vehicles")
+      .select("*", { count: "exact", head: true })
+      .eq("is_published", true);
+    if (count && count > 0) vehicleCount = count;
+  } catch { /* use fallback */ }
+
   const stats = [
     { value: "100+", label: "Happy Customers", icon: Users },
-    { value: "6", label: "Quality Vehicles", icon: Car },
+    { value: String(vehicleCount), label: "Quality Vehicles", icon: Car },
     { value: "1.5", label: "Years in Business", icon: Clock },
     { value: "4.8", label: "Average Rating", icon: Award },
   ];
@@ -86,7 +98,7 @@ export default function AboutPage() {
               need to go without the hassle of big-chain rental companies.
             </p>
             <p>
-              Today, we operate a carefully curated fleet of 6 vehicles spanning compact cars, sedans, SUVs,
+              Today, we operate a carefully curated fleet of {vehicleCount} vehicles spanning compact cars, sedans, SUVs,
               and trucks. Every vehicle is hand-selected for reliability, comfort, and value. We may not be the
               biggest rental company in town, but we pride ourselves on being the most trusted.
             </p>
