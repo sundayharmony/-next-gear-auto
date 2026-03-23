@@ -31,7 +31,7 @@ export default function LocationPage() {
             {/* Google Maps Embed */}
             <Card className="overflow-hidden">
               <iframe
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3024.6!2d-74.0661!3d40.7178!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x89c25716e56b3f2b%3A0x0!2s92+Forrest+Street%2C+Jersey+City%2C+NJ+07304!5e0!3m2!1sen!2sus!4v1"
+                src="https://maps.google.com/maps?q=92+Forrest+Street,+Jersey+City,+NJ+07304&t=&z=15&ie=UTF8&iwloc=&output=embed"
                 width="100%"
                 height="400"
                 style={{ border: 0 }}
