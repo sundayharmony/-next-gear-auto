@@ -41,6 +41,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
@@ -90,6 +91,7 @@ export default function AdminCustomersPage() {
   const [editPhone, setEditPhone] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const { currentPage, pageSize, handlePageChange, handlePageSizeChange, resetPage, paginateArray } = usePagination(12);
   const [selectedBookingForUpload, setSelectedBookingForUpload] = useState<string | null>(null);
   const [uploadDocType, setUploadDocType] = useState<"id_document" | "insurance_proof">("id_document");
   const [deletingCustomer, setDeletingCustomer] = useState(false);
@@ -140,7 +142,7 @@ export default function AdminCustomersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightId, customers, selectedCustomer]);
 
-  const handleSearch = () => fetchCustomers(searchInput);
+  const handleSearch = () => { fetchCustomers(searchInput); resetPage(); };
 
   const router = useRouter();
 
@@ -1565,8 +1567,9 @@ export default function AdminCustomersPage() {
             </CardContent>
           </Card>
         ) : (
+          <>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
-            {customers.map((c) => (
+            {paginateArray(customers).map((c) => (
               <Card
                 key={c.id}
                 className="hover:border-purple-300 hover:shadow-md transition-all"
@@ -1629,6 +1632,15 @@ export default function AdminCustomersPage() {
               </Card>
             ))}
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={customers.length}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            pageSizeOptions={[12, 24, 48, 96]}
+          />
+          </>
         )}
       </PageContainer>
 

@@ -64,9 +64,9 @@ export default async function AboutPage() {
   ];
 
   const team = [
-    { name: "Marcus Johnson", role: "Founder & CEO", bio: "With over 15 years in the automotive industry, Marcus founded NextGearAuto to make quality car rentals accessible and affordable." },
-    { name: "Sarah Chen", role: "Operations Manager", bio: "Sarah ensures every vehicle meets our high standards and every booking runs smoothly from start to finish." },
-    { name: "David Rodriguez", role: "Customer Relations", bio: "David is your go-to for any questions or special requests. He is dedicated to making every customer feel valued." },
+    { name: "Marcus Johnson", role: "Founder & CEO", bio: "With over 15 years in the automotive industry, Marcus founded NextGearAuto to make quality car rentals accessible and affordable.", gradient: "from-purple-500 to-indigo-600" },
+    { name: "Sarah Chen", role: "Operations Manager", bio: "Sarah ensures every vehicle meets our high standards and every booking runs smoothly from start to finish.", gradient: "from-pink-500 to-purple-600" },
+    { name: "David Rodriguez", role: "Customer Relations", bio: "David is your go-to for any questions or special requests. He is dedicated to making every customer feel valued.", gradient: "from-indigo-500 to-blue-600" },
   ];
 
   return (
@@ -149,14 +149,14 @@ export default async function AboutPage() {
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-4xl mx-auto">
           {team.map((member) => (
-            <Card key={member.name} className="p-6 text-center card-hover">
-              <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-purple-100">
-                <span className="text-2xl font-bold text-purple-600">
+            <Card key={member.name} className="p-6 text-center card-hover overflow-hidden relative">
+              <div className={`mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br ${member.gradient} shadow-lg`}>
+                <span className="text-3xl font-bold text-white">
                   {member.name.split(" ").map((n) => n[0]).join("")}
                 </span>
               </div>
-              <h3 className="font-semibold text-gray-900">{member.name}</h3>
-              <p className="text-sm text-purple-600 mb-3">{member.role}</p>
+              <h3 className="text-lg font-semibold text-gray-900">{member.name}</h3>
+              <p className="text-sm font-medium text-purple-600 mb-3">{member.role}</p>
               <p className="text-sm text-gray-500 leading-relaxed">{member.bio}</p>
             </Card>
           ))}

@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Instagram, Ticket
+  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Instagram, Ticket, Bell
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/auth-context";
@@ -30,6 +30,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [recentBookings, setRecentBookings] = useState<Array<{ id: string; customer_name: string; created_at: string; total_price: number }>>([]);
+
+  const fetchPendingBookings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/bookings?status=pending");
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && data.data) {
+        setPendingCount(data.data.length);
+        // Keep 5 most recent
+        setRecentBookings(
+          data.data
+            .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .slice(0, 5)
+            .map((b: any) => ({
+              id: b.id,
+              customer_name: b.customer_name || "Unknown",
+              created_at: b.created_at,
+              total_price: b.total_price || 0,
+            }))
+        );
+      }
+    } catch { /* silent */ }
+  }, []);
+
+  useEffect(() => {
+    fetchPendingBookings();
+    const interval = setInterval(fetchPendingBookings, 60000); // Poll every 60s
+    return () => clearInterval(interval);
+  }, [fetchPendingBookings]);
 
   if (!isAuthenticated || user?.role !== "admin") {
     return (
@@ -73,7 +105,58 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       >
         {/* Logo area */}
         <div className="px-5 py-5 border-b border-gray-800">
-          <h2 className="text-lg font-bold">Admin Panel</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-bold">Admin Panel</h2>
+            <div className="relative">
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                className="relative p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+              >
+                <Bell className="h-5 w-5 text-gray-400" />
+                {pendingCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+              {showNotifications && (
+                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-lg shadow-xl border z-50">
+                  <div className="p-3 border-b">
+                    <h3 className="text-sm font-semibold text-gray-900">Pending Bookings</h3>
+                  </div>
+                  {recentBookings.length === 0 ? (
+                    <div className="p-4 text-center text-sm text-gray-400">No pending bookings</div>
+                  ) : (
+                    <div className="max-h-64 overflow-y-auto">
+                      {recentBookings.map((b) => (
+                        <Link
+                          key={b.id}
+                          href={`/admin/bookings?highlight=${b.id}`}
+                          onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
+                          className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 border-b last:border-0"
+                        >
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{b.customer_name}</p>
+                            <p className="text-xs text-gray-400">
+                              {new Date(b.created_at).toLocaleDateString()}
+                            </p>
+                          </div>
+                          <span className="text-sm font-semibold text-purple-600">${b.total_price}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                  <Link
+                    href="/admin/bookings?status=pending"
+                    onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
+                    className="block p-2.5 text-center text-xs font-medium text-purple-600 hover:bg-purple-50 border-t"
+                  >
+                    View all pending bookings
+                  </Link>
+                </div>
+              )}
+            </div>
+          </div>
           <p className="text-xs text-gray-400 mt-0.5">{user?.email}</p>
         </div>
 

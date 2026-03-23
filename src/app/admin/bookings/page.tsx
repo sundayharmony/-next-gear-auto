@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, Suspense } from "react";
+import React, { useEffect, useState, useMemo, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save, User, UserPlus, Mail, Ticket, MapPin, Car, Download } from "lucide-react";
@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
@@ -115,6 +116,7 @@ function AdminBookingsContent() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [updating, setUpdating] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newBooking, setNewBooking] = useState(emptyNewBooking);
   const [creating, setCreating] = useState(false);
@@ -127,6 +129,9 @@ function AdminBookingsContent() {
   const [addingCustomer, setAddingCustomer] = useState(false);
   const [sendingEmail, setSendingEmail] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
+  const { currentPage, pageSize, handlePageChange, handlePageSizeChange, resetPage, paginateArray } = usePagination(10);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkUpdating, setBulkUpdating] = useState(false);
   const [allCustomers, setAllCustomers] = useState<CustomerOption[]>([]);
   const [customerSearch, setCustomerSearch] = useState("");
   const [showCustomerDropdown, setShowCustomerDropdown] = useState(false);
@@ -172,6 +177,12 @@ function AdminBookingsContent() {
       return () => clearTimeout(t);
     }
   }, [error]);
+  useEffect(() => {
+    if (success) {
+      const t = setTimeout(() => setSuccess(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [success]);
 
   const fetchBookings = async () => {
     setLoading(true);
@@ -240,6 +251,7 @@ function AdminBookingsContent() {
 
   useEffect(() => {
     fetchBookings();
+    resetPage();
   }, [statusFilter]);
 
   useEffect(() => {
@@ -259,13 +271,13 @@ function AdminBookingsContent() {
       const data = await res.json();
       if (data.success) {
         if (newStatus === "cancelled") {
-          // Remove from view immediately
           setBookings((prev) => prev.filter((b) => b.id !== bookingId));
         } else {
           setBookings((prev) =>
             prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b))
           );
         }
+        setSuccess(`Booking ${newStatus} successfully!`);
       } else {
         setError(data.message || `Failed to update booking to "${newStatus}"`);
       }
@@ -273,6 +285,47 @@ function AdminBookingsContent() {
       setError("Network error — could not update booking status");
     }
     setUpdating(null);
+  };
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    const currentPageIds = paginateArray(bookings).map((b) => b.id);
+    const allSelected = currentPageIds.every((id) => selectedIds.has(id));
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      currentPageIds.forEach((id) => allSelected ? next.delete(id) : next.add(id));
+      return next;
+    });
+  };
+
+  const bulkUpdateStatus = async (newStatus: string) => {
+    if (selectedIds.size === 0) return;
+    setBulkUpdating(true);
+    let successCount = 0;
+    for (const id of selectedIds) {
+      try {
+        const res = await fetch("/api/bookings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId: id, status: newStatus }),
+        });
+        const data = await res.json();
+        if (data.success) successCount++;
+      } catch { /* continue with others */ }
+    }
+    if (successCount > 0) {
+      setSuccess(`${successCount} booking${successCount > 1 ? "s" : ""} updated to ${newStatus}`);
+      fetchBookings();
+    }
+    setSelectedIds(new Set());
+    setBulkUpdating(false);
   };
 
   // Calculate price when vehicle, dates, or extras change
@@ -352,6 +405,7 @@ function AdminBookingsContent() {
         setShowCreateForm(false);
         setNewBooking(emptyNewBooking);
         fetchBookings();
+        setSuccess("Booking created successfully!");
       } else {
         setError(data.message || "Failed to create booking");
       }
@@ -611,6 +665,13 @@ function AdminBookingsContent() {
 
       <PageContainer className="py-8">
         {/* Error Banner */}
+        {success && (
+          <div className="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center justify-between">
+            <span className="flex items-center gap-2"><Check className="h-4 w-4" />{success}</span>
+            <button onClick={() => setSuccess(null)} className="text-green-400 hover:text-green-600 ml-3">&times;</button>
+          </div>
+        )}
+
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
             <span>{error}</span>
@@ -916,16 +977,45 @@ function AdminBookingsContent() {
           </Card>
         )}
 
-        <p className="text-sm text-gray-500 mb-4">
-          {bookings.length} booking{bookings.length !== 1 ? "s" : ""}
-          {statusFilter === "all" && <span className="text-gray-400"> (cancelled trips hidden)</span>}
-        </p>
+        <div className="flex items-center justify-between mb-4">
+          <p className="text-sm text-gray-500">
+            {bookings.length} booking{bookings.length !== 1 ? "s" : ""}
+            {statusFilter === "all" && <span className="text-gray-400"> (cancelled trips hidden)</span>}
+          </p>
+
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2 bg-purple-50 border border-purple-200 rounded-lg px-3 py-1.5">
+              <span className="text-sm font-medium text-purple-700">{selectedIds.size} selected</span>
+              <Button size="sm" variant="outline" className="h-7 text-xs text-green-600 hover:text-green-700" onClick={() => bulkUpdateStatus("confirmed")} disabled={bulkUpdating}>
+                Confirm
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkUpdateStatus("active")} disabled={bulkUpdating}>
+                Start
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => bulkUpdateStatus("completed")} disabled={bulkUpdating}>
+                Complete
+              </Button>
+              <Button size="sm" variant="outline" className="h-7 text-xs text-red-600 hover:text-red-700" onClick={() => bulkUpdateStatus("cancelled")} disabled={bulkUpdating}>
+                Cancel
+              </Button>
+              <button className="text-purple-400 hover:text-purple-600 ml-1" onClick={() => setSelectedIds(new Set())}><X className="h-4 w-4" /></button>
+            </div>
+          )}
+        </div>
 
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b bg-gray-50">
+                  <th className="px-3 py-3 w-10">
+                    <input
+                      type="checkbox"
+                      className="rounded border-gray-300"
+                      checked={paginateArray(bookings).length > 0 && paginateArray(bookings).every((b) => selectedIds.has(b.id))}
+                      onChange={toggleSelectAll}
+                    />
+                  </th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Customer</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Vehicle</th>
                   <th className="px-4 py-3 text-left font-medium text-gray-500">Dates</th>
@@ -938,19 +1028,27 @@ function AdminBookingsContent() {
               <tbody>
                 {loading ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                       Loading...
                     </td>
                   </tr>
                 ) : bookings.length === 0 ? (
                   <tr>
-                    <td colSpan={7} className="px-4 py-8 text-center text-gray-400">
+                    <td colSpan={8} className="px-4 py-8 text-center text-gray-400">
                       No bookings found.
                     </td>
                   </tr>
                 ) : (
-                  bookings.map((b) => (
-                    <tr key={b.id} className="border-b last:border-0 hover:bg-gray-50 cursor-pointer" onClick={() => { setSelectedBooking(b); setShowDetail(true); }}>
+                  paginateArray(bookings).map((b) => (
+                    <tr key={b.id} className={`border-b last:border-0 hover:bg-gray-50 cursor-pointer ${selectedIds.has(b.id) ? "bg-purple-50" : ""}`} onClick={() => { setSelectedBooking(b); setShowDetail(true); }}>
+                      <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
+                        <input
+                          type="checkbox"
+                          className="rounded border-gray-300"
+                          checked={selectedIds.has(b.id)}
+                          onChange={() => toggleSelect(b.id)}
+                        />
+                      </td>
                       <td className="px-4 py-3 max-w-[200px]">
                         <div className="text-gray-900 truncate">{b.customer_name || "—"}</div>
                         <div className="text-xs text-gray-400 truncate">{b.customer_email}</div>
@@ -1021,6 +1119,13 @@ function AdminBookingsContent() {
               </tbody>
             </table>
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={bookings.length}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </Card>
       </PageContainer>
 

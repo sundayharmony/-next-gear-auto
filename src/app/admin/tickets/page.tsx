@@ -23,6 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { Pagination, usePagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
 
@@ -94,6 +95,7 @@ export default function AdminTicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<TicketRecord | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const { currentPage, pageSize, handlePageChange, handlePageSizeChange, resetPage, paginateArray } = usePagination(10);
 
   const [form, setForm] = useState({
     bookingId: "",
@@ -269,6 +271,9 @@ export default function AdminTicketsPage() {
       alert("Failed to delete ticket");
     }
   };
+
+  // Reset page when filters change
+  useEffect(() => { resetPage(); }, [statusFilter, typeFilter]);
 
   // ─── Filtered Data ──────────────────────────────────────────
   const filtered = tickets.filter((t) => {
@@ -758,8 +763,9 @@ export default function AdminTicketsPage() {
             </CardContent>
           </Card>
         ) : (
+          <>
           <div className="space-y-2">
-            {filtered.map((t) => (
+            {paginateArray(filtered).map((t) => (
               <Card
                 key={t.id}
                 className="cursor-pointer hover:shadow-md hover:border-purple-200 transition-all"
@@ -809,6 +815,14 @@ export default function AdminTicketsPage() {
               </Card>
             ))}
           </div>
+          <Pagination
+            currentPage={currentPage}
+            totalItems={filtered.length}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
+          </>
         )}
       </PageContainer>
     </>

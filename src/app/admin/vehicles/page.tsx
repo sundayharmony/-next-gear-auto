@@ -90,16 +90,23 @@ export default function AdminVehiclesPage() {
     [key: string]: boolean;
   }>({});
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<VehicleCategory | "">("");
 
-  // Auto-clear error after 5 seconds
+  // Auto-clear error/success after 5 seconds
   useEffect(() => {
     if (error) {
       const t = setTimeout(() => setError(null), 5000);
       return () => clearTimeout(t);
     }
   }, [error]);
+  useEffect(() => {
+    if (success) {
+      const t = setTimeout(() => setSuccess(null), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [success]);
 
   const fetchVehicles = async () => {
     setLoading(true);
@@ -354,6 +361,7 @@ export default function AdminVehiclesPage() {
           )
         );
         setEditingId(null);
+        setSuccess("Vehicle updated successfully!");
       } else {
         setError(data.message || "Failed to save changes");
       }
@@ -402,6 +410,7 @@ export default function AdminVehiclesPage() {
         await fetchVehicles();
         setShowAddForm(false);
         setNewVehicle(emptyVehicle);
+        setSuccess("Vehicle added successfully!");
       } else {
         setError(data.message || "Failed to add vehicle");
       }
@@ -1065,7 +1074,7 @@ export default function AdminVehiclesPage() {
               disabled={isSaving || !form.make || !form.model}
               className="bg-purple-600 hover:bg-purple-700"
             >
-              {isSaving ? "Saving..." : "Save"}
+              {isSaving ? <><RefreshCw className="h-4 w-4 mr-1 animate-spin" /> Saving...</> : <><Check className="h-4 w-4 mr-1" /> Save</>}
             </Button>
             <Button variant="outline" onClick={onCancel}>
               Cancel
@@ -1102,6 +1111,14 @@ export default function AdminVehiclesPage() {
       </section>
 
       <PageContainer className="py-8">
+        {/* Success Banner */}
+        {success && (
+          <div className="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center justify-between">
+            <span className="flex items-center gap-2"><Check className="h-4 w-4" />{success}</span>
+            <button onClick={() => setSuccess(null)} className="text-green-500 hover:text-green-700"><X className="h-4 w-4" /></button>
+          </div>
+        )}
+
         {/* Error Banner */}
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
