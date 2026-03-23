@@ -27,6 +27,7 @@ export interface Vehicle {
   licensePlate: string;
   vin: string;
   maintenanceStatus: "good" | "needs-service" | "in-maintenance";
+  isPublished?: boolean;
   purchasePrice?: number;
   isFinanced?: boolean;
   monthlyPayment?: number;

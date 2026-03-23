@@ -36,6 +36,7 @@ export async function GET(req: NextRequest) {
         monthlyPayment: v.monthly_payment ?? 0,
         paymentDayOfMonth: v.payment_day_of_month ?? 1,
         financingStartDate: v.financing_start_date || null,
+        isPublished: v.is_published !== false,
         createdAt: v.created_at || null,
       }));
       return NextResponse.json({ success: true, data: vehicles });
@@ -70,6 +71,7 @@ export async function POST(request: NextRequest) {
         daily_rate: body.dailyRate,
         features: body.features || [],
         is_available: body.isAvailable !== false,
+        is_published: body.isPublished !== false,
         description: body.description || "",
         color: body.color || "",
         mileage: body.mileage ?? 0,
@@ -116,6 +118,7 @@ export async function PUT(request: NextRequest) {
     if (updates.category !== undefined) dbUpdates.category = updates.category;
     if (updates.dailyRate !== undefined) dbUpdates.daily_rate = updates.dailyRate;
     if (updates.isAvailable !== undefined) dbUpdates.is_available = updates.isAvailable;
+    if (updates.isPublished !== undefined) dbUpdates.is_published = updates.isPublished;
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.features !== undefined) dbUpdates.features = updates.features;
     if (updates.specs !== undefined) dbUpdates.specs = updates.specs;

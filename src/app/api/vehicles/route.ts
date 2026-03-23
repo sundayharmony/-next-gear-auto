@@ -10,6 +10,7 @@ export async function GET(request: Request) {
     let query = supabase
       .from("vehicles")
       .select("*")
+      .eq("is_published", true)
       .order("created_at", { ascending: true });
 
     if (category && category !== "all") {

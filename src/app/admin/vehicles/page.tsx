@@ -61,6 +61,7 @@ const emptyVehicle: Omit<Vehicle, "id"> = {
   purchasePrice: 0,
   features: [],
   isAvailable: true,
+  isPublished: true,
   description: "",
   color: "White",
   mileage: 0,
@@ -306,6 +307,7 @@ export default function AdminVehiclesPage() {
           dailyRate: editForm.dailyRate,
           features: editForm.features,
           isAvailable: editForm.isAvailable,
+          isPublished: editForm.isPublished,
           description: editForm.description,
           color: editForm.color,
           mileage: editForm.mileage,
@@ -335,6 +337,7 @@ export default function AdminVehiclesPage() {
                   dailyRate: editForm.dailyRate || v.dailyRate,
                   features: editForm.features || v.features,
                   isAvailable: editForm.isAvailable !== undefined ? editForm.isAvailable : v.isAvailable,
+                  isPublished: editForm.isPublished !== undefined ? editForm.isPublished : v.isPublished,
                   description: editForm.description || v.description,
                   color: editForm.color || v.color,
                   mileage: editForm.mileage !== undefined ? editForm.mileage : v.mileage,
@@ -380,6 +383,7 @@ export default function AdminVehiclesPage() {
           dailyRate: newVehicle.dailyRate,
           features: newVehicle.features || [],
           isAvailable: newVehicle.isAvailable,
+          isPublished: newVehicle.isPublished,
           description: newVehicle.description,
           color: newVehicle.color,
           mileage: newVehicle.mileage,
@@ -675,6 +679,21 @@ export default function AdminVehiclesPage() {
               >
                 <option value="yes">Available</option>
                 <option value="no">Unavailable</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">
+                Published
+              </label>
+              <select
+                value={form.isPublished !== false ? "yes" : "no"}
+                onChange={(e) =>
+                  setForm({ ...form, isPublished: e.target.value === "yes" })
+                }
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+              >
+                <option value="yes">Visible to customers</option>
+                <option value="no">Hidden (draft)</option>
               </select>
             </div>
           </div>
@@ -1240,6 +1259,9 @@ export default function AdminVehiclesPage() {
 
                   {/* Status Badges Overlay */}
                   <div className="absolute top-2 right-2 flex gap-1">
+                    {vehicle.isPublished === false && (
+                      <Badge className="bg-yellow-500 text-black">Draft</Badge>
+                    )}
                     <Badge
                       className={
                         vehicle.isAvailable
