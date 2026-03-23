@@ -122,8 +122,8 @@ async function updateBookingAndRespond(supabase: ReturnType<typeof import("@/lib
   if (updateError) {
     console.error("Database update error:", JSON.stringify(updateError));
     return NextResponse.json(
-      { success: true, url: publicUrl, warning: `File uploaded but DB update failed: ${updateError.message}` },
-      { status: 200 }
+      { success: false, url: publicUrl, message: `File uploaded but failed to link to booking: ${updateError.message}` },
+      { status: 500 }
     );
   }
 

@@ -19,7 +19,8 @@ export function formatTime(timeStr: string | null | undefined): string {
 }
 
 export function formatDateShort(dateStr: string): string {
-  const date = new Date(dateStr);
+  const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
+  if (isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -45,12 +46,16 @@ export function isDateAfter(dateStr1: string, dateStr2: string): boolean {
 export function getMinPickupDate(): string {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-  return tomorrow.toISOString().split("T")[0];
+  // Build YYYY-MM-DD from local time to avoid UTC timezone shift
+  const y = tomorrow.getFullYear();
+  const m = String(tomorrow.getMonth() + 1).padStart(2, "0");
+  const d = String(tomorrow.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 export function daysBetween(date1: string, date2: string): number {
-  const d1 = new Date(date1);
-  const d2 = new Date(date2);
+  const d1 = new Date(date1 + (date1.includes("T") ? "" : "T00:00:00"));
+  const d2 = new Date(date2 + (date2.includes("T") ? "" : "T00:00:00"));
   const diffTime = Math.abs(d2.getTime() - d1.getTime());
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
