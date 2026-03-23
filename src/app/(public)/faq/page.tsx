@@ -33,6 +33,22 @@ const generalFaqs = [
     question: "Do you offer long-term rentals?",
     answer: "Yes! We offer competitive daily rates for any rental duration. Whether you need a vehicle for a day, a week, or longer, our transparent per-day pricing makes it easy to plan your trip. Contact us for special long-term rental arrangements.",
   },
+  {
+    question: "What is the pickup and drop-off process?",
+    answer: "After booking, you will receive a confirmation email with pickup instructions. Bring your driver's license and the credit card used for booking. We will walk you through the vehicle condition report, explain the controls, and you are on your way. Drop-off is equally simple — return the vehicle to the same location and we will complete a quick inspection.",
+  },
+  {
+    question: "Is there a mileage limit?",
+    answer: "Standard rentals include unlimited mileage within the tri-state area (NJ, NY, PA). If you plan to travel out of the tri-state area, please let us know in advance so we can make appropriate arrangements.",
+  },
+  {
+    question: "What happens if I return the vehicle late?",
+    answer: "Late returns are charged at the daily rate for each additional day. If you know you will be late, please call us as soon as possible so we can update your reservation and avoid any issues with the next booking.",
+  },
+  {
+    question: "What is the fuel policy?",
+    answer: "Vehicles are provided with a full tank of gas and should be returned full. If you prefer not to refuel, you can add our Fuel Pre-Pay option during booking, which lets you return the vehicle empty for a flat fee.",
+  },
 ];
 
 const pricingFaqs = [
