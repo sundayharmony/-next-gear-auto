@@ -752,12 +752,12 @@ function TimelineView({
                                 <span className="text-xs font-bold text-gray-800 truncate">
                                   {booking.customer_name.split(" ")[0]}
                                 </span>
-                                {span >= 2 && (
+                                {fullDaySpan >= 2 && (
                                   <span className="text-[10px] text-gray-600 truncate hidden sm:inline">
                                     {daysTotal}d
                                   </span>
                                 )}
-                                {span >= 3 && (
+                                {fullDaySpan >= 3 && (
                                   <span className="text-[10px] font-semibold text-gray-700 truncate hidden md:inline">
                                     ${booking.total_price.toFixed(0)}
                                   </span>

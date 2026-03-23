@@ -88,11 +88,11 @@ const cancellationFaqs = [
 const insuranceFaqs = [
   {
     question: "Do I need insurance to rent?",
-    answer: "Your personal auto insurance or credit card rental coverage may provide coverage. We also offer optional insurance coverage ($15/day) that includes basic collision damage waiver for added peace of mind.",
+    answer: "Your personal auto insurance or credit card rental coverage may provide coverage. We also offer optional insurance coverage ($11.25/day) that includes basic collision damage waiver for added peace of mind.",
   },
   {
     question: "What add-ons are available?",
-    answer: "We offer insurance coverage ($15/day), child seats ($10/day, max $50), roadside assistance ($8/day for 24/7 towing, lockout, and tire service), and fuel pre-pay (market rate + $10 fee to return the vehicle empty).",
+    answer: "We offer insurance coverage ($11.25/day), child seats ($10/day, max $50), roadside assistance ($8/day for 24/7 towing, lockout, and tire service), and fuel pre-pay (market rate + $10 fee to return the vehicle empty).",
   },
   {
     question: "What happens if the vehicle is damaged?",

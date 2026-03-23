@@ -2,7 +2,7 @@
   {
     "id": "e1",
     "name": "Insurance Coverage",
-    "pricePerDay": 15,
+    "pricePerDay": 11.25,
     "maxPrice": null,
     "billingType": "per-day",
     "description": "Basic collision damage waiver covering vehicle damage up to full replacement value."

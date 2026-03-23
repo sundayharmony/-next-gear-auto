@@ -998,7 +998,7 @@ function BookingPageInner() {
                           Have your own insurance coverage?
                         </p>
                         <p className="text-xs text-gray-500 mb-3">
-                          Upload proof of valid auto insurance to waive the $15/day coverage fee.
+                          Upload proof of valid auto insurance to waive the $11.25/day coverage fee.
                         </p>
                         {insuranceProofUrl ? (
                           <div className="flex items-center gap-3 rounded-lg bg-green-50 border border-green-200 p-3">

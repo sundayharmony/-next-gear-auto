@@ -179,8 +179,8 @@ function Page2() {
           <div><span className="font-semibold">Policy #:</span> <Field width="120px" /></div>
           <div><span className="font-semibold">Phone:</span> <Field width="120px" /></div>
         </div>
-        <p className="text-gray-700 mb-1">If proof of insurance is not provided, temporary Non-Owned Auto Coverage will be added at $12/day.</p>
-        <p className="text-gray-700"><strong>Optional Supplemental Liability Protection (SLP):</strong> $14.99/day (up to $1M)</p>
+        <p className="text-gray-700 mb-1">If proof of insurance is not provided, temporary Non-Owned Auto Coverage will be added at $9/day.</p>
+        <p className="text-gray-700"><strong>Optional Supplemental Liability Protection (SLP):</strong> $11.25/day (up to $1M)</p>
       </div>
 
       {/* Section 6 */}

@@ -69,7 +69,7 @@ const TIME_SLOTS = Array.from({ length: 41 }, (_, i) => {
 });
 
 const AVAILABLE_EXTRAS = [
-  { id: "e1", name: "Insurance Coverage", pricePerDay: 15, maxPrice: null, billingType: "per-day" as const, description: "Basic collision damage waiver" },
+  { id: "e1", name: "Insurance Coverage", pricePerDay: 11.25, maxPrice: null, billingType: "per-day" as const, description: "Basic collision damage waiver" },
   { id: "e2", name: "Child Seat", pricePerDay: 10, maxPrice: 50, billingType: "per-day-capped" as const, description: "Infant and toddler car seat" },
   { id: "e3", name: "Roadside Assistance", pricePerDay: 8, maxPrice: null, billingType: "per-day" as const, description: "24/7 emergency roadside assistance" },
   { id: "e4", name: "Fuel Pre-Pay", pricePerDay: 45, maxPrice: null, billingType: "one-time" as const, description: "Pre-pay for a full tank" },

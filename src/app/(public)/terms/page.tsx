@@ -239,7 +239,7 @@ export default function TermsPage() {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Optional Insurance</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  NextGearAuto offers optional insurance coverage for $15/day that includes a collision damage waiver and comprehensive coverage. This coverage is optional and can be added during the booking process.
+                  NextGearAuto offers optional insurance coverage for $11.25/day that includes a collision damage waiver and comprehensive coverage. This coverage is optional and can be added during the booking process.
                 </p>
               </div>
 
