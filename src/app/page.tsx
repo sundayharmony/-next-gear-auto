@@ -34,15 +34,27 @@ export default async function HomePage() {
   let featuredVehicles: Vehicle[] = [];
 
   try {
-    const { data } = await supabase
+    // Try with is_published filter first
+    const { data, error } = await supabase
       .from("vehicles")
       .select("*")
       .eq("is_published", true)
       .order("created_at", { ascending: false })
       .limit(4);
 
-    if (data) {
+    if (!error && data && data.length > 0) {
       featuredVehicles = data;
+    } else {
+      // Fallback: fetch without is_published filter (column may not exist yet)
+      const { data: fallbackData } = await supabase
+        .from("vehicles")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(4);
+
+      if (fallbackData) {
+        featuredVehicles = fallbackData;
+      }
     }
   } catch (error) {
     logger.error("Failed to fetch featured vehicles:", error);

@@ -17,7 +17,25 @@ export async function GET(request: Request) {
       query = query.eq("category", category);
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+
+    // Fallback: if is_published filter fails (column may not exist yet), retry without it
+    if (error || !data || data.length === 0) {
+      let fallbackQuery = supabase
+        .from("vehicles")
+        .select("*")
+        .order("created_at", { ascending: true });
+
+      if (category && category !== "all") {
+        fallbackQuery = fallbackQuery.eq("category", category);
+      }
+
+      const fallbackResult = await fallbackQuery;
+      if (!fallbackResult.error && fallbackResult.data) {
+        data = fallbackResult.data;
+        error = null;
+      }
+    }
 
     if (!error && data && data.length > 0) {
       const vehicles = data.map((v) => ({

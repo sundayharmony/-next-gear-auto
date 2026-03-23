@@ -17,11 +17,20 @@ export default async function AboutPage() {
   let vehicleCount = 6; // fallback
   try {
     const supabase = getServiceSupabase();
-    const { count } = await supabase
+    // Try with is_published filter first
+    const { count, error } = await supabase
       .from("vehicles")
       .select("*", { count: "exact", head: true })
       .eq("is_published", true);
-    if (count && count > 0) vehicleCount = count;
+    if (!error && count && count > 0) {
+      vehicleCount = count;
+    } else {
+      // Fallback: count without is_published filter (column may not exist yet)
+      const { count: fallbackCount } = await supabase
+        .from("vehicles")
+        .select("*", { count: "exact", head: true });
+      if (fallbackCount && fallbackCount > 0) vehicleCount = fallbackCount;
+    }
   } catch { /* use fallback */ }
 
   const stats = [
