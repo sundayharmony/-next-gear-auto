@@ -18,6 +18,7 @@ import { SignaturePad } from "@/components/signature-pad";
 import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
 import { cn } from "@/lib/utils/cn";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
+import { csrfFetch } from "@/lib/utils/csrf-fetch";
 import { useAuth } from "@/lib/context/auth-context";
 import { logger } from "@/lib/utils/logger";
 import extras from "@/data/extras.json";
@@ -339,7 +340,7 @@ function BookingPageInner() {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      const res = await fetch("/api/upload-temp", { method: "POST", body: formData });
+      const res = await csrfFetch("/api/upload-temp", { method: "POST", body: formData });
       const data = await res.json();
       if (data.success) {
         setIdDocumentUrl(data.url);
@@ -1053,7 +1054,7 @@ function BookingPageInner() {
                                 try {
                                   const formData = new FormData();
                                   formData.append("file", file);
-                                  const uploadRes = await fetch("/api/upload-temp", { method: "POST", body: formData });
+                                  const uploadRes = await csrfFetch("/api/upload-temp", { method: "POST", body: formData });
                                   const uploadData = await uploadRes.json();
                                   if (uploadData.success) {
                                     setInsuranceProofUrl(uploadData.url);

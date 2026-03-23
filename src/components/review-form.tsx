@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Star, Send, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
 interface ReviewFormProps {
   vehicleId: string;
@@ -50,7 +51,7 @@ export function ReviewForm({
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/reviews", {
+      const res = await csrfFetch("/api/reviews", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm } from "@/lib/hooks/use-form";
 import { emailRule, phoneRule, nameRule } from "@/lib/utils/validation";
+import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
@@ -24,7 +25,7 @@ export function ContactForm() {
       message: { required: true, minLength: 10, message: "Please enter at least 10 characters" },
     },
     onSubmit: async (values) => {
-      const res = await fetch("/api/contact", {
+      const res = await csrfFetch("/api/contact", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),

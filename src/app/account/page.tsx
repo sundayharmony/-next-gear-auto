@@ -18,6 +18,7 @@ import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/context/auth-context";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
+import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
 interface Vehicle {
   id: string;
@@ -155,7 +156,7 @@ export default function AccountPage() {
     if (!confirm("Are you sure you want to cancel this booking? This action cannot be undone.")) return;
     setCancelling(bookingId);
     try {
-      const res = await fetch("/api/bookings", {
+      const res = await csrfFetch("/api/bookings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId, status: "cancelled" }),

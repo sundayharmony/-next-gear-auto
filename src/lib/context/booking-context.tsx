@@ -4,6 +4,7 @@ import React, { createContext, useContext, useReducer, useCallback } from "react
 import type { Vehicle, BookingExtra, BookingStep, PricingBreakdown } from "@/lib/types";
 import { calculatePricing, calculateRentalDays, applyDiscount, type PromoDiscount } from "@/lib/utils/price-calculator";
 import { logger } from "@/lib/utils/logger";
+import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
 interface BookingState {
   currentStep: BookingStep;
@@ -206,7 +207,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
   const applyPromoCode = useCallback(async (code: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      const res = await fetch("/api/promo-codes/validate", {
+      const res = await csrfFetch("/api/promo-codes/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, bookingAmount: state.pricing?.subtotal ?? 0 }),
@@ -241,7 +242,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "SUBMIT_START" });
     try {
       // Call our checkout API which creates booking in Supabase + Stripe Checkout session
-      const res = await fetch("/api/checkout", {
+      const res = await csrfFetch("/api/checkout", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

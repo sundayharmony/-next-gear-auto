@@ -17,6 +17,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 import { SignaturePad } from "@/components/signature-pad";
 import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
+import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
 // Signature fields the renter must complete
 const SIGNATURE_FIELDS = [
@@ -146,7 +147,7 @@ export default function AgreementSigningPage() {
     setSubmitting(true);
 
     try {
-      const res = await fetch("/api/rental-agreement/sign", {
+      const res = await csrfFetch("/api/rental-agreement/sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId, signatures }),

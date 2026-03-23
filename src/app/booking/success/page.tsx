@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
+import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
 interface BookingDetails {
   id: string;
@@ -54,7 +55,7 @@ function SuccessContent() {
 
         setAgreementStatus("signing");
 
-        const res = await fetch("/api/rental-agreement/sign", {
+        const res = await csrfFetch("/api/rental-agreement/sign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ bookingId, signatures: validSigs }),

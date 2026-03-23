@@ -3,16 +3,12 @@
  *
  * JWT tokens are stored in HTTP-only cookies and sent automatically.
  * This wrapper handles:
+ *   - CSRF token (via shared getCsrfToken)
  *   - Automatic token refresh on 401 responses
  *   - Redirect to admin login if refresh fails
  *   - Legacy x-admin-id header (will be removed after full migration)
  */
-/** Read the CSRF token from the nga_csrf cookie */
-function getCsrfToken(): string {
-  if (typeof document === "undefined") return "";
-  const match = document.cookie.match(/(?:^|;\s*)nga_csrf=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : "";
-}
+import { getCsrfToken } from "./csrf-fetch";
 
 export async function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const headers = new Headers(options.headers || {});
