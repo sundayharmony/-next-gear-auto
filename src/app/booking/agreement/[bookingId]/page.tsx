@@ -117,7 +117,7 @@ export default function AgreementSigningPage() {
       const res = await csrfFetch("/api/rental-agreement/sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, signatures }),
+        body: JSON.stringify({ bookingId, signatures, customerEmail: booking?.customer_email }),
       });
       const data = await res.json();
 

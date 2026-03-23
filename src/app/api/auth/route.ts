@@ -174,7 +174,11 @@ export async function POST(request: Request) {
             .single();
 
           if (updated) {
-            return NextResponse.json({
+            const updatedRole = (updated.role || "customer") as "admin" | "customer";
+            const accessToken = await createAccessToken({ userId: updated.id, role: updatedRole, email: updated.email });
+            const refreshToken = await createRefreshToken({ userId: updated.id, role: updatedRole, email: updated.email });
+
+            const response = NextResponse.json({
               data: {
                 id: updated.id,
                 name: updated.name,
@@ -189,6 +193,7 @@ export async function POST(request: Request) {
               },
               success: true,
             }, { status: 201 });
+            return setAuthCookies(response, accessToken, refreshToken);
           }
         }
 
@@ -237,7 +242,11 @@ export async function POST(request: Request) {
         role: newCustomer.role,
       };
 
-      return NextResponse.json({ data: mapped, success: true }, { status: 201 });
+      const accessToken = await createAccessToken({ userId: newCustomer.id, role: "customer", email: newCustomer.email });
+      const refreshToken = await createRefreshToken({ userId: newCustomer.id, role: "customer", email: newCustomer.email });
+
+      const response = NextResponse.json({ data: mapped, success: true }, { status: 201 });
+      return setAuthCookies(response, accessToken, refreshToken);
     }
 
     return NextResponse.json(

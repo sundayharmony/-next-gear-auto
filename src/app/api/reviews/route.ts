@@ -92,13 +92,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Sanitize customer name
+    const safeName = customerName.replace(/<[^>]*>/g, "").trim();
+
     // Insert into Supabase
     const reviewId = `rev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
     const { data, error } = await supabase.from("reviews").insert({
       id: reviewId,
       customer_id: customerId || null,
-      customer_name: customerName,
+      customer_name: safeName,
       vehicle_id: vehicleId,
       booking_id: bookingId || null,
       rating,

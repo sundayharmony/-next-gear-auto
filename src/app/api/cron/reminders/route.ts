@@ -8,20 +8,24 @@ import { logger } from "@/lib/utils/logger";
 
 export async function GET(request: Request) {
   const supabase = getServiceSupabase();
-  // Verify cron secret (optional security)
-  const authHeader = request.headers.get("authorization");
+  // Verify cron secret (required security)
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
+  if (!cronSecret) {
+    return NextResponse.json({ error: "CRON_SECRET not configured" }, { status: 500 });
+  }
+  const authHeader = request.headers.get("authorization");
+  if (authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   try {
-    const today = new Date();
-    const tomorrow = new Date(today);
+    // Use timezone-aware date calculation
+    const tz = process.env.BUSINESS_TIMEZONE || "America/New_York";
+    const now = new Date();
+    const todayStr = now.toLocaleDateString("en-CA", { timeZone: tz });
+    const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
-
-    const todayStr = today.toISOString().split("T")[0];
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    const tomorrowStr = tomorrow.toLocaleDateString("en-CA", { timeZone: tz });
 
     let pickupCount = 0;
     let returnCount = 0;

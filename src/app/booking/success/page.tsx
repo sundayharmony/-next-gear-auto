@@ -21,6 +21,7 @@ interface BookingDetails {
   total_price: number;
   deposit: number;
   customer_name: string;
+  customer_email?: string;
 }
 
 function SuccessContent() {
@@ -66,7 +67,7 @@ function SuccessContent() {
         const res = await csrfFetch("/api/rental-agreement/sign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bookingId, signatures: validSigs }),
+          body: JSON.stringify({ bookingId, signatures: validSigs, customerEmail: booking?.customer_email }),
         });
 
         const data = await res.json();

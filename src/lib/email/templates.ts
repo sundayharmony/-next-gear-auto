@@ -12,6 +12,11 @@ interface EmailData {
   needsPassword?: boolean;
 }
 
+/** Escape HTML special characters to prevent injection */
+function escHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 /** Format "2026-03-06" → "Fri, Mar 6, 2026" */
 export function fmtDate(dateStr: string): string {
   const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
@@ -94,8 +99,8 @@ function bookingIdBlock(id: string, color = '#7C3AED', bg = '#F5F3FF'): string {
 
 function detailRow(label: string, value: string, bold = false): string {
   return `<tr>
-    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">${label}</td>
-    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #111827; font-size: 14px; font-weight: ${bold ? '700' : '600'}; text-align: right;">${value}</td>
+    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">${escHtml(label)}</td>
+    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #111827; font-size: 14px; font-weight: ${bold ? '700' : '600'}; text-align: right;">${escHtml(value)}</td>
   </tr>`;
 }
 
@@ -153,14 +158,14 @@ export function bookingPendingTemplate(data: EmailData): string {
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${data.customerName}, we've received your reservation. Here are your details:</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escHtml(data.customerName)}, we've received your reservation. Here are your details:</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
           <tr>
             <td style="padding: 20px 24px;">
               <p style="margin: 0 0 4px; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Booking ID</p>
               <p style="margin: 0 0 16px; color: #111827; font-size: 14px; font-weight: 600; font-family: monospace;">${data.bookingId}</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                ${detailRow('Vehicle', data.vehicleName, true)}
+                ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
                 ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
                 ${detailRow('Total', '$' + data.totalPrice.toFixed(2), true)}
@@ -201,14 +206,14 @@ export function bookingConfirmationTemplate(data: EmailData): string {
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${data.customerName}, your reservation is confirmed${data.totalPrice > 0 ? ` and your payment of <strong>$${data.totalPrice.toFixed(2)}</strong> has been received` : ''}.</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escHtml(data.customerName)}, your reservation is confirmed${data.totalPrice > 0 ? ` and your payment of <strong>$${data.totalPrice.toFixed(2)}</strong> has been received` : ''}.</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
           <tr>
             <td style="padding: 20px 24px;">
               <p style="margin: 0 0 4px; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Booking ID</p>
               <p style="margin: 0 0 16px; color: #111827; font-size: 14px; font-weight: 600; font-family: monospace;">${data.bookingId}</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                ${detailRow('Vehicle', data.vehicleName, true)}
+                ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
                 ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
                 ${detailRow('Total', '$' + data.totalPrice.toFixed(2), true)}
@@ -253,9 +258,9 @@ export function adminNewBookingTemplate(data: EmailData): string {
     <tr>
       <td style="padding: 0 32px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          ${detailRow('Customer', data.customerName, true)}
-          ${detailRow('Email', data.customerEmail)}
-          ${detailRow('Vehicle', data.vehicleName, true)}
+          ${detailRow('Customer', escHtml(data.customerName), true)}
+          ${detailRow('Email', escHtml(data.customerEmail))}
+          ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
         </table>
         ${dateTimeBlock('Pick-up', data.pickupDate, data.pickupTime, '#059669', 'linear-gradient(135deg, #ecfdf5, #d1fae5)')}
         ${dateTimeBlock('Return', data.returnDate, data.returnTime, '#d97706', 'linear-gradient(135deg, #fffbeb, #fef3c7)')}
@@ -276,8 +281,8 @@ export function cancellationTemplate(data: EmailData): string {
     ${headerBlock('Booking Cancelled', 'Your reservation has been cancelled', '#DC2626', '#B91C1C')}
     <tr>
       <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${data.customerName},</p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Your booking <strong style="color: #111827;">${data.bookingId}</strong> for the <strong>${data.vehicleName}</strong> has been cancelled.</p>
+        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escHtml(data.customerName)},</p>
+        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Your booking <strong style="color: #111827;">${escHtml(data.bookingId)}</strong> for the <strong>${escHtml(data.vehicleName)}</strong> has been cancelled.</p>
       </td>
     </tr>
     <tr>
@@ -303,8 +308,8 @@ export function pickupReminderTemplate(data: EmailData): string {
     ${headerBlock("Your Pickup is Tomorrow!", 'Get ready for your trip')}
     <tr>
       <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${data.customerName},</p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Just a reminder that your <strong style="color: #111827;">${data.vehicleName}</strong> is ready for pickup tomorrow.</p>
+        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escHtml(data.customerName)},</p>
+        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Just a reminder that your <strong style="color: #111827;">${escHtml(data.vehicleName)}</strong> is ready for pickup tomorrow.</p>
       </td>
     </tr>
     <tr>
@@ -341,8 +346,8 @@ export function returnReminderTemplate(data: EmailData): string {
     ${headerBlock('Return Reminder', 'Your rental return is today', '#f59e0b', '#d97706')}
     <tr>
       <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${data.customerName},</p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">This is a friendly reminder that your <strong style="color: #111827;">${data.vehicleName}</strong> (Booking ${data.bookingId}) is due for return today.</p>
+        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escHtml(data.customerName)},</p>
+        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">This is a friendly reminder that your <strong style="color: #111827;">${escHtml(data.vehicleName)}</strong> (Booking ${escHtml(data.bookingId)}) is due for return today.</p>
       </td>
     </tr>
     <tr>
@@ -372,14 +377,14 @@ export function bookingSignAgreementTemplate(data: EmailData): string {
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${data.customerName}, please review your details and sign the rental agreement before pickup.</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escHtml(data.customerName)}, please review your details and sign the rental agreement before pickup.</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
           <tr>
             <td style="padding: 20px 24px;">
               <p style="margin: 0 0 4px; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Booking ID</p>
               <p style="margin: 0 0 16px; color: #111827; font-size: 14px; font-weight: 600; font-family: monospace;">${data.bookingId}</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                ${detailRow('Vehicle', data.vehicleName, true)}
+                ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
                 ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
                 ${detailRow('Total', '$' + data.totalPrice.toFixed(2), true)}
@@ -417,7 +422,7 @@ export function passwordResetTemplate(data: { customerName: string; customerEmai
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${data.customerName}, use the button below to set up your password for your NextGearAuto account.</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escHtml(data.customerName)}, use the button below to set up your password for your NextGearAuto account.</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 20px;">
           <tr>
             <td align="center">

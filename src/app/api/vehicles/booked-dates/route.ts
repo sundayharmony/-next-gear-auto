@@ -26,9 +26,9 @@ export async function GET(req: NextRequest) {
     if (error) {
       logger.error("Booked dates fetch error:", error);
       return NextResponse.json({
-        success: true,
-        data: [],
-      });
+        success: false,
+        error: "Failed to fetch booked dates",
+      }, { status: 500 });
     }
 
     // Return booking date ranges with time info for 60-minute gap checks
@@ -36,8 +36,8 @@ export async function GET(req: NextRequest) {
       id: b.id,
       pickupDate: b.pickup_date,
       returnDate: b.return_date,
-      pickupTime: b.pickup_time || "10:00",
-      returnTime: b.return_time || "10:00",
+      pickupTime: b.pickup_time || "00:00",
+      returnTime: b.return_time || "23:59",
       status: b.status,
     }));
 

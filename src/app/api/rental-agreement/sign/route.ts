@@ -38,9 +38,10 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { bookingId, signatures } = body as {
+    const { bookingId, signatures, customerEmail } = body as {
       bookingId: string;
       signatures: SignatureData;
+      customerEmail?: string;
     };
 
     if (!bookingId) {
@@ -61,8 +62,8 @@ export async function POST(req: NextRequest) {
     for (const [key, value] of Object.entries(signatures)) {
       if (value && typeof value === "string") {
         const cleaned = (value as string).replace(/^data:image\/png;base64,/, "");
-        // Check it's valid base64 and not excessively large (max 500KB per signature)
-        if (cleaned.length > 500 * 1024) {
+        // Check it's valid base64 and not excessively large (max 100KB per signature)
+        if (cleaned.length > 100 * 1024) {
           return NextResponse.json(
             { success: false, error: `Signature ${key} exceeds maximum size` },
             { status: 400 }
@@ -91,6 +92,17 @@ export async function POST(req: NextRequest) {
         { success: false, error: "Booking not found" },
         { status: 404 }
       );
+    }
+
+    // Verify the requester owns this booking (check customer email matches)
+    if (customerEmail && booking.customer_email) {
+      if (customerEmail.toLowerCase().trim() !== booking.customer_email.toLowerCase().trim()) {
+        logger.warn(`Agreement sign attempt by non-owner: ${customerEmail} for booking ${bookingId}`);
+        return NextResponse.json(
+          { success: false, error: "You are not authorized to sign this agreement" },
+          { status: 403 }
+        );
+      }
     }
 
     // Verify booking hasn't already been signed
