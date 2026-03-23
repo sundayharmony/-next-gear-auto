@@ -177,10 +177,15 @@ export async function DELETE(req: NextRequest) {
     }
 
     // First nullify customer_id on related bookings to avoid FK constraint
-    await supabase
+    const { error: updateError } = await supabase
       .from("bookings")
       .update({ customer_id: null })
       .eq("customer_id", id);
+
+    if (updateError) {
+      logger.error("Error updating bookings during customer deletion:", updateError);
+      return NextResponse.json({ success: false, error: "Failed to update bookings" }, { status: 500 });
+    }
 
     const { error } = await supabase
       .from("customers")

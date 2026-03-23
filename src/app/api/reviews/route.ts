@@ -3,13 +3,20 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 
-// GET: Return reviews — admin=true returns all statuses, otherwise only approved
+// GET: Return reviews — verified admins see all statuses, public only sees approved
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const vehicleId = searchParams.get("vehicleId");
-  const admin = searchParams.get("admin") === "true";
+  const adminRequested = searchParams.get("admin") === "true";
   const statusFilter = searchParams.get("status"); // all, pending, approved, rejected
   const supabase = getServiceSupabase();
+
+  // Verify admin identity if admin view requested
+  let isAdmin = false;
+  if (adminRequested) {
+    const auth = await verifyAdmin(req);
+    isAdmin = auth.authorized;
+  }
 
   // Try to fetch from Supabase first
   try {
@@ -18,8 +25,8 @@ export async function GET(req: NextRequest) {
       .select("*")
       .order("created_at", { ascending: false });
 
-    // For public API, only show approved. For admin, optionally filter by status
-    if (!admin) {
+    // For public API, only show approved. For verified admin, optionally filter by status
+    if (!isAdmin) {
       query = query.eq("status", "approved");
     } else if (statusFilter && statusFilter !== "all") {
       query = query.eq("status", statusFilter);

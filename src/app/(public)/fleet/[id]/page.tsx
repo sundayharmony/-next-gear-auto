@@ -371,8 +371,8 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                     <CardContent className="p-5">
                       <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{sv.year} {sv.make} {sv.model}</h3>
                       <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {(sv.specs as Record<string, any>).passengers}</span>
-                        <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {(sv.specs as Record<string, any>).mpg} mpg</span>
+                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {(sv.specs as Record<string, any>)?.passengers}</span>
+                        <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {(sv.specs as Record<string, any>)?.mpg} mpg</span>
                       </div>
                       <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                         <span className="text-xl font-bold text-purple-600">${sv.daily_rate}<span className="text-sm text-gray-400 font-normal">/day</span></span>

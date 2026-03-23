@@ -88,7 +88,7 @@ export async function POST(request: NextRequest) {
       }
 
       const currentUrls = record?.photo_urls || [];
-      const updatedUrls = [...currentUrls, publicUrl];
+      const updatedUrls = [...(currentUrls || []), publicUrl];
 
       const { error: updateError } = await supabase
         .from("maintenance_records")

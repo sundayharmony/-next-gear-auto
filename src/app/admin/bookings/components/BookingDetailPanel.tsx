@@ -158,6 +158,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     try {
       const response = await adminFetch(`/api/bookings/${booking.id}`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus }),
       });
 
@@ -198,6 +199,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     try {
       const response = await adminFetch(`/api/bookings/${booking.id}`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(editData),
       });
 
@@ -225,6 +227,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     try {
       const response = await adminFetch(`/api/bookings/${booking.id}`, {
         method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ admin_notes: editData.admin_notes }),
       });
 

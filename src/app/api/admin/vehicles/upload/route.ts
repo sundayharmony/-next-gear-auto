@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       }
 
       const currentImages = vehicle?.images || [];
-      const updatedImages = [...currentImages, publicUrl];
+      const updatedImages = [...(currentImages || []), publicUrl];
 
       const { error: updateError } = await supabase
         .from("vehicles")

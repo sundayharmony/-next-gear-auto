@@ -248,7 +248,6 @@ export default function CreateBookingForm({
       if (!res.ok) {
         const error = await res.json();
         onError(error.message || "Failed to create booking");
-        setLoading(false);
         return;
       }
 
@@ -258,6 +257,7 @@ export default function CreateBookingForm({
       onCreated();
     } catch (err) {
       onError(err instanceof Error ? err.message : "An error occurred");
+    } finally {
       setLoading(false);
     }
   };
@@ -486,7 +486,10 @@ export default function CreateBookingForm({
               type="number"
               step="0.01"
               value={form.totalPrice}
-              onChange={(e) => setForm({ ...form, totalPrice: parseFloat(e.target.value) || 0 })}
+              onChange={(e) => {
+                const amount = parseFloat(e.target.value);
+                setForm({ ...form, totalPrice: isNaN(amount) ? 0 : amount });
+              }}
               placeholder="0.00"
             />
             <div className="text-xs text-gray-500 mt-1">

@@ -42,8 +42,8 @@ export async function GET(request: NextRequest) {
   const isAscending = orderParam === "asc";
 
   // Pagination
-  const page = pageParam ? parseInt(pageParam, 10) : null;
-  const perPage = perPageParam ? parseInt(perPageParam, 10) : 50;
+  const page = pageParam ? Math.max(1, parseInt(pageParam, 10)) : null;
+  const perPage = perPageParam ? Math.min(Math.max(1, parseInt(perPageParam, 10)), 200) : 50;
   const offset = page && page > 0 ? (page - 1) * perPage : null;
 
   try {
@@ -167,6 +167,12 @@ export async function POST(request: Request) {
   const supabase = getServiceSupabase();
   try {
     const body = await request.json();
+
+    // Validate required fields
+    if (!body.vehicleId || !body.pickupDate || !body.returnDate) {
+      return NextResponse.json({ success: false, error: "vehicleId, pickupDate, and returnDate are required" }, { status: 400 });
+    }
+
     // Double-booking check — admins can always overlap; clients need 60min gap
     if (!body.adminCreated && body.vehicleId && body.pickupDate && body.returnDate) {
       const { data: conflicting } = await supabase

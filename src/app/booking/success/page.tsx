@@ -41,7 +41,15 @@ function SuccessContent() {
         const savedSigs = localStorage.getItem(storageKey);
         if (!savedSigs) return;
 
-        const signatures = JSON.parse(savedSigs);
+        let signatures: Record<string, any>;
+        try {
+          signatures = JSON.parse(savedSigs);
+        } catch {
+          // Handle corrupted localStorage data
+          localStorage.removeItem(storageKey);
+          return;
+        }
+
         // Filter out null/empty signatures
         const validSigs: Record<string, string> = {};
         for (const [key, val] of Object.entries(signatures)) {

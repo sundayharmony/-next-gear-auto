@@ -103,6 +103,7 @@ export default function AdminCustomersPage() {
     try {
       const url = query ? `/api/admin/customers?search=${encodeURIComponent(query)}` : "/api/admin/customers";
       const res = await adminFetch(url);
+      if (!res.ok) throw new Error("Failed to fetch customers");
       const data = await res.json();
       if (data.success) setCustomers(data.data);
     } catch (err) {

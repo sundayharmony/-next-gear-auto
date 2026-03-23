@@ -74,6 +74,7 @@ export function useBookings(): UseBookingsReturn {
   const fetchVehicles = useCallback(async () => {
     try {
       const res = await adminFetch("/api/admin/vehicles");
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       if (data.success) setVehicles(data.data || []);
     } catch (err) {
@@ -84,6 +85,7 @@ export function useBookings(): UseBookingsReturn {
   const fetchCustomers = useCallback(async () => {
     try {
       const res = await adminFetch("/api/admin/customers");
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       if (data.success) {
         setAllCustomers(
@@ -146,12 +148,14 @@ export function useBookings(): UseBookingsReturn {
       }
     } catch {
       setError("Network error — could not update booking status");
+    } finally {
+      setUpdating(null);
     }
-    setUpdating(null);
   }, []);
 
   const bulkUpdateStatus = useCallback(async (ids: Set<string>, newStatus: string): Promise<number> => {
     let successCount = 0;
+    const failedIds: string[] = [];
     for (const id of ids) {
       try {
         const res = await adminFetch("/api/bookings", {
@@ -159,9 +163,19 @@ export function useBookings(): UseBookingsReturn {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ bookingId: id, status: newStatus }),
         });
+        if (!res.ok) throw new Error(`Failed: ${res.status}`);
         const data = await res.json();
-        if (data.success) successCount++;
-      } catch { /* continue */ }
+        if (data.success) {
+          successCount++;
+        } else {
+          failedIds.push(id);
+        }
+      } catch (err) {
+        failedIds.push(id);
+      }
+    }
+    if (failedIds.length > 0) {
+      setError(`Failed to update ${failedIds.length} booking${failedIds.length > 1 ? "s" : ""}`);
     }
     if (successCount > 0) {
       setSuccess(`${successCount} booking${successCount > 1 ? "s" : ""} updated to ${newStatus}`);

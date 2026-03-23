@@ -99,6 +99,7 @@ export default function AdminVehiclesPage() {
     setLoading(true);
     try {
       const res = await adminFetch("/api/admin/vehicles");
+      if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       if (data.success) {
         setVehicles(data.data);
