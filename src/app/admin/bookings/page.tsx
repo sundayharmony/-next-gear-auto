@@ -262,7 +262,7 @@ function AdminBookingsContent() {
   const updateStatus = async (bookingId: string, newStatus: string) => {
     setUpdating(bookingId);
     try {
-      const res = await fetch("/api/bookings", {
+      const res = await adminFetch("/api/bookings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId, status: newStatus }),
@@ -311,7 +311,7 @@ function AdminBookingsContent() {
     let successCount = 0;
     for (const id of selectedIds) {
       try {
-        const res = await fetch("/api/bookings", {
+        const res = await adminFetch("/api/bookings", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ bookingId: id, status: newStatus }),
@@ -377,7 +377,7 @@ function AdminBookingsContent() {
 
       const hasInsurance = newBooking.selectedExtras.includes("e1");
 
-      const res = await fetch("/api/bookings", {
+      const res = await adminFetch("/api/bookings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -425,7 +425,7 @@ function AdminBookingsContent() {
       formData.append("bookingId", selectedBooking.id);
       formData.append("type", docType);
 
-      const res = await fetch("/api/bookings/upload", {
+      const res = await adminFetch("/api/bookings/upload", {
         method: "POST",
         body: formData,
       });
@@ -475,7 +475,7 @@ function AdminBookingsContent() {
       const data = await res.json();
       if (data.success && data.data?.id) {
         // Update the booking with the new customer_id
-        await fetch("/api/bookings", {
+        await adminFetch("/api/bookings", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ bookingId: selectedBooking.id, customer_id: data.data.id }),
@@ -550,7 +550,7 @@ function AdminBookingsContent() {
 
     setSaving(true);
     try {
-      const res = await fetch("/api/bookings", {
+      const res = await adminFetch("/api/bookings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

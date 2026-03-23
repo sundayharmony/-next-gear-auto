@@ -539,83 +539,149 @@ function TimelineView({
 
         if (startIdx === -1 || endIdx === -1) return null;
 
-        return { booking, startIdx, endIdx };
+        // Track if booking extends beyond visible range
+        const extendsLeft = pickupKey < rangeStart;
+        const extendsRight = returnKey > rangeEnd;
+
+        return { booking, startIdx, endIdx, extendsLeft, extendsRight };
       })
-      .filter(Boolean) as { booking: BookingRow; startIdx: number; endIdx: number }[];
+      .filter(Boolean) as { booking: BookingRow; startIdx: number; endIdx: number; extendsLeft: boolean; extendsRight: boolean }[];
   };
 
   const today = toDateKey(new Date());
+  const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6;
+
+  // Count total bookings per vehicle in view
+  const vehicleBookingCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const rangeStart = dateKeys[0];
+    const rangeEnd = dateKeys[days - 1];
+    vehicles.forEach((v) => {
+      const vBookings = bookingsByVehicle[v.id] || [];
+      counts[v.id] = vBookings.filter((b) => {
+        const pk = b.pickup_date.split("T")[0];
+        const rk = b.return_date.split("T")[0];
+        return !(rk < rangeStart || pk > rangeEnd);
+      }).length;
+    });
+    return counts;
+  }, [bookingsByVehicle, vehicles, dateKeys]);
 
   return (
-    <Card>
+    <Card className="shadow-sm">
       <CardContent className="p-6">
         {/* Date Navigation */}
         <div className="flex items-center justify-between mb-6">
-          <div className="flex gap-2">
-            <Button onClick={onPrevious} variant="outline" size="sm">
-              <ChevronLeft className="w-4 h-4" />
-            </Button>
-            <Button onClick={onToday} variant="outline" size="sm">
-              Today
-            </Button>
-            <Button onClick={onNext} variant="outline" size="sm">
-              <ChevronRight className="w-4 h-4" />
-            </Button>
+          <div className="flex items-center gap-3">
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+              <Button onClick={onPrevious} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white">
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <Button onClick={onToday} variant="ghost" size="sm" className="h-8 px-3 hover:bg-white text-xs font-semibold">
+                Today
+              </Button>
+              <Button onClick={onNext} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white">
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+            <span className="text-sm font-semibold text-gray-800">
+              {dateRange[0].toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}{" "}
+              &ndash;{" "}
+              {dateRange[days - 1].toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+            </span>
           </div>
-          <div className="text-sm font-medium text-gray-600">
-            {dateRange[0].toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}{" "}
-            -{" "}
-            {dateRange[days - 1].toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-              year: "numeric",
-            })}
+          <div className="flex items-center gap-2 text-xs text-gray-500">
+            <div className="flex items-center gap-1">
+              <div className="w-2 h-2 rounded-full bg-red-400" />
+              Today
+            </div>
+            <span className="text-gray-300">|</span>
+            <span>{bookings.length} bookings</span>
           </div>
         </div>
 
         {/* Timeline Table */}
-        <div className="overflow-x-auto border border-gray-200 rounded-lg">
+        <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
           <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
             <colgroup>
-              <col style={{ width: "180px", minWidth: "180px" }} />
+              <col style={{ width: "170px", minWidth: "170px" }} />
               {dateRange.map((_, i) => (
-                <col key={i} style={{ minWidth: "70px" }} />
+                <col key={i} style={{ minWidth: "72px" }} />
               ))}
             </colgroup>
             <thead>
               <tr>
-                <th className="sticky left-0 z-10 bg-purple-50 border-b border-r border-gray-200 p-3 text-left text-sm font-semibold text-gray-900">
-                  Vehicles
+                <th className="sticky left-0 z-20 bg-gray-50 border-b-2 border-r border-gray-200 p-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                  Vehicle
                 </th>
-                {dateRange.map((date, i) => (
-                  <th
-                    key={i}
-                    className={`border-b border-r border-gray-200 p-2 text-center text-xs font-medium ${
-                      toDateKey(date) === today
-                        ? "bg-purple-100 text-purple-800"
-                        : "bg-purple-50 text-gray-700"
-                    }`}
-                  >
-                    <div>{date.toLocaleDateString("en-US", { weekday: "short" })}</div>
-                    <div className="font-semibold">{date.getDate()}</div>
-                  </th>
-                ))}
+                {dateRange.map((date, i) => {
+                  const isDateToday = toDateKey(date) === today;
+                  const weekend = isWeekend(date);
+                  return (
+                    <th
+                      key={i}
+                      className={`border-b-2 border-r border-gray-200 p-2 text-center text-xs font-medium relative ${
+                        isDateToday
+                          ? "bg-purple-100 text-purple-900"
+                          : weekend
+                          ? "bg-gray-100 text-gray-500"
+                          : "bg-gray-50 text-gray-600"
+                      }`}
+                    >
+                      <div className={`text-[10px] uppercase tracking-wide ${isDateToday ? "font-bold" : ""}`}>
+                        {date.toLocaleDateString("en-US", { weekday: "short" })}
+                      </div>
+                      <div className={`text-sm ${isDateToday ? "font-extrabold" : "font-semibold"}`}>
+                        {date.getDate()}
+                      </div>
+                      {i === 0 || date.getDate() === 1 ? (
+                        <div className="text-[9px] text-gray-400 font-medium">
+                          {date.toLocaleDateString("en-US", { month: "short" })}
+                        </div>
+                      ) : null}
+                      {/* Today indicator dot */}
+                      {isDateToday && (
+                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                      )}
+                    </th>
+                  );
+                })}
               </tr>
             </thead>
             <tbody>
-              {vehicles.map((vehicle) => {
+              {vehicles.map((vehicle, vehicleIdx) => {
                 const visibleBookings = getVisibleBookings(vehicle.id);
+                const count = vehicleBookingCounts[vehicle.id] || 0;
                 return (
-                  <tr key={vehicle.id} className="group">
-                    <td className="sticky left-0 z-10 bg-white border-b border-r border-gray-200 p-3 text-sm font-medium text-gray-900 whitespace-nowrap">
-                      {vehicle.year} {vehicle.make} {vehicle.model}
+                  <tr
+                    key={vehicle.id}
+                    className={`group ${vehicleIdx % 2 === 0 ? "" : "bg-gray-50/30"}`}
+                  >
+                    <td className="sticky left-0 z-10 bg-white border-b border-r border-gray-200 p-3 group-hover:bg-purple-50/50 transition-colors">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {vehicle.make} {vehicle.model}
+                          </p>
+                          <p className="text-[11px] text-gray-400">{vehicle.year}</p>
+                        </div>
+                        {count > 0 && (
+                          <span className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold">
+                            {count}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     {dateRange.map((date, dateIdx) => {
-                      const isToday = toDateKey(date) === today;
+                      const isDateToday = toDateKey(date) === today;
+                      const weekend = isWeekend(date);
                       const bookingStartingHere = visibleBookings.filter(
                         (vb) => vb.startIdx === dateIdx
                       );
@@ -623,29 +689,60 @@ function TimelineView({
                       return (
                         <td
                           key={dateIdx}
-                          className={`border-b border-r border-gray-200 p-0 h-14 relative ${
-                            isToday ? "bg-purple-50/50" : "bg-white"
+                          className={`border-b border-r border-gray-100 p-0 h-14 relative ${
+                            isDateToday
+                              ? "bg-purple-50/40"
+                              : weekend
+                              ? "bg-gray-50/60"
+                              : ""
                           }`}
                         >
-                          {bookingStartingHere.map(({ booking, startIdx, endIdx }) => {
+                          {/* Today vertical line */}
+                          {isDateToday && (
+                            <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-red-400/60 z-[3] pointer-events-none" />
+                          )}
+                          {bookingStartingHere.map(({ booking, startIdx, endIdx, extendsLeft, extendsRight }) => {
                             const span = endIdx - startIdx + 1;
+                            // Dynamic rounding: flat edge if booking extends beyond view
+                            const roundLeft = extendsLeft ? "rounded-l-none" : "rounded-l-lg";
+                            const roundRight = extendsRight ? "rounded-r-none" : "rounded-r-lg";
+                            const pickupDate = booking.pickup_date.split("T")[0];
+                            const returnDate = booking.return_date.split("T")[0];
+                            const daysTotal = Math.ceil(
+                              (new Date(returnDate).getTime() - new Date(pickupDate).getTime()) / 86400000
+                            ) + 1;
+
                             return (
                               <div
                                 key={booking.id}
                                 onClick={() => onBookingClick(booking)}
-                                className={`absolute top-1 bottom-1 left-0.5 ${statusBgColors[booking.status]} border-2 ${statusBorderColors[booking.status]} rounded-md px-2 flex items-center overflow-hidden cursor-pointer hover:shadow-lg hover:brightness-95 transition-all z-[5]`}
+                                className={`absolute top-1.5 bottom-1.5 left-0 ${statusBgColors[booking.status]} border ${statusBorderColors[booking.status]} ${roundLeft} ${roundRight} px-2 flex items-center gap-1.5 overflow-hidden cursor-pointer hover:shadow-md hover:scale-[1.02] hover:z-20 transition-all duration-150 z-[5]`}
                                 style={{
-                                  width: `calc(${span * 100}% - 4px)`,
+                                  width: `calc(${span * 100}% - ${extendsLeft ? 0 : 2}px)`,
+                                  marginLeft: extendsLeft ? 0 : "1px",
                                 }}
-                                title={`${booking.customer_name} — Click to view details`}
+                                title={`${booking.customer_name}\n${pickupDate} → ${returnDate} (${daysTotal} days)\n$${booking.total_price.toFixed(2)} — ${booking.status}`}
                               >
+                                {/* Left arrow if extends beyond view */}
+                                {extendsLeft && (
+                                  <ChevronLeft className="w-3 h-3 text-gray-500 flex-shrink-0 -ml-1" />
+                                )}
                                 <span className="text-xs font-bold text-gray-800 truncate">
-                                  {booking.customer_name}
+                                  {booking.customer_name.split(" ")[0]}
                                 </span>
-                                {span >= 3 && (
-                                  <span className="text-xs text-gray-600 ml-1 truncate hidden sm:inline">
-                                    · ${booking.total_price.toFixed(0)}
+                                {span >= 2 && (
+                                  <span className="text-[10px] text-gray-600 truncate hidden sm:inline">
+                                    {daysTotal}d
                                   </span>
+                                )}
+                                {span >= 3 && (
+                                  <span className="text-[10px] font-semibold text-gray-700 truncate hidden md:inline">
+                                    ${booking.total_price.toFixed(0)}
+                                  </span>
+                                )}
+                                {/* Right arrow if extends beyond view */}
+                                {extendsRight && (
+                                  <ChevronRight className="w-3 h-3 text-gray-500 flex-shrink-0 -mr-1 ml-auto" />
                                 )}
                               </div>
                             );
@@ -660,9 +757,13 @@ function TimelineView({
                 <tr>
                   <td
                     colSpan={days + 1}
-                    className="text-center text-gray-500 py-12 text-sm"
+                    className="text-center py-16"
                   >
-                    No vehicles found. Add vehicles in the Fleet Management page.
+                    <div className="text-gray-400 mb-2">
+                      <Calendar className="w-10 h-10 mx-auto opacity-50" />
+                    </div>
+                    <p className="text-gray-500 text-sm font-medium">No vehicles found</p>
+                    <p className="text-gray-400 text-xs mt-1">Add vehicles in the Fleet Management page</p>
                   </td>
                 </tr>
               )}
@@ -671,15 +772,18 @@ function TimelineView({
         </div>
 
         {/* Legend */}
-        <div className="mt-6 pt-4 border-t border-gray-200 flex flex-wrap gap-4 text-xs">
-          {Object.entries(statusColors).map(([status]) => (
-            <div key={status} className="flex items-center gap-2">
-              <div
-                className={`w-4 h-4 rounded ${statusBgColors[status]} border-2 ${statusBorderColors[status]}`}
-              ></div>
-              <span className="capitalize">{status}</span>
-            </div>
-          ))}
+        <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
+          <span className="text-gray-400 font-medium uppercase tracking-wider text-[10px]">Status:</span>
+          {Object.entries(statusColors)
+            .filter(([status]) => status !== "cancelled")
+            .map(([status]) => (
+              <div key={status} className="flex items-center gap-1.5">
+                <div
+                  className={`w-3 h-3 rounded-sm ${statusBgColors[status]} border ${statusBorderColors[status]}`}
+                />
+                <span className="capitalize text-gray-600">{status}</span>
+              </div>
+            ))}
         </div>
       </CardContent>
     </Card>
