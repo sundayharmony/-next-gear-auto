@@ -18,7 +18,32 @@ export async function GET(request: NextRequest) {
   const limitParam = searchParams.get("limit");
   const fromDate = searchParams.get("from");
   const toDate = searchParams.get("to");
+  const search = searchParams.get("search");
+  const sortParam = searchParams.get("sort");
+  const orderParam = searchParams.get("order");
+  const pageParam = searchParams.get("page");
+  const perPageParam = searchParams.get("per_page");
   const supabase = getServiceSupabase();
+
+  // Column mapping for sort parameter
+  const sortColumnMap: Record<string, string> = {
+    customer_name: "customer_name",
+    pickup_date: "pickup_date",
+    return_date: "return_date",
+    total_price: "total_price",
+    deposit: "deposit",
+    status: "status",
+    created_at: "created_at",
+  };
+
+  // Determine sort column (default: created_at) and order (default: desc)
+  const sortColumn = sortParam && sortColumnMap[sortParam] ? sortColumnMap[sortParam] : "created_at";
+  const isAscending = orderParam === "asc";
+
+  // Pagination
+  const page = pageParam ? parseInt(pageParam, 10) : null;
+  const perPage = perPageParam ? parseInt(perPageParam, 10) : 50;
+  const offset = page && page > 0 ? (page - 1) * perPage : null;
 
   try {
     // Single booking lookup (used by success page) — single query with JOIN
@@ -51,8 +76,7 @@ export async function GET(request: NextRequest) {
     // List bookings with optional filters — single query with vehicle JOIN
     let query = supabase
       .from("bookings")
-      .select("*, vehicles(year, make, model)")
-      .order("created_at", { ascending: false });
+      .select("*, vehicles(year, make, model)", { count: "exact" });
 
     if (customerId && customerEmail) {
       // Search by both — return bookings matching EITHER (covers mismatches)
@@ -73,6 +97,10 @@ export async function GET(request: NextRequest) {
     if (toDate) {
       query = query.lte("pickup_date", toDate);
     }
+    // Server-side search: filter by customer_name, customer_email, or id (case-insensitive)
+    if (search) {
+      query = query.or(`customer_name.ilike.%${search}%,customer_email.ilike.%${search}%,id.eq.${search}`);
+    }
     if (limitParam) {
       const limit = parseInt(limitParam, 10);
       if (!isNaN(limit) && limit > 0) {
@@ -80,7 +108,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const { data: bookings, error } = await query;
+    // Apply sorting
+    query = query.order(sortColumn, { ascending: isAscending });
+
+    // Apply pagination if page is provided
+    if (offset !== null) {
+      query = query.range(offset, offset + perPage - 1);
+    }
+
+    const { data: bookings, error, count } = await query;
 
     if (error) {
       console.error("Bookings fetch error:", error);
@@ -90,15 +126,32 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const today = new Date().toISOString().split("T")[0];
+
     const enriched = (bookings || []).map((b) => {
       const v = b.vehicles as unknown as { year: number; make: string; model: string } | null;
       const { vehicles: _v, ...rest } = b;
+      // Check if overdue: return_date < today AND status === 'active'
+      const isOverdue = b.return_date < today && b.status === "active";
       return {
         ...rest,
         vehicleName: v ? `${v.year} ${v.make} ${v.model}` : "Unknown",
         customerName: b.customer_name || "Guest",
+        is_overdue: isOverdue,
       };
     });
+
+    // Handle pagination response
+    if (page !== null && offset !== null) {
+      const totalPages = Math.ceil((count || 0) / perPage);
+      return NextResponse.json({
+        data: enriched,
+        success: true,
+        total: count || 0,
+        page,
+        totalPages,
+      });
+    }
 
     return NextResponse.json({ data: enriched, success: true });
   } catch {
@@ -373,6 +426,8 @@ export async function PATCH(request: Request) {
     if (body.deposit !== undefined) updateFields.deposit = body.deposit;
     if (body.extras !== undefined) updateFields.extras = body.extras;
     if (body.insurance_opted_out !== undefined) updateFields.insurance_opted_out = body.insurance_opted_out;
+    if (body.admin_notes !== undefined) updateFields.admin_notes = body.admin_notes;
+    if (body.payment_method !== undefined) updateFields.payment_method = body.payment_method;
 
     if (Object.keys(updateFields).length === 0) {
       return NextResponse.json(

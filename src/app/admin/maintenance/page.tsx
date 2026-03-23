@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { compressImage } from "@/lib/utils/compress-image";
 import {
@@ -112,10 +112,22 @@ export default function AdminMaintenancePage() {
     fetchData();
   }, []);
 
-  // Filter records by status
-  const filteredRecords = records.filter((r) =>
-    statusFilter === "all" ? true : r.status === statusFilter
-  );
+  // Filter and sort records by status for "all" view
+  const filteredRecords = useMemo(() => {
+    const filtered = records.filter((r) =>
+      statusFilter === "all" ? true : r.status === statusFilter
+    );
+
+    if (statusFilter !== "all") return filtered;
+
+    const statusOrder: Record<MaintenanceRecord["status"], number> = {
+      pending: 0,
+      "in-progress": 1,
+      completed: 2,
+    };
+
+    return [...filtered].sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
+  }, [records, statusFilter]);
 
   // Count records by status
   const statusCounts = {

@@ -1,0 +1,529 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import { X, Check, AlertTriangle } from "lucide-react";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import adminFetch from "@/lib/utils/admin-fetch";
+import {
+  Vehicle,
+  CustomerOption,
+  ExtraItem,
+  AVAILABLE_EXTRAS,
+  PAYMENT_METHODS,
+  TIME_SLOTS,
+} from "../types";
+
+interface CreateBookingFormProps {
+  vehicles: Vehicle[];
+  allCustomers: CustomerOption[];
+  onClose: () => void;
+  onCreated: () => void;
+  onError: (msg: string) => void;
+  onSuccess: (msg: string) => void;
+  prefillData?: {
+    customerName?: string;
+    customerEmail?: string;
+    customerPhone?: string;
+  };
+}
+
+const emptyForm = {
+  customerName: "",
+  customerEmail: "",
+  customerPhone: "",
+  vehicleId: "",
+  pickupDate: "",
+  returnDate: "",
+  pickupTime: "10:00",
+  returnTime: "10:00",
+  totalPrice: 0,
+  status: "confirmed",
+  selectedExtras: ["e1"],
+  paymentMethod: "stripe",
+};
+
+export default function CreateBookingForm({
+  vehicles,
+  allCustomers,
+  onClose,
+  onCreated,
+  onError,
+  onSuccess,
+  prefillData,
+}: CreateBookingFormProps) {
+  const [form, setForm] = useState(emptyForm);
+  const [filteredCustomers, setFilteredCustomers] = useState<CustomerOption[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [searchValue, setSearchValue] = useState("");
+  const [hasOverlappingBookings, setHasOverlappingBookings] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Prefill data if provided
+  useEffect(() => {
+    if (prefillData) {
+      setForm((prev) => ({
+        ...prev,
+        customerName: prefillData.customerName || "",
+        customerEmail: prefillData.customerEmail || "",
+        customerPhone: prefillData.customerPhone || "",
+      }));
+    }
+  }, [prefillData]);
+
+  // Click-outside detection for dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setShowDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Handle customer search
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchValue(value);
+    if (value.trim()) {
+      const filtered = allCustomers.filter(
+        (c) =>
+          c.name.toLowerCase().includes(value.toLowerCase()) ||
+          c.email.toLowerCase().includes(value.toLowerCase())
+      );
+      setFilteredCustomers(filtered.slice(0, 8));
+      setShowDropdown(true);
+    } else {
+      setFilteredCustomers([]);
+      setShowDropdown(false);
+    }
+  };
+
+  // Select customer from dropdown
+  const selectCustomer = (customer: CustomerOption) => {
+    setForm((prev) => ({
+      ...prev,
+      customerName: customer.name,
+      customerEmail: customer.email,
+      customerPhone: customer.phone,
+    }));
+    setShowDropdown(false);
+    setSearchValue("");
+  };
+
+  // Calculate days
+  const calculateDays = () => {
+    if (!form.pickupDate || !form.returnDate) return 0;
+    const pickup = new Date(form.pickupDate).getTime();
+    const returnDate = new Date(form.returnDate).getTime();
+    return Math.max(1, Math.ceil((returnDate - pickup) / 86400000));
+  };
+
+  // Check for overlapping bookings
+  useEffect(() => {
+    const checkOverlap = async () => {
+      if (!form.vehicleId || !form.pickupDate || !form.returnDate) {
+        setHasOverlappingBookings(false);
+        return;
+      }
+      try {
+        const res = await adminFetch(
+          `/api/bookings/check-overlap?vehicleId=${form.vehicleId}&pickupDate=${form.pickupDate}&returnDate=${form.returnDate}`,
+          { method: "GET" }
+        );
+        const data = await res.json();
+        setHasOverlappingBookings(data.hasOverlap || false);
+      } catch (err) {
+        console.error("Failed to check booking overlap:", err);
+        setHasOverlappingBookings(false);
+      }
+    };
+    checkOverlap();
+  }, [form.vehicleId, form.pickupDate, form.returnDate]);
+
+  // Auto-calculate price
+  useEffect(() => {
+    const selectedVehicle = vehicles.find((v) => v.id === form.vehicleId);
+    if (!selectedVehicle || !form.pickupDate || !form.returnDate) {
+      setForm((prev) => ({ ...prev, totalPrice: 0 }));
+      return;
+    }
+
+    const days = calculateDays();
+    let baseTotal = days * selectedVehicle.dailyRate;
+    let extrasTotal = 0;
+
+    form.selectedExtras.forEach((extraId) => {
+      const extra = AVAILABLE_EXTRAS.find((e) => e.id === extraId);
+      if (extra) {
+        if (extra.billingType === "per-day") {
+          extrasTotal += days * extra.pricePerDay;
+        } else if (extra.billingType === "per-day-capped" && extra.maxPrice) {
+          extrasTotal += Math.min(days * extra.pricePerDay, extra.maxPrice);
+        } else if (extra.billingType === "one-time") {
+          extrasTotal += extra.pricePerDay;
+        }
+      }
+    });
+
+    const subtotal = baseTotal + extrasTotal;
+    const tax = subtotal * 0.08;
+    const total = Math.round((subtotal + tax) * 100) / 100;
+
+    setForm((prev) => ({ ...prev, totalPrice: total }));
+  }, [form.vehicleId, form.pickupDate, form.returnDate, form.selectedExtras, vehicles]);
+
+  // Toggle extra
+  const toggleExtra = (extraId: string) => {
+    setForm((prev) => ({
+      ...prev,
+      selectedExtras: prev.selectedExtras.includes(extraId)
+        ? prev.selectedExtras.filter((id) => id !== extraId)
+        : [...prev.selectedExtras, extraId],
+    }));
+  };
+
+  // Validate form
+  const validate = () => {
+    if (!form.customerName.trim()) {
+      onError("Customer name is required");
+      return false;
+    }
+    if (!form.customerEmail.trim()) {
+      onError("Customer email is required");
+      return false;
+    }
+    if (!form.vehicleId) {
+      onError("Vehicle is required");
+      return false;
+    }
+    if (!form.pickupDate) {
+      onError("Pickup date is required");
+      return false;
+    }
+    if (!form.returnDate) {
+      onError("Return date is required");
+      return false;
+    }
+    if (form.returnDate < form.pickupDate) {
+      onError("Return date must be after pickup date");
+      return false;
+    }
+    return true;
+  };
+
+  // Submit form
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!validate()) return;
+
+    setLoading(true);
+    try {
+      const payload = {
+        customerName: form.customerName,
+        customerEmail: form.customerEmail,
+        customerPhone: form.customerPhone || null,
+        vehicleId: form.vehicleId,
+        pickupDate: form.pickupDate,
+        returnDate: form.returnDate,
+        pickupTime: form.pickupTime,
+        returnTime: form.returnTime,
+        totalPrice: form.totalPrice,
+        status: form.status,
+        selectedExtras: form.selectedExtras,
+        paymentMethod: form.paymentMethod,
+      };
+
+      const res = await adminFetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const error = await res.json();
+        onError(error.message || "Failed to create booking");
+        setLoading(false);
+        return;
+      }
+
+      onSuccess("Booking created successfully");
+      setForm(emptyForm);
+      setSearchValue("");
+      onCreated();
+    } catch (err) {
+      onError(err instanceof Error ? err.message : "An error occurred");
+      setLoading(false);
+    }
+  };
+
+  const selectedVehicle = vehicles.find((v) => v.id === form.vehicleId);
+  const days = calculateDays();
+
+  return (
+    <Card className="border-purple-200 p-6">
+      <form onSubmit={handleSubmit} className="space-y-6">
+        {/* CUSTOMER SEARCH DROPDOWN */}
+        <div ref={dropdownRef} className="relative">
+          <label className="block text-sm font-medium mb-2">Find Existing Customer</label>
+          <Input
+            ref={searchInputRef}
+            type="text"
+            placeholder="Search by name or email..."
+            value={searchValue}
+            onChange={handleSearchChange}
+            onFocus={() => searchValue && setShowDropdown(true)}
+            className="w-full"
+          />
+          {showDropdown && filteredCustomers.length > 0 && (
+            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-50">
+              {filteredCustomers.map((customer) => (
+                <button
+                  key={customer.id}
+                  type="button"
+                  onClick={() => selectCustomer(customer)}
+                  className="w-full text-left px-4 py-2 hover:bg-purple-50"
+                >
+                  <div className="font-medium">{customer.name}</div>
+                  <div className="text-xs text-gray-500">{customer.email}</div>
+                </button>
+              ))}
+            </div>
+          )}
+          <div className="my-3 text-xs text-gray-400 text-center">
+            ──────── Or enter new customer details below ────────
+          </div>
+        </div>
+
+        {/* CUSTOMER FIELDS */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Customer Name *</label>
+            <Input
+              type="text"
+              value={form.customerName}
+              onChange={(e) => setForm({ ...form, customerName: e.target.value })}
+              placeholder="John Doe"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Email *</label>
+            <Input
+              type="email"
+              value={form.customerEmail}
+              onChange={(e) => setForm({ ...form, customerEmail: e.target.value })}
+              placeholder="john@example.com"
+            />
+          </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Phone (Optional)</label>
+          <Input
+            type="tel"
+            value={form.customerPhone}
+            onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
+            placeholder="+1 (555) 123-4567"
+          />
+        </div>
+
+        {/* VEHICLE SELECT */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Vehicle *</label>
+          <select
+            value={form.vehicleId}
+            onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}
+            className="w-full px-3 py-2 border rounded text-sm"
+          >
+            <option value="">Select a vehicle</option>
+            {vehicles.map((v) => (
+              <option
+                key={v.id}
+                value={v.id}
+                disabled={!v.isAvailable}
+                className={!v.isAvailable ? "text-gray-400" : ""}
+              >
+                {v.year} {v.make} {v.model} — ${v.dailyRate}/day
+                {!v.isAvailable ? " (Unavailable)" : ""}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* OVERLAP WARNING */}
+        {hasOverlappingBookings && (
+          <div className="flex gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded">
+            <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+            <div className="text-sm text-yellow-800">
+              This vehicle has overlapping bookings for the selected dates. Please review.
+            </div>
+          </div>
+        )}
+
+        {/* DATE/TIME FIELDS */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Pickup Date *</label>
+            <Input
+              type="date"
+              value={form.pickupDate}
+              onChange={(e) => setForm({ ...form, pickupDate: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Pickup Time *</label>
+            <select
+              value={form.pickupTime}
+              onChange={(e) => setForm({ ...form, pickupTime: e.target.value })}
+              className="w-full px-3 py-2 border rounded text-sm"
+            >
+              {TIME_SLOTS.map((slot) => (
+                <option key={slot.value} value={slot.value}>
+                  {slot.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Return Date *</label>
+            <Input
+              type="date"
+              value={form.returnDate}
+              onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Return Time *</label>
+            <select
+              value={form.returnTime}
+              onChange={(e) => setForm({ ...form, returnTime: e.target.value })}
+              className="w-full px-3 py-2 border rounded text-sm"
+            >
+              {TIME_SLOTS.map((slot) => (
+                <option key={slot.value} value={slot.value}>
+                  {slot.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {/* EXTRAS / INSURANCE */}
+        <div>
+          <label className="block text-sm font-medium mb-3">Extras & Insurance</label>
+          <div className="grid grid-cols-2 gap-3">
+            {AVAILABLE_EXTRAS.map((extra) => (
+              <button
+                key={extra.id}
+                type="button"
+                onClick={() => toggleExtra(extra.id)}
+                className={`p-3 border-2 rounded text-left transition ${
+                  form.selectedExtras.includes(extra.id)
+                    ? "border-purple-500 bg-purple-50"
+                    : "border-gray-200 bg-white hover:border-gray-300"
+                }`}
+              >
+                <div className="flex items-start gap-2">
+                  <div
+                    className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                      form.selectedExtras.includes(extra.id)
+                        ? "bg-purple-500 border-purple-500"
+                        : "border-gray-300"
+                    }`}
+                  >
+                    {form.selectedExtras.includes(extra.id) && (
+                      <Check className="w-3 h-3 text-white" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <div className="font-medium text-sm">
+                      {extra.name}
+                      {extra.id === "e1" && <span className="text-green-600 ml-1">(Recommended)</span>}
+                    </div>
+                    <div className="text-xs text-gray-600">{extra.description}</div>
+                    <div className="text-xs font-medium text-purple-600 mt-1">
+                      ${extra.pricePerDay}
+                      {extra.billingType === "per-day" && "/day"}
+                      {extra.billingType === "per-day-capped" && ` (max: $${extra.maxPrice})`}
+                      {extra.billingType === "one-time" && " (one-time)"}
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* PAYMENT METHOD */}
+        <div>
+          <label className="block text-sm font-medium mb-1">Payment Method</label>
+          <select
+            value={form.paymentMethod}
+            onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
+            className="w-full px-3 py-2 border rounded text-sm"
+          >
+            {PAYMENT_METHODS.map((method) => (
+              <option key={method.value} value={method.value}>
+                {method.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* PRICE + STATUS */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">Total Price ($)</label>
+            <Input
+              type="number"
+              step="0.01"
+              value={form.totalPrice}
+              onChange={(e) => setForm({ ...form, totalPrice: parseFloat(e.target.value) || 0 })}
+              placeholder="0.00"
+            />
+            <div className="text-xs text-gray-500 mt-1">
+              Auto-calculated from daily rate, editable for custom pricing
+            </div>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">Initial Status</label>
+            <select
+              value={form.status}
+              onChange={(e) => setForm({ ...form, status: e.target.value })}
+              className="w-full px-3 py-2 border rounded text-sm"
+            >
+              <option value="confirmed">Confirmed (paid outside site)</option>
+              <option value="pending">Pending (awaiting payment)</option>
+            </select>
+          </div>
+        </div>
+
+        {/* BUTTONS */}
+        <div className="flex gap-3 justify-end pt-4">
+          <Button
+            type="button"
+            onClick={onClose}
+            variant="outline"
+            disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={loading}
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            {loading ? "Creating..." : "Create Booking"}
+          </Button>
+        </div>
+      </form>
+    </Card>
+  );
+}
