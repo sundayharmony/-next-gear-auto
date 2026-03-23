@@ -23,7 +23,7 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Fleet", href: "/fleet" },
   { label: "About", href: "/about" },
   { label: "Location", href: "/location" },
-  { label: "Instagram", href: "/blog" }, // Instagram feed
+  { label: "Instagram", href: "/instagram" },
   { label: "FAQ", href: "/faq" },
 ];
 

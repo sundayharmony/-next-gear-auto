@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 
-// Old blog post URLs redirect to the new blog/social page
+// Old blog post URLs redirect to the Instagram feed page
 export default function BlogPostRedirect() {
-  redirect("/blog");
+  redirect("/instagram");
 }
