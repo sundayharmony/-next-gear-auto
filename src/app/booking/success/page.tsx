@@ -158,13 +158,13 @@ function SuccessContent() {
                           <CreditCard className="h-4 w-4" /> Amount Paid
                         </span>
                         <span className="text-sm font-semibold text-green-600">
-                          ${booking.total_price?.toFixed(2) || "—"}
+                          ${(booking.total_price ?? 0).toFixed(2)}
                         </span>
                       </div>
                       <div className="flex items-center justify-between py-3">
                         <span className="text-sm text-gray-500">Total</span>
                         <span className="text-lg font-bold text-purple-600">
-                          ${booking.total_price?.toFixed(2)}
+                          ${(booking.total_price ?? 0).toFixed(2)}
                         </span>
                       </div>
                     </div>

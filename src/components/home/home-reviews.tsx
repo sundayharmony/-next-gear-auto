@@ -108,9 +108,9 @@ export function HomeReviews() {
           </p>
           <div className="mt-4 flex items-center gap-3">
             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-purple-100 text-sm font-semibold text-purple-600">
-              {review.customerName
+              {(review.customerName || "?")
                 .split(" ")
-                .map((n) => n[0])
+                .map((n) => n[0] || "")
                 .join("")}
             </div>
             <div>

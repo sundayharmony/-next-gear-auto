@@ -1060,8 +1060,8 @@ function AdminBookingsContent() {
                         <div className="text-sm font-bold text-gray-900 mt-1">→ {formatDate(b.return_date)}</div>
                         <div className="text-lg font-bold text-purple-600">{formatTime(b.return_time)}</div>
                       </td>
-                      <td className="px-4 py-3 font-medium">${b.total_price?.toFixed(2)}</td>
-                      <td className="px-4 py-3 text-green-600">${b.deposit?.toFixed(2)}</td>
+                      <td className="px-4 py-3 font-medium">${(b.total_price ?? 0).toFixed(2)}</td>
+                      <td className="px-4 py-3 text-green-600">${(b.deposit ?? 0).toFixed(2)}</td>
                       <td className="px-4 py-3">
                         <Badge className={statusColors[b.status] || "bg-gray-100"}>{b.status}</Badge>
                       </td>
@@ -1446,11 +1446,11 @@ function AdminBookingsContent() {
                   <>
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-gray-500">Total</span>
-                      <span className="font-bold text-lg">${selectedBooking.total_price?.toFixed(2)}</span>
+                      <span className="font-bold text-lg">${(selectedBooking.total_price ?? 0).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between py-2 border-b">
                       <span className="text-gray-500">Paid</span>
-                      <span className="text-green-600 font-semibold">${selectedBooking.deposit?.toFixed(2)}</span>
+                      <span className="text-green-600 font-semibold">${(selectedBooking.deposit ?? 0).toFixed(2)}</span>
                     </div>
                   </>
                 )}

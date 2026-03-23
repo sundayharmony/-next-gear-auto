@@ -38,7 +38,10 @@ const formatDate = (d: string | undefined) => {
 
 const formatTime = (t: string | undefined | null) => {
   if (!t) return "___________";
-  const [h, m] = t.split(":").map(Number);
+  const parts = t.split(":").map(Number);
+  const h = parts[0];
+  const m = parts[1] ?? 0;
+  if (isNaN(h)) return "___________";
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 };

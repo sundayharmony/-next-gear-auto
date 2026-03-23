@@ -95,8 +95,8 @@ export default function AdminDashboardPage() {
               {[
                 { label: "Total Bookings", value: data.totalBookings, icon: Calendar, color: "text-purple-600" },
                 { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600" },
-                { label: "Revenue", value: `$${data.totalRevenue.toFixed(0)}`, icon: DollarSign, color: "text-green-600" },
-                { label: "Payments Collected", value: `$${data.totalDeposits.toFixed(0)}`, icon: TrendingUp, color: "text-emerald-600" },
+                { label: "Revenue", value: `$${(data.totalRevenue ?? 0).toFixed(0)}`, icon: DollarSign, color: "text-green-600" },
+                { label: "Payments Collected", value: `$${(data.totalDeposits ?? 0).toFixed(0)}`, icon: TrendingUp, color: "text-emerald-600" },
               ].map((stat) => (
                 <Card key={stat.label}>
                   <CardContent className="p-5">
@@ -210,7 +210,7 @@ export default function AdminDashboardPage() {
                             <div><span className="text-sm font-bold text-black">{formatDate(booking.pickup_date)}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
                             <div><span className="text-sm font-bold text-black">{formatDate(booking.return_date)}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>
                           </td>
-                          <td className="px-4 py-3 font-medium">${booking.total_price?.toFixed(2) || "—"}</td>
+                          <td className="px-4 py-3 font-medium">${(booking.total_price ?? 0).toFixed(2)}</td>
                           <td className="px-4 py-3">
                             <Badge className={statusColors[booking.status] || "bg-gray-100 text-gray-600"}>
                               {booking.status}

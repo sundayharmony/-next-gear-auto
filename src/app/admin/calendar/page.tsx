@@ -418,11 +418,11 @@ export default function AdminCalendarPage() {
                 <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Payment</h3>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-gray-500">Total</span>
-                  <span className="font-bold text-lg">${selectedBooking.total_price?.toFixed(2)}</span>
+                  <span className="font-bold text-lg">${(selectedBooking.total_price ?? 0).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-gray-500">Paid</span>
-                  <span className="text-green-600 font-semibold">${selectedBooking.deposit?.toFixed(2)}</span>
+                  <span className="text-green-600 font-semibold">${(selectedBooking.deposit ?? 0).toFixed(2)}</span>
                 </div>
               </div>
 
@@ -743,7 +743,7 @@ function TimelineView({
                                   left: `calc(${trimStart * 100}%)`,
                                   width: `calc(${preciseSpan * 100}% - 2px)`,
                                 }}
-                                title={`${booking.customer_name}\n${pickupDate} → ${returnDate} (${daysTotal} days)\n$${booking.total_price.toFixed(2)} — ${booking.status}`}
+                                title={`${booking.customer_name}\n${pickupDate} → ${returnDate} (${daysTotal} days)\n$${(booking.total_price ?? 0).toFixed(2)} — ${booking.status}`}
                               >
                                 {/* Left arrow if extends beyond view */}
                                 {extendsLeft && (
@@ -759,7 +759,7 @@ function TimelineView({
                                 )}
                                 {fullDaySpan >= 3 && (
                                   <span className="text-[10px] font-semibold text-gray-700 truncate hidden md:inline">
-                                    ${booking.total_price.toFixed(0)}
+                                    ${(booking.total_price ?? 0).toFixed(0)}
                                   </span>
                                 )}
                                 {/* Right arrow if extends beyond view */}
@@ -1012,7 +1012,7 @@ function CalendarView({
                     <div>
                       <span className="text-gray-600">Price:</span>
                       <div className="font-medium text-gray-900">
-                        ${booking.total_price.toFixed(2)}
+                        ${(booking.total_price ?? 0).toFixed(2)}
                       </div>
                     </div>
                     <div>
