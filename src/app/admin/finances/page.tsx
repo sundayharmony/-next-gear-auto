@@ -29,6 +29,7 @@ import {
   ParkingCircle,
   FileText,
   MoreHorizontal,
+  Download,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
+import { exportToCSV } from "@/lib/utils/csv-export";
 import {
   BarChart,
   Bar,
@@ -698,6 +700,17 @@ export default function AdminFinancesPage() {
       logger.error("Error deleting expense:", err);
       alert("Failed to delete expense");
     }
+  };
+
+  const handleExportExpensesCSV = () => {
+    const exportData = expenses.map((expense) => ({
+      Date: formatDate(expense.date),
+      Category: expense.category.charAt(0).toUpperCase() + expense.category.slice(1),
+      Description: expense.description || "",
+      Vehicle: expense.vehicle_id ? vehicles.find((v) => v.id === expense.vehicle_id)?.make + " " + vehicles.find((v) => v.id === expense.vehicle_id)?.model || "N/A" : "N/A",
+      Amount: `$${expense.amount}`,
+    }));
+    exportToCSV(exportData, `expenses-export-${new Date().toISOString().split("T")[0]}`);
   };
 
   // ─── Vehicle Detail View ────────────────────────────────────────
@@ -1376,14 +1389,19 @@ export default function AdminFinancesPage() {
               <CardContent className="p-5">
                 <div className="flex items-center justify-between mb-4">
                   <SectionHeader title="Expenses" subtitle={`${expenses.length} manual + ${maintenanceCosts.length} maintenance + ${financingCosts.length} financing`} />
-                  <Button
-                    onClick={() => setAddingExpense(!addingExpense)}
-                    size="sm"
-                    className={addingExpense ? "bg-gray-600" : ""}
-                  >
-                    {addingExpense ? <X className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
-                    {addingExpense ? "Cancel" : "Add Expense"}
-                  </Button>
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" onClick={handleExportExpensesCSV}>
+                      <Download className="h-4 w-4 mr-1" /> Export CSV
+                    </Button>
+                    <Button
+                      onClick={() => setAddingExpense(!addingExpense)}
+                      size="sm"
+                      className={addingExpense ? "bg-gray-600" : ""}
+                    >
+                      {addingExpense ? <X className="h-4 w-4 mr-1" /> : <Plus className="h-4 w-4 mr-1" />}
+                      {addingExpense ? "Cancel" : "Add Expense"}
+                    </Button>
+                  </div>
                 </div>
 
                 {addingExpense && (

@@ -3,7 +3,7 @@
 import React, { useEffect, useState, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save, User, UserPlus, Mail, Ticket, MapPin, Car } from "lucide-react";
+import { ArrowLeft, RefreshCw, Filter, Plus, X, Check, Upload, Shield, Pencil, Save, User, UserPlus, Mail, Ticket, MapPin, Car, Download } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,7 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
+import { exportToCSV } from "@/lib/utils/csv-export";
 
 interface BookingRow {
   id: string;
@@ -192,6 +193,21 @@ function AdminBookingsContent() {
       logger.error("Failed to fetch bookings:", err);
     }
     setLoading(false);
+  };
+
+  const handleExportBookingsCSV = () => {
+    const exportData = bookings.map((booking) => ({
+      "Booking ID": booking.id,
+      "Customer Name": booking.customer_name,
+      Email: booking.customer_email,
+      Vehicle: booking.vehicleName,
+      "Pickup Date": formatDate(booking.pickup_date),
+      "Return Date": formatDate(booking.return_date),
+      Status: booking.status,
+      "Total Amount": `$${booking.total_price}`,
+      "Created Date": formatDate(booking.created_at),
+    }));
+    exportToCSV(exportData, `bookings-export-${new Date().toISOString().split("T")[0]}`);
   };
 
   const fetchVehicles = async () => {
@@ -623,6 +639,9 @@ function AdminBookingsContent() {
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={fetchBookings} disabled={loading}>
               <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportBookingsCSV}>
+              <Download className="h-3.5 w-3.5 mr-1" /> Export CSV
             </Button>
             <Button
               size="sm"
