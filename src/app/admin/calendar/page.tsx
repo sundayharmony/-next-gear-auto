@@ -268,12 +268,12 @@ export default function AdminCalendarPage() {
               start={timelineStart}
               onPrevious={() => {
                 const newStart = new Date(timelineStart);
-                newStart.setDate(newStart.getDate() - 14);
+                newStart.setDate(newStart.getDate() - 9);
                 setTimelineStart(newStart);
               }}
               onNext={() => {
                 const newStart = new Date(timelineStart);
-                newStart.setDate(newStart.getDate() + 14);
+                newStart.setDate(newStart.getDate() + 9);
                 setTimelineStart(newStart);
               }}
               onToday={() => {
@@ -488,7 +488,7 @@ function TimelineView({
   onToday,
   onBookingClick,
 }: TimelineViewProps) {
-  const days = 14;
+  const days = 9;
   const dateRange = Array.from({ length: days }, (_, i) => {
     const date = new Date(start);
     date.setDate(date.getDate() + i);
@@ -543,9 +543,24 @@ function TimelineView({
         const extendsLeft = pickupKey < rangeStart;
         const extendsRight = returnKey > rangeEnd;
 
-        return { booking, startIdx, endIdx, extendsLeft, extendsRight };
+        // Calculate fractional offsets based on pickup/return times
+        // startFraction: how far into the first day the booking starts (0 = midnight, 0.5 = noon)
+        // endFraction: how far into the last day the booking ends (0.5 = noon, 1 = end of day)
+        let startFraction = 0;
+        let endFraction = 1;
+
+        if (!extendsLeft && booking.pickup_time) {
+          const [h, m] = booking.pickup_time.split(":").map(Number);
+          if (!isNaN(h)) startFraction = (h + (m || 0) / 60) / 24;
+        }
+        if (!extendsRight && booking.return_time) {
+          const [h, m] = booking.return_time.split(":").map(Number);
+          if (!isNaN(h)) endFraction = (h + (m || 0) / 60) / 24;
+        }
+
+        return { booking, startIdx, endIdx, extendsLeft, extendsRight, startFraction, endFraction };
       })
-      .filter(Boolean) as { booking: BookingRow; startIdx: number; endIdx: number; extendsLeft: boolean; extendsRight: boolean }[];
+      .filter(Boolean) as { booking: BookingRow; startIdx: number; endIdx: number; extendsLeft: boolean; extendsRight: boolean; startFraction: number; endFraction: number }[];
   };
 
   const today = toDateKey(new Date());
@@ -701,8 +716,15 @@ function TimelineView({
                           {isDateToday && (
                             <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-red-400/60 z-[3] pointer-events-none" />
                           )}
-                          {bookingStartingHere.map(({ booking, startIdx, endIdx, extendsLeft, extendsRight }) => {
-                            const span = endIdx - startIdx + 1;
+                          {bookingStartingHere.map(({ booking, startIdx, endIdx, extendsLeft, extendsRight, startFraction, endFraction }) => {
+                            const fullDaySpan = endIdx - startIdx + 1;
+                            // Calculate precise width: subtract the partial start and partial end
+                            // Each cell = 100%. Subtract the portion before pickup on first day,
+                            // and the portion after return on last day.
+                            const trimStart = startFraction; // fraction to trim from the left of the first cell
+                            const trimEnd = 1 - endFraction;  // fraction to trim from the right of the last cell
+                            const preciseSpan = fullDaySpan - trimStart - trimEnd;
+
                             // Dynamic rounding: flat edge if booking extends beyond view
                             const roundLeft = extendsLeft ? "rounded-l-none" : "rounded-l-lg";
                             const roundRight = extendsRight ? "rounded-r-none" : "rounded-r-lg";
@@ -716,10 +738,10 @@ function TimelineView({
                               <div
                                 key={booking.id}
                                 onClick={() => onBookingClick(booking)}
-                                className={`absolute top-1.5 bottom-1.5 left-0 ${statusBgColors[booking.status]} border ${statusBorderColors[booking.status]} ${roundLeft} ${roundRight} px-2 flex items-center gap-1.5 overflow-hidden cursor-pointer hover:shadow-md hover:scale-[1.02] hover:z-20 transition-all duration-150 z-[5]`}
+                                className={`absolute top-1.5 bottom-1.5 ${statusBgColors[booking.status]} border ${statusBorderColors[booking.status]} ${roundLeft} ${roundRight} px-2 flex items-center gap-1.5 overflow-hidden cursor-pointer hover:shadow-md hover:scale-[1.02] hover:z-20 transition-all duration-150 z-[5]`}
                                 style={{
-                                  width: `calc(${span * 100}% - ${extendsLeft ? 0 : 2}px)`,
-                                  marginLeft: extendsLeft ? 0 : "1px",
+                                  left: `calc(${trimStart * 100}%)`,
+                                  width: `calc(${preciseSpan * 100}% - 2px)`,
                                 }}
                                 title={`${booking.customer_name}\n${pickupDate} → ${returnDate} (${daysTotal} days)\n$${booking.total_price.toFixed(2)} — ${booking.status}`}
                               >
