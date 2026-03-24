@@ -152,7 +152,7 @@ export default function AdminVehiclesPage() {
   const stats = {
     total: vehicles.length,
     available: vehicles.filter((v) => v.isAvailable).length,
-    inMaintenance: vehicles.filter((v) => v.maintenanceStatus === "in-maintenance").length,
+    inMaintenance: vehicles.filter((v) => v.maintenanceStatus === "in-maintenance" || v.maintenanceStatus === "needs-service").length,
     avgRate:
       vehicles.length > 0
         ? Math.round(
