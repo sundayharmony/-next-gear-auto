@@ -19,6 +19,10 @@ import {
   ChevronLeft,
   ChevronRight,
   ImageIcon,
+  DollarSign,
+  AlertTriangle,
+  CheckCircle,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -94,6 +98,8 @@ export default function AdminVehiclesPage() {
   const { error, setError, success, setSuccess } = useAutoToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<VehicleCategory | "">("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const editFormRef = useRef<HTMLDivElement>(null);
 
 
   const fetchVehicles = async () => {
@@ -276,6 +282,9 @@ export default function AdminVehiclesPage() {
               : v
           )
         );
+        setSuccess(
+          `${getVehicleDisplayName(vehicle)} marked as ${!vehicle.isAvailable ? "available" : "unavailable"}`
+        );
       } else {
         setError(data.message || "Failed to update availability");
       }
@@ -285,8 +294,13 @@ export default function AdminVehiclesPage() {
   };
 
   const startEdit = (vehicle: Vehicle) => {
+    setShowAddForm(false);
     setEditingId(vehicle.id);
     setEditForm({ ...vehicle });
+    // Scroll to edit form after React re-renders it
+    setTimeout(() => {
+      editFormRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
   };
 
   const saveEdit = async () => {
@@ -392,6 +406,7 @@ export default function AdminVehiclesPage() {
 
   const deleteVehicle = async (id: string) => {
     if (!confirm("Are you sure you want to delete this vehicle?")) return;
+    setDeletingId(id);
     try {
       const res = await adminFetch(`/api/admin/vehicles?id=${id}`, {
         method: "DELETE",
@@ -400,11 +415,14 @@ export default function AdminVehiclesPage() {
       const data = await res.json();
       if (data.success) {
         setVehicles((prev) => prev.filter((v) => v.id !== id));
+        setSuccess("Vehicle deleted successfully");
       } else {
         setError(data.message || "Failed to delete vehicle");
       }
     } catch {
       setError("Network error — could not delete vehicle");
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -1082,7 +1100,11 @@ export default function AdminVehiclesPage() {
               }}
               className="bg-white text-purple-900 hover:bg-gray-100"
             >
-              <Plus className="h-4 w-4 mr-2" /> Add Vehicle
+              {showAddForm ? (
+                <><X className="h-4 w-4 mr-2" /> Cancel</>
+              ) : (
+                <><Plus className="h-4 w-4 mr-2" /> Add Vehicle</>
+              )}
             </Button>
           </div>
         </div>
@@ -1114,35 +1136,55 @@ export default function AdminVehiclesPage() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-gray-900">
-                {stats.total}
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="rounded-lg bg-gray-100 p-2">
+                <Car className="h-5 w-5 text-gray-600" />
               </div>
-              <p className="text-sm text-gray-600 mt-1">Total Vehicles</p>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">
+                  {stats.total}
+                </div>
+                <p className="text-sm text-gray-600">Total Vehicles</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">
-                {stats.available}
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="rounded-lg bg-green-100 p-2">
+                <CheckCircle className="h-5 w-5 text-green-600" />
               </div>
-              <p className="text-sm text-gray-600 mt-1">Available</p>
+              <div>
+                <div className="text-2xl font-bold text-green-600">
+                  {stats.available}
+                </div>
+                <p className="text-sm text-gray-600">Available</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-600">
-                {stats.inMaintenance}
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="rounded-lg bg-yellow-100 p-2">
+                <AlertTriangle className="h-5 w-5 text-yellow-600" />
               </div>
-              <p className="text-sm text-gray-600 mt-1">In Maintenance</p>
+              <div>
+                <div className="text-2xl font-bold text-yellow-600">
+                  {stats.inMaintenance}
+                </div>
+                <p className="text-sm text-gray-600">In Maintenance</p>
+              </div>
             </CardContent>
           </Card>
           <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-purple-600">
-                ${stats.avgRate}
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="rounded-lg bg-purple-100 p-2">
+                <DollarSign className="h-5 w-5 text-purple-600" />
               </div>
-              <p className="text-sm text-gray-600 mt-1">Avg Daily Rate</p>
+              <div>
+                <div className="text-2xl font-bold text-purple-600">
+                  ${stats.avgRate}
+                </div>
+                <p className="text-sm text-gray-600">Avg Daily Rate</p>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -1173,8 +1215,17 @@ export default function AdminVehiclesPage() {
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Search vehicles"
-              className="pl-10"
+              className="pl-10 pr-8"
             />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                aria-label="Clear search"
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-400" />
@@ -1208,9 +1259,18 @@ export default function AdminVehiclesPage() {
           </Button>
         </div>
 
-        {/* Edit Form Modal */}
+        {/* Filtered Results Count */}
+        {(searchQuery || filterCategory) && (
+          <p className="text-sm text-gray-500 mb-4">
+            Showing {filteredVehicles.length} of {vehicles.length} vehicle{vehicles.length !== 1 ? "s" : ""}
+            {searchQuery && <> matching &ldquo;{searchQuery}&rdquo;</>}
+            {filterCategory && <> in <span className="font-medium capitalize">{filterCategory}</span></>}
+          </p>
+        )}
+
+        {/* Edit Form */}
         {editingId && (
-          <>
+          <div ref={editFormRef}>
             {renderVehicleForm(
               editForm,
               setEditForm,
@@ -1219,12 +1279,13 @@ export default function AdminVehiclesPage() {
               () => setEditingId(null),
               saving
             )}
-          </>
+          </div>
         )}
 
         {/* Vehicles Grid */}
         {loading ? (
           <div className="text-center py-12">
+            <Loader2 className="h-8 w-8 text-purple-500 animate-spin mx-auto mb-3" />
             <p className="text-gray-500">Loading vehicles...</p>
           </div>
         ) : filteredVehicles.length === 0 ? (
