@@ -23,6 +23,8 @@ import {
   AlertTriangle,
   CheckCircle,
   Loader2,
+  EyeOff,
+  Fuel,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -102,7 +104,6 @@ export default function AdminVehiclesPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const editFormRef = useRef<HTMLDivElement>(null);
 
-
   const fetchVehicles = async () => {
     setLoading(true);
     try {
@@ -126,21 +127,26 @@ export default function AdminVehiclesPage() {
     fetchVehicles();
   }, []);
 
-  // Close forms on Escape key
+  // Close forms on Escape key (only when not focused on an input)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (editingId) {
-          setEditingId(null);
-        } else if (showAddForm) {
-          setShowAddForm(false);
-          setNewVehicle(emptyVehicle);
-        }
+      if (e.key !== "Escape" || saving) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+        // Blur the field instead of closing the form
+        (e.target as HTMLElement).blur();
+        return;
+      }
+      if (editingId) {
+        setEditingId(null);
+      } else if (showAddForm) {
+        setShowAddForm(false);
+        setNewVehicle(emptyVehicle);
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [editingId, showAddForm]);
+  }, [editingId, showAddForm, saving]);
 
   // Compute stats
   const stats = {
@@ -947,7 +953,7 @@ export default function AdminVehiclesPage() {
                 onChange={(e) =>
                   setForm({ ...form, featureInput: e.target.value })
                 }
-                placeholder="e.g. Leather seats, GPS"
+                placeholder="Add a feature (e.g. Leather seats)"
                 onKeyDown={(e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -959,6 +965,7 @@ export default function AdminVehiclesPage() {
                 type="button"
                 variant="outline"
                 disabled={!form.featureInput?.trim()}
+                aria-label="Add feature"
                 onClick={() =>
                   addFeature(formKey, form.featureInput || "")
                 }
@@ -1136,7 +1143,7 @@ export default function AdminVehiclesPage() {
             <div>
               <h1 className="text-3xl font-bold">Fleet Management</h1>
               <p className="mt-1 text-purple-200">
-                Manage your rental vehicle fleet
+                Manage your rental vehicle fleet{vehicles.length > 0 && ` · ${vehicles.length} vehicle${vehicles.length !== 1 ? "s" : ""}`}
               </p>
             </div>
             <Button
@@ -1337,11 +1344,22 @@ export default function AdminVehiclesPage() {
         ) : filteredVehicles.length === 0 ? (
           <div className="text-center py-12">
             <Car className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">
+            <p className="text-gray-500 mb-3">
               {vehicles.length === 0
                 ? "No vehicles yet. Add your first vehicle!"
                 : "No vehicles match your search."}
             </p>
+            {vehicles.length === 0 && (
+              <Button
+                onClick={() => {
+                  setShowAddForm(true);
+                  setEditingId(null);
+                }}
+                className="bg-purple-600 hover:bg-purple-700"
+              >
+                <Plus className="h-4 w-4 mr-2" /> Add Your First Vehicle
+              </Button>
+            )}
             {vehicles.length > 0 && (searchQuery || filterCategory) && (
               <Button
                 variant="outline"
@@ -1378,7 +1396,9 @@ export default function AdminVehiclesPage() {
                   {/* Status Badges Overlay */}
                   <div className="absolute top-2 right-2 flex gap-1">
                     {vehicle.isPublished === false && (
-                      <Badge className="bg-yellow-500 text-black">Draft</Badge>
+                      <Badge className="bg-yellow-500 text-black flex items-center gap-1">
+                        <EyeOff className="h-3 w-3" /> Draft
+                      </Badge>
                     )}
                     <Badge
                       className={
@@ -1406,6 +1426,13 @@ export default function AdminVehiclesPage() {
                   <h3 className="font-semibold text-gray-900 mb-2 text-lg">
                     {getVehicleDisplayName(vehicle)}
                   </h3>
+
+                  {/* Description snippet */}
+                  {vehicle.description && (
+                    <p className="text-sm text-gray-500 mb-2 line-clamp-2">
+                      {vehicle.description}
+                    </p>
+                  )}
 
                   {/* Category and Color */}
                   <div className="flex items-center gap-2 mb-3">
@@ -1483,11 +1510,18 @@ export default function AdminVehiclesPage() {
                         {vehicle.specs.transmission}
                       </span>
                     </div>
+                    <div className="flex justify-between">
+                      <span>Fuel:</span>
+                      <span className="font-medium flex items-center gap-1">
+                        <Fuel className="h-3 w-3" aria-hidden="true" />
+                        {vehicle.specs.fuelType}
+                      </span>
+                    </div>
                   </div>
 
                   {/* Maintenance Status */}
                   <div className="mb-4 flex items-center gap-2">
-                    <Wrench className="h-3 w-3 text-gray-600" />
+                    <Wrench className="h-3 w-3 text-gray-600" aria-hidden="true" />
                     <Badge
                       variant="outline"
                       className={
@@ -1545,11 +1579,11 @@ export default function AdminVehiclesPage() {
                   <div className="flex gap-2">
                     <Button
                       size="sm"
-                      variant="outline"
-                      className="flex-1"
-                      onClick={() => startEdit(vehicle)}
+                      variant={editingId === vehicle.id ? "default" : "outline"}
+                      className={`flex-1 ${editingId === vehicle.id ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}`}
+                      onClick={() => editingId === vehicle.id ? setEditingId(null) : startEdit(vehicle)}
                     >
-                      <Pencil className="h-3 w-3 mr-1" /> Edit
+                      <Pencil className="h-3 w-3 mr-1" /> {editingId === vehicle.id ? "Editing" : "Edit"}
                     </Button>
                     <Button
                       size="sm"
