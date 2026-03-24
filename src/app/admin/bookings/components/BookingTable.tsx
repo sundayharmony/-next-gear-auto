@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { ArrowUp, ArrowDown, FileText, Shield, Check, AlertTriangle, StickyNote } from "lucide-react";
 import { BookingRow, SortField, SortOrder } from "../types";
 import { formatDate, formatTime, formatDateShort } from "@/lib/utils/date-helpers";
@@ -37,6 +37,14 @@ export default function BookingTable({
 }: BookingTableProps) {
   const allSelected = bookings.length > 0 && selectedIds.size === bookings.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < bookings.length;
+
+  const selectAllRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (selectAllRef.current) {
+      selectAllRef.current.indeterminate = someSelected;
+    }
+  }, [someSelected]);
 
   const getStatusActions = (status: string): string[] => {
     switch (status) {
@@ -78,10 +86,11 @@ export default function BookingTable({
           <tr className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
             <th className="px-4 py-3 text-left">
               <input
+                ref={selectAllRef}
                 type="checkbox"
                 checked={allSelected}
                 onChange={onToggleSelectAll}
-                className="rounded border-gray-300 cursor-pointer"
+                className="rounded border-gray-300 cursor-pointer accent-purple-600"
               />
             </th>
             <th className="px-4 py-3 text-left">
@@ -114,8 +123,8 @@ export default function BookingTable({
               <tr
                 key={booking.id}
                 onClick={() => onSelectBooking(booking)}
-                className={`border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors ${
-                  isSelected ? "bg-purple-50" : ""
+                className={`border-b border-gray-200 cursor-pointer transition-colors ${
+                  isSelected ? "bg-purple-50 hover:bg-purple-100" : "hover:bg-gray-50"
                 }`}
               >
                 {/* Checkbox */}
@@ -124,7 +133,7 @@ export default function BookingTable({
                     type="checkbox"
                     checked={isSelected}
                     onChange={() => onToggleSelect(booking.id)}
-                    className="rounded border-gray-300 cursor-pointer"
+                    className="rounded border-gray-300 cursor-pointer accent-purple-600"
                   />
                 </td>
 
@@ -172,9 +181,9 @@ export default function BookingTable({
 
                 {/* Status */}
                 <td className="px-4 py-3">
-                  <Badge variant="outline" className="text-xs">
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[booking.status] || "bg-gray-100 text-gray-600"}`}>
                     {booking.status}
-                  </Badge>
+                  </span>
                 </td>
 
                 {/* Document Indicators */}

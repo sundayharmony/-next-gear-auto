@@ -118,70 +118,64 @@ export default function BookingFilters({
 
       {/* Bulk action bar */}
       {selectedCount > 0 && (
-        <div className="flex items-center gap-3 px-4 py-3 bg-purple-50 border border-purple-200 rounded-full">
-          <span className="text-sm font-medium text-purple-900">
+        <div className="flex items-center gap-1 px-4 py-2 bg-purple-50 border border-purple-200 rounded-full">
+          <span className="text-sm font-medium text-purple-900 mr-2">
             {selectedCount} selected
           </span>
           <div className="flex-1" />
-          <Button
-            size="sm"
-            variant="ghost"
+          <button
             onClick={onBulkConfirm}
             disabled={bulkUpdating}
             title="Confirm selected bookings"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Check className="w-4 h-4 mr-1" />
+            <Check className="w-4 h-4" />
             Confirm
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
+          </button>
+          <button
             onClick={onBulkStart}
             disabled={bulkUpdating}
             title="Start selected bookings"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Check className="w-4 h-4 mr-1" />
+            <Check className="w-4 h-4" />
             Start
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
+          </button>
+          <button
             onClick={onBulkComplete}
             disabled={bulkUpdating}
             title="Complete selected bookings"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Check className="w-4 h-4 mr-1" />
+            <Check className="w-4 h-4" />
             Complete
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
+          </button>
+          <button
             onClick={onBulkCancel}
             disabled={bulkUpdating}
             title="Cancel selected bookings"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 rounded-full hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <X className="w-4 h-4 mr-1" />
+            <X className="w-4 h-4" />
             Cancel
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
+          </button>
+          <button
             onClick={onBulkEmail}
             disabled={bulkUpdating}
             title="Send email to selected"
+            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Mail className="w-4 h-4 mr-1" />
+            <Mail className="w-4 h-4" />
             Email
-          </Button>
-          <Button
-            size="sm"
-            variant="ghost"
+          </button>
+          <button
             onClick={onClearSelection}
             disabled={bulkUpdating}
             title="Clear selection"
+            className="inline-flex items-center p-1.5 text-gray-500 rounded-full hover:bg-gray-200 active:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-4 h-4" />
-          </Button>
+          </button>
         </div>
       )}
 
