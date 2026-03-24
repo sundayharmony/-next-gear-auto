@@ -1331,6 +1331,14 @@ export default function AdminVehiclesPage() {
                       {vehicle.isAvailable ? "Available" : "Unavailable"}
                     </Badge>
                   </div>
+
+                  {/* Image count badge */}
+                  {vehicle.images && vehicle.images.length > 1 && (
+                    <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-black/70 text-white text-xs font-medium rounded px-1.5 py-0.5">
+                      <ImageIcon className="h-3 w-3" />
+                      {vehicle.images.length}
+                    </div>
+                  )}
                 </div>
 
                 {/* Content */}
@@ -1345,21 +1353,27 @@ export default function AdminVehiclesPage() {
                     <Badge variant="secondary">{vehicle.category}</Badge>
                     <div
                       className="w-4 h-4 rounded-full border border-gray-300"
+                      aria-hidden="true"
                       style={{
                         backgroundColor:
-                          vehicle.color === "White"
-                            ? "#FFFFFF"
-                            : vehicle.color === "Black"
-                            ? "#000000"
-                            : vehicle.color === "Silver"
-                            ? "#C0C0C0"
-                            : vehicle.color === "Gray"
-                            ? "#808080"
-                            : vehicle.color === "Blue"
-                            ? "#0000FF"
-                            : vehicle.color === "Red"
-                            ? "#FF0000"
-                            : "#666666",
+                          {
+                            White: "#FFFFFF",
+                            Black: "#000000",
+                            Silver: "#C0C0C0",
+                            Gray: "#808080",
+                            Grey: "#808080",
+                            Blue: "#3B82F6",
+                            Red: "#EF4444",
+                            Green: "#22C55E",
+                            Yellow: "#EAB308",
+                            Orange: "#F97316",
+                            Brown: "#92400E",
+                            Beige: "#D4C5A9",
+                            Gold: "#CA8A04",
+                            Navy: "#1E3A5F",
+                            Maroon: "#7F1D1D",
+                            Purple: "#9333EA",
+                          }[vehicle.color] || "#666666",
                       }}
                       title={vehicle.color}
                     />
@@ -1497,11 +1511,16 @@ export default function AdminVehiclesPage() {
                     <Button
                       size="sm"
                       variant="outline"
-                      className="text-red-600 hover:text-red-700"
+                      className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => deleteVehicle(vehicle.id)}
+                      disabled={deletingId === vehicle.id}
                       aria-label={`Delete ${getVehicleDisplayName(vehicle)}`}
                     >
-                      <Trash2 className="h-3 w-3" />
+                      {deletingId === vehicle.id ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
                     </Button>
                   </div>
                 </CardContent>
