@@ -90,6 +90,13 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
+    };
+  }, []);
+
   // Fetch tickets, activity, and payments on mount
   useEffect(() => {
     const fetchDetails = async () => {
@@ -245,7 +252,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       onUpdateBooking(updated);
 
       // Keep "saving" indicator visible briefly so user sees feedback
-      setTimeout(() => {
+      notesTimeoutRef.current = setTimeout(() => {
         setNoteSaving(false);
       }, 1500);
     } catch (err) {

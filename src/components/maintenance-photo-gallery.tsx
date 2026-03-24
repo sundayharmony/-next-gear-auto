@@ -74,7 +74,7 @@ export function MaintenancePhotoGallery({
       <div className="flex flex-wrap gap-2">
         {photos.map((photo, i) => (
           <div
-            key={i}
+            key={photo}
             className="relative group h-20 w-20 rounded-lg overflow-hidden border border-gray-200 cursor-pointer hover:border-purple-400 transition-colors"
             onClick={() => openLightbox(i)}
           >
@@ -184,7 +184,7 @@ export function MaintenancePhotoGallery({
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2 rounded-lg bg-black/50 p-2 max-w-[90vw] overflow-x-auto">
               {photos.map((photo, i) => (
                 <button
-                  key={i}
+                  key={photo}
                   onClick={(e) => {
                     e.stopPropagation();
                     if (isPdf(photo)) {

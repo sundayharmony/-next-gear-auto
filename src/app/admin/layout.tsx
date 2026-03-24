@@ -32,6 +32,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [recentBookings, setRecentBookings] = useState<Array<{ id: string; customer_name: string; created_at: string; total_price: number }>>([]);
@@ -190,11 +191,12 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Footer */}
         <div className="px-3 py-4 border-t border-gray-800">
           <button
-            onClick={async () => { await logout(); setSidebarOpen(false); router.push("/"); }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+            disabled={loggingOut}
+            onClick={async () => { setLoggingOut(true); await logout(); setSidebarOpen(false); router.push("/"); }}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <LogOut className="h-4.5 w-4.5" />
-            Sign Out
+            {loggingOut ? "Signing out…" : "Sign Out"}
           </button>
         </div>
       </aside>

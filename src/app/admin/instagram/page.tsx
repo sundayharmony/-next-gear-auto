@@ -66,6 +66,7 @@ export default function AdminInstagramPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: newUrl.trim(), caption: newCaption.trim() || null }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setNewUrl("");
@@ -85,6 +86,7 @@ export default function AdminInstagramPage() {
     if (!confirm("Remove this Instagram post from the feed?")) return;
     try {
       const res = await adminFetch(`/api/instagram?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setPosts((prev) => prev.filter((p) => p.id !== id));

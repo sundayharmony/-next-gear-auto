@@ -1088,6 +1088,7 @@ export default function AdminFinancesPage() {
                   type="date"
                   value={dateRange.from}
                   onChange={(e) => setDateRange((p) => ({ ...p, from: e.target.value }))}
+                  aria-label="Start date"
                   className="bg-transparent text-white text-sm border-none outline-none"
                 />
                 <span className="text-gray-400">—</span>
@@ -1095,6 +1096,7 @@ export default function AdminFinancesPage() {
                   type="date"
                   value={dateRange.to}
                   onChange={(e) => setDateRange((p) => ({ ...p, to: e.target.value }))}
+                  aria-label="End date"
                   className="bg-transparent text-white text-sm border-none outline-none"
                 />
               </div>

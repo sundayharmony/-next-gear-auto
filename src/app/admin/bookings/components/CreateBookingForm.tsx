@@ -126,9 +126,10 @@ export default function CreateBookingForm({
 
   // Check for overlapping bookings
   useEffect(() => {
+    let cancelled = false;
     const checkOverlap = async () => {
       if (!form.vehicleId || !form.pickupDate || !form.returnDate) {
-        setHasOverlappingBookings(false);
+        if (!cancelled) setHasOverlappingBookings(false);
         return;
       }
       try {
@@ -138,13 +139,14 @@ export default function CreateBookingForm({
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        setHasOverlappingBookings(data.hasOverlap || false);
+        if (!cancelled) setHasOverlappingBookings(data.hasOverlap || false);
       } catch (err) {
         logger.error("Failed to check booking overlap:", err);
-        setHasOverlappingBookings(false);
+        if (!cancelled) setHasOverlappingBookings(false);
       }
     };
     checkOverlap();
+    return () => { cancelled = true; };
   }, [form.vehicleId, form.pickupDate, form.returnDate]);
 
   // Auto-calculate price

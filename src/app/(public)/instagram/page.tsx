@@ -36,6 +36,7 @@ declare global {
 export default function SocialPage() {
   const [posts, setPosts] = useState<InstaPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [activePost, setActivePost] = useState<InstaPost | null>(null);
   const [embedLoading, setEmbedLoading] = useState(false);
   const embedRef = useRef<HTMLDivElement>(null);
@@ -52,6 +53,7 @@ export default function SocialPage() {
         }
       } catch (error) {
         logger.error("Failed to fetch Instagram posts", error);
+        setFetchError(true);
       }
       setLoading(false);
     }
@@ -182,6 +184,11 @@ export default function SocialPage() {
                 className="aspect-square rounded-xl bg-gray-100 animate-pulse"
               />
             ))}
+          </div>
+        ) : fetchError ? (
+          <div className="text-center py-12">
+            <Instagram className="mx-auto h-12 w-12 text-gray-300 mb-4" />
+            <p className="text-gray-500">Unable to load posts right now. Please try again later.</p>
           </div>
         ) : posts.length > 0 ? (
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">

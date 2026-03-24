@@ -30,6 +30,7 @@ function SuccessContent() {
   const sessionId = searchParams.get("session_id");
   const [booking, setBooking] = useState<BookingDetails | null>(null);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState(false);
   const [agreementStatus, setAgreementStatus] = useState<"idle" | "signing" | "signed" | "error">("idle");
 
   // Submit agreement signatures that were saved to localStorage before Stripe redirect
@@ -105,6 +106,7 @@ function SuccessContent() {
         }
       } catch (err) {
         logger.error("Failed to fetch booking:", err);
+        setFetchError(true);
       }
       setLoading(false);
     }
@@ -132,6 +134,14 @@ function SuccessContent() {
               <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
               <p className="mt-4 text-gray-500">Loading your booking details...</p>
             </div>
+          ) : fetchError ? (
+            <Card className="mb-6">
+              <CardContent className="p-6 text-center">
+                <p className="text-gray-500 mb-2">We couldn&apos;t load your booking details, but your payment was processed successfully.</p>
+                <p className="text-sm text-gray-400">Your booking ID: <span className="font-mono font-bold text-purple-600">{bookingId || "—"}</span></p>
+                <p className="text-sm text-gray-400 mt-1">Please save this ID for your records. You can also check your email for a confirmation.</p>
+              </CardContent>
+            </Card>
           ) : (
             <>
               <Card className="mb-6">

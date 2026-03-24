@@ -59,7 +59,7 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
         </div>
         {images.slice(1, 3).map((img, i) => (
           <div
-            key={i}
+            key={img}
             className="aspect-[16/9] rounded-lg overflow-hidden bg-gray-100 cursor-pointer group"
             onClick={() => openLightbox(i + 1)}
           >
@@ -149,7 +149,7 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2 rounded-lg bg-black/50 p-2">
               {images.map((img, i) => (
                 <button
-                  key={i}
+                  key={img}
                   onClick={(e) => { e.stopPropagation(); setActiveIndex(i); }}
                   aria-label={`View image ${i + 1} of ${images.length}`}
                   className={`h-12 w-16 rounded overflow-hidden border-2 transition-all ${

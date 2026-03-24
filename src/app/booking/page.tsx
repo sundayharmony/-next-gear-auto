@@ -454,11 +454,11 @@ function BookingPageInner() {
       <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-xl" onClick={onClose}>
         <div className="bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl max-w-sm w-full mx-4 shadow-2xl p-6 animate-in" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center justify-between mb-6">
-            <button onClick={previousMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
+            <button onClick={previousMonth} aria-label="Previous month" className="p-2 hover:bg-gray-100 rounded-lg transition">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h3 className="text-lg font-semibold text-gray-900">{monthYear}</h3>
-            <button onClick={nextMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
+            <button onClick={nextMonth} aria-label="Next month" className="p-2 hover:bg-gray-100 rounded-lg transition">
               <ArrowRight className="h-5 w-5" />
             </button>
           </div>
@@ -603,13 +603,14 @@ function BookingPageInner() {
 
           {/* Month navigation */}
           <div className="flex items-center justify-between mb-6">
-            <button onClick={previousMonth} className="p-2 hover:bg-gray-100 rounded-lg transition">
+            <button onClick={previousMonth} aria-label="Previous month" className="p-2 hover:bg-gray-100 rounded-lg transition">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h3 className="text-lg font-semibold text-gray-900">{monthYear}</h3>
             <button
               onClick={nextMonth}
               disabled={new Date(dobViewDate.getFullYear(), dobViewDate.getMonth() + 1) > maxDate}
+              aria-label="Next month"
               className="p-2 hover:bg-gray-100 rounded-lg transition disabled:opacity-30 disabled:cursor-not-allowed"
             >
               <ArrowRight className="h-5 w-5" />
@@ -1273,7 +1274,7 @@ function BookingPageInner() {
                           — {booking.promoDiscount?.description || "Discount applied"}
                         </span>
                       </div>
-                      <button onClick={handleRemovePromo} className="text-green-600 hover:text-green-800">
+                      <button onClick={handleRemovePromo} aria-label="Remove promo code" className="text-green-600 hover:text-green-800">
                         <X className="h-4 w-4" />
                       </button>
                     </div>
@@ -1347,7 +1348,7 @@ function BookingPageInner() {
                           <h3 className="font-bold text-gray-900">Rental Agreement</h3>
                           <div className="flex items-center gap-3">
                             <span className="text-xs text-gray-400">Page {fullAgreementPage} of 3</span>
-                            <button onClick={() => setShowFullAgreement(false)} className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
+                            <button onClick={() => setShowFullAgreement(false)} aria-label="Close agreement" className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
                               <X className="h-4 w-4 text-gray-600" />
                             </button>
                           </div>
