@@ -13,8 +13,10 @@ function SetPasswordForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const emailFromUrl = searchParams.get("email") || "";
+  const tokenFromUrl = searchParams.get("token") || "";
 
   const [email] = useState(emailFromUrl);
+  const [token] = useState(tokenFromUrl);
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -24,10 +26,14 @@ function SetPasswordForm() {
 
   const passwordStrength = (pw: string): { label: string; color: string; width: string } => {
     if (pw.length === 0) return { label: "", color: "bg-gray-200", width: "w-0" };
-    if (pw.length < 6) return { label: "Weak", color: "bg-red-500", width: "w-1/4" };
-    if (pw.length < 8) return { label: "Fair", color: "bg-yellow-500", width: "w-1/2" };
-    if (/[A-Z]/.test(pw) && /[0-9]/.test(pw) && pw.length >= 10)
-      return { label: "Strong", color: "bg-green-500", width: "w-full" };
+    if (pw.length < 12) return { label: "Too short (min 12)", color: "bg-red-500", width: "w-1/4" };
+    const hasUpper = /[A-Z]/.test(pw);
+    const hasLower = /[a-z]/.test(pw);
+    const hasDigit = /[0-9]/.test(pw);
+    const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(pw);
+    const score = [hasUpper, hasLower, hasDigit, hasSpecial].filter(Boolean).length;
+    if (score < 4) return { label: "Needs uppercase, lowercase, number & special char", color: "bg-yellow-500", width: "w-1/2" };
+    if (pw.length >= 16) return { label: "Strong", color: "bg-green-500", width: "w-full" };
     return { label: "Good", color: "bg-blue-500", width: "w-3/4" };
   };
 
@@ -41,8 +47,12 @@ function SetPasswordForm() {
       setError("Email address is missing. Please use the link from your confirmation email.");
       return;
     }
-    if (password.length < 6) {
-      setError("Password must be at least 6 characters.");
+    if (password.length < 12) {
+      setError("Password must be at least 12 characters.");
+      return;
+    }
+    if (!/[A-Z]/.test(password) || !/[a-z]/.test(password) || !/[0-9]/.test(password) || !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(password)) {
+      setError("Password must contain uppercase, lowercase, number, and special character.");
       return;
     }
     if (password !== confirmPassword) {
@@ -55,7 +65,7 @@ function SetPasswordForm() {
       const res = await csrfFetch("/api/auth/set-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, token: token || undefined }),
       });
 
       const result = await res.json();

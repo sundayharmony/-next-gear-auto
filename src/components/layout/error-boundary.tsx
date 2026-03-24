@@ -3,6 +3,7 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import { Car } from "lucide-react";
+import { logger } from "@/lib/utils/logger";
 
 interface ErrorBoundaryProps {
   children: React.ReactNode;
@@ -24,7 +25,7 @@ export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoun
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("Error caught by boundary:", error, errorInfo);
+    logger.error("Error caught by boundary:", { error: error.message, componentStack: errorInfo.componentStack });
   }
 
   render() {

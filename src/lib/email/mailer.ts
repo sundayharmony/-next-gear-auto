@@ -49,14 +49,23 @@ interface BookingEmailData {
   needsPassword?: boolean;
 }
 
+async function enrichWithPasswordToken(data: BookingEmailData): Promise<BookingEmailData & { passwordToken?: string }> {
+  if (data.needsPassword && data.customerEmail) {
+    const { generatePasswordToken } = await import("@/lib/auth/password-token");
+    return { ...data, passwordToken: generatePasswordToken(data.customerEmail) };
+  }
+  return data;
+}
+
 export async function sendBookingConfirmation(data: BookingEmailData) {
   try {
+    const enriched = await enrichWithPasswordToken(data);
     const transporter = getTransporter();
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       subject: `Booking Confirmed - ${data.bookingId}`,
-      html: bookingConfirmationTemplate(data),
+      html: bookingConfirmationTemplate(enriched),
     });
     logger.info("Confirmation email sent to:", data.customerEmail);
   } catch (error) {
@@ -67,12 +76,13 @@ export async function sendBookingConfirmation(data: BookingEmailData) {
 
 export async function sendBookingPendingEmail(data: BookingEmailData) {
   try {
+    const enriched = await enrichWithPasswordToken(data);
     const transporter = getTransporter();
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       subject: `Booking Received - ${data.bookingId}`,
-      html: bookingPendingTemplate(data),
+      html: bookingPendingTemplate(enriched),
     });
     logger.info("Pending booking email sent to:", data.customerEmail);
   } catch (error) {
@@ -241,12 +251,16 @@ export async function sendBookingSignAgreement(data: BookingEmailData) {
 
 export async function sendPasswordResetLink(data: { customerName: string; customerEmail: string }) {
   try {
+    // Generate a cryptographic token for the set-password link
+    const { generatePasswordToken } = await import("@/lib/auth/password-token");
+    const token = generatePasswordToken(data.customerEmail);
+
     const transporter = getTransporter();
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       subject: "Set Your Password - NextGearAuto",
-      html: passwordResetTemplate(data),
+      html: passwordResetTemplate({ ...data, token }),
     });
     logger.info("Password reset link sent to:", data.customerEmail);
   } catch (error) {

@@ -215,8 +215,8 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
       if (data.success) {
         dispatch({ type: "SET_PROMO", payload: { code: data.data.code, discount: data.data } });
-        // Recalculate pricing with discount applied
-        setTimeout(() => dispatch({ type: "CALCULATE_PRICING" }), 0);
+        // Recalculate pricing synchronously after promo is set
+        dispatch({ type: "CALCULATE_PRICING" });
         return { success: true };
       }
       return { success: false, error: data.error || "Invalid promo code" };
@@ -227,7 +227,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
   const clearPromoCode = useCallback(() => {
     dispatch({ type: "CLEAR_PROMO" });
-    setTimeout(() => dispatch({ type: "CALCULATE_PRICING" }), 0);
+    dispatch({ type: "CALCULATE_PRICING" });
   }, []);
 
   const setInsuranceProof = useCallback((url: string | null, optedOut: boolean) => {

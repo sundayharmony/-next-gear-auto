@@ -38,37 +38,35 @@ export async function POST(request: Request) {
         const bookingId = session.metadata?.booking_id;
 
         if (bookingId) {
-          // Check current booking status for idempotency
-          const { data: existingBooking } = await supabase
+          // Atomically confirm booking — only update if not already confirmed.
+          // The .neq("status", "confirmed") guard makes this idempotent even under
+          // concurrent webhook deliveries without a separate read-then-write.
+          const { error: updateError } = await supabase
             .from("bookings")
-            .select("status")
+            .update({
+              status: "confirmed",
+              stripe_payment_intent: session.payment_intent as string,
+            })
             .eq("id", bookingId)
-            .single();
+            .neq("status", "confirmed");
 
-          // Only update if not already confirmed
-          if (existingBooking?.status !== "confirmed") {
-            const { error: updateError } = await supabase
-              .from("bookings")
-              .update({
-                status: "confirmed",
-                stripe_payment_intent: session.payment_intent as string,
-              })
-              .eq("id", bookingId);
-
-            if (updateError) {
-              logger.error("Error updating booking status:", updateError);
-            }
+          if (updateError) {
+            logger.error("Error updating booking status:", updateError);
           }
 
-          // Create payment record
-          const { error: paymentError } = await supabase.from("payment_records").insert({
-            id: "pay" + Date.now(),
-            booking_id: bookingId,
-            stripe_session_id: session.id,
-            stripe_payment_intent: session.payment_intent as string,
-            amount: (session.amount_total ?? 0) / 100,
-            status: "succeeded",
-          });
+          // Create payment record (use crypto.randomUUID to avoid ID collisions in serverless).
+          // Upsert on stripe_session_id prevents duplicate records from concurrent webhook deliveries.
+          const { error: paymentError } = await supabase.from("payment_records").upsert(
+            {
+              id: "pay_" + crypto.randomUUID(),
+              booking_id: bookingId,
+              stripe_session_id: session.id,
+              stripe_payment_intent: session.payment_intent as string,
+              amount: (session.amount_total ?? 0) / 100,
+              status: "succeeded",
+            },
+            { onConflict: "stripe_session_id", ignoreDuplicates: true }
+          );
 
           if (paymentError) {
             logger.error("Error creating payment record:", paymentError);

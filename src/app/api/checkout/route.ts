@@ -3,6 +3,9 @@ import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendBookingConfirmation, sendBookingPendingEmail, sendAdminNewBooking } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
+import { calculateRentalDays, calculatePricing, applyDiscount } from "@/lib/utils/price-calculator";
+import extrasData from "@/data/extras.json";
+import type { BookingExtra } from "@/lib/types";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -103,8 +106,95 @@ export async function POST(request: Request) {
       }
     }
 
-    // Charge full rental amount upfront
-    const chargeAmount = totalPrice ?? deposit ?? 0;
+    // ── Server-side price recalculation ──────────────────────────────
+    // Never trust client-supplied totalPrice. Recalculate from vehicle rate,
+    // dates, selected extras, and validated promo code.
+    const { data: vehicle } = await supabase
+      .from("vehicles")
+      .select("daily_rate")
+      .eq("id", vehicleId)
+      .single();
+
+    if (!vehicle) {
+      return NextResponse.json(
+        { success: false, message: "Vehicle not found" },
+        { status: 404 }
+      );
+    }
+
+    const rentalDays = calculateRentalDays(pickupDate, returnDate);
+    const availableExtras = extrasData as BookingExtra[];
+
+    // Map client extras to server-validated extras with correct prices
+    const validatedExtras: BookingExtra[] = (extras || []).map((clientExtra: { id: string; selected?: boolean }) => {
+      const serverExtra = availableExtras.find((e) => e.id === clientExtra.id);
+      if (!serverExtra) return null;
+      return { ...serverExtra, selected: clientExtra.selected ?? true };
+    }).filter(Boolean) as BookingExtra[];
+
+    let serverPricing = calculatePricing(rentalDays, vehicle.daily_rate, validatedExtras);
+
+    // Apply promo code discount if provided (re-validate server-side)
+    if (promoCode && discountAmount && discountAmount > 0) {
+      // Look up the promo code to get its actual discount value
+      const { data: promo } = await supabase
+        .from("promo_codes")
+        .select("*")
+        .ilike("code", promoCode)
+        .eq("is_active", true)
+        .single();
+
+      if (promo) {
+        const now = new Date().toISOString().split("T")[0];
+        const isExpired = promo.expires_at && promo.expires_at < now;
+        const isOverLimit = promo.max_uses && promo.used_count >= promo.max_uses;
+
+        if (!isExpired && !isOverLimit) {
+          serverPricing = applyDiscount(serverPricing, {
+            code: promo.code,
+            discountType: promo.discount_type,
+            discountValue: promo.discount_value,
+            discountAmount: 0, // will be recalculated
+            description: promo.description || "",
+          });
+
+          // Atomically increment usage: only succeeds if used_count is still
+          // below max_uses at the moment of the UPDATE. This prevents two
+          // concurrent checkouts from both applying the same last-use code.
+          if (promo.max_uses) {
+            const { count: updated } = await supabase
+              .from("promo_codes")
+              .update({ used_count: (promo.used_count ?? 0) + 1 })
+              .eq("id", promo.id)
+              .lt("used_count", promo.max_uses);
+
+            if (updated === 0) {
+              // Race condition: another checkout used the last redemption
+              return NextResponse.json(
+                { success: false, message: "This promo code has reached its usage limit" },
+                { status: 409 }
+              );
+            }
+          } else {
+            // No max_uses limit — just increment for tracking
+            await supabase
+              .from("promo_codes")
+              .update({ used_count: (promo.used_count ?? 0) + 1 })
+              .eq("id", promo.id);
+          }
+        }
+      }
+    }
+
+    const serverTotal = Math.round(serverPricing.total * 100) / 100;
+
+    // Allow small rounding tolerance ($0.02) between client and server
+    if (totalPrice != null && Math.abs(totalPrice - serverTotal) > 0.02) {
+      logger.warn(`Price mismatch: client=${totalPrice}, server=${serverTotal}, booking for vehicle ${vehicleId}`);
+    }
+
+    // Always use server-calculated price
+    const chargeAmount = serverTotal;
 
     // 1. Find or create customer in Supabase
     let customerId: string | null = null;
@@ -117,7 +207,7 @@ export async function POST(request: Request) {
     if (existingCustomer) {
       customerId = existingCustomer.id;
     } else {
-      const newId = "c" + Date.now();
+      const newId = "c_" + crypto.randomUUID();
       const { data: newCustomer } = await supabase
         .from("customers")
         .insert({
@@ -151,7 +241,7 @@ export async function POST(request: Request) {
       pickup_time: pickupTime || null,
       return_time: returnTime || null,
       extras: extras || [],
-      total_price: totalPrice,
+      total_price: serverTotal,
       deposit: chargeAmount,
       status: "pending",
       signed_name: signedName,
@@ -199,7 +289,7 @@ export async function POST(request: Request) {
         returnDate,
         pickupTime: pickupTime || undefined,
         returnTime: returnTime || undefined,
-        totalPrice: totalPrice ?? 0,
+        totalPrice: serverTotal,
         deposit: 0,
         needsPassword,
       };
@@ -240,7 +330,7 @@ export async function POST(request: Request) {
         booking_id: bookingId,
         customer_id: customerId || "",
         vehicle_id: vehicleId,
-        total_price: totalPrice.toString(),
+        total_price: serverTotal.toString(),
         promo_code: promoCode || "",
         discount_amount: (discountAmount ?? 0).toString(),
       },
@@ -275,7 +365,7 @@ export async function POST(request: Request) {
       returnDate,
       pickupTime: pickupTime || undefined,
       returnTime: returnTime || undefined,
-      totalPrice: totalPrice ?? 0,
+      totalPrice: serverTotal,
       deposit: chargeAmount,
       needsPassword: needsPasswordForPending,
     };

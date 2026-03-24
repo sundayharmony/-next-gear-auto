@@ -1,9 +1,24 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
+import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
 
 export async function POST(request: NextRequest) {
   try {
+    // Require authentication — only the booking owner or an admin can upload documents
+    let auth;
+    try {
+      auth = await getAuthFromRequest(request);
+    } catch {
+      auth = null;
+    }
+    if (!auth) {
+      return NextResponse.json(
+        { success: false, error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     const supabase = getServiceSupabase();
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
@@ -25,6 +40,22 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Verify the caller owns this booking (or is admin)
+    if (auth.role !== "admin") {
+      const { data: bookingOwner } = await supabase
+        .from("bookings")
+        .select("customer_email")
+        .eq("id", bookingId)
+        .single();
+
+      if (!bookingOwner || bookingOwner.customer_email?.toLowerCase() !== auth.email?.toLowerCase()) {
+        return NextResponse.json(
+          { success: false, error: "You can only upload documents for your own bookings" },
+          { status: 403 }
+        );
+      }
+    }
+
     // Validate file type
     const allowedTypes = [
       "image/jpeg",
@@ -42,6 +73,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Validate file extension matches MIME type
+    const ext = file.name.split(".").pop()?.toLowerCase() || "";
+    const extMimeMap: Record<string, string[]> = {
+      jpg: ["image/jpeg"], jpeg: ["image/jpeg"], png: ["image/png"],
+      webp: ["image/webp"], pdf: ["application/pdf"],
+    };
+    if (!extMimeMap[ext] || !extMimeMap[ext].includes(file.type)) {
+      return NextResponse.json({ success: false, error: "File extension does not match content type" }, { status: 400 });
+    }
+
     // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
@@ -50,8 +91,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const ext = file.name.split(".").pop() || "jpg";
-    const fileName = `${bookingId}/${docType}_${crypto.randomUUID()}.${ext}`;
+    const fileExt = ext || "jpg";
+    const fileName = `${bookingId}/${docType}_${crypto.randomUUID()}.${fileExt}`;
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
@@ -66,7 +107,7 @@ export async function POST(request: NextRequest) {
       // If bucket doesn't exist, try creating it
       if (uploadError.message?.includes("not found") || uploadError.message?.includes("Bucket")) {
         await supabase.storage.createBucket("booking-documents", {
-          public: true,
+          public: false,
           fileSizeLimit: 10485760,
         });
         // Retry upload

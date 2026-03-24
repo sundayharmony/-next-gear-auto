@@ -45,9 +45,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         // Keep 5 most recent
         setRecentBookings(
           data.data
-            .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+            .sort((a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
             .slice(0, 5)
-            .map((b: any) => ({
+            .map((b: { id: string; customer_name?: string; created_at: string; total_price?: number }) => ({
               id: b.id,
               customer_name: b.customer_name || "Unknown",
               created_at: b.created_at,
@@ -185,7 +185,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Footer */}
         <div className="px-3 py-4 border-t border-gray-800">
           <button
-            onClick={() => { logout(); setSidebarOpen(false); router.push("/"); }}
+            onClick={async () => { await logout(); setSidebarOpen(false); router.push("/"); }}
             className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
           >
             <LogOut className="h-4.5 w-4.5" />

@@ -162,6 +162,7 @@ function bookingEmailTemplate(
     deposit: number;
     customerEmail?: string;
     needsPassword?: boolean;
+    passwordToken?: string;
   },
   opts: {
     subject: string;
@@ -207,7 +208,7 @@ function bookingEmailTemplate(
             <td style="background: #f0f9ff; border-radius: 10px; padding: 16px 20px; text-align: center;">
               <p style="margin: 0 0 8px; color: #1e40af; font-size: 14px; font-weight: 600;">Create Your Account</p>
               <p style="margin: 0 0 12px; color: #4b5563; font-size: 13px;">Set up a password to manage your bookings and speed up future reservations.</p>
-              <a href="https://rentnextgearauto.com/set-password?email=${encodeURIComponent(data.customerEmail || '')}" style="display: inline-block; background: #1e40af; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 13px;">Set Up My Password</a>
+              <a href="https://rentnextgearauto.com/set-password?email=${encodeURIComponent(data.customerEmail || '')}${data.passwordToken ? '&token=' + encodeURIComponent(data.passwordToken) : ''}" style="display: inline-block; background: #1e40af; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 13px;">Set Up My Password</a>
             </td>
           </tr>
         </table>` : ''}
@@ -464,8 +465,9 @@ export function bookingSignAgreementTemplate(data: EmailData): string {
   `);
 }
 
-export function passwordResetTemplate(data: { customerName: string; customerEmail: string }): string {
+export function passwordResetTemplate(data: { customerName: string; customerEmail: string; token?: string }): string {
   const encodedEmail = encodeURIComponent(data.customerEmail);
+  const tokenParam = data.token ? `&token=${encodeURIComponent(data.token)}` : "";
   return wrapEmail(`
     <tr>
       <td style="padding: 40px 32px 24px; text-align: center;">
@@ -479,11 +481,11 @@ export function passwordResetTemplate(data: { customerName: string; customerEmai
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 20px;">
           <tr>
             <td align="center">
-              <a href="https://rentnextgearauto.com/set-password?email=${encodedEmail}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Set My Password</a>
+              <a href="https://rentnextgearauto.com/set-password?email=${encodedEmail}${tokenParam}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Set My Password</a>
             </td>
           </tr>
         </table>
-        <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">If you didn't request this, you can safely ignore this email.</p>
+        <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">This link expires in 48 hours. If you didn't request this, you can safely ignore this email.</p>
       </td>
     </tr>
   `);

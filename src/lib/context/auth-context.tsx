@@ -46,7 +46,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<Customer | null>;
-  logout: () => void;
+  logout: () => Promise<void>;
   signup: (data: { name: string; email: string; password: string; phone: string }) => Promise<boolean>;
   updateProfile: (data: Partial<Customer>) => void;
   checkRole: (role: string) => boolean;
@@ -57,8 +57,11 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(authReducer, initialState);
 
-  // Restore session from localStorage on mount
+  // Restore session from localStorage, then validate against server JWT
   useEffect(() => {
+    let cancelled = false;
+
+    // Immediately restore from localStorage for fast UI render
     try {
       const stored = localStorage.getItem("nga_user");
       if (stored) {
@@ -70,6 +73,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       localStorage.removeItem("nga_user");
     }
+
+    // Then validate the JWT cookie against the server
+    async function validateSession() {
+      try {
+        const res = await fetch("/api/auth", { credentials: "same-origin" });
+        if (!res.ok) {
+          // JWT expired or invalid — clear localStorage
+          if (!cancelled) {
+            localStorage.removeItem("nga_user");
+            dispatch({ type: "LOGOUT" });
+          }
+          return;
+        }
+        const data = await res.json();
+        if (data.success && data.data && !cancelled) {
+          // Update localStorage with server-verified user data
+          dispatch({ type: "LOGIN_SUCCESS", payload: data.data });
+        }
+      } catch {
+        // Network error — keep cached user (offline-friendly)
+      }
+    }
+
+    validateSession();
+    return () => { cancelled = true; };
   }, []);
 
   // Persist user to localStorage on changes
@@ -103,9 +131,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
     localStorage.removeItem("nga_user");
     dispatch({ type: "LOGOUT" });
+    // Clear server-side HTTP-only cookies
+    try { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); } catch { /* best-effort */ }
   }, []);
 
   const signup = useCallback(async (data: { name: string; email: string; password: string; phone: string }): Promise<boolean> => {

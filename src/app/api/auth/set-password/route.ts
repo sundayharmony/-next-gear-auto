@@ -4,6 +4,8 @@ import bcrypt from "bcryptjs";
 import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
 import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/utils/logger";
+import { validatePasswordToken } from "@/lib/auth/password-token";
+import { createAccessToken, createRefreshToken, setAuthCookies } from "@/lib/auth/jwt";
 
 export async function POST(request: Request) {
   try {
@@ -15,13 +17,24 @@ export async function POST(request: Request) {
     }
 
     const body = await request.json();
-    const { email, password } = body;
+    const { email, password, token } = body;
 
     if (!email || !password) {
       return NextResponse.json(
         { success: false, message: "Email and password are required." },
         { status: 400 }
       );
+    }
+
+    // Validate the cryptographic token if provided (new flow)
+    if (token) {
+      const tokenEmail = validatePasswordToken(token);
+      if (!tokenEmail || tokenEmail !== email.toLowerCase().trim()) {
+        return NextResponse.json(
+          { success: false, message: "Invalid or expired link. Please request a new one." },
+          { status: 400 }
+        );
+      }
     }
 
     const pwCheck = validatePassword(password);
@@ -91,11 +104,17 @@ export async function POST(request: Request) {
       role: customer.role || "customer",
     };
 
-    return NextResponse.json({
+    // Issue JWT tokens so user is logged in automatically
+    const customerRole = (customer.role || "customer") as "admin" | "customer";
+    const accessToken = await createAccessToken({ userId: customer.id, role: customerRole, email: customer.email });
+    const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
+
+    const response = NextResponse.json({
       success: true,
       message: "Password set successfully!",
       data: userData,
     });
+    return setAuthCookies(response, accessToken, refreshToken);
   } catch (err) {
     logger.error("Set password API error:", err);
     return NextResponse.json(

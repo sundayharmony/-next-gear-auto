@@ -1,11 +1,69 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
 import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
-import { createAccessToken, createRefreshToken, setAuthCookies, clearAuthCookies } from "@/lib/auth/jwt";
+import { createAccessToken, createRefreshToken, setAuthCookies, clearAuthCookies, getAuthFromRequest } from "@/lib/auth/jwt";
 import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
+
+// GET: Validate current session and return user data from JWT
+export async function GET(request: NextRequest) {
+  try {
+    const auth = await getAuthFromRequest(request);
+    if (!auth) {
+      return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
+    }
+
+    const supabase = getServiceSupabase();
+
+    // Look up the user in the appropriate table based on role
+    if (auth.role === "admin") {
+      const { data: admin } = await supabase.from("admins").select("*").eq("id", auth.sub).single();
+      if (!admin) {
+        return NextResponse.json({ success: false, message: "Admin not found" }, { status: 404 });
+      }
+      return NextResponse.json({
+        success: true,
+        data: {
+          id: admin.id,
+          name: admin.name,
+          email: admin.email,
+          phone: admin.phone || "",
+          dob: "",
+          driverLicense: null,
+          paymentMethods: [],
+          bookings: [],
+          createdAt: admin.created_at,
+          role: "admin",
+        },
+      });
+    }
+
+    const { data: customer } = await supabase.from("customers").select("*").eq("id", auth.sub).single();
+    if (!customer) {
+      return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        id: customer.id,
+        name: customer.name,
+        email: customer.email,
+        phone: customer.phone || "",
+        dob: customer.dob || "",
+        driverLicense: customer.driver_license || null,
+        paymentMethods: [],
+        bookings: [],
+        createdAt: customer.created_at,
+        role: customer.role || "customer",
+      },
+    });
+  } catch {
+    return NextResponse.json({ success: false, message: "Session validation failed" }, { status: 401 });
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -263,8 +321,17 @@ export async function POST(request: Request) {
 }
 
 // PATCH: Update user profile
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   try {
+    // Verify authenticated user can only update their own profile
+    const auth = await getAuthFromRequest(request);
+    if (!auth) {
+      return NextResponse.json(
+        { success: false, message: "Authentication required." },
+        { status: 401 }
+      );
+    }
+
     const body = await request.json();
     const { id, name, phone, dob } = body;
 
@@ -272,6 +339,14 @@ export async function PATCH(request: Request) {
       return NextResponse.json(
         { success: false, message: "User ID is required." },
         { status: 400 }
+      );
+    }
+
+    // Users can only update their own profile (admins can update anyone)
+    if (auth.role !== "admin" && auth.sub !== id) {
+      return NextResponse.json(
+        { success: false, message: "You can only update your own profile." },
+        { status: 403 }
       );
     }
 

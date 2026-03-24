@@ -23,7 +23,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (name.length > 100 || email.length > 200 || message.length > 2000) {
+    if (name.length > 100 || email.length > 200 || message.length > 5000) {
       return NextResponse.json(
         { success: false, message: "Input exceeds maximum length." },
         { status: 400 }
@@ -38,8 +38,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Sanitize inputs for email (strip HTML)
-    const clean = (s: string) => s.replace(/<[^>]*>/g, "").trim();
+    // Sanitize inputs for email (strip HTML and CRLF for SMTP header injection prevention)
+    const clean = (s: string) => s.replace(/<[^>]*>/g, "").replace(/[\r\n]/g, " ").trim();
     const safeName = clean(name);
     const safeEmail = clean(email);
     const safePhone = clean(phone || "Not provided");

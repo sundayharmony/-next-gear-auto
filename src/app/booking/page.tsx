@@ -318,7 +318,15 @@ function BookingPageInner() {
         return true;
       }
       case 2: return !!booking.selectedVehicle;
-      case 3: return true;
+      case 3: {
+        // Insurance (e1) is required: must either be selected (pay for it)
+        // or the user must have uploaded proof of their own coverage
+        const insuranceExtra = localExtras.find(e => e.id === "e1");
+        if (insuranceExtra && !insuranceExtra.selected && !insuranceProofUrl) {
+          return false;
+        }
+        return true;
+      }
       case 4: {
         if (!details.name || !details.email || !details.phone || !details.dob) {
           return false;

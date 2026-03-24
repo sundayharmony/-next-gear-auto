@@ -19,9 +19,9 @@ function CancelContent() {
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
             <XCircle className="h-10 w-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold sm:text-4xl">Payment Cancelled</h1>
+          <h1 className="text-3xl font-bold sm:text-4xl">Payment Not Completed</h1>
           <p className="mt-2 text-gray-300">
-            Your payment was not completed. No charges have been made.
+            Your payment session was not completed. No charges have been made.
           </p>
         </div>
       </section>
@@ -31,25 +31,24 @@ function CancelContent() {
           <Card>
             <CardContent className="p-6 text-center">
               <p className="text-gray-600 mb-2">
-                Your booking has been cancelled and will not be charged.
+                Your payment session was not completed. Your booking remains in pending status and will expire automatically if not paid within 24 hours.
               </p>
               {bookingId && (
                 <p className="text-sm text-gray-400 mb-6">
-                  Reference: {bookingId}
+                  Booking Reference: {bookingId}
                 </p>
               )}
 
-              <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 mb-6 text-left">
-                <p className="text-sm text-amber-800">
-                  <strong>Next steps:</strong> To start a new booking, begin fresh from the fleet selection.
-                  Your previous booking details have been cleared.
+              <div className="rounded-lg bg-blue-50 border border-blue-200 p-4 mb-6 text-left">
+                <p className="text-sm text-blue-800">
+                  <strong>What happens next:</strong> You can return to complete payment for this booking at any time. If you don't complete payment within 24 hours, your booking will be automatically cancelled.
                 </p>
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link href="/booking">
+                <Link href={bookingId ? `/booking?retry=${bookingId}` : "/booking"}>
                   <Button className="w-full sm:w-auto">
-                    <RefreshCw className="h-4 w-4 mr-1" /> Start New Booking
+                    <RefreshCw className="h-4 w-4 mr-1" /> Retry Payment
                   </Button>
                 </Link>
                 <Link href="/fleet">

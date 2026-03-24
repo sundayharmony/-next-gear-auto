@@ -9,6 +9,7 @@ import {
 } from "@/lib/email/mailer";
 import { autoSignAgreement } from "@/lib/agreement/auto-sign";
 import { logger } from "@/lib/utils/logger";
+import { getAuthFromRequest, type TokenPayload } from "@/lib/auth/jwt";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -25,6 +26,15 @@ export async function GET(request: NextRequest) {
   const pageParam = searchParams.get("page");
   const perPageParam = searchParams.get("per_page");
   const supabase = getServiceSupabase();
+
+  // ── Authentication ────────────────────────────────────────────────
+  // Determine caller identity. Admins can see all bookings; customers
+  // can only see their own. Unauthenticated callers get limited data
+  // for single-booking lookup only (needed by success/agreement pages).
+  let auth: TokenPayload | null = null;
+  try { auth = await getAuthFromRequest(request); } catch { /* unauthenticated */ }
+  const isAdmin = auth?.role === "admin";
+  const callerEmail = auth?.email?.toLowerCase().trim();
 
   // Column mapping for sort parameter
   const sortColumnMap: Record<string, string> = {
@@ -65,28 +75,61 @@ export async function GET(request: NextRequest) {
       const v = booking.vehicles as unknown as { year: number; make: string; model: string } | null;
       const { vehicles: _v, ...rest } = booking;
 
+      const isOwner = isAdmin ||
+        (callerEmail && booking.customer_email?.toLowerCase().trim() === callerEmail);
+
+      // Strip sensitive fields for non-owners (unauthenticated success/agreement page callers)
+      const safeData = isOwner ? rest : {
+        id: rest.id,
+        vehicle_id: rest.vehicle_id,
+        pickup_date: rest.pickup_date,
+        return_date: rest.return_date,
+        pickup_time: rest.pickup_time,
+        return_time: rest.return_time,
+        total_price: rest.total_price,
+        deposit: rest.deposit,
+        status: rest.status,
+        customer_name: rest.customer_name,
+        customer_email: rest.customer_email,
+        extras: rest.extras,
+        agreement_signed_at: rest.agreement_signed_at,
+        signed_name: rest.signed_name,
+      };
+
       return NextResponse.json({
         success: true,
         data: {
-          ...rest,
+          ...safeData,
           vehicle_name: v ? `${v.year} ${v.make} ${v.model}` : "Vehicle",
         },
       });
     }
 
-    // List bookings with optional filters — single query with vehicle JOIN
+    // ── List bookings — require authentication ──────────────────────
+    // Admin: full access. Customer: own bookings only. No auth: rejected.
+    if (!auth) {
+      return NextResponse.json(
+        { success: false, message: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
     let query = supabase
       .from("bookings")
       .select("*, vehicles(year, make, model)", { count: "exact" });
 
-    if (customerId && customerEmail) {
-      // Search by both — return bookings matching EITHER (covers mismatches)
-      query = query.or(`customer_id.eq.${customerId},customer_email.ilike.${customerEmail}`);
-    } else if (customerId) {
-      query = query.eq("customer_id", customerId);
-    } else if (customerEmail) {
-      // Case-insensitive email match
-      query = query.ilike("customer_email", customerEmail);
+    if (isAdmin) {
+      // Admins can filter by any customer
+      if (customerId && customerEmail) {
+        query = query.or(`customer_id.eq.${customerId},customer_email.ilike.${customerEmail}`);
+      } else if (customerId) {
+        query = query.eq("customer_id", customerId);
+      } else if (customerEmail) {
+        query = query.ilike("customer_email", customerEmail);
+      }
+    } else {
+      // Customers can only see their own bookings — enforce by caller's JWT email
+      query = query.ilike("customer_email", callerEmail!);
     }
     if (status) {
       query = query.eq("status", status);
