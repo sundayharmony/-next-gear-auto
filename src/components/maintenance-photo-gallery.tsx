@@ -142,7 +142,7 @@ export function MaintenancePhotoGallery({
 
           {/* Image counter */}
           <div className="absolute top-4 left-4 z-10 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white">
-            {activeIndex + 1} / {photos.length}
+            {imagePhotos.indexOf(photos[activeIndex]) + 1} / {imagePhotos.length}
           </div>
 
           {/* Download button */}

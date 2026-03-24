@@ -66,7 +66,7 @@ export async function GET(req: NextRequest) {
         title: record.title || "",
         description: record.description || "",
         status: record.status || "pending",
-        cost: record.cost || null,
+        cost: record.cost ?? null,
         photoUrls: record.photo_urls || [],
         scheduledDate: record.scheduled_date || "",
         startedDate: record.started_date || "",
@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
         title,
         description: description || "",
         status: recordStatus,
-        cost: cost || null,
+        cost: cost ?? null,
         photo_urls: [],
         scheduled_date: scheduledDate || null,
         started_date: startedDate || null,
@@ -193,6 +193,7 @@ export async function PUT(req: NextRequest) {
 
     // Build DB updates mapping camelCase to snake_case
     const dbUpdates: Record<string, unknown> = {};
+    if (updates.vehicleId !== undefined) dbUpdates.vehicle_id = updates.vehicleId;
     if (updates.title !== undefined) dbUpdates.title = updates.title;
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.status !== undefined) dbUpdates.status = updates.status;
@@ -232,10 +233,12 @@ export async function PUT(req: NextRequest) {
         vehicleStatus = "in-maintenance";
       }
 
+      // Use the new vehicleId if it was changed, otherwise use the existing one
+      const targetVehicleId = updates.vehicleId || record.vehicle_id;
       await supabase
         .from("vehicles")
         .update({ maintenance_status: vehicleStatus })
-        .eq("id", record.vehicle_id);
+        .eq("id", targetVehicleId);
     }
 
     return NextResponse.json({ success: true, message: "Record updated" });
@@ -265,10 +268,39 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
+    // Fetch record first to get photo URLs for storage cleanup
+    const { data: record } = await supabase
+      .from("maintenance_records")
+      .select("photo_urls")
+      .eq("id", id)
+      .single();
+
     const { error } = await supabase
       .from("maintenance_records")
       .delete()
       .eq("id", id);
+
+    // Clean up photos from Supabase storage after successful delete
+    if (!error && record?.photo_urls && record.photo_urls.length > 0) {
+      try {
+        const bucket = "maintenance-photos";
+        const filePaths = record.photo_urls
+          .map((url: string) => {
+            // Extract storage path from public URL
+            const marker = `/storage/v1/object/public/${bucket}/`;
+            const idx = url.indexOf(marker);
+            return idx !== -1 ? url.substring(idx + marker.length) : null;
+          })
+          .filter(Boolean) as string[];
+
+        if (filePaths.length > 0) {
+          await supabase.storage.from(bucket).remove(filePaths);
+        }
+      } catch (cleanupErr) {
+        logger.error("Failed to clean up maintenance photos from storage:", cleanupErr);
+        // Don't fail the delete — record is already gone
+      }
+    }
 
     if (error) {
       logger.error("Maintenance delete error:", error);

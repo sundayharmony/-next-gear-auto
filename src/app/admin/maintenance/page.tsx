@@ -175,12 +175,12 @@ export default function AdminMaintenancePage() {
   );
 
   // Count records by status
-  const statusCounts = {
+  const statusCounts = useMemo(() => ({
     all: records.length,
     pending: records.filter((r) => r.status === "pending").length,
     "in-progress": records.filter((r) => r.status === "in-progress").length,
     completed: records.filter((r) => r.status === "completed").length,
-  };
+  }), [records]);
 
   // Detail panel helpers
   const openDetail = (record: MaintenanceRecord) => {
@@ -284,18 +284,21 @@ export default function AdminMaintenancePage() {
         const newId = data.data?.id;
 
         // Upload any temporary photos to the newly created record
+        let failedUploads = 0;
         if (newId && tempNewPhotos.length > 0) {
           for (const file of tempNewPhotos) {
             try {
               const formData = new FormData();
               formData.append("file", file);
               formData.append("maintenanceId", newId);
-              await adminFetch("/api/admin/maintenance/upload", {
+              const uploadRes = await adminFetch("/api/admin/maintenance/upload", {
                 method: "POST",
                 body: formData,
               });
+              if (!uploadRes.ok) failedUploads++;
             } catch (err) {
               logger.error("Failed to upload photo for new record:", err);
+              failedUploads++;
             }
           }
         }
@@ -309,6 +312,10 @@ export default function AdminMaintenancePage() {
         await fetchData();
         setShowAddForm(false);
         setNewRecord(emptyRecord);
+
+        if (failedUploads > 0) {
+          setError(`Record saved, but ${failedUploads} photo${failedUploads > 1 ? "s" : ""} failed to upload`);
+        }
       } else {
         setError(data.message || "Failed to add record");
       }
@@ -420,16 +427,19 @@ export default function AdminMaintenancePage() {
     if (!window.confirm("Are you sure you want to remove this photo?")) return;
 
     if (context === "new") {
-      const idx = newRecord.photoUrls.indexOf(url);
-      if (idx !== -1) {
-        // Revoke blob URL and remove corresponding temp file
-        if (url.startsWith("blob:")) URL.revokeObjectURL(url);
-        setTempNewPhotos((prev) => prev.filter((_, i) => i !== idx));
-      }
-      setNewRecord((prev) => ({
-        ...prev,
-        photoUrls: prev.photoUrls.filter((r) => r !== url),
-      }));
+      // Revoke blob URL
+      if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+      // Use functional update to get correct index from current state
+      setNewRecord((prev) => {
+        const idx = prev.photoUrls.indexOf(url);
+        if (idx !== -1) {
+          setTempNewPhotos((prevFiles) => prevFiles.filter((_, i) => i !== idx));
+        }
+        return {
+          ...prev,
+          photoUrls: prev.photoUrls.filter((r) => r !== url),
+        };
+      });
     } else {
       setDetailEditData((prev) => ({
         ...prev,
@@ -552,7 +562,7 @@ export default function AdminMaintenancePage() {
               <label className="text-xs font-medium text-gray-700 mb-1 block">Estimated Cost ($)</label>
               <Input
                 type="number"
-                value={newRecord.cost || ""}
+                value={newRecord.cost ?? ""}
                 onChange={(e) =>
                   setNewRecord({
                     ...newRecord,
@@ -1012,7 +1022,7 @@ export default function AdminMaintenancePage() {
                     <label className="block text-xs font-medium text-gray-600 mb-1">Cost ($)</label>
                     <Input
                       type="number"
-                      value={detailEditData.cost || ""}
+                      value={detailEditData.cost ?? ""}
                       onChange={(e) =>
                         setDetailEditData({
                           ...detailEditData,
