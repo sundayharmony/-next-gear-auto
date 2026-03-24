@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   try {
     const { data, error } = await supabase
       .from("vehicles")
-      .select("*")
+      .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at")
       .order("created_at", { ascending: true });
 
     if (!error && data && data.length > 0) {

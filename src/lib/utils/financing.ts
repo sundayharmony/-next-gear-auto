@@ -148,25 +148,3 @@ export function calculateFinancing(
     isPaidOff,
   };
 }
-
-/**
- * Get the effective vehicle cost for financial calculations.
- *
- * For financed vehicles: returns the sum of processed monthly payments.
- * For non-financed vehicles: returns the full purchase price.
- */
-export function getEffectiveVehicleCost(
-  vehicle: FinancedVehicle,
-  asOfDate?: Date
-): number {
-  if (!vehicle.isFinanced) {
-    return vehicle.purchasePrice ?? 0;
-  }
-
-  const financing = calculateFinancing(vehicle, asOfDate);
-  if (!financing) {
-    return vehicle.purchasePrice ?? 0;
-  }
-
-  return financing.totalPaid;
-}

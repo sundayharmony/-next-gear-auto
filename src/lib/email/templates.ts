@@ -148,17 +148,44 @@ function infoBox(title: string, text: string, color: string, bg: string): string
 
 /* ─── Templates ─── */
 
-export function bookingPendingTemplate(data: EmailData): string {
-  return wrapEmail(`
+/* Shared helper for booking pending/confirmation emails */
+function bookingEmailTemplate(
+  data: {
+    customerName: string;
+    bookingId: string;
+    vehicleName: string;
+    pickupDate: string;
+    returnDate: string;
+    pickupTime?: string;
+    returnTime?: string;
+    totalPrice: number;
+    deposit: number;
+    customerEmail?: string;
+    needsPassword?: boolean;
+  },
+  opts: {
+    subject: string;
+    heading: string;
+    headingColor?: string;
+    message: string;
+    showConfirmationLink?: boolean;
+    confirmationUrl?: string;
+    showAccountLink?: boolean;
+    accountUrl?: string;
+    accountLinkText?: string;
+    bottomNote: string;
+  }
+): { subject: string; html: string } {
+  const html = wrapEmail(`
     <tr>
       <td style="padding: 40px 32px 24px; text-align: center;">
         <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
-        <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Booking Received</h1>
+        <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">${opts.heading}</h1>
       </td>
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escHtml(data.customerName)}, we've received your reservation. Here are your details:</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escHtml(data.customerName)}, ${opts.message}</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
           <tr>
             <td style="padding: 20px 24px;">
@@ -173,82 +200,69 @@ export function bookingPendingTemplate(data: EmailData): string {
             </td>
           </tr>
         </table>
-        <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">You'll receive a confirmation once your payment is verified. Please bring a valid driver's license at pickup.</p>
+        <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">${opts.bottomNote}</p>
         ${data.needsPassword ? `
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 16px;">
           <tr>
             <td style="background: #f0f9ff; border-radius: 10px; padding: 16px 20px; text-align: center;">
               <p style="margin: 0 0 8px; color: #1e40af; font-size: 14px; font-weight: 600;">Create Your Account</p>
               <p style="margin: 0 0 12px; color: #4b5563; font-size: 13px;">Set up a password to manage your bookings and speed up future reservations.</p>
-              <a href="https://rentnextgearauto.com/set-password?email=${encodeURIComponent(data.customerEmail)}" style="display: inline-block; background: #1e40af; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 13px;">Set Up My Password</a>
+              <a href="https://rentnextgearauto.com/set-password?email=${encodeURIComponent(data.customerEmail || '')}" style="display: inline-block; background: #1e40af; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 13px;">Set Up My Password</a>
             </td>
           </tr>
         </table>` : ''}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 8px;">
+          ${opts.showConfirmationLink ? `<tr>
+            <td align="center" style="padding: 0 0 8px;">
+              <a href="${opts.confirmationUrl}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">${opts.accountLinkText || 'View My Booking'}</a>
+            </td>
+          </tr>` : ''}
           <tr>
-            <td align="center">
-              <a href="https://rentnextgearauto.com/account" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">View My Booking</a>
+            <td align="center"${opts.showConfirmationLink ? ' style="padding: 0 0 8px;"' : ''}>
+              <a href="${opts.accountUrl}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">${opts.accountLinkText ? 'View Bookings' : 'View My Booking'}</a>
             </td>
           </tr>
         </table>
       </td>
     </tr>
   `);
+  return { subject: opts.subject, html };
+}
+
+export function bookingPendingTemplate(data: EmailData): string {
+  const result = bookingEmailTemplate(
+    data,
+    {
+      subject: 'Booking Received',
+      heading: 'Booking Received',
+      message: "we've received your reservation. Here are your details:",
+      showConfirmationLink: false,
+      accountUrl: 'https://rentnextgearauto.com/account',
+      accountLinkText: 'View My Booking',
+      bottomNote: "You'll receive a confirmation once your payment is verified. Please bring a valid driver's license at pickup.",
+    }
+  );
+  return result.html;
 }
 
 export function bookingConfirmationTemplate(data: EmailData): string {
-  return wrapEmail(`
-    <tr>
-      <td style="padding: 40px 32px 24px; text-align: center;">
-        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
-        <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Booking Confirmed</h1>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escHtml(data.customerName)}, your reservation is confirmed${data.totalPrice > 0 ? ` and your payment of <strong>$${data.totalPrice.toFixed(2)}</strong> has been received` : ''}.</p>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
-          <tr>
-            <td style="padding: 20px 24px;">
-              <p style="margin: 0 0 4px; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Booking ID</p>
-              <p style="margin: 0 0 16px; color: #111827; font-size: 14px; font-weight: 600; font-family: monospace;">${data.bookingId}</p>
-              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
-                ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
-                ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
-                ${detailRow('Total', '$' + data.totalPrice.toFixed(2), true)}
-              </table>
-            </td>
-          </tr>
-        </table>
-        <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">
-          ${data.totalPrice > 0 ? "Please bring a valid driver's license at pickup." : "Your complimentary rental is confirmed. Please bring a valid driver's license at pickup."}
-        </p>
-        ${data.needsPassword ? `
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 16px;">
-          <tr>
-            <td style="background: #f0f9ff; border-radius: 10px; padding: 16px 20px; text-align: center;">
-              <p style="margin: 0 0 8px; color: #1e40af; font-size: 14px; font-weight: 600;">Create Your Account</p>
-              <p style="margin: 0 0 12px; color: #4b5563; font-size: 13px;">Set up a password to manage your bookings and speed up future reservations.</p>
-              <a href="https://rentnextgearauto.com/set-password?email=${encodeURIComponent(data.customerEmail)}" style="display: inline-block; background: #1e40af; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 13px;">Set Up My Password</a>
-            </td>
-          </tr>
-        </table>` : ''}
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 8px;">
-          <tr>
-            <td align="center" style="padding: 0 0 8px;">
-              <a href="https://rentnextgearauto.com/booking/agreement/${data.bookingId}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Sign Rental Agreement</a>
-            </td>
-          </tr>
-          <tr>
-            <td align="center">
-              <a href="https://rentnextgearauto.com/account" style="color: #6b7280; text-decoration: underline; font-size: 13px;">View Bookings</a>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  `);
+  const paymentText = data.totalPrice > 0 ? ` and your payment of <strong>$${data.totalPrice.toFixed(2)}</strong> has been received` : '';
+  const bottomNote = data.totalPrice > 0 ? "Please bring a valid driver's license at pickup." : "Your complimentary rental is confirmed. Please bring a valid driver's license at pickup.";
+
+  const result = bookingEmailTemplate(
+    data,
+    {
+      subject: 'Booking Confirmed',
+      heading: 'Booking Confirmed',
+      message: `your reservation is confirmed${paymentText}.`,
+      showConfirmationLink: true,
+      confirmationUrl: `https://rentnextgearauto.com/booking/agreement/${data.bookingId}`,
+      accountUrl: 'https://rentnextgearauto.com/account',
+      accountLinkText: 'Sign Rental Agreement',
+      bottomNote,
+    }
+  );
+  return result.html;
 }
 
 export function adminNewBookingTemplate(data: EmailData): string {
@@ -303,19 +317,49 @@ export function cancellationTemplate(data: EmailData): string {
   `);
 }
 
-export function pickupReminderTemplate(data: EmailData): string {
-  return wrapEmail(`
-    ${headerBlock("Your Pickup is Tomorrow!", 'Get ready for your trip')}
+/* Shared helper for pickup/return reminder emails */
+function reminderTemplate(
+  data: {
+    customerName: string;
+    vehicleName: string;
+    pickupDate: string;
+    returnDate: string;
+    pickupTime?: string;
+    returnTime?: string;
+    bookingId: string;
+  },
+  opts: { type: 'pickup' | 'return' }
+): { subject: string; html: string } {
+  const isPickup = opts.type === 'pickup';
+  const headerTitle = isPickup ? "Your Pickup is Tomorrow!" : 'Return Reminder';
+  const headerSubtitle = isPickup ? 'Get ready for your trip' : 'Your rental return is today';
+  const headerBgColor = isPickup ? '#7C3AED' : '#f59e0b';
+  const headerBgEnd = isPickup ? '#5B21B6' : '#d97706';
+  const dateLabel = isPickup ? 'Pick-up Date & Time' : 'Return Date & Time';
+  const dateValue = isPickup ? data.pickupDate : data.returnDate;
+  const timeValue = isPickup ? data.pickupTime : data.returnTime;
+  const accentColor = isPickup ? '#7C3AED' : '#f59e0b';
+  const bgGradient = isPickup
+    ? 'linear-gradient(135deg, #f5f3ff, #ede9fe)'
+    : 'linear-gradient(135deg, #fffbeb, #fef3c7)';
+
+  const message = isPickup
+    ? `Just a reminder that your <strong style="color: #111827;">${escHtml(data.vehicleName)}</strong> is ready for pickup tomorrow.`
+    : `This is a friendly reminder that your <strong style="color: #111827;">${escHtml(data.vehicleName)}</strong> (Booking ${escHtml(data.bookingId)}) is due for return today.`;
+
+  const html = wrapEmail(`
+    ${headerBlock(headerTitle, headerSubtitle, headerBgColor, headerBgEnd)}
     <tr>
       <td style="padding: 32px 32px 0;">
         <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escHtml(data.customerName)},</p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Just a reminder that your <strong style="color: #111827;">${escHtml(data.vehicleName)}</strong> is ready for pickup tomorrow.</p>
+        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">${message}</p>
       </td>
     </tr>
     <tr>
       <td style="padding: 20px 32px 0;">
-        ${dateTimeBlock('Pick-up Date & Time', data.pickupDate, data.pickupTime, '#7C3AED', 'linear-gradient(135deg, #f5f3ff, #ede9fe)')}
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
+        ${dateTimeBlock(dateLabel, dateValue, timeValue, accentColor, bgGradient)}
+        ${isPickup
+          ? `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
           <tr>
             <td style="background: #f5f3ff; border-radius: 12px; padding: 20px;">
               <p style="margin: 0 0 12px; color: #5b21b6; font-weight: 700; font-size: 14px;">Please bring:</p>
@@ -326,45 +370,54 @@ export function pickupReminderTemplate(data: EmailData): string {
               </table>
             </td>
           </tr>
-        </table>
+        </table>`
+          : `${infoBox('Before You Return', 'Please return the vehicle with the same fuel level as pickup to avoid fuel charges. Ensure the vehicle is clean inside and out.', '#92400e', '#fffbeb')}`
+        }
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0;">
           <tr>
             <td style="background: #f9fafb; border-radius: 12px; padding: 16px 20px; border: 1px solid #e5e7eb;">
-              <p style="margin: 0 0 4px; color: #111827; font-size: 14px; font-weight: 700;">Pick-up Location</p>
+              <p style="margin: 0 0 4px; color: #111827; font-size: 14px; font-weight: 700;">${isPickup ? 'Pick-up Location' : 'Return Location'}</p>
               <p style="margin: 0; color: #6b7280; font-size: 13px;">92 Forrest Street, Jersey City, NJ 07304</p>
-              <p style="margin: 6px 0 0; color: #6b7280; font-size: 12px;">Mon-Fri 8AM-6PM &bull; Sat 9AM-5PM &bull; Sun 10AM-4PM</p>
+              ${isPickup ? '<p style="margin: 6px 0 0; color: #6b7280; font-size: 12px;">Mon-Fri 8AM-6PM &bull; Sat 9AM-5PM &bull; Sun 10AM-4PM</p>' : ''}
             </td>
           </tr>
         </table>
       </td>
     </tr>
   `);
+  return { subject: isPickup ? 'Your Pickup is Tomorrow!' : 'Return Reminder', html };
+}
+
+export function pickupReminderTemplate(data: EmailData): string {
+  const result = reminderTemplate(
+    {
+      customerName: data.customerName,
+      vehicleName: data.vehicleName,
+      pickupDate: data.pickupDate,
+      returnDate: data.returnDate,
+      pickupTime: data.pickupTime,
+      returnTime: data.returnTime,
+      bookingId: data.bookingId,
+    },
+    { type: 'pickup' }
+  );
+  return result.html;
 }
 
 export function returnReminderTemplate(data: EmailData): string {
-  return wrapEmail(`
-    ${headerBlock('Return Reminder', 'Your rental return is today', '#f59e0b', '#d97706')}
-    <tr>
-      <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escHtml(data.customerName)},</p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">This is a friendly reminder that your <strong style="color: #111827;">${escHtml(data.vehicleName)}</strong> (Booking ${escHtml(data.bookingId)}) is due for return today.</p>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding: 20px 32px 0;">
-        ${dateTimeBlock('Return Date & Time', data.returnDate, data.returnTime, '#f59e0b', 'linear-gradient(135deg, #fffbeb, #fef3c7)')}
-        ${infoBox('Before You Return', 'Please return the vehicle with the same fuel level as pickup to avoid fuel charges. Ensure the vehicle is clean inside and out.', '#92400e', '#fffbeb')}
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0;">
-          <tr>
-            <td style="background: #f9fafb; border-radius: 12px; padding: 16px 20px; border: 1px solid #e5e7eb;">
-              <p style="margin: 0 0 4px; color: #111827; font-size: 14px; font-weight: 700;">Return Location</p>
-              <p style="margin: 0; color: #6b7280; font-size: 13px;">92 Forrest Street, Jersey City, NJ 07304</p>
-            </td>
-          </tr>
-        </table>
-      </td>
-    </tr>
-  `);
+  const result = reminderTemplate(
+    {
+      customerName: data.customerName,
+      vehicleName: data.vehicleName,
+      pickupDate: data.pickupDate,
+      returnDate: data.returnDate,
+      pickupTime: data.pickupTime,
+      returnTime: data.returnTime,
+      bookingId: data.bookingId,
+    },
+    { type: 'return' }
+  );
+  return result.html;
 }
 
 export function bookingSignAgreementTemplate(data: EmailData): string {

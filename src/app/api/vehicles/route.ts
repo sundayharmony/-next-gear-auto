@@ -10,7 +10,7 @@ export async function GET(request: Request) {
   try {
     let query = supabase
       .from("vehicles")
-      .select("*")
+      .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, maintenance_status, color, vin, description")
       .eq("is_published", true)
       .order("created_at", { ascending: true });
 
@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     if (error || !data || data.length === 0) {
       let fallbackQuery = supabase
         .from("vehicles")
-        .select("*")
+        .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, maintenance_status, color, vin, description")
         .order("created_at", { ascending: true });
 
       if (category && category !== "all") {

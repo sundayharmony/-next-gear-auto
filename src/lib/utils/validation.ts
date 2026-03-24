@@ -49,20 +49,6 @@ export const nameRule: ValidationRule = {
   message: "Please enter your full name",
 };
 
-export const dobRule: ValidationRule = {
-  required: true,
-  custom: (value: string) => {
-    const dob = new Date(value);
-    const today = new Date();
-    const age = today.getFullYear() - dob.getFullYear();
-    const monthDiff = today.getMonth() - dob.getMonth();
-    const actualAge = monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate()) ? age - 1 : age;
-    if (actualAge < 18) return "You must be at least 18 years old to rent a vehicle";
-    if (actualAge > 120) return "Please enter a valid date of birth";
-    return null;
-  },
-};
-
 export function sanitizeInput(input: string): string {
   return input
     .replace(/&/g, "&amp;")

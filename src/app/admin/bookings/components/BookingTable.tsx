@@ -3,8 +3,9 @@
 import React from "react";
 import { ArrowUp, ArrowDown, FileText, Shield, Check, AlertTriangle, StickyNote } from "lucide-react";
 import { BookingRow, SortField, SortOrder } from "../types";
-import { formatDate, formatTime } from "@/lib/utils/date-helpers";
+import { formatDate, formatTime, formatDateShort } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
+import { calculateRentalDays } from "@/lib/utils/price-calculator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -52,20 +53,6 @@ export default function BookingTable({
     }
   };
 
-  const formatDateShort = (dateStr: string): string => {
-    try {
-      const date = new Date(dateStr + "T00:00:00");
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-    } catch {
-      return dateStr;
-    }
-  };
-
-  const getRentalDays = (pickupDate: string, returnDate: string): number => {
-    const pickup = new Date(pickupDate).getTime();
-    const returnD = new Date(returnDate).getTime();
-    return Math.max(1, Math.ceil((returnD - pickup) / 86400000));
-  };
 
   const getBalanceColor = (total: number, deposit: number): string => {
     const balance = total - deposit;
@@ -118,7 +105,7 @@ export default function BookingTable({
         <tbody>
           {bookings.map((booking) => {
             const isSelected = selectedIds.has(booking.id);
-            const rentalDays = getRentalDays(booking.pickup_date, booking.return_date);
+            const rentalDays = calculateRentalDays(booking.pickup_date, booking.return_date);
             const statusActions = getStatusActions(booking.status);
             const balance = booking.total_price - booking.deposit;
             const balanceColor = getBalanceColor(booking.total_price, booking.deposit);

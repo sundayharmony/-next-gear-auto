@@ -147,49 +147,6 @@ export function generateProductSchema(vehicle: {
   return schema;
 }
 
-// Article schema - used on blog post pages
-export function generateArticleSchema(post: {
-  title: string;
-  slug: string;
-  excerpt: string;
-  content: string;
-  author: string;
-  publishedAt: string;
-  category: string;
-  featuredImage: string;
-}) {
-  return {
-    "@context": "https://schema.org",
-    "@type": "Article",
-    headline: post.title,
-    description: post.excerpt,
-    url: `${SITE_URL}/blog/${post.slug}`,
-    image: `${SITE_URL}${post.featuredImage}`,
-    datePublished: post.publishedAt,
-    dateModified: post.publishedAt,
-    author: {
-      "@type": "Organization",
-      name: post.author,
-      url: SITE_URL,
-    },
-    publisher: {
-      "@type": "Organization",
-      name: SITE_NAME,
-      url: SITE_URL,
-      logo: {
-        "@type": "ImageObject",
-        url: `${SITE_URL}/images/logo.png`,
-      },
-    },
-    mainEntityOfPage: {
-      "@type": "WebPage",
-      "@id": `${SITE_URL}/blog/${post.slug}`,
-    },
-    articleSection: post.category,
-    wordCount: post.content.split(/\s+/).length,
-  };
-}
-
 // FAQPage schema - used on FAQ page
 export function generateFAQSchema(
   faqs: Array<{ question: string; answer: string }>
