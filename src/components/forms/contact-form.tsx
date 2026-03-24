@@ -30,6 +30,7 @@ export function ContactForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(values),
       });
+      if (!res.ok) throw new Error(`Server error (${res.status})`);
       const data = await res.json();
       if (!data.success) throw new Error(data.message || "Failed to send");
       setSubmitted(true);

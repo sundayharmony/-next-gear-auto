@@ -117,6 +117,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password, action: "login" }),
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        dispatch({ type: "LOGIN_FAILURE", payload: errData?.message || `Server error (${res.status})` });
+        return null;
+      }
       const data = await res.json();
       if (data.success) {
         dispatch({ type: "LOGIN_SUCCESS", payload: data.data });
@@ -146,6 +151,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ...data, action: "signup" }),
       });
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        dispatch({ type: "LOGIN_FAILURE", payload: errData?.message || `Server error (${res.status})` });
+        return false;
+      }
       const result = await res.json();
       if (result.success) {
         dispatch({ type: "LOGIN_SUCCESS", payload: result.data });

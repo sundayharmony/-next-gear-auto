@@ -41,6 +41,7 @@ export function HomeReviews() {
     async function fetchReviews() {
       try {
         const res = await fetch("/api/reviews");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const result = await res.json();
         if (result.success && result.data?.length > 0) {
           // Sort by rating descending, then take top 3

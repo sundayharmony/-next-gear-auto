@@ -68,6 +68,7 @@ function SetPasswordForm() {
         body: JSON.stringify({ email, password, token: token || undefined }),
       });
 
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = await res.json();
 
       if (!result.success) {

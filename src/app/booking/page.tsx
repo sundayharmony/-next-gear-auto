@@ -279,6 +279,7 @@ function BookingPageInner() {
       const formData = new FormData();
       formData.append("file", file);
       const res = await csrfFetch("/api/upload-temp", { method: "POST", body: formData });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setIdDocumentUrl(data.url);

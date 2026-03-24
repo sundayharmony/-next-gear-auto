@@ -45,6 +45,7 @@ export default function SocialPage() {
     async function fetchPosts() {
       try {
         const res = await fetch("/api/instagram");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.success) {
           setPosts(data.data || []);
@@ -65,11 +66,16 @@ export default function SocialPage() {
         return;
       }
       if (scriptLoadedRef.current) {
-        // Script is loading, wait for it
+        // Script is loading, wait for it with a timeout to prevent leaks
+        let elapsed = 0;
         const check = setInterval(() => {
+          elapsed += 100;
           if (window.instgrm) {
             clearInterval(check);
             resolve();
+          } else if (elapsed >= 10000) {
+            clearInterval(check);
+            resolve(); // Give up after 10s, proceed without embed
           }
         }, 100);
         return;
