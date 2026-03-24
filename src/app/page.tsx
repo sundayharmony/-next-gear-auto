@@ -137,17 +137,13 @@ export default async function HomePage() {
                           src={vehicle.images[0]}
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                           loading="lazy"
-                          onError={(e) => {
-                            e.currentTarget.style.display = "none";
-                            const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
-                            if (fallback) fallback.style.display = "flex";
-                          }}
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
-                      ) : null}
-                      <div className="flex h-full items-center justify-center" style={vehicle.images && vehicle.images.length > 0 ? { display: "none" } : {}}>
-                        <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
-                      </div>
+                      ) : (
+                        <div className="flex h-full items-center justify-center">
+                          <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
+                        </div>
+                      )}
                       <Badge className="absolute top-3 left-3" variant="default">
                         {vehicle.category}
                       </Badge>
