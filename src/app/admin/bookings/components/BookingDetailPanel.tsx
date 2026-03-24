@@ -89,13 +89,21 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   });
 
   const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
 
-  // Cleanup timeout on unmount
+  // Cleanup timeout on unmount and handle Escape key
   useEffect(() => {
+    const handleEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        onClose();
+      }
+    };
+    document.addEventListener("keydown", handleEscapeKey);
     return () => {
+      document.removeEventListener("keydown", handleEscapeKey);
       if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
     };
-  }, []);
+  }, [onClose]);
 
   // Fetch tickets, activity, and payments on mount
   useEffect(() => {
@@ -394,7 +402,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       />
 
       {/* Slide-over panel */}
-      <div className="w-full max-w-lg bg-white shadow-xl overflow-y-auto flex flex-col">
+      <div ref={panelRef} tabIndex={0} autoFocus className="w-full max-w-lg bg-white shadow-xl overflow-y-auto flex flex-col outline-none">
         {/* Sticky Header */}
         <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">

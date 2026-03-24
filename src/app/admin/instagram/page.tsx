@@ -84,7 +84,9 @@ export default function AdminInstagramPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Remove this Instagram post from the feed?")) return;
+    const post = posts.find(p => p.id === id);
+    const confirmMsg = post ? `Remove this Instagram post from the feed?\n\nURL: ${post.url}${post.caption ? `\nCaption: ${post.caption}` : ""}` : "Remove this Instagram post from the feed?";
+    if (!confirm(confirmMsg)) return;
     try {
       const res = await adminFetch(`/api/instagram?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -216,7 +218,7 @@ export default function AdminInstagramPage() {
         ) : (
           <div className="space-y-3">
             {posts.map((post, index) => (
-              <Card key={post.id} className="p-4 flex items-center gap-4">
+              <Card key={post.id} className="p-4 flex items-center gap-4 hover:shadow-md transition-shadow">
                 {post.thumbnail_url ? (
                   <div className="relative h-14 w-14 rounded-lg overflow-hidden shrink-0 bg-gray-100">
                     <img src={post.thumbnail_url} alt={`Instagram post ${index + 1}`} loading="lazy" className="h-full w-full object-cover" />
@@ -236,6 +238,7 @@ export default function AdminInstagramPage() {
                     href={post.url}
                     target="_blank"
                     rel="noopener noreferrer"
+                    title={post.url}
                     className="text-sm text-purple-600 hover:text-purple-800 font-medium truncate block"
                   >
                     {post.url}

@@ -29,7 +29,7 @@ export function Footer() {
             <ul className="space-y-2">
               {NAV_ITEMS.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} className="text-sm text-gray-400 transition-colors hover:text-purple-400">
+                  <Link href={item.href} className="text-sm text-gray-400 transition-colors hover:text-purple-400 focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">
                     {item.label}
                   </Link>
                 </li>
@@ -41,11 +41,11 @@ export function Footer() {
           <div>
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white">Services</h3>
             <ul className="space-y-2 text-sm">
-              <li><Link href="/fleet?category=compact" className="text-gray-400 transition-colors hover:text-purple-400">Economy Rentals</Link></li>
-              <li><Link href="/fleet?category=sedan" className="text-gray-400 transition-colors hover:text-purple-400">Sedan Rentals</Link></li>
-              <li><Link href="/fleet?category=suv" className="text-gray-400 transition-colors hover:text-purple-400">SUV Rentals</Link></li>
-              <li><Link href="/fleet?category=truck" className="text-gray-400 transition-colors hover:text-purple-400">Truck Rentals</Link></li>
-              <li><Link href="/fleet" className="text-gray-400 transition-colors hover:text-purple-400">Long-Term Rentals</Link></li>
+              <li><Link href="/fleet?category=compact" className="text-gray-400 transition-colors hover:text-purple-400 focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">Economy Rentals</Link></li>
+              <li><Link href="/fleet?category=sedan" className="text-gray-400 transition-colors hover:text-purple-400 focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">Sedan Rentals</Link></li>
+              <li><Link href="/fleet?category=suv" className="text-gray-400 transition-colors hover:text-purple-400 focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">SUV Rentals</Link></li>
+              <li><Link href="/fleet?category=truck" className="text-gray-400 transition-colors hover:text-purple-400 focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">Truck Rentals</Link></li>
+              <li><Link href="/fleet" className="text-gray-400 transition-colors hover:text-purple-400 focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">Long-Term Rentals</Link></li>
             </ul>
           </div>
 
@@ -59,11 +59,11 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="h-4 w-4 shrink-0 text-purple-400" />
-                <a href={`tel:${CONTACT_INFO.phone.replace(/[^\d+]/g, "")}`} className="hover:text-purple-400 transition-colors">{CONTACT_INFO.phone}</a>
+                <a href={`tel:${CONTACT_INFO.phone.replace(/[^\d+]/g, "")}`} className="hover:text-purple-400 transition-colors focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">{CONTACT_INFO.phone}</a>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="h-4 w-4 shrink-0 text-purple-400" />
-                <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-purple-400 transition-colors">{CONTACT_INFO.email}</a>
+                <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-purple-400 transition-colors focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">{CONTACT_INFO.email}</a>
               </li>
             </ul>
           </div>
@@ -73,9 +73,9 @@ export function Footer() {
         <div className="mt-10 border-t border-gray-800 pt-6 text-center text-xs text-gray-500">
           <p>&copy; {currentYear} {SITE_NAME}. All rights reserved.</p>
           <div className="mt-2 flex justify-center gap-4">
-            <Link href="/privacy" className="hover:text-purple-400 transition-colors">Privacy Policy</Link>
-            <Link href="/terms" className="hover:text-purple-400 transition-colors">Terms of Service</Link>
-            <Link href="/faq#rental-agreement" className="hover:text-purple-400 transition-colors">Rental Agreement</Link>
+            <Link href="/privacy" className="hover:text-purple-400 transition-colors focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">Privacy Policy</Link>
+            <Link href="/terms" className="hover:text-purple-400 transition-colors focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">Terms of Service</Link>
+            <Link href="/faq#rental-agreement" className="hover:text-purple-400 transition-colors focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">Rental Agreement</Link>
           </div>
         </div>
       </div>

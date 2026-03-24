@@ -306,21 +306,23 @@ export default function CreateBookingForm({
         {/* CUSTOMER FIELDS */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Customer Name *</label>
+            <label className="block text-sm font-medium mb-1">Customer Name <span className="text-red-500">*</span></label>
             <Input
               type="text"
               value={form.customerName}
               onChange={(e) => setForm({ ...form, customerName: e.target.value })}
               placeholder="John Doe"
+              className="focus-visible:outline-2 focus-visible:outline-purple-600"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Email *</label>
+            <label className="block text-sm font-medium mb-1">Email <span className="text-red-500">*</span></label>
             <Input
               type="email"
               value={form.customerEmail}
               onChange={(e) => setForm({ ...form, customerEmail: e.target.value })}
               placeholder="john@example.com"
+              className="focus-visible:outline-2 focus-visible:outline-purple-600"
             />
           </div>
         </div>
@@ -337,11 +339,11 @@ export default function CreateBookingForm({
 
         {/* VEHICLE SELECT */}
         <div>
-          <label className="block text-sm font-medium mb-1">Vehicle *</label>
+          <label className="block text-sm font-medium mb-1">Vehicle <span className="text-red-500">*</span></label>
           <select
             value={form.vehicleId}
             onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}
-            className="w-full px-3 py-2 border rounded text-sm"
+            className="w-full px-3 py-2 border rounded text-sm focus-visible:outline-2 focus-visible:outline-purple-600 outline-none"
           >
             <option value="">Select a vehicle</option>
             {vehicles.map((v) => (
@@ -371,19 +373,20 @@ export default function CreateBookingForm({
         {/* DATE/TIME FIELDS */}
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Pickup Date *</label>
+            <label className="block text-sm font-medium mb-1">Pickup Date <span className="text-red-500">*</span></label>
             <Input
               type="date"
               value={form.pickupDate}
               onChange={(e) => setForm({ ...form, pickupDate: e.target.value })}
+              className="focus-visible:outline-2 focus-visible:outline-purple-600"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Pickup Time *</label>
+            <label className="block text-sm font-medium mb-1">Pickup Time <span className="text-red-500">*</span></label>
             <select
               value={form.pickupTime}
               onChange={(e) => setForm({ ...form, pickupTime: e.target.value })}
-              className="w-full px-3 py-2 border rounded text-sm"
+              className="w-full px-3 py-2 border rounded text-sm focus-visible:outline-2 focus-visible:outline-purple-600 outline-none"
             >
               {TIME_SLOTS.map((slot) => (
                 <option key={slot.value} value={slot.value}>
@@ -396,19 +399,20 @@ export default function CreateBookingForm({
 
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Return Date *</label>
+            <label className="block text-sm font-medium mb-1">Return Date <span className="text-red-500">*</span></label>
             <Input
               type="date"
               value={form.returnDate}
               onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
+              className="focus-visible:outline-2 focus-visible:outline-purple-600"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Return Time *</label>
+            <label className="block text-sm font-medium mb-1">Return Time <span className="text-red-500">*</span></label>
             <select
               value={form.returnTime}
               onChange={(e) => setForm({ ...form, returnTime: e.target.value })}
-              className="w-full px-3 py-2 border rounded text-sm"
+              className="w-full px-3 py-2 border rounded text-sm focus-visible:outline-2 focus-visible:outline-purple-600 outline-none"
             >
               {TIME_SLOTS.map((slot) => (
                 <option key={slot.value} value={slot.value}>
@@ -471,7 +475,7 @@ export default function CreateBookingForm({
           <select
             value={form.paymentMethod}
             onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-            className="w-full px-3 py-2 border rounded text-sm"
+            className="w-full px-3 py-2 border rounded text-sm focus-visible:outline-2 focus-visible:outline-purple-600 outline-none"
           >
             {PAYMENT_METHODS.map((method) => (
               <option key={method.value} value={method.value}>

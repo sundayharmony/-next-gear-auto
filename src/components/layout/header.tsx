@@ -17,6 +17,7 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
+      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-purple-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md">Skip to main content</a>
       {/* Top bar */}
       <div className="bg-purple-800 text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-1.5 text-xs sm:px-6 lg:px-8">
@@ -48,7 +49,7 @@ export function Header() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:text-purple-600 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none",
                   pathname === item.href
                     ? "bg-purple-50 text-purple-700"
                     : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
@@ -118,7 +119,7 @@ export function Header() {
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  "block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:text-purple-600 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none",
                   pathname === item.href
                     ? "bg-purple-50 text-purple-700"
                     : "text-gray-600 hover:bg-gray-50"

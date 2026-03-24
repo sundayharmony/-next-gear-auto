@@ -65,10 +65,11 @@ export default function BookingFilters({
           <button
             key={status}
             onClick={() => onStatusChange(status)}
-            className={`px-4 py-2 rounded-full font-medium text-sm transition-colors ${
+            aria-pressed={statusFilter === status}
+            className={`px-4 py-2 rounded-full font-medium text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 outline-none ${
               statusFilter === status
-                ? "bg-purple-600 text-white"
-                : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+                ? "bg-purple-600 text-white focus-visible:outline-purple-700"
+                : "bg-gray-200 text-gray-700 hover:bg-gray-300 focus-visible:outline-purple-600"
             }`}
           >
             {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -85,7 +86,7 @@ export default function BookingFilters({
             placeholder="Search by customer name, email, phone..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-10"
+            className="pl-10 focus-visible:outline-2 focus-visible:outline-purple-600 focus-visible:outline-offset-0"
           />
         </div>
         <Button

@@ -226,7 +226,7 @@ export default function AdminPromoCodesPage() {
                   </td></tr>
                 ) : (
                   codes.map((c) => (
-                    <tr key={c.code} className="border-b last:border-0 hover:bg-gray-50">
+                    <tr key={c.code} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
                       {editingCode === c.code ? (
                         <>
                           <td className="px-4 py-3"><Badge className="bg-purple-100 text-purple-700 font-mono">{c.code}</Badge></td>
@@ -253,8 +253,7 @@ export default function AdminPromoCodesPage() {
                         <>
                           <td className="px-4 py-3">
                             <div className="flex items-center gap-2">
-                              <Tag className="h-3.5 w-3.5 text-green-500" />
-                              <span className="font-mono font-medium text-gray-900">{c.code}</span>
+                              <Badge className="bg-purple-100 text-purple-700 font-mono font-medium tracking-wide">{c.code}</Badge>
                             </div>
                             {c.description && <p className="text-xs text-gray-400 mt-0.5">{c.description}</p>}
                           </td>
@@ -266,7 +265,15 @@ export default function AdminPromoCodesPage() {
                             <span className="text-gray-900">{c.usedCount || 0}</span>
                             <span className="text-gray-400"> / {c.maxUses}</span>
                           </td>
-                          <td className="px-4 py-3 text-gray-500 text-xs">{c.expiresAt || "No expiry"}</td>
+                          <td className="px-4 py-3 text-xs">
+                            {c.expiresAt ? (
+                              <span className={new Date(c.expiresAt) < new Date() ? "text-red-600 line-through font-medium" : "text-gray-600"}>
+                                {new Date(c.expiresAt).toLocaleDateString()}
+                              </span>
+                            ) : (
+                              <span className="text-gray-500">No expiry</span>
+                            )}
+                          </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1">
                               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => { setEditingCode(c.code); setEditForm({ ...c }); }}>
