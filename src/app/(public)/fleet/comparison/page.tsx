@@ -28,8 +28,9 @@ function ComparisonContent() {
   if (loading) {
     return (
       <PageContainer className="py-16">
-        <div className="flex items-center justify-center">
-          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" />
+        <div className="flex flex-col items-center justify-center gap-3" role="status" aria-live="polite">
+          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" aria-hidden="true" />
+          <p className="text-sm text-gray-500">Loading comparison...</p>
         </div>
       </PageContainer>
     );
@@ -208,9 +209,15 @@ function ComparisonContent() {
                   {selectedVehicles.map((v) => (
                     <td key={v.id} className="p-3 text-center">
                       {v.features.includes(feature) ? (
-                        <Check className="h-5 w-5 text-green-500 mx-auto" />
+                        <>
+                          <Check className="h-5 w-5 text-green-500 mx-auto" aria-hidden="true" />
+                          <span className="sr-only">Included</span>
+                        </>
                       ) : (
-                        <X className="h-5 w-5 text-gray-300 mx-auto" />
+                        <>
+                          <X className="h-5 w-5 text-gray-300 mx-auto" aria-hidden="true" />
+                          <span className="sr-only">Not included</span>
+                        </>
                       )}
                     </td>
                   ))}

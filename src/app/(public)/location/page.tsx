@@ -29,7 +29,12 @@ export default function LocationPage() {
           {/* Contact Info + Map */}
           <div className="lg:col-span-2 space-y-8">
             {/* Google Maps Embed */}
-            <Card className="overflow-hidden">
+            <Card className="overflow-hidden relative bg-gray-100">
+              <noscript>
+                <div className="flex h-96 items-center justify-center bg-gray-200 text-center">
+                  <p className="text-gray-600">Map requires JavaScript. <a href="https://maps.google.com/maps?q=92+Forrest+Street,+Jersey+City,+NJ+07304" className="text-purple-600 hover:underline">View on Google Maps</a></p>
+                </div>
+              </noscript>
               <iframe
                 src="https://maps.google.com/maps?q=92+Forrest+Street,+Jersey+City,+NJ+07304&t=&z=15&ie=UTF8&iwloc=&output=embed"
                 width="100%"
@@ -49,14 +54,14 @@ export default function LocationPage() {
                 <CardContent className="p-5">
                   <div className="flex items-start gap-3">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100">
-                      <MapPin className="h-5 w-5 text-purple-600" />
+                      <MapPin className="h-5 w-5 text-purple-600" aria-hidden="true" />
                     </div>
                     <div>
                       <h3 className="font-semibold text-gray-900">Address</h3>
-                      <p className="mt-1 text-sm text-gray-500">
+                      <address className="mt-1 text-sm text-gray-500 not-italic">
                         {CONTACT_INFO.address}<br />
                         {CONTACT_INFO.city}, {CONTACT_INFO.state} {CONTACT_INFO.zip}
-                      </p>
+                      </address>
                     </div>
                   </div>
                 </CardContent>

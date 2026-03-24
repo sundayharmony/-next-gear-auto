@@ -152,21 +152,21 @@ function SetPasswordForm() {
                     placeholder="Create a password"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10"
+                    className="pl-10 pr-10 focus-visible:ring-2 focus-visible:ring-purple-500"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-purple-500 rounded outline-none"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
                 {password && (
-                  <div className="mt-2">
+                  <div className="mt-2" aria-live="polite">
                     <div className="h-1.5 w-full rounded-full bg-gray-200">
-                      <div className={`h-1.5 rounded-full transition-all ${strength.color} ${strength.width}`} />
+                      <div className={`h-1.5 rounded-full transition-all duration-300 ${strength.color} ${strength.width}`} />
                     </div>
                     <p className="mt-1 text-xs text-gray-500">Password strength: {strength.label}</p>
                   </div>
@@ -186,7 +186,7 @@ function SetPasswordForm() {
                     placeholder="Confirm your password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 pr-10"
                   />
                   {confirmPassword && password === confirmPassword && (
                     <Check className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />

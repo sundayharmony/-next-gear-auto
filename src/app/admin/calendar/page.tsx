@@ -59,6 +59,20 @@ export default function AdminCalendarPage() {
     setSelectedBooking(null);
   };
 
+  // Escape key handler for booking detail panel
+  useEffect(() => {
+    const handleEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showBookingDetail) {
+        closeBookingDetail();
+      }
+    };
+
+    if (showBookingDetail) {
+      window.addEventListener("keydown", handleEscapeKey);
+      return () => window.removeEventListener("keydown", handleEscapeKey);
+    }
+  }, [showBookingDetail]);
+
   // Build date range for API filtering (3 months window around current view)
   const getDateRange = () => {
     const from = new Date(view === "timeline" ? timelineStart : calendarMonth);
@@ -231,7 +245,7 @@ export default function AdminCalendarPage() {
 
           {loading && (
             <div className="text-center py-12">
-              <div role="status" aria-label="Loading calendar" className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
+              <div role="status" aria-label="Loading calendar" aria-live="polite" className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
               <p className="mt-4 text-gray-500">Loading calendar...</p>
             </div>
           )}
@@ -290,7 +304,7 @@ export default function AdminCalendarPage() {
           {/* Backdrop */}
           <div className="flex-1 bg-black/50" onClick={closeBookingDetail} />
           {/* Panel */}
-          <div className="w-full max-w-lg bg-white shadow-xl overflow-y-auto">
+          <div className="w-full max-w-lg bg-white shadow-xl overflow-y-auto" tabIndex={0} autoFocus>
             <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
               <h2 className="text-lg font-semibold">Booking Details</h2>
               <button onClick={closeBookingDetail} aria-label="Close booking details" className="text-gray-400 hover:text-gray-600">

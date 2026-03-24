@@ -823,8 +823,9 @@ export default function AdminTicketsPage() {
             {paginateArray(filtered).map((t) => (
               <Card
                 key={t.id}
-                className="cursor-pointer hover:shadow-md hover:border-purple-200 transition-all"
+                className="cursor-pointer hover:shadow-md hover:border-purple-200 transition-all focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 outline-none"
                 onClick={() => setSelectedTicket(t)}
+                tabIndex={0}
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">

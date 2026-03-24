@@ -1569,9 +1569,18 @@ export default function AdminCustomersPage() {
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Search by name or email..."
-              className="pl-9"
+              className="pl-9 pr-9"
               aria-label="Search customers by name or email"
             />
+            {searchInput && (
+              <button
+                onClick={() => { setSearchInput(""); fetchCustomers(); }}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
           </div>
           <Button onClick={handleSearch} variant="outline">Search</Button>
           <Button
@@ -1623,8 +1632,8 @@ export default function AdminCustomersPage() {
                         </div>
                       )}
                       <div className="min-w-0">
-                        <p className="font-semibold text-gray-900 truncate">{c.name}</p>
-                        <p className="text-xs text-gray-500 truncate">{c.email}</p>
+                        <p className="font-semibold text-gray-900 truncate" title={c.name}>{c.name}</p>
+                        <p className="text-xs text-gray-500 truncate" title={c.email}>{c.email}</p>
                       </div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">

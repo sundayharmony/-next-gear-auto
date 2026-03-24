@@ -273,7 +273,7 @@ export default function AgreementSigningPage() {
           )}
 
           {/* Progress */}
-          <div className="mb-6">
+          <div className="mb-6" aria-live="polite" aria-label="Signature progress">
             <div className="flex items-center justify-between mb-2">
               <span className="text-sm font-medium text-gray-700">
                 Signatures: {completedCount} of {SIGNATURE_FIELDS.length}
@@ -287,14 +287,22 @@ export default function AgreementSigningPage() {
                 <button
                   key={field.id}
                   onClick={() => setCurrentStep(i)}
-                  className={`h-2 flex-1 rounded-full transition-colors ${
+                  className={`h-8 w-8 flex-1 rounded-full transition-colors flex items-center justify-center relative ${
                     signatures[field.id]
                       ? "bg-green-500"
                       : i === currentStep
                         ? "bg-purple-500"
                         : "bg-gray-200"
                   }`}
-                />
+                  title={`${field.label}: ${signatures[field.id] ? 'Signed' : 'Pending'}`}
+                  aria-label={`${field.label}: ${signatures[field.id] ? 'Signed' : 'Pending'}`}
+                >
+                  {signatures[field.id] ? (
+                    <CheckCircle2 className="h-5 w-5 text-white" />
+                  ) : i === currentStep ? (
+                    <PenLine className="h-5 w-5 text-white" />
+                  ) : null}
+                </button>
               ))}
             </div>
           </div>

@@ -197,7 +197,7 @@ export default function SocialPage() {
                 key={post.id}
                 onClick={() => openPost(post)}
                 className="group relative aspect-square overflow-hidden rounded-xl bg-gray-100 block w-full text-left cursor-pointer"
-                aria-label={post.caption ? `View Instagram post: ${post.caption.substring(0, 50)}...` : "View Instagram post"}
+                aria-label={post.caption ? `View Instagram post: ${post.caption.substring(0, 60).trim()}${post.caption.length > 60 ? '...' : ''}` : "View Instagram post"}
               >
                 {/* Thumbnail image */}
                 {post.thumbnail_url ? (
@@ -299,7 +299,7 @@ export default function SocialPage() {
           {/* Close button */}
           <button
             onClick={closeModal}
-            className="absolute top-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+            className="absolute top-4 right-4 z-50 flex h-10 w-10 items-center justify-center rounded-full bg-black/50 text-gray-100 hover:bg-black/70 transition-colors"
             aria-label="Close"
           >
             <X className="h-5 w-5" />
@@ -364,7 +364,7 @@ export default function SocialPage() {
               </a>
               <button
                 onClick={closeModal}
-                className="text-sm text-gray-400 hover:text-gray-600"
+                className="text-sm text-gray-600 hover:text-gray-800"
               >
                 Close
               </button>

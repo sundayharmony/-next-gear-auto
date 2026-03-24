@@ -108,7 +108,7 @@ export default function LoginPage() {
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 focus-visible:ring-2 focus-visible:ring-purple-500 rounded outline-none"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
@@ -119,7 +119,7 @@ export default function LoginPage() {
               {/* Remember + Forgot */}
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm">
-                  <input type="checkbox" className="rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
+                  <input type="checkbox" className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2" />
                   <span className="text-gray-600">Remember me</span>
                 </label>
                 <button type="button" onClick={() => setForgotPasswordMsg("Check your email for password reset instructions.")} className="text-sm text-purple-600 hover:text-purple-700 font-medium">

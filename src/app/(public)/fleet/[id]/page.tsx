@@ -209,10 +209,10 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`h-4 w-4 ${i < Math.round(Number(avgRating)) ? "fill-amber-400 text-amber-400" : "text-gray-500"}`} />
+                      <Star key={i} className={`h-4 w-4 ${i < Math.floor(Number(avgRating)) ? "fill-amber-400 text-amber-400" : "text-gray-500"}`} aria-hidden="true" />
                     ))}
                   </div>
-                  <span className="text-sm text-purple-200">{avgRating} ({vehicleReviews.length} reviews)</span>
+                  <span className="text-sm text-purple-200">{avgRating}/5 ({vehicleReviews.length} reviews)</span>
                 </div>
               )}
             </div>
@@ -252,7 +252,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                   {specRows.map((spec) => (
                     <div key={spec.label} className="flex items-center gap-3 rounded-lg bg-gray-50 p-3">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100">
-                        <spec.icon className="h-5 w-5 text-purple-600" />
+                        <spec.icon className="h-5 w-5 text-purple-600" aria-hidden="true" />
                       </div>
                       <div>
                         <div className="text-xs text-gray-400">{spec.label}</div>
@@ -271,7 +271,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                 <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                   {vehicle.features.map((feature) => (
                     <div key={feature} className="flex items-center gap-2 text-sm text-gray-600">
-                      <Check className="h-4 w-4 shrink-0 text-green-500" />
+                      <Check className="h-4 w-4 shrink-0 text-green-500" aria-hidden="true" />
                       {feature}
                     </div>
                   ))}

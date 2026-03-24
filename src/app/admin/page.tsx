@@ -98,7 +98,7 @@ export default function AdminDashboardPage() {
         ) : data ? (
           <>
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4 mb-8">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4 mb-8">
               {[
                 { label: "Total Bookings", value: data.totalBookings, icon: Calendar, color: "text-purple-600" },
                 { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600" },
@@ -164,7 +164,7 @@ export default function AdminDashboardPage() {
                 { label: "Customers", desc: "View all users", icon: Users, href: "/admin/customers", color: "bg-blue-100 text-blue-700" },
               ].map((item) => (
                 <Link key={item.href} href={item.href}>
-                  <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-purple-200">
+                  <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-purple-200 focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2">
                     <CardContent className="p-5">
                       <div className={`inline-flex rounded-lg p-2.5 mb-3 ${item.color}`}>
                         <item.icon className="h-5 w-5" />
@@ -211,8 +211,8 @@ export default function AdminDashboardPage() {
                       data.recentBookings.map((booking) => (
                         <tr key={booking.id} className="border-b last:border-0 hover:bg-gray-50">
                           <td className="px-4 py-3 font-mono text-xs text-purple-600 max-w-[120px] truncate" title={booking.id}>{booking.id}</td>
-                          <td className="px-4 py-3 text-gray-900 max-w-[150px] truncate">{booking.customer_name || "—"}</td>
-                          <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate">{booking.vehicleName}</td>
+                          <td className="px-4 py-3 text-gray-900 max-w-[150px] truncate" title={booking.customer_name || "—"}>{booking.customer_name || "—"}</td>
+                          <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate" title={booking.vehicleName}>{booking.vehicleName}</td>
                           <td className="px-4 py-3">
                             <div><span className="text-sm font-bold text-black">{formatDate(booking.pickup_date)}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
                             <div><span className="text-sm font-bold text-black">{formatDate(booking.return_date)}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>

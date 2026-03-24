@@ -191,7 +191,7 @@ function FleetContent() {
               <div key={vehicle.id} className="relative">
                 {/* Compare checkbox */}
                 <label
-                  className="absolute top-3 right-14 z-10 flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-sm px-2.5 py-1 text-xs font-medium cursor-pointer shadow-sm border border-gray-200 hover:border-purple-300 transition-colors"
+                  className="absolute top-3 right-14 z-10 flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-sm px-2.5 py-1 text-xs font-medium cursor-pointer shadow-sm border border-gray-200 hover:border-purple-300 transition-all duration-200"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <input
@@ -206,7 +206,7 @@ function FleetContent() {
                 </label>
 
                 <Link href={`/fleet/${vehicle.id}`}>
-                  <Card className={`group h-full card-hover ${comparison.isComparing(vehicle.id) ? "ring-2 ring-purple-500" : ""}`}>
+                  <Card className={`group h-full card-hover transition-shadow ${comparison.isComparing(vehicle.id) ? "ring-2 ring-purple-500" : ""}`}>
                     {/* Vehicle Image */}
                     <div className="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100">
                       {vehicle.images && vehicle.images.length > 0 ? (

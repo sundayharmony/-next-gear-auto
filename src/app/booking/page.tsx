@@ -457,7 +457,7 @@ function BookingPageInner() {
             <button onClick={previousMonth} aria-label="Previous month" className="p-2 hover:bg-gray-100 rounded-lg transition">
               <ArrowLeft className="h-5 w-5" />
             </button>
-            <h3 className="text-lg font-semibold text-gray-900">{monthYear}</h3>
+            <h3 className="text-lg font-semibold text-gray-900" aria-live="polite">{monthYear}</h3>
             <button onClick={nextMonth} aria-label="Next month" className="p-2 hover:bg-gray-100 rounded-lg transition">
               <ArrowRight className="h-5 w-5" />
             </button>
@@ -681,6 +681,7 @@ function BookingPageInner() {
                       : "bg-gray-100 text-gray-400"
                   )}
                   disabled={step.num > booking.currentStep}
+                  aria-current={booking.currentStep === step.num ? "step" : undefined}
                 >
                   {step.num < booking.currentStep ? (
                     <Check className="h-3.5 w-3.5" />

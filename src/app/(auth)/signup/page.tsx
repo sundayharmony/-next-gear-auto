@@ -131,7 +131,7 @@ export default function SignupPage() {
                 </div>
                 {/* Strength meter */}
                 {formData.password && (
-                  <div className="mt-2">
+                  <div className="mt-2" aria-live="polite">
                     <div className="h-1.5 w-full rounded-full bg-gray-200">
                       <div className={`h-1.5 rounded-full transition-all ${strength.color} ${strength.width}`} />
                     </div>
@@ -153,24 +153,26 @@ export default function SignupPage() {
                     <Check className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
                   )}
                   {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 text-xs">Passwords don't match</span>
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 text-xs">Mismatch</span>
                   )}
                 </div>
-                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
-                  <p className="mt-1 text-xs text-red-500">Passwords must match</p>
+                {formData.confirmPassword && (
+                  <p className={`mt-1 text-xs ${formData.password === formData.confirmPassword ? "text-green-600" : "text-red-500"}`}>
+                    {formData.password === formData.confirmPassword ? "Passwords match" : "Passwords do not match"}
+                  </p>
                 )}
               </div>
 
               {/* Terms */}
-              <label className="flex items-start gap-2 text-sm">
-                <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500" aria-label="I agree to the Terms of Service and Privacy Policy" />
-                <span className="text-gray-600">
+              <div className="flex items-start gap-2 text-sm">
+                <input type="checkbox" id="terms" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
+                <label htmlFor="terms" className="text-gray-600 cursor-pointer">
                   I agree to the{" "}
                   <Link href="/terms" className="text-purple-600 hover:text-purple-700">Terms of Service</Link>{" "}
                   and{" "}
                   <Link href="/privacy" className="text-purple-600 hover:text-purple-700">Privacy Policy</Link>
-                </span>
-              </label>
+                </label>
+              </div>
 
               <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                 {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}

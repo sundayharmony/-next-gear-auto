@@ -93,7 +93,7 @@ export default async function HomePage() {
                 </Button>
               </Link>
               <Link href="/booking">
-                <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
+                <Button size="lg" variant="outline" className="border-white/60 text-white hover:bg-white/10">
                   Book Now
                 </Button>
               </Link>
@@ -130,20 +130,24 @@ export default async function HomePage() {
               const specs = vehicle.specs as Record<string, any>;
               return (
                 <Link key={vehicle.id} href={`/fleet/${vehicle.id}`}>
-                  <Card className="group h-full card-hover">
+                  <Card className="group h-full card-hover transition-shadow">
                     <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100">
                       {vehicle.images && vehicle.images.length > 0 ? (
                         <img
                           src={vehicle.images[0]}
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                           loading="lazy"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                            const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
+                            if (fallback) fallback.style.display = "flex";
+                          }}
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
-                      ) : (
-                        <div className="flex h-full items-center justify-center">
-                          <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
-                        </div>
-                      )}
+                      ) : null}
+                      <div className="flex h-full items-center justify-center" style={vehicle.images && vehicle.images.length > 0 ? { display: "none" } : {}}>
+                        <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
+                      </div>
                       <Badge className="absolute top-3 left-3" variant="default">
                         {vehicle.category}
                       </Badge>
@@ -206,7 +210,7 @@ export default async function HomePage() {
               { icon: Clock, title: "Easy Booking", desc: "Book online in minutes with our simple 7-step process. Instant confirmation." },
               { icon: Star, title: "Local Expertise", desc: "Friendly, knowledgeable staff ready to help you find the perfect vehicle." },
             ].map((item) => (
-              <Card key={item.title} className="border-0 bg-white p-6 text-center shadow-sm card-hover">
+              <Card key={item.title} className="border-0 bg-white p-6 text-center shadow-sm card-hover transition-shadow">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-100">
                   <item.icon className="h-6 w-6 text-purple-600" />
                 </div>
@@ -265,7 +269,7 @@ export default async function HomePage() {
               </Button>
             </Link>
             <Link href="/booking">
-              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10">
+              <Button size="lg" variant="outline" className="border-white/60 text-white hover:bg-white/10">
                 Book Now
               </Button>
             </Link>

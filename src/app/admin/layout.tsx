@@ -109,7 +109,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar overlay on mobile */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden"
+          className="fixed inset-0 z-40 bg-black/50 lg:hidden transition-opacity duration-300 ease-in-out"
           onClick={() => setSidebarOpen(false)}
         />
       )}
@@ -117,7 +117,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Sidebar */}
       <aside
         className={cn(
-          "fixed z-40 top-[64px] bottom-0 left-0 w-64 bg-gray-900 text-white flex flex-col transition-transform lg:relative lg:top-0 lg:translate-x-0",
+          "fixed z-40 top-[64px] bottom-0 left-0 w-64 bg-gray-900 text-white flex flex-col transition-transform duration-300 ease-in-out lg:relative lg:top-0 lg:translate-x-0",
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
         )}
       >
@@ -130,6 +130,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 onClick={() => setShowNotifications(!showNotifications)}
                 aria-label="Toggle notifications dropdown"
                 aria-expanded={showNotifications}
+                title="Unread notifications"
                 className="relative p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
               >
                 <Bell className="h-5 w-5 text-gray-400" />

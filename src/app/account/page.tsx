@@ -270,7 +270,7 @@ export default function AccountPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   className={cn(
-                    "flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-colors",
+                    "flex w-full items-center justify-between rounded-lg px-4 py-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 outline-none",
                     activeTab === tab.id
                       ? "bg-purple-50 text-purple-700"
                       : "text-gray-600 hover:bg-gray-50"
@@ -568,7 +568,7 @@ export default function AccountPage() {
                           </div>
                           {latestIdDoc ? (
                             <a href={latestIdDoc} target="_blank" rel="noopener noreferrer" className="block">
-                              <img src={latestIdDoc} alt="ID Document" loading="lazy" className="rounded-lg border max-h-32 w-full object-contain bg-white" />
+                              <img src={latestIdDoc} alt="Uploaded driver's license document" loading="lazy" className="rounded-lg border max-h-32 w-full object-contain bg-white" />
                               <p className="text-xs text-purple-600 mt-2 font-medium">Click to view full size</p>
                             </a>
                           ) : (
@@ -585,7 +585,7 @@ export default function AccountPage() {
                           </div>
                           {latestInsDoc ? (
                             <a href={latestInsDoc} target="_blank" rel="noopener noreferrer" className="block">
-                              <img src={latestInsDoc} alt="Insurance Proof" loading="lazy" className="rounded-lg border max-h-32 w-full object-contain bg-white" />
+                              <img src={latestInsDoc} alt="Uploaded auto insurance proof document" loading="lazy" className="rounded-lg border max-h-32 w-full object-contain bg-white" />
                               <p className="text-xs text-purple-600 mt-2 font-medium">Click to view full size</p>
                             </a>
                           ) : (

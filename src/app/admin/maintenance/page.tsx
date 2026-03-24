@@ -365,6 +365,8 @@ export default function AdminMaintenancePage() {
   };
 
   const removePhoto = (url: string, context: "new" | "detail") => {
+    if (!window.confirm("Are you sure you want to remove this photo?")) return;
+
     if (context === "new") {
       const idx = newRecord.photoUrls.indexOf(url);
       if (idx !== -1) {
@@ -683,7 +685,7 @@ export default function AdminMaintenancePage() {
         {/* Records Table */}
         {loading ? (
           <div className="text-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
+            <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" role="status" aria-label="Loading records" aria-live="polite" />
             <p className="mt-4 text-gray-500">Loading records...</p>
           </div>
         ) : filteredRecords.length === 0 ? (
@@ -725,6 +727,7 @@ export default function AdminMaintenancePage() {
                       <td className="px-6 py-3 text-gray-700 max-w-[200px] truncate">{record.title}</td>
                       <td className="px-6 py-3">
                         <Badge className={getStatusBadgeColor(record.status)}>
+                          <span className={`mr-1.5 font-bold ${record.status === "pending" ? "text-yellow-700" : record.status === "in-progress" ? "text-blue-700" : "text-green-700"}`}>●</span>
                           {getStatusIcon(record.status)}
                           {formatStatusLabel(record.status)}
                         </Badge>
@@ -952,6 +955,7 @@ export default function AdminMaintenancePage() {
                     <p className="text-xs text-gray-500">Record ID</p>
                     <p className="font-mono text-purple-600 font-bold text-sm break-all">{selectedRecord.id}</p>
                     <Badge className={`mt-1 ${getStatusBadgeColor(selectedRecord.status)}`}>
+                      <span className={`mr-1.5 font-bold ${selectedRecord.status === "pending" ? "text-yellow-700" : selectedRecord.status === "in-progress" ? "text-blue-700" : "text-green-700"}`}>●</span>
                       {getStatusIcon(selectedRecord.status)}
                       {formatStatusLabel(selectedRecord.status)}
                     </Badge>
