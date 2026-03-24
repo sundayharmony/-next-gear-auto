@@ -174,13 +174,16 @@ export default function AdminVehiclesPage() {
           body: formData,
         });
 
-        const contentType = res.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
+        if (!res.ok) {
           if (res.status === 413) {
             throw new Error(
               "Upload is too large for the server. Try a smaller image file."
             );
           }
+          throw new Error(`Upload failed (HTTP ${res.status})`);
+        }
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
           throw new Error("Upload failed with a non-JSON server response.");
         }
         const data = await res.json();
@@ -322,32 +325,7 @@ export default function AdminVehiclesPage() {
       if (data.success) {
         setVehicles((prev) =>
           prev.map((v) =>
-            v.id === editingId
-              ? {
-                  ...v,
-                  year: editForm.year || v.year,
-                  make: editForm.make || v.make,
-                  model: editForm.model || v.model,
-                  category: editForm.category || v.category,
-                  images: editForm.images || v.images,
-                  specs: editForm.specs || v.specs,
-                  dailyRate: editForm.dailyRate || v.dailyRate,
-                  features: editForm.features || v.features,
-                  isAvailable: editForm.isAvailable !== undefined ? editForm.isAvailable : v.isAvailable,
-                  isPublished: editForm.isPublished !== undefined ? editForm.isPublished : v.isPublished,
-                  description: editForm.description || v.description,
-                  color: editForm.color || v.color,
-                  mileage: editForm.mileage !== undefined ? editForm.mileage : v.mileage,
-                  licensePlate: editForm.licensePlate || v.licensePlate,
-                  vin: editForm.vin || v.vin,
-                  maintenanceStatus: editForm.maintenanceStatus || v.maintenanceStatus,
-                  purchasePrice: editForm.purchasePrice !== undefined ? editForm.purchasePrice : v.purchasePrice,
-                  isFinanced: editForm.isFinanced !== undefined ? editForm.isFinanced : v.isFinanced,
-                  monthlyPayment: editForm.monthlyPayment !== undefined ? editForm.monthlyPayment : v.monthlyPayment,
-                  paymentDayOfMonth: editForm.paymentDayOfMonth !== undefined ? editForm.paymentDayOfMonth : v.paymentDayOfMonth,
-                  financingStartDate: editForm.financingStartDate || v.financingStartDate,
-                }
-              : v
+            v.id === editingId ? { ...v, ...editForm } : v
           )
         );
         setEditingId(null);
@@ -605,6 +583,9 @@ export default function AdminVehiclesPage() {
               </label>
               <button
                 type="button"
+                role="switch"
+                aria-checked={form.isFinanced}
+                aria-label="Toggle vehicle financing"
                 onClick={() => setForm({ ...form, isFinanced: !form.isFinanced })}
                 className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
                   form.isFinanced ? "bg-purple-600" : "bg-gray-300"
@@ -798,7 +779,7 @@ export default function AdminVehiclesPage() {
             <div className="flex flex-wrap gap-2 mb-3">
               {(form.images || []).map((img, idx) => (
                 <div
-                  key={idx}
+                  key={img}
                   className="relative w-24 h-24 rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
                 >
                   <img
@@ -881,7 +862,7 @@ export default function AdminVehiclesPage() {
             <div className="flex flex-wrap gap-2 mb-3">
               {(form.features || []).map((feature, idx) => (
                 <Badge
-                  key={idx}
+                  key={`${feature}-${idx}`}
                   variant="secondary"
                   className="flex items-center gap-1"
                 >
@@ -889,6 +870,7 @@ export default function AdminVehiclesPage() {
                   <button
                     type="button"
                     onClick={() => removeFeature(idx, formKey)}
+                    aria-label={`Remove ${feature}`}
                     className="ml-1 hover:text-red-600"
                   >
                     <X className="h-3 w-3" />
@@ -1189,6 +1171,7 @@ export default function AdminVehiclesPage() {
               placeholder="Search by make, model, or name..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
+              aria-label="Search vehicles"
               className="pl-10"
             />
           </div>
@@ -1199,6 +1182,7 @@ export default function AdminVehiclesPage() {
               onChange={(e) =>
                 setFilterCategory(e.target.value as VehicleCategory | "")
               }
+              aria-label="Filter by category"
               className="rounded-md border border-gray-200 px-3 py-2 text-sm"
             >
               <option value="">All Categories</option>
@@ -1390,9 +1374,9 @@ export default function AdminVehiclesPage() {
                   {/* Features Tags */}
                   {vehicle.features && vehicle.features.length > 0 && (
                     <div className="mb-4 flex flex-wrap gap-1">
-                      {vehicle.features.slice(0, 3).map((feature, idx) => (
+                      {vehicle.features.slice(0, 3).map((feature) => (
                         <Badge
-                          key={idx}
+                          key={feature}
                           variant="secondary"
                           className="text-xs"
                         >
@@ -1453,6 +1437,7 @@ export default function AdminVehiclesPage() {
                       variant="outline"
                       className="text-red-600 hover:text-red-700"
                       onClick={() => deleteVehicle(vehicle.id)}
+                      aria-label={`Delete ${getVehicleDisplayName(vehicle)}`}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>

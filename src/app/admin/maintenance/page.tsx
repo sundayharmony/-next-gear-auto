@@ -83,6 +83,7 @@ export default function AdminMaintenancePage() {
         adminFetch("/api/admin/vehicles"),
       ]);
 
+      if (!recordsRes.ok || !vehiclesRes.ok) throw new Error("Failed to fetch");
       const recordsData = await recordsRes.json();
       const vehiclesData = await vehiclesRes.json();
 
@@ -175,6 +176,7 @@ export default function AdminMaintenancePage() {
         }),
       });
 
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         const updatedRecord: MaintenanceRecord = {
@@ -226,6 +228,7 @@ export default function AdminMaintenancePage() {
         }),
       });
 
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         const newId = data.data?.id;
@@ -271,6 +274,7 @@ export default function AdminMaintenancePage() {
       const res = await adminFetch(`/api/admin/maintenance?id=${id}`, {
         method: "DELETE",
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setRecords((prev) => prev.filter((r) => r.id !== id));
@@ -326,6 +330,7 @@ export default function AdminMaintenancePage() {
         body: formData,
       });
 
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
       if (data.success) {
@@ -1026,6 +1031,7 @@ export default function AdminMaintenancePage() {
                     <Button
                       variant="outline"
                       className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                      disabled={saving}
                       onClick={() => deleteRecord(selectedRecord.id)}
                     >
                       <Trash2 className="h-4 w-4 mr-2" />

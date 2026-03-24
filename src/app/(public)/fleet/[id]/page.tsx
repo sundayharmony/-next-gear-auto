@@ -21,6 +21,15 @@ interface PageProps {
   params: Promise<{ id: string }>;
 }
 
+interface VehicleSpecs {
+  passengers: number;
+  luggage: number;
+  transmission: string;
+  fuelType: string;
+  mpg: number;
+  doors: number;
+}
+
 interface Vehicle {
   id: string;
   year: number;
@@ -28,7 +37,7 @@ interface Vehicle {
   model: string;
   category: string;
   images: string[];
-  specs: Record<string, any>;
+  specs: VehicleSpecs;
   daily_rate: number;
   features: string[];
   is_available: boolean;
@@ -108,7 +117,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     : null;
 
   const displayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
-  const specs = vehicle.specs as Record<string, any>;
+  const specs = vehicle.specs;
   return {
     title: `${displayName} Rental - $${vehicle.daily_rate}/day`,
     description: `Rent a ${displayName} in Jersey City, NJ. ${specs.passengers} passengers, ${specs.luggage} bags, ${specs.mpg} MPG. Starting at $${vehicle.daily_rate}/day.${avgRating ? ` Rated ${avgRating}/5.` : ""}`,
@@ -152,7 +161,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
     // If error, similar vehicles will be empty
   }
 
-  const specs = vehicle.specs as Record<string, any>;
+  const specs = vehicle.specs;
   const specRows = [
     { icon: Users, label: "Passengers", value: `${specs.passengers} seats` },
     { icon: Briefcase, label: "Luggage", value: `${specs.luggage} bags` },
@@ -371,8 +380,8 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                     <CardContent className="p-5">
                       <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{sv.year} {sv.make} {sv.model}</h3>
                       <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {(sv.specs as Record<string, any>)?.passengers}</span>
-                        <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {(sv.specs as Record<string, any>)?.mpg} mpg</span>
+                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {sv.specs?.passengers}</span>
+                        <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {sv.specs?.mpg} mpg</span>
                       </div>
                       <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
                         <span className="text-xl font-bold text-purple-600">${sv.daily_rate}<span className="text-sm text-gray-400 font-normal">/day</span></span>

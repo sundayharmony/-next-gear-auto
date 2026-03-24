@@ -117,6 +117,7 @@ function FleetContent() {
                   placeholder="Search vehicles..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
+                  aria-label="Search vehicles"
                   className="pl-10"
                 />
               </div>
