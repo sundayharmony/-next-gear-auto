@@ -101,7 +101,7 @@ function BookingPageInner() {
     if (vehicleId && !booking.selectedVehicle) {
       const vehicle = vehicles.find((v) => v.id === vehicleId);
       if (vehicle) {
-        booking.selectVehicle(vehicle as any);
+        booking.selectVehicle(vehicle);
         setPreSelected(true);
       }
     }
@@ -110,6 +110,10 @@ function BookingPageInner() {
   // Fetch booked dates for all vehicles when dates are set (Step 1 → Step 2 transition)
   useEffect(() => {
     if (!booking.pickupDate || !booking.returnDate) return;
+    if (vehicles.length === 0) return;
+
+    let cancelled = false;
+    const controller = new AbortController();
 
     const fetchAllBookedDates = async () => {
       setCheckingAvailability(true);
@@ -118,27 +122,34 @@ function BookingPageInner() {
         await Promise.all(
           vehicles.map(async (v) => {
             try {
-              const res = await fetch(`/api/vehicles/booked-dates?vehicleId=${v.id}`);
+              const res = await fetch(`/api/vehicles/booked-dates?vehicleId=${v.id}`, { signal: controller.signal });
               if (!res.ok) throw new Error(`HTTP ${res.status}`);
               const data = await res.json();
               if (data.success) {
                 dateMap[v.id] = data.data || [];
               }
-            } catch {
-              dateMap[v.id] = [];
+            } catch (err) {
+              if ((err as Error).name !== "AbortError") {
+                dateMap[v.id] = [];
+              }
             }
           })
         );
       } catch {
         // If fetching fails, don't block anything
       }
-      setVehicleBookedDates(dateMap);
-      setCheckingAvailability(false);
+      if (!cancelled) {
+        setVehicleBookedDates(dateMap);
+        setCheckingAvailability(false);
+      }
     };
 
-    if (vehicles.length > 0) {
-      fetchAllBookedDates();
-    }
+    fetchAllBookedDates();
+
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [booking.pickupDate, booking.returnDate, vehicles]);
 
   // Check if a vehicle has a date conflict with selected dates (includes 12-hour buffer)
@@ -858,7 +869,7 @@ function BookingPageInner() {
                           : "cursor-pointer hover:shadow-md",
                         !booked && booking.selectedVehicle?.id === vehicle.id && "ring-2 ring-purple-600 shadow-md"
                       )}
-                      onClick={() => !booked && booking.selectVehicle(vehicle as any)}
+                      onClick={() => !booked && booking.selectVehicle(vehicle)}
                     >
                       <CardContent className="flex items-center gap-4 p-4">
                         <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg bg-gray-100 overflow-hidden">

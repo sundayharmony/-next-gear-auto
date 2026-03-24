@@ -79,7 +79,11 @@ function SetPasswordForm() {
 
       // Save user to localStorage so they're logged in
       if (result.data) {
-        localStorage.setItem("nga_user", JSON.stringify(result.data));
+        try {
+          localStorage.setItem("nga_user", JSON.stringify(result.data));
+        } catch {
+          // localStorage may be full or disabled — proceed anyway
+        }
       }
 
       setSuccess(true);

@@ -33,16 +33,17 @@ function SuccessContent() {
   const [agreementStatus, setAgreementStatus] = useState<"idle" | "signing" | "signed" | "error">("idle");
 
   // Submit agreement signatures that were saved to localStorage before Stripe redirect
+  // Waits for booking to load so we have the customer_email
   useEffect(() => {
     async function submitAgreementSignatures() {
-      if (!bookingId) return;
+      if (!bookingId || !booking) return;
 
       const storageKey = `nga_agreement_sigs_${bookingId}`;
       try {
         const savedSigs = localStorage.getItem(storageKey);
         if (!savedSigs) return;
 
-        let signatures: Record<string, any>;
+        let signatures: Record<string, unknown>;
         try {
           signatures = JSON.parse(savedSigs);
         } catch {
@@ -67,7 +68,7 @@ function SuccessContent() {
         const res = await csrfFetch("/api/rental-agreement/sign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bookingId, signatures: validSigs, customerEmail: booking?.customer_email }),
+          body: JSON.stringify({ bookingId, signatures: validSigs, customerEmail: booking.customer_email }),
         });
 
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -87,7 +88,7 @@ function SuccessContent() {
     }
 
     submitAgreementSignatures();
-  }, [bookingId]);
+  }, [bookingId, booking]);
 
   useEffect(() => {
     async function fetchBooking() {

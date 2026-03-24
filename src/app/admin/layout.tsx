@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/context/auth-context";
 import { cn } from "@/lib/utils/cn";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { logger } from "@/lib/utils/logger";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -55,7 +56,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             }))
         );
       }
-    } catch { /* silent */ }
+    } catch (err) {
+      logger.error("Failed to fetch pending bookings:", err);
+    }
   }, []);
 
   useEffect(() => {
