@@ -33,6 +33,7 @@ import {
   MoreHorizontal,
   Download,
   CheckCircle2,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -249,6 +250,7 @@ export default function AdminFinancesPage() {
   });
   const [editingExpense, setEditingExpense] = useState<EditingExpense | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [savingExpenseId, setSavingExpenseId] = useState<string | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [showDailyRevenue, setShowDailyRevenue] = useState(false);
   const [tickets, setTickets] = useState<Array<{ id: string; vehicle_id?: string; amount_due?: number; ticket_type?: string; municipality?: string; state?: string; violation_date?: string; created_at?: string }>>([]);
@@ -640,6 +642,7 @@ export default function AdminFinancesPage() {
       return;
     }
     try {
+      setSavingExpenseId("new");
       const response = await adminFetch("/api/admin/expenses", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -659,6 +662,8 @@ export default function AdminFinancesPage() {
     } catch (err) {
       logger.error("Error creating expense:", err);
       setError("Failed to create expense");
+    } finally {
+      setSavingExpenseId(null);
     }
   };
 
@@ -673,6 +678,7 @@ export default function AdminFinancesPage() {
       return;
     }
     try {
+      setSavingExpenseId(editingExpense.id);
       const response = await adminFetch("/api/admin/expenses", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -692,11 +698,14 @@ export default function AdminFinancesPage() {
     } catch (err) {
       logger.error("Error updating expense:", err);
       setError("Failed to update expense");
+    } finally {
+      setSavingExpenseId(null);
     }
   };
 
   const handleDeleteExpense = async (id: string) => {
     try {
+      setSavingExpenseId(id);
       const response = await adminFetch(`/api/admin/expenses?id=${id}`, { method: "DELETE" });
       if (!response.ok) throw new Error("Failed to delete expense");
       setDeleteConfirm(null);
@@ -705,6 +714,8 @@ export default function AdminFinancesPage() {
     } catch (err) {
       logger.error("Error deleting expense:", err);
       setError("Failed to delete expense");
+    } finally {
+      setSavingExpenseId(null);
     }
   };
 
@@ -1050,8 +1061,9 @@ export default function AdminFinancesPage() {
   if (loading) {
     return (
       <PageContainer>
-        <div className="flex items-center justify-center py-20">
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
           <RefreshCw className="h-8 w-8 animate-spin text-purple-600" />
+          <p className="text-gray-600 font-medium">Loading finances...</p>
         </div>
       </PageContainer>
     );
@@ -1081,7 +1093,8 @@ export default function AdminFinancesPage() {
 
           {/* Date range + tabs */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-6">
-            <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-2">
+              <p className="text-xs font-medium text-gray-300">Date Range</p>
               <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
                 <Calendar className="h-4 w-4 text-gray-300" />
                 <input
@@ -1089,7 +1102,7 @@ export default function AdminFinancesPage() {
                   value={dateRange.from}
                   onChange={(e) => setDateRange((p) => ({ ...p, from: e.target.value }))}
                   aria-label="Start date"
-                  className="bg-transparent text-white text-sm border-none outline-none"
+                  className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1"
                 />
                 <span className="text-gray-400">—</span>
                 <input
@@ -1097,7 +1110,7 @@ export default function AdminFinancesPage() {
                   value={dateRange.to}
                   onChange={(e) => setDateRange((p) => ({ ...p, to: e.target.value }))}
                   aria-label="End date"
-                  className="bg-transparent text-white text-sm border-none outline-none"
+                  className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1"
                 />
               </div>
               <button
@@ -1422,11 +1435,11 @@ export default function AdminFinancesPage() {
                   <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
-                        <label className="text-xs font-medium text-gray-600 block mb-1">Category</label>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">Category <span className="text-red-500">*</span></label>
                         <select
                           value={newExpense.category}
                           onChange={(e) => setNewExpense((p) => ({ ...p, category: e.target.value }))}
-                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         >
                           {CATEGORIES.map((c) => (
                             <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
@@ -1434,21 +1447,23 @@ export default function AdminFinancesPage() {
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-600 block mb-1">Amount</label>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">Amount <span className="text-red-500">*</span></label>
                         <Input
                           type="number"
                           step="0.01"
                           placeholder="0.00"
                           value={newExpense.amount}
                           onChange={(e) => setNewExpense((p) => ({ ...p, amount: e.target.value }))}
+                          className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-600 block mb-1">Date</label>
+                        <label className="text-xs font-medium text-gray-600 block mb-1">Date <span className="text-red-500">*</span></label>
                         <Input
                           type="date"
                           value={newExpense.date}
                           onChange={(e) => setNewExpense((p) => ({ ...p, date: e.target.value }))}
+                          className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         />
                       </div>
                       <div>
@@ -1456,7 +1471,7 @@ export default function AdminFinancesPage() {
                         <select
                           value={newExpense.vehicleId}
                           onChange={(e) => setNewExpense((p) => ({ ...p, vehicleId: e.target.value }))}
-                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         >
                           <option value="">General (no vehicle)</option>
                           {vehicles.map((v) => (
@@ -1471,10 +1486,11 @@ export default function AdminFinancesPage() {
                         placeholder="e.g. Oil change, monthly premium..."
                         value={newExpense.description}
                         onChange={(e) => setNewExpense((p) => ({ ...p, description: e.target.value }))}
+                        className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                       />
                     </div>
-                    <Button onClick={handleAddExpense} className="w-full sm:w-auto">
-                      <Plus className="h-4 w-4 mr-1" /> Save Expense
+                    <Button onClick={handleAddExpense} disabled={savingExpenseId === "new"} className="w-full sm:w-auto">
+                      {savingExpenseId === "new" ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Plus className="h-4 w-4 mr-1" />} Save Expense
                     </Button>
                   </div>
                 )}
@@ -1620,11 +1636,11 @@ export default function AdminFinancesPage() {
                             <div key={exp.id} className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                 <div>
-                                  <label className="text-xs font-medium text-gray-600 block mb-1">Category</label>
+                                  <label className="text-xs font-medium text-gray-600 block mb-1">Category <span className="text-red-500">*</span></label>
                                   <select
                                     value={editingExpense.category}
                                     onChange={(e) => setEditingExpense((p) => p ? { ...p, category: e.target.value } : p)}
-                                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                   >
                                     {CATEGORIES.map((c) => (
                                       <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
@@ -1632,20 +1648,22 @@ export default function AdminFinancesPage() {
                                   </select>
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium text-gray-600 block mb-1">Amount</label>
+                                  <label className="text-xs font-medium text-gray-600 block mb-1">Amount <span className="text-red-500">*</span></label>
                                   <Input
                                     type="number"
                                     step="0.01"
                                     value={editingExpense.amount}
                                     onChange={(e) => setEditingExpense((p) => p ? { ...p, amount: e.target.value } : p)}
+                                    className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium text-gray-600 block mb-1">Date</label>
+                                  <label className="text-xs font-medium text-gray-600 block mb-1">Date <span className="text-red-500">*</span></label>
                                   <Input
                                     type="date"
                                     value={editingExpense.date}
                                     onChange={(e) => setEditingExpense((p) => p ? { ...p, date: e.target.value } : p)}
+                                    className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                   />
                                 </div>
                                 <div>
@@ -1653,7 +1671,7 @@ export default function AdminFinancesPage() {
                                   <select
                                     value={editingExpense.vehicle_id || ""}
                                     onChange={(e) => setEditingExpense((p) => p ? { ...p, vehicle_id: e.target.value || null } : p)}
-                                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                   >
                                     <option value="">General</option>
                                     {vehicles.map((v) => (
@@ -1666,9 +1684,12 @@ export default function AdminFinancesPage() {
                                 placeholder="Description"
                                 value={editingExpense.description}
                                 onChange={(e) => setEditingExpense((p) => p ? { ...p, description: e.target.value } : p)}
+                                className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                               />
                               <div className="flex gap-2">
-                                <Button onClick={handleUpdateExpense} size="sm">Save</Button>
+                                <Button onClick={handleUpdateExpense} size="sm" disabled={savingExpenseId === editingExpense?.id}>
+                                  {savingExpenseId === editingExpense?.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}Save
+                                </Button>
                                 <Button onClick={() => setEditingExpense(null)} variant="outline" size="sm">Cancel</Button>
                               </div>
                             </div>
@@ -1718,13 +1739,15 @@ export default function AdminFinancesPage() {
                                 <div className="flex gap-1">
                                   <button
                                     onClick={() => handleDeleteExpense(exp.id)}
-                                    className="px-2 py-1 text-xs bg-red-500 text-white rounded-md hover:bg-red-600"
+                                    disabled={savingExpenseId === exp.id}
+                                    className="px-2 py-1 text-xs bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50 flex items-center gap-1"
                                   >
-                                    Confirm
+                                    {savingExpenseId === exp.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null}Confirm
                                   </button>
                                   <button
                                     onClick={() => setDeleteConfirm(null)}
-                                    className="px-2 py-1 text-xs bg-gray-200 rounded-md hover:bg-gray-300"
+                                    disabled={savingExpenseId === exp.id}
+                                    className="px-2 py-1 text-xs bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50"
                                   >
                                     No
                                   </button>
@@ -1733,7 +1756,7 @@ export default function AdminFinancesPage() {
                                 <button
                                   onClick={() => setDeleteConfirm(exp.id)}
                                   aria-label="Delete expense"
-                                  className="p-1.5 rounded-md hover:bg-red-100 text-red-600"
+                                  className="p-1.5 rounded-md hover:bg-red-100 text-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
@@ -1893,7 +1916,7 @@ export default function AdminFinancesPage() {
               />
               <StatCard
                 label="Profit Margin"
-                value={`${summaryData.totalRevenue > 0 ? ((summaryData.netProfit / summaryData.totalRevenue) * 100).toFixed(1) : 0}%`}
+                value={summaryData.totalRevenue > 0 ? `${((summaryData.netProfit / summaryData.totalRevenue) * 100).toFixed(1)}%` : "—"}
                 icon={<BarChart3 className="h-4 w-4" />}
                 accent="blue"
               />

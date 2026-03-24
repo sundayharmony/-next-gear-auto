@@ -3,7 +3,7 @@
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Car, Lock, Eye, EyeOff, Check, ArrowRight, CheckCircle } from "lucide-react";
+import { Car, Lock, Eye, EyeOff, Check, ArrowRight, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -158,6 +158,7 @@ function SetPasswordForm() {
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                    aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -190,12 +191,19 @@ function SetPasswordForm() {
                   {confirmPassword && password === confirmPassword && (
                     <Check className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
                   )}
+                  {confirmPassword && password !== confirmPassword && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 text-xs">Passwords don't match</span>
+                  )}
                 </div>
+                {confirmPassword && password !== confirmPassword && (
+                  <p className="mt-1 text-xs text-red-500">Passwords must match</p>
+                )}
               </div>
 
               <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 {isLoading ? "Setting Password..." : "Set My Password"}
-                <ArrowRight className="h-4 w-4" />
+                {!isLoading && <ArrowRight className="h-4 w-4" />}
               </Button>
             </form>
           </CardContent>

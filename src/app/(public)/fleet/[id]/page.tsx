@@ -280,10 +280,10 @@ export default async function VehicleDetailPage({ params }: PageProps) {
             </Card>
 
             {/* Reviews */}
-            {vehicleReviews.length > 0 && (
-              <Card>
-                <CardContent className="p-6">
-                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Customer Reviews</h2>
+            <Card>
+              <CardContent className="p-6">
+                <h2 className="text-xl font-semibold text-gray-900 mb-4">Customer Reviews</h2>
+                {vehicleReviews.length > 0 ? (
                   <div className="space-y-4">
                     {vehicleReviews.map((review) => (
                       <div key={review.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
@@ -299,9 +299,14 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                       </div>
                     ))}
                   </div>
-                </CardContent>
-              </Card>
-            )}
+                ) : (
+                  <div className="text-center py-8">
+                    <p className="text-gray-500 mb-2">No reviews yet</p>
+                    <p className="text-sm text-gray-400">Be the first to review this vehicle and help other travelers make informed decisions.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Sidebar */}

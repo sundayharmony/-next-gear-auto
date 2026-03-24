@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { Tag, Plus, Pencil, Trash2, Check, X, RefreshCw } from "lucide-react";
+import { Tag, Plus, Pencil, Trash2, Check, X, RefreshCw, Loader2, Package } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -30,7 +30,7 @@ export default function AdminPromoCodesPage() {
   const [saving, setSaving] = useState(false);
   const [editingCode, setEditingCode] = useState<string | null>(null);
   const [editForm, setEditForm] = useState<Partial<PromoCode>>({});
-  const { error, setError } = useAutoToast();
+  const { error, setError, setSuccess } = useAutoToast();
   const [newCode, setNewCode] = useState<Partial<PromoCode>>({
     code: "",
     discountType: "percentage",
@@ -73,6 +73,7 @@ export default function AdminPromoCodesPage() {
         await fetchCodes();
         setShowAddForm(false);
         setNewCode({ code: "", discountType: "percentage", discountValue: 10, minBookingAmount: 0, maxUses: 100, description: "", expiresAt: "" });
+        setSuccess("Promo code created successfully");
       } else {
         setError(data.message || "Failed to create code");
       }
@@ -96,6 +97,7 @@ export default function AdminPromoCodesPage() {
       if (data.success) {
         setCodes((prev) => prev.map((c) => c.code === editingCode ? { ...c, ...editForm } : c));
         setEditingCode(null);
+        setSuccess("Promo code updated successfully");
       } else {
         setError(data.message || "Failed to update promo code");
       }
@@ -153,39 +155,39 @@ export default function AdminPromoCodesPage() {
               <h3 className="font-semibold text-gray-900 mb-4">Create Promo Code</h3>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
                 <div>
-                  <label className="text-xs font-medium text-gray-500 mb-1 block">Code</label>
-                  <Input value={newCode.code || ""} onChange={(e) => setNewCode({ ...newCode, code: e.target.value.toUpperCase() })} placeholder="e.g. SUMMER20" className="uppercase" />
+                  <label className="text-xs font-medium text-gray-500 mb-1 block">Code <span className="text-red-500">*</span></label>
+                  <Input value={newCode.code || ""} onChange={(e) => setNewCode({ ...newCode, code: e.target.value.toUpperCase() })} placeholder="e.g. SUMMER20" className="uppercase focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Discount Type</label>
-                  <select value={newCode.discountType} onChange={(e) => setNewCode({ ...newCode, discountType: e.target.value as "percentage" | "fixed" })} className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm">
+                  <select value={newCode.discountType} onChange={(e) => setNewCode({ ...newCode, discountType: e.target.value as "percentage" | "fixed" })} className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                     <option value="percentage">Percentage (%)</option>
                     <option value="fixed">Fixed Amount ($)</option>
                   </select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Discount Value</label>
-                  <Input type="number" value={newCode.discountValue || 0} onChange={(e) => setNewCode({ ...newCode, discountValue: Number(e.target.value) })} />
+                  <Input type="number" value={newCode.discountValue || 0} onChange={(e) => setNewCode({ ...newCode, discountValue: Number(e.target.value) })} className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Min Booking ($)</label>
-                  <Input type="number" value={newCode.minBookingAmount || 0} onChange={(e) => setNewCode({ ...newCode, minBookingAmount: Number(e.target.value) })} />
+                  <Input type="number" value={newCode.minBookingAmount || 0} onChange={(e) => setNewCode({ ...newCode, minBookingAmount: Number(e.target.value) })} className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Max Uses</label>
-                  <Input type="number" value={newCode.maxUses || 100} onChange={(e) => setNewCode({ ...newCode, maxUses: Number(e.target.value) })} />
+                  <Input type="number" value={newCode.maxUses || 100} onChange={(e) => setNewCode({ ...newCode, maxUses: Number(e.target.value) })} className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Expires At</label>
-                  <Input type="date" value={newCode.expiresAt || ""} onChange={(e) => setNewCode({ ...newCode, expiresAt: e.target.value })} />
+                  <Input type="date" value={newCode.expiresAt || ""} onChange={(e) => setNewCode({ ...newCode, expiresAt: e.target.value })} className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Description</label>
-                  <Input value={newCode.description || ""} onChange={(e) => setNewCode({ ...newCode, description: e.target.value })} placeholder="e.g. Summer 2026 special offer" />
+                  <Input value={newCode.description || ""} onChange={(e) => setNewCode({ ...newCode, description: e.target.value })} placeholder="e.g. Summer 2026 special offer" className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
                 </div>
               </div>
               <div className="mt-4 flex gap-2">
-                <Button onClick={addCode} disabled={saving || !newCode.code}>{saving ? "Creating..." : "Create Code"}</Button>
+                <Button onClick={addCode} disabled={saving || !newCode.code}>{saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creating...</> : "Create Code"}</Button>
                 <Button variant="outline" onClick={() => setShowAddForm(false)}>Cancel</Button>
               </div>
             </CardContent>
@@ -215,7 +217,13 @@ export default function AdminPromoCodesPage() {
                 {loading ? (
                   <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
                 ) : codes.length === 0 ? (
-                  <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">No promo codes yet.</td></tr>
+                  <tr><td colSpan={6} className="px-4 py-12 text-center">
+                    <div className="flex flex-col items-center justify-center">
+                      <Package className="h-12 w-12 text-gray-300 mb-3" />
+                      <p className="text-gray-500 font-medium">No promo codes yet</p>
+                      <p className="text-gray-400 text-sm">Create your first promo code to get started</p>
+                    </div>
+                  </td></tr>
                 ) : (
                   codes.map((c) => (
                     <tr key={c.code} className="border-b last:border-0 hover:bg-gray-50">
@@ -224,20 +232,20 @@ export default function AdminPromoCodesPage() {
                           <td className="px-4 py-3"><Badge className="bg-purple-100 text-purple-700 font-mono">{c.code}</Badge></td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1">
-                              <select value={editForm.discountType || c.discountType} onChange={(e) => setEditForm({ ...editForm, discountType: e.target.value as "percentage" | "fixed" })} className="rounded border px-1 py-1 text-xs h-8">
+                              <select value={editForm.discountType || c.discountType} onChange={(e) => setEditForm({ ...editForm, discountType: e.target.value as "percentage" | "fixed" })} className="rounded border px-1 py-1 text-xs h-8 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
                                 <option value="percentage">%</option>
                                 <option value="fixed">$</option>
                               </select>
-                              <Input type="number" value={editForm.discountValue ?? c.discountValue} onChange={(e) => setEditForm({ ...editForm, discountValue: Number(e.target.value) })} className="h-8 text-sm w-16" />
+                              <Input type="number" value={editForm.discountValue ?? c.discountValue} onChange={(e) => setEditForm({ ...editForm, discountValue: Number(e.target.value) })} className="h-8 text-sm w-16 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
                             </div>
                           </td>
-                          <td className="px-4 py-3"><Input type="number" value={editForm.minBookingAmount ?? c.minBookingAmount} onChange={(e) => setEditForm({ ...editForm, minBookingAmount: Number(e.target.value) })} className="h-8 text-sm w-20" /></td>
-                          <td className="px-4 py-3"><Input type="number" value={editForm.maxUses ?? c.maxUses} onChange={(e) => setEditForm({ ...editForm, maxUses: Number(e.target.value) })} className="h-8 text-sm w-16" /></td>
-                          <td className="px-4 py-3"><Input type="date" value={editForm.expiresAt ?? c.expiresAt ?? ""} onChange={(e) => setEditForm({ ...editForm, expiresAt: e.target.value })} className="h-8 text-sm" /></td>
+                          <td className="px-4 py-3"><Input type="number" value={editForm.minBookingAmount ?? c.minBookingAmount} onChange={(e) => setEditForm({ ...editForm, minBookingAmount: Number(e.target.value) })} className="h-8 text-sm w-20 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" /></td>
+                          <td className="px-4 py-3"><Input type="number" value={editForm.maxUses ?? c.maxUses} onChange={(e) => setEditForm({ ...editForm, maxUses: Number(e.target.value) })} className="h-8 text-sm w-16 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" /></td>
+                          <td className="px-4 py-3"><Input type="date" value={editForm.expiresAt ?? c.expiresAt ?? ""} onChange={(e) => setEditForm({ ...editForm, expiresAt: e.target.value })} className="h-8 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" /></td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1">
-                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={saveEdit} disabled={saving}><Check className="h-3 w-3 mr-1" /> Save</Button>
-                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingCode(null)}><X className="h-3 w-3" /></Button>
+                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={saveEdit} disabled={saving}>{saving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />} Save</Button>
+                              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => setEditingCode(null)} aria-label="Cancel edit"><X className="h-3 w-3" /></Button>
                             </div>
                           </td>
                         </>

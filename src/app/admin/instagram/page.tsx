@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Plus, Trash2, RefreshCw, Instagram, ExternalLink, X } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, RefreshCw, Instagram, ExternalLink, X, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -28,7 +28,7 @@ export default function AdminInstagramPage() {
   const [newUrl, setNewUrl] = useState("");
   const [newCaption, setNewCaption] = useState("");
   const [adding, setAdding] = useState(false);
-  const { error, setError } = useAutoToast();
+  const { error, setError, setSuccess } = useAutoToast();
   const [showForm, setShowForm] = useState(false);
 
   const fetchPosts = async () => {
@@ -72,6 +72,7 @@ export default function AdminInstagramPage() {
         setNewUrl("");
         setNewCaption("");
         setShowForm(false);
+        setSuccess("Post added successfully!");
         fetchPosts();
       } else {
         setError(data.error || "Failed to add post");
@@ -153,7 +154,9 @@ export default function AdminInstagramPage() {
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Instagram Post or Reel URL *</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Instagram Post or Reel URL <span className="text-red-500">*</span>
+                  </label>
                   <Input
                     value={newUrl}
                     onChange={(e) => setNewUrl(e.target.value)}
@@ -182,7 +185,7 @@ export default function AdminInstagramPage() {
                   disabled={adding}
                   className="bg-gradient-to-r from-pink-500 via-purple-500 to-indigo-500 text-white hover:opacity-90"
                 >
-                  {adding ? "Adding..." : "Add to Feed"}
+                  {adding ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Adding...</> : "Add to Feed"}
                 </Button>
               </div>
             </div>

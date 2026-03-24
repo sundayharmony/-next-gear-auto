@@ -197,6 +197,7 @@ export default function SocialPage() {
                 key={post.id}
                 onClick={() => openPost(post)}
                 className="group relative aspect-square overflow-hidden rounded-xl bg-gray-100 block w-full text-left cursor-pointer"
+                aria-label={post.caption ? `View Instagram post: ${post.caption.substring(0, 50)}...` : "View Instagram post"}
               >
                 {/* Thumbnail image */}
                 {post.thumbnail_url ? (
@@ -308,9 +309,9 @@ export default function SocialPage() {
           <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl bg-white shadow-2xl">
             {/* Loading spinner */}
             {embedLoading && (
-              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 rounded-2xl">
+              <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/80 rounded-2xl" role="status" aria-live="polite" aria-label="Loading post">
                 <div className="flex flex-col items-center gap-3">
-                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" />
+                  <Loader2 className="h-8 w-8 animate-spin text-purple-500" aria-hidden="true" />
                   <span className="text-sm text-gray-500">
                     Loading post...
                   </span>

@@ -156,6 +156,7 @@ export default function AdminCalendarPage() {
               disabled={loading}
               variant="outline"
               size="sm"
+              aria-label="Refresh calendar"
               className="gap-2 border-purple-400 text-purple-200 hover:bg-purple-800 hover:text-white"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
@@ -216,7 +217,7 @@ export default function AdminCalendarPage() {
               <select
                 value={vehicleFilter}
                 onChange={(e) => setVehicleFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="all">All Vehicles</option>
                 {vehicles.map((vehicle) => (
@@ -230,7 +231,7 @@ export default function AdminCalendarPage() {
 
           {loading && (
             <div className="text-center py-12">
-              <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
+              <div role="status" aria-label="Loading calendar" className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
               <p className="mt-4 text-gray-500">Loading calendar...</p>
             </div>
           )}

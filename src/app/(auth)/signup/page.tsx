@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Car, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, Check } from "lucide-react";
+import { Car, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -125,7 +125,7 @@ export default function SignupPage() {
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
                   <Input id="password" type={showPassword ? "text" : "password"} placeholder="Create a password" value={formData.password} onChange={(e) => updateField("password", e.target.value)} className="pl-10 pr-10" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600" aria-label={showPassword ? "Hide password" : "Show password"}>
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
@@ -152,12 +152,18 @@ export default function SignupPage() {
                   {formData.confirmPassword && formData.password === formData.confirmPassword && (
                     <Check className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-green-500" />
                   )}
+                  {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-red-500 text-xs">Passwords don't match</span>
+                  )}
                 </div>
+                {formData.confirmPassword && formData.password !== formData.confirmPassword && (
+                  <p className="mt-1 text-xs text-red-500">Passwords must match</p>
+                )}
               </div>
 
               {/* Terms */}
               <label className="flex items-start gap-2 text-sm">
-                <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
+                <input type="checkbox" checked={agreedToTerms} onChange={(e) => setAgreedToTerms(e.target.checked)} className="mt-0.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500" aria-label="I agree to the Terms of Service and Privacy Policy" />
                 <span className="text-gray-600">
                   I agree to the{" "}
                   <Link href="/terms" className="text-purple-600 hover:text-purple-700">Terms of Service</Link>{" "}
@@ -167,8 +173,9 @@ export default function SignupPage() {
               </label>
 
               <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
+                {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 {isLoading ? "Creating Account..." : "Create Account"}
-                <ArrowRight className="h-4 w-4" />
+                {!isLoading && <ArrowRight className="h-4 w-4" />}
               </Button>
             </form>
           </CardContent>

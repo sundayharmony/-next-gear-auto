@@ -100,9 +100,18 @@ export function Header() {
         </div>
       </div>
 
+      {/* Mobile menu backdrop */}
+      {isMobileMenuOpen && (
+        <div
+          className="fixed inset-0 z-30 md:hidden"
+          onClick={() => setIsMobileMenuOpen(false)}
+          aria-hidden="true"
+        />
+      )}
+
       {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="border-t border-gray-200 bg-white md:hidden mobile-menu-enter">
+        <div className="relative z-40 border-t border-gray-200 bg-white md:hidden mobile-menu-enter">
           <div className="space-y-1 px-4 py-3">
             {NAV_ITEMS.map((item) => (
               <Link

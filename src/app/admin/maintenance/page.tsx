@@ -14,6 +14,7 @@ import {
   X,
   Pencil,
   Save,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -424,7 +425,9 @@ export default function AdminMaintenancePage() {
           {/* Vehicle and Title Row */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Vehicle *</label>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">
+                Vehicle <span className="text-red-500">*</span>
+              </label>
               <select
                 value={newRecord.vehicleId || ""}
                 onChange={(e) => {
@@ -435,7 +438,7 @@ export default function AdminMaintenancePage() {
                     vehicleName: selected ? getVehicleDisplayName(selected) : "",
                   });
                 }}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">Select a vehicle</option>
                 {vehicles.map((v) => (
@@ -444,7 +447,9 @@ export default function AdminMaintenancePage() {
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Title *</label>
+              <label className="text-xs font-medium text-gray-700 mb-1 block">
+                Title <span className="text-red-500">*</span>
+              </label>
               <Input
                 value={newRecord.title || ""}
                 onChange={(e) => setNewRecord({ ...newRecord, title: e.target.value })}
@@ -461,7 +466,7 @@ export default function AdminMaintenancePage() {
               onChange={(e) => setNewRecord({ ...newRecord, description: e.target.value })}
               placeholder="Details about the maintenance work"
               rows={3}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
 
@@ -477,7 +482,7 @@ export default function AdminMaintenancePage() {
                     status: e.target.value as "pending" | "in-progress" | "completed",
                   })
                 }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="pending">Pending</option>
                 <option value="in-progress">In Progress</option>
@@ -526,7 +531,7 @@ export default function AdminMaintenancePage() {
               onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })}
               placeholder="Additional notes about the maintenance"
               rows={2}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
 
@@ -566,7 +571,7 @@ export default function AdminMaintenancePage() {
               disabled={saving || !newRecord.vehicleId || !newRecord.title}
               className="bg-purple-600 hover:bg-purple-700"
             >
-              {saving ? "Saving..." : "Save"}
+              {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : "Save"}
             </Button>
             <Button
               variant="outline"
@@ -784,7 +789,9 @@ export default function AdminMaintenancePage() {
                 <>
                   {/* Vehicle */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Vehicle *</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Vehicle <span className="text-red-500">*</span>
+                    </label>
                     <select
                       value={detailEditData.vehicleId || ""}
                       onChange={(e) => {
@@ -795,7 +802,7 @@ export default function AdminMaintenancePage() {
                           vehicleName: selected ? getVehicleDisplayName(selected) : "",
                         });
                       }}
-                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     >
                       <option value="">Select a vehicle</option>
                       {vehicles.map((v) => (
@@ -806,7 +813,9 @@ export default function AdminMaintenancePage() {
 
                   {/* Title */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Title *</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                      Title <span className="text-red-500">*</span>
+                    </label>
                     <Input
                       value={detailEditData.title || ""}
                       onChange={(e) => setDetailEditData({ ...detailEditData, title: e.target.value })}
@@ -821,7 +830,7 @@ export default function AdminMaintenancePage() {
                       value={detailEditData.description || ""}
                       onChange={(e) => setDetailEditData({ ...detailEditData, description: e.target.value })}
                       rows={3}
-                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
 
@@ -836,7 +845,7 @@ export default function AdminMaintenancePage() {
                           status: e.target.value as "pending" | "in-progress" | "completed",
                         })
                       }
-                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     >
                       <option value="pending">Pending</option>
                       <option value="in-progress">In Progress</option>
@@ -889,7 +898,7 @@ export default function AdminMaintenancePage() {
                       value={detailEditData.notes || ""}
                       onChange={(e) => setDetailEditData({ ...detailEditData, notes: e.target.value })}
                       rows={2}
-                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
 
@@ -909,7 +918,7 @@ export default function AdminMaintenancePage() {
                     <label className="cursor-pointer">
                       <div className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">
                         <Upload className="h-4 w-4" />
-                        {uploadingPhoto[selectedRecord.id] ? "Uploading..." : "Upload Photo"}
+                        {uploadingPhoto[selectedRecord.id] ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading...</> : "Upload Photo"}
                       </div>
                       <input
                         type="file"
@@ -928,8 +937,7 @@ export default function AdminMaintenancePage() {
                       disabled={saving || !detailEditData.vehicleId || !detailEditData.title}
                       className="bg-purple-600 hover:bg-purple-700"
                     >
-                      <Save className="h-4 w-4 mr-2" />
-                      {saving ? "Saving..." : "Save Changes"}
+                      {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : <><Save className="h-4 w-4 mr-2" /> Save Changes</>}
                     </Button>
                     <Button variant="outline" onClick={cancelDetailEdit}>
                       Cancel

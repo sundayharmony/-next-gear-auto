@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Calendar, Clock, User,
   Car, Download, XCircle, Star, LogOut, Shield,
-  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw, CheckCircle2, ShieldCheck
+  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw, CheckCircle2, ShieldCheck, Loader2
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -362,8 +362,17 @@ export default function AccountPage() {
                               disabled={cancelling === booking.id}
                               onClick={() => handleCancelBooking(booking.id)}
                             >
-                              <XCircle className="h-3.5 w-3.5 mr-1" />
-                              {cancelling === booking.id ? "Cancelling..." : "Cancel Booking"}
+                              {cancelling === booking.id ? (
+                                <>
+                                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                                  Cancelling...
+                                </>
+                              ) : (
+                                <>
+                                  <XCircle className="h-3.5 w-3.5 mr-1" />
+                                  Cancel Booking
+                                </>
+                              )}
                             </Button>
                           )}
                         </div>
@@ -513,7 +522,14 @@ export default function AccountPage() {
                     )}
                     <div className="flex justify-end">
                       <Button onClick={handleSaveProfile} disabled={profileSaving}>
-                        {profileSaving ? "Saving..." : "Save Changes"}
+                        {profileSaving ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                            Saving...
+                          </>
+                        ) : (
+                          "Save Changes"
+                        )}
                       </Button>
                     </div>
                   </div>

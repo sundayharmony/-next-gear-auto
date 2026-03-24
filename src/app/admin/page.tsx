@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { Car, DollarSign, Calendar, CalendarDays, Users, TrendingUp, Clock, ArrowRight, Tag, Star, BarChart3 } from "lucide-react";
+import { Car, DollarSign, Calendar, CalendarDays, Users, TrendingUp, Clock, ArrowRight, Tag, Star, BarChart3, AlertCircle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -36,42 +36,47 @@ interface DashboardData {
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  async function fetchData() {
+    setLoading(true);
+    setError(false);
+    try {
+      const res = await adminFetch("/api/bookings");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const result = await res.json();
+      if (result.success) {
+        const allBookings = result.data || [];
+        // Exclude cancelled bookings from dashboard
+        const bookings = allBookings.filter((b: { status: string }) => b.status !== "cancelled");
+        const confirmed = bookings.filter((b: { status: string }) => b.status === "confirmed");
+        const pending = bookings.filter((b: { status: string }) => b.status === "pending");
+        const active = bookings.filter((b: { status: string }) => b.status === "active");
+        const totalRevenue = bookings
+          .filter((b: { status: string }) => ["confirmed", "active", "completed"].includes(b.status))
+          .reduce((sum: number, b: { total_price: number }) => sum + (b.total_price ?? 0), 0);
+        const totalDeposits = bookings
+          .filter((b: { status: string }) => ["confirmed", "active", "completed"].includes(b.status))
+          .reduce((sum: number, b: { deposit: number }) => sum + (b.deposit ?? 0), 0);
+
+        setData({
+          totalBookings: bookings.length,
+          confirmedBookings: confirmed.length,
+          pendingBookings: pending.length,
+          activeBookings: active.length,
+          totalRevenue,
+          totalDeposits,
+          recentBookings: bookings.slice(0, 10),
+        });
+      }
+    } catch (err) {
+      logger.error("Failed to fetch dashboard data:", err);
+      setError(true);
+    }
+    setLoading(false);
+  }
 
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const res = await adminFetch("/api/bookings");
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const result = await res.json();
-        if (result.success) {
-          const allBookings = result.data || [];
-          // Exclude cancelled bookings from dashboard
-          const bookings = allBookings.filter((b: { status: string }) => b.status !== "cancelled");
-          const confirmed = bookings.filter((b: { status: string }) => b.status === "confirmed");
-          const pending = bookings.filter((b: { status: string }) => b.status === "pending");
-          const active = bookings.filter((b: { status: string }) => b.status === "active");
-          const totalRevenue = bookings
-            .filter((b: { status: string }) => ["confirmed", "active", "completed"].includes(b.status))
-            .reduce((sum: number, b: { total_price: number }) => sum + (b.total_price ?? 0), 0);
-          const totalDeposits = bookings
-            .filter((b: { status: string }) => ["confirmed", "active", "completed"].includes(b.status))
-            .reduce((sum: number, b: { deposit: number }) => sum + (b.deposit ?? 0), 0);
-
-          setData({
-            totalBookings: bookings.length,
-            confirmedBookings: confirmed.length,
-            pendingBookings: pending.length,
-            activeBookings: active.length,
-            totalRevenue,
-            totalDeposits,
-            recentBookings: bookings.slice(0, 10),
-          });
-        }
-      } catch (err) {
-        logger.error("Failed to fetch dashboard data:", err);
-      }
-      setLoading(false);
-    }
     fetchData();
   }, []);
 
@@ -87,7 +92,7 @@ export default function AdminDashboardPage() {
       <PageContainer className="py-8">
         {loading ? (
           <div className="text-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
+            <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" role="status" aria-label="Loading dashboard" />
             <p className="mt-4 text-gray-500">Loading dashboard...</p>
           </div>
         ) : data ? (
@@ -205,7 +210,7 @@ export default function AdminDashboardPage() {
                     ) : (
                       data.recentBookings.map((booking) => (
                         <tr key={booking.id} className="border-b last:border-0 hover:bg-gray-50">
-                          <td className="px-4 py-3 font-mono text-xs text-purple-600 max-w-[120px] truncate">{booking.id}</td>
+                          <td className="px-4 py-3 font-mono text-xs text-purple-600 max-w-[120px] truncate" title={booking.id}>{booking.id}</td>
                           <td className="px-4 py-3 text-gray-900 max-w-[150px] truncate">{booking.customer_name || "—"}</td>
                           <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate">{booking.vehicleName}</td>
                           <td className="px-4 py-3">
@@ -226,6 +231,14 @@ export default function AdminDashboardPage() {
               </div>
             </Card>
           </>
+        ) : error ? (
+          <div className="text-center py-12">
+            <div className="flex justify-center mb-4">
+              <AlertCircle className="h-12 w-12 text-red-500" />
+            </div>
+            <p className="text-gray-600 mb-4">Failed to load dashboard data.</p>
+            <Button onClick={fetchData}>Retry</Button>
+          </div>
         ) : (
           <p className="text-center text-gray-500 py-12">Failed to load dashboard data.</p>
         )}

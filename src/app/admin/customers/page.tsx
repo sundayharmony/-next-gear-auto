@@ -36,6 +36,7 @@ import {
   ZoomOut,
   Ticket,
   MapPin,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -822,6 +823,7 @@ export default function AdminCustomersPage() {
                             variant="ghost"
                             size="sm"
                             className="h-7 w-7 p-0"
+                            aria-label="Edit customer information"
                           >
                             <Edit2 className="h-3.5 w-3.5" />
                           </Button>
@@ -1005,7 +1007,15 @@ export default function AdminCustomersPage() {
                                   variant="outline"
                                   className="w-full text-xs"
                                 >
-                                  <Upload className="h-3 w-3 mr-1" /> {uploadingDoc ? "Uploading..." : "Choose File"}
+                                  {uploadingDoc ? (
+                                    <>
+                                      <Loader2 className="h-3 w-3 mr-1 animate-spin" /> Uploading...
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Upload className="h-3 w-3 mr-1" /> Choose File
+                                    </>
+                                  )}
                                 </Button>
                               </label>
                             )}
@@ -1466,22 +1476,24 @@ export default function AdminCustomersPage() {
             <h2 className="text-lg font-bold mb-4">Add New Customer</h2>
             <div className="space-y-3">
               <div>
-                <label className="text-xs text-gray-600 font-semibold">Full Name</label>
+                <label className="text-xs text-gray-600 font-semibold">Full Name <span className="text-red-500">*</span></label>
                 <Input
                   value={formName}
                   onChange={(e) => setFormName(e.target.value)}
                   placeholder="John Doe"
                   className="mt-1"
+                  required
                 />
               </div>
               <div>
-                <label className="text-xs text-gray-600 font-semibold">Email</label>
+                <label className="text-xs text-gray-600 font-semibold">Email <span className="text-red-500">*</span></label>
                 <Input
                   type="email"
                   value={formEmail}
                   onChange={(e) => setFormEmail(e.target.value)}
                   placeholder="john@example.com"
                   className="mt-1"
+                  required
                 />
               </div>
               <div>
@@ -1558,6 +1570,7 @@ export default function AdminCustomersPage() {
               onKeyDown={(e) => e.key === "Enter" && handleSearch()}
               placeholder="Search by name or email..."
               className="pl-9"
+              aria-label="Search customers by name or email"
             />
           </div>
           <Button onClick={handleSearch} variant="outline">Search</Button>
@@ -1623,6 +1636,7 @@ export default function AdminCustomersPage() {
                         variant="ghost"
                         size="sm"
                         className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
+                        aria-label={`Delete customer ${c.name}`}
                       >
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -1675,6 +1689,7 @@ export default function AdminCustomersPage() {
                 <button
                   onClick={closeCropModal}
                   className="rounded-full p-1 hover:bg-gray-100"
+                  aria-label="Close crop modal"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -1741,6 +1756,7 @@ export default function AdminCustomersPage() {
                         size="sm"
                         className="h-8 w-8 p-0"
                         title="Shrink crop area"
+                        aria-label="Shrink crop area"
                       >
                         <ZoomOut className="h-4 w-4" />
                       </Button>
@@ -1753,6 +1769,7 @@ export default function AdminCustomersPage() {
                         size="sm"
                         className="h-8 w-8 p-0"
                         title="Enlarge crop area"
+                        aria-label="Enlarge crop area"
                       >
                         <ZoomIn className="h-4 w-4" />
                       </Button>
@@ -1794,8 +1811,17 @@ export default function AdminCustomersPage() {
                       disabled={!cropPreview || savingProfilePic}
                       className="flex-1"
                     >
-                      <User className="h-4 w-4 mr-1" />
-                      {savingProfilePic ? "Saving..." : "Save as Profile Picture"}
+                      {savingProfilePic ? (
+                        <>
+                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <User className="h-4 w-4 mr-1" />
+                          Save as Profile Picture
+                        </>
+                      )}
                     </Button>
                     <Button
                       onClick={closeCropModal}

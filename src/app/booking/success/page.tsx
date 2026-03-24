@@ -131,7 +131,7 @@ function SuccessContent() {
         <div className="mx-auto max-w-2xl">
           {loading ? (
             <div className="text-center py-12">
-              <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
+              <Loader2 className="mx-auto h-8 w-8 text-purple-600 animate-spin" />
               <p className="mt-4 text-gray-500">Loading your booking details...</p>
             </div>
           ) : fetchError ? (
@@ -278,7 +278,7 @@ export default function BookingSuccessPage() {
     <Suspense
       fallback={
         <div className="flex items-center justify-center py-24">
-          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" />
+          <Loader2 className="h-8 w-8 text-purple-600 animate-spin" />
         </div>
       }
     >

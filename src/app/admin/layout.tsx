@@ -37,6 +37,17 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [showNotifications, setShowNotifications] = useState(false);
   const [recentBookings, setRecentBookings] = useState<Array<{ id: string; customer_name: string; created_at: string; total_price: number }>>([]);
 
+  // Handle Escape key to close notifications dropdown
+  useEffect(() => {
+    const handleEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showNotifications) {
+        setShowNotifications(false);
+      }
+    };
+    window.addEventListener("keydown", handleEscapeKey);
+    return () => window.removeEventListener("keydown", handleEscapeKey);
+  }, [showNotifications]);
+
   const fetchPendingBookings = useCallback(async () => {
     try {
       const res = await adminFetch("/api/bookings?status=pending");
@@ -117,6 +128,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
+                aria-label="Toggle notifications dropdown"
+                aria-expanded={showNotifications}
                 className="relative p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
               >
                 <Bell className="h-5 w-5 text-gray-400" />
@@ -132,7 +145,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                     <h3 className="text-sm font-semibold text-gray-900">Pending Bookings</h3>
                   </div>
                   {recentBookings.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-gray-400">No pending bookings</div>
+                    <div className="p-4 text-center text-sm text-gray-500">No pending bookings</div>
                   ) : (
                     <div className="max-h-64 overflow-y-auto">
                       {recentBookings.map((b) => (

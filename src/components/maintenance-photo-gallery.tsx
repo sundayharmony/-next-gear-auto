@@ -55,6 +55,19 @@ export function MaintenancePhotoGallery({
     if (!isPdf(photos[prev])) setActiveIndex(prev);
   };
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "ArrowRight") {
+      e.preventDefault();
+      goNext();
+    } else if (e.key === "ArrowLeft") {
+      e.preventDefault();
+      goPrev();
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      closeLightbox();
+    }
+  };
+
   const imagePhotos = photos.filter((p) => !isPdf(p));
 
   if (!photos || photos.length === 0) {
@@ -113,6 +126,10 @@ export function MaintenancePhotoGallery({
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
           onClick={closeLightbox}
+          onKeyDown={handleKeyDown}
+          role="dialog"
+          aria-modal="true"
+          tabIndex={0}
         >
           {/* Close button */}
           <button
@@ -134,6 +151,7 @@ export function MaintenancePhotoGallery({
             target="_blank"
             rel="noopener noreferrer"
             onClick={(e) => e.stopPropagation()}
+            aria-label="Open file in new tab"
             className="absolute top-4 left-1/2 -translate-x-1/2 z-10 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white hover:bg-white/20 transition-colors flex items-center gap-1.5"
           >
             <Download className="h-4 w-4" /> Open

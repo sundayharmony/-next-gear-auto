@@ -20,6 +20,7 @@ import {
   FileText,
   Filter,
   ArrowLeft,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -82,6 +83,8 @@ export default function AdminTicketsPage() {
   const [selectedTicket, setSelectedTicket] = useState<TicketRecord | null>(null);
   const [editMode, setEditMode] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const { currentPage, pageSize, handlePageChange, handlePageSizeChange, resetPage, paginateArray } = usePagination(10);
 
   const [form, setForm] = useState({
@@ -190,6 +193,7 @@ export default function AdminTicketsPage() {
       setError("Violation date is required");
       return;
     }
+    setIsSubmitting(true);
     try {
       // Resolve customerId from booking
       let customerId = "";
@@ -214,11 +218,14 @@ export default function AdminTicketsPage() {
     } catch (err) {
       logger.error("Error creating ticket:", err);
       setError("Failed to create ticket");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleUpdate = async () => {
     if (!selectedTicket) return;
+    setIsSubmitting(true);
     try {
       let customerId = selectedTicket.customerId || "";
       if (form.bookingId) {
@@ -243,10 +250,13 @@ export default function AdminTicketsPage() {
     } catch (err) {
       logger.error("Error updating ticket:", err);
       setError("Failed to update ticket");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const handleDelete = async (id: string) => {
+    setIsDeleting(true);
     try {
       const res = await adminFetch(`/api/admin/tickets?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error("Failed to delete ticket");
@@ -256,6 +266,8 @@ export default function AdminTicketsPage() {
     } catch (err) {
       logger.error("Error deleting ticket:", err);
       setError("Failed to delete ticket");
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -289,7 +301,11 @@ export default function AdminTicketsPage() {
       <PageContainer>
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSelectedTicket(null)} aria-label="Back to tickets list" className="p-2 hover:bg-gray-100 rounded-lg">
+            <button
+              onClick={() => setSelectedTicket(null)}
+              aria-label="Back to tickets list"
+              className="p-2 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="flex-1">
@@ -315,15 +331,37 @@ export default function AdminTicketsPage() {
               </Button>
               {deleteConfirm === selectedTicket.id ? (
                 <div className="flex gap-1">
-                  <Button size="sm" variant="danger" onClick={() => handleDelete(selectedTicket.id)}>
-                    Confirm Delete
+                  <Button
+                    size="sm"
+                    variant="danger"
+                    onClick={() => handleDelete(selectedTicket.id)}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                        Deleting...
+                      </>
+                    ) : (
+                      "Confirm Delete"
+                    )}
                   </Button>
-                  <Button size="sm" variant="outline" onClick={() => setDeleteConfirm(null)}>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setDeleteConfirm(null)}
+                    disabled={isDeleting}
+                  >
                     Cancel
                   </Button>
                 </div>
               ) : (
-                <Button size="sm" variant="outline" className="text-red-600 hover:bg-red-50" onClick={() => setDeleteConfirm(selectedTicket.id)}>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="text-red-600 hover:bg-red-50"
+                  onClick={() => setDeleteConfirm(selectedTicket.id)}
+                >
                   <Trash2 className="h-4 w-4 mr-1" /> Delete
                 </Button>
               )}
@@ -449,7 +487,11 @@ export default function AdminTicketsPage() {
       <PageContainer>
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => { setEditMode(false); setSelectedTicket(null); }} aria-label="Back to tickets list" className="p-2 hover:bg-gray-100 rounded-lg">
+            <button
+              onClick={() => { setEditMode(false); setSelectedTicket(null); }}
+              aria-label="Back to tickets list"
+              className="p-2 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+            >
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h1 className="text-2xl font-bold text-gray-900">Edit Ticket</h1>
@@ -471,7 +513,7 @@ export default function AdminTicketsPage() {
               <select
                 value={form.ticketType}
                 onChange={(e) => setForm((f) => ({ ...f, ticketType: e.target.value }))}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="traffic">Traffic</option>
                 <option value="parking">Parking</option>
@@ -548,7 +590,7 @@ export default function AdminTicketsPage() {
               <select
                 value={form.status}
                 onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="unpaid">Unpaid</option>
                 <option value="paid">Paid</option>
@@ -561,7 +603,7 @@ export default function AdminTicketsPage() {
               <select
                 value={form.bookingId}
                 onChange={(e) => handleBookingSelect(e.target.value)}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">No booking</option>
                 {bookings
@@ -579,7 +621,7 @@ export default function AdminTicketsPage() {
               <select
                 value={form.vehicleId}
                 onChange={(e) => setForm((f) => ({ ...f, vehicleId: e.target.value }))}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">Select vehicle</option>
                 {vehicles.map((v) => (
@@ -597,12 +639,22 @@ export default function AdminTicketsPage() {
               placeholder="Additional details..."
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
           <div className="flex gap-2">
-            <Button onClick={isEdit ? handleUpdate : handleCreate}>
-              {isEdit ? "Save Changes" : "Add Ticket"}
+            <Button
+              onClick={isEdit ? handleUpdate : handleCreate}
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {isEdit ? "Saving..." : "Adding..."}
+                </>
+              ) : (
+                isEdit ? "Save Changes" : "Add Ticket"
+              )}
             </Button>
             <Button
               variant="outline"
@@ -610,6 +662,7 @@ export default function AdminTicketsPage() {
                 if (isEdit) { setEditMode(false); setSelectedTicket(null); }
                 else { setAdding(false); resetForm(); }
               }}
+              disabled={isSubmitting}
             >
               Cancel
             </Button>
@@ -753,6 +806,15 @@ export default function AdminTicketsPage() {
                   ? "Add your first ticket to start tracking violations"
                   : "Try adjusting your filters"}
               </p>
+              {tickets.length === 0 && (
+                <Button
+                  onClick={() => { resetForm(); setAdding(true); }}
+                  className="mt-4"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add First Ticket
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (

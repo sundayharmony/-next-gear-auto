@@ -2,7 +2,7 @@
 
 import React, { useEffect, useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { Star, Trash2, CheckCircle, XCircle, RefreshCw, Filter } from "lucide-react";
+import { Star, Trash2, CheckCircle, XCircle, RefreshCw, Filter, Loader2, MessageSquare } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -149,9 +149,19 @@ export default function AdminReviewsPage() {
 
         {/* Reviews List */}
         {loading ? (
-          <Card className="p-8 text-center text-gray-400">Loading...</Card>
+          <Card className="p-8 text-center">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <Loader2 className="h-6 w-6 text-purple-600 animate-spin" />
+              <span className="text-gray-400">Loading reviews...</span>
+            </div>
+          </Card>
         ) : reviews.length === 0 ? (
-          <Card className="p-8 text-center text-gray-400">No reviews found.</Card>
+          <Card className="p-8 text-center">
+            <div className="flex flex-col items-center justify-center gap-3">
+              <MessageSquare className="h-8 w-8 text-gray-300" />
+              <span className="text-gray-400">No reviews found.</span>
+            </div>
+          </Card>
         ) : (
           <div className="space-y-3">
             {reviews.map((r) => (
@@ -197,6 +207,8 @@ export default function AdminReviewsPage() {
                       variant="outline"
                       className="h-7 text-xs text-red-600"
                       onClick={() => deleteReview(r.id)}
+                      disabled={updating === r.id}
+                      aria-label="Delete review"
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
