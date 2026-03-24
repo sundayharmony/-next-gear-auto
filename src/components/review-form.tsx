@@ -105,6 +105,7 @@ export function ReviewForm({
         </h3>
         <button
           onClick={onClose}
+          aria-label="Close review form"
           className="text-gray-400 hover:text-gray-600 transition-colors"
         >
           <X className="h-5 w-5" />
@@ -125,6 +126,8 @@ export function ReviewForm({
                 onClick={() => setRating(star)}
                 onMouseEnter={() => setHoveredRating(star)}
                 onMouseLeave={() => setHoveredRating(0)}
+                aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+                aria-pressed={rating === star}
                 className="transition-transform hover:scale-110"
               >
                 <Star

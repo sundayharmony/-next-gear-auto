@@ -613,6 +613,7 @@ export default function AdminMaintenancePage() {
             <span>{error}</span>
             <button
               onClick={() => setError(null)}
+              aria-label="Dismiss error"
               className="text-red-400 hover:text-red-600 ml-3"
             >
               &times;
@@ -766,7 +767,7 @@ export default function AdminMaintenancePage() {
                     <Pencil className="h-3.5 w-3.5" /> Edit
                   </button>
                 )}
-                <button onClick={closeDetail} className="text-gray-400 hover:text-gray-600">
+                <button onClick={closeDetail} aria-label="Close details" className="text-gray-400 hover:text-gray-600">
                   <X className="h-5 w-5" />
                 </button>
               </div>

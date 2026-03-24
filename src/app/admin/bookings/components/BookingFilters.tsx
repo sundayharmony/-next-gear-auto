@@ -94,6 +94,7 @@ export default function BookingFilters({
           onClick={onRefresh}
           disabled={loading}
           title="Refresh bookings"
+          aria-label="Refresh bookings"
         >
           <RefreshCw className="w-4 h-4" />
         </Button>
@@ -103,6 +104,7 @@ export default function BookingFilters({
           onClick={onExportCSV}
           disabled={loading}
           title="Export as CSV"
+          aria-label="Export as CSV"
         >
           <Download className="w-4 h-4" />
         </Button>
@@ -172,6 +174,7 @@ export default function BookingFilters({
             onClick={onClearSelection}
             disabled={bulkUpdating}
             title="Clear selection"
+            aria-label="Clear selection"
             className="inline-flex items-center p-1.5 text-gray-500 rounded-full hover:bg-gray-200 active:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <X className="w-4 h-4" />

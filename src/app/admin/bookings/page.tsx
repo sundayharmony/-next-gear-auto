@@ -199,13 +199,13 @@ function AdminBookingsContent() {
         {success && (
           <div className="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center justify-between">
             <span className="flex items-center gap-2"><Check className="h-4 w-4" />{success}</span>
-            <button onClick={() => setSuccess(null)} className="text-green-400 hover:text-green-600 ml-3">&times;</button>
+            <button onClick={() => setSuccess(null)} aria-label="Dismiss success message" className="text-green-400 hover:text-green-600 ml-3">&times;</button>
           </div>
         )}
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
             <span>{error}</span>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600 ml-3">&times;</button>
+            <button onClick={() => setError(null)} aria-label="Dismiss error" className="text-red-400 hover:text-red-600 ml-3">&times;</button>
           </div>
         )}
 

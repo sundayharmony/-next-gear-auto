@@ -817,6 +817,7 @@ export default function AdminVehiclesPage() {
                       disabled={idx === 0}
                       className="bg-white/90 text-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Move image left"
+                      aria-label="Move image left"
                     >
                       <ChevronLeft className="h-3.5 w-3.5" />
                     </button>
@@ -826,6 +827,7 @@ export default function AdminVehiclesPage() {
                       disabled={idx === (form.images || []).length - 1}
                       className="bg-white/90 text-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Move image right"
+                      aria-label="Move image right"
                     >
                       <ChevronRight className="h-3.5 w-3.5" />
                     </button>
@@ -833,6 +835,7 @@ export default function AdminVehiclesPage() {
                   <button
                     type="button"
                     onClick={() => removeImage(img, formKey)}
+                    aria-label="Remove image"
                     className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
                   >
                     <X className="h-3 w-3" />
@@ -1107,7 +1110,7 @@ export default function AdminVehiclesPage() {
         {success && (
           <div className="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center justify-between">
             <span className="flex items-center gap-2"><Check className="h-4 w-4" />{success}</span>
-            <button onClick={() => setSuccess(null)} className="text-green-500 hover:text-green-700"><X className="h-4 w-4" /></button>
+            <button onClick={() => setSuccess(null)} aria-label="Dismiss success message" className="text-green-500 hover:text-green-700"><X className="h-4 w-4" /></button>
           </div>
         )}
 
@@ -1117,6 +1120,7 @@ export default function AdminVehiclesPage() {
             <span>{error}</span>
             <button
               onClick={() => setError(null)}
+              aria-label="Dismiss error"
               className="text-red-400 hover:text-red-600 ml-3"
             >
               &times;

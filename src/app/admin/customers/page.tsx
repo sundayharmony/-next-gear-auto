@@ -686,6 +686,7 @@ export default function AdminCustomersPage() {
                       onClick={() => openCropModal(latestIdUrl)}
                       className="absolute -bottom-1 -right-1 h-6 w-6 rounded-full bg-white text-purple-700 flex items-center justify-center shadow-md opacity-0 group-hover:opacity-100 transition-opacity"
                       title="Crop profile picture from ID"
+                      aria-label="Crop profile picture from ID"
                     >
                       <Crop className="h-3 w-3" />
                     </button>
@@ -741,6 +742,7 @@ export default function AdminCustomersPage() {
                 </Button>
                 <button
                   onClick={closeCustomer}
+                  aria-label="Close customer details"
                   className="rounded-full p-2 hover:bg-white/10 transition-colors"
                 >
                   <X className="h-5 w-5" />

@@ -292,7 +292,7 @@ export default function AdminCalendarPage() {
           <div className="w-full max-w-lg bg-white shadow-xl overflow-y-auto">
             <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
               <h2 className="text-lg font-semibold">Booking Details</h2>
-              <button onClick={closeBookingDetail} className="text-gray-400 hover:text-gray-600">
+              <button onClick={closeBookingDetail} aria-label="Close booking details" className="text-gray-400 hover:text-gray-600">
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -950,6 +950,7 @@ function CalendarView({
               </h3>
               <button
                 onClick={() => onSelectDay(null)}
+                aria-label="Clear selected day"
                 className="p-1 hover:bg-gray-100 rounded"
               >
                 <X className="w-4 h-4 text-gray-600" />
@@ -1021,6 +1022,7 @@ function CalendarView({
               </h3>
               <button
                 onClick={() => onSelectDay(null)}
+                aria-label="Clear selected day"
                 className="p-1 hover:bg-gray-100 rounded"
               >
                 <X className="w-4 h-4 text-gray-600" />

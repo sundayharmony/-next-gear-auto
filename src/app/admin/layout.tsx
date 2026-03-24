@@ -87,6 +87,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* Mobile sidebar toggle */}
       <button
         onClick={() => setSidebarOpen(!sidebarOpen)}
+        aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
+        aria-expanded={sidebarOpen}
         className="fixed bottom-4 right-4 z-50 lg:hidden rounded-full bg-purple-600 p-3 text-white shadow-lg"
       >
         {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}

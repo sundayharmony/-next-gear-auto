@@ -99,6 +99,7 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
           {/* Close button */}
           <button
             onClick={closeLightbox}
+            aria-label="Close gallery"
             className="absolute top-4 right-4 z-10 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
           >
             <X className="h-6 w-6" />
@@ -113,6 +114,7 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
           {images.length > 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
+              aria-label="Previous image"
               className="absolute left-4 z-10 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 transition-colors"
             >
               <ChevronLeft className="h-6 w-6" />
@@ -135,6 +137,7 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
           {images.length > 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); goNext(); }}
+              aria-label="Next image"
               className="absolute right-4 z-10 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 transition-colors"
             >
               <ChevronRight className="h-6 w-6" />
@@ -148,6 +151,7 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
                 <button
                   key={i}
                   onClick={(e) => { e.stopPropagation(); setActiveIndex(i); }}
+                  aria-label={`View image ${i + 1} of ${images.length}`}
                   className={`h-12 w-16 rounded overflow-hidden border-2 transition-all ${
                     i === activeIndex ? "border-purple-500 opacity-100" : "border-transparent opacity-60 hover:opacity-80"
                   }`}

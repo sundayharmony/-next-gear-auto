@@ -774,7 +774,7 @@ export default function AdminFinancesPage() {
       <PageContainer>
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => setShowDailyRevenue(false)} className="p-2 hover:bg-gray-100 rounded-lg">
+            <button onClick={() => setShowDailyRevenue(false)} aria-label="Back to finances overview" className="p-2 hover:bg-gray-100 rounded-lg">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
@@ -873,7 +873,7 @@ export default function AdminFinancesPage() {
       <PageContainer>
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSelectedVehicleId(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+            <button onClick={() => setSelectedVehicleId(null)} aria-label="Back to finances overview" className="p-2 hover:bg-gray-100 rounded-lg">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div>
@@ -1730,6 +1730,7 @@ export default function AdminFinancesPage() {
                               ) : (
                                 <button
                                   onClick={() => setDeleteConfirm(exp.id)}
+                                  aria-label="Delete expense"
                                   className="p-1.5 rounded-md hover:bg-red-100 text-red-600"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />

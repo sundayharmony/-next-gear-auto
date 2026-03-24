@@ -99,6 +99,7 @@ export function MaintenancePhotoGallery({
                 }}
                 className="absolute top-0.5 right-0.5 rounded-full bg-red-500 p-0.5 text-white opacity-0 group-hover:opacity-100 transition-opacity"
                 title="Remove photo"
+                aria-label="Remove photo"
               >
                 <X className="h-3 w-3" />
               </button>
@@ -116,6 +117,7 @@ export function MaintenancePhotoGallery({
           {/* Close button */}
           <button
             onClick={closeLightbox}
+            aria-label="Close lightbox"
             className="absolute top-4 right-4 z-10 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
           >
             <X className="h-6 w-6" />
@@ -144,6 +146,7 @@ export function MaintenancePhotoGallery({
                 e.stopPropagation();
                 goPrev();
               }}
+              aria-label="Previous photo"
               className="absolute left-4 z-10 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 transition-colors"
             >
               <ChevronLeft className="h-6 w-6" />
@@ -169,6 +172,7 @@ export function MaintenancePhotoGallery({
                 e.stopPropagation();
                 goNext();
               }}
+              aria-label="Next photo"
               className="absolute right-4 z-10 rounded-full bg-white/10 p-3 text-white hover:bg-white/20 transition-colors"
             >
               <ChevronRight className="h-6 w-6" />

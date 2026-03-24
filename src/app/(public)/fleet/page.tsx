@@ -280,6 +280,7 @@ function FleetContent() {
                       {v.year} {v.make} {v.model}
                       <button
                         onClick={() => comparison.removeFromCompare(id)}
+                        aria-label={`Remove ${v.year} ${v.make} ${v.model} from comparison`}
                         className="hover:text-purple-900"
                       >
                         <X className="h-3 w-3" />

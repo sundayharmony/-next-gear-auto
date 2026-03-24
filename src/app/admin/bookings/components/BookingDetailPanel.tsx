@@ -401,6 +401,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   variant="ghost"
                   onClick={toggleEditMode}
                   title="Edit booking"
+                  aria-label="Edit booking"
                 >
                   <Pencil className="w-4 h-4" />
                 </Button>
@@ -410,6 +411,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 variant="ghost"
                 onClick={onClose}
                 title="Close"
+                aria-label="Close booking details"
               >
                 <X className="w-4 h-4" />
               </Button>

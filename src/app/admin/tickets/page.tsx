@@ -289,7 +289,7 @@ export default function AdminTicketsPage() {
       <PageContainer>
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => setSelectedTicket(null)} className="p-2 hover:bg-gray-100 rounded-lg">
+            <button onClick={() => setSelectedTicket(null)} aria-label="Back to tickets list" className="p-2 hover:bg-gray-100 rounded-lg">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <div className="flex-1">
@@ -449,7 +449,7 @@ export default function AdminTicketsPage() {
       <PageContainer>
         <div className="space-y-6">
           <div className="flex items-center gap-3">
-            <button onClick={() => { setEditMode(false); setSelectedTicket(null); }} className="p-2 hover:bg-gray-100 rounded-lg">
+            <button onClick={() => { setEditMode(false); setSelectedTicket(null); }} aria-label="Back to tickets list" className="p-2 hover:bg-gray-100 rounded-lg">
               <ArrowLeft className="h-5 w-5" />
             </button>
             <h1 className="text-2xl font-bold text-gray-900">Edit Ticket</h1>

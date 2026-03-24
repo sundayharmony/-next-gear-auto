@@ -119,7 +119,7 @@ export default function AdminInstagramPage() {
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
             <span>{error}</span>
-            <button onClick={() => setError(null)} className="text-red-400 hover:text-red-600">&times;</button>
+            <button onClick={() => setError(null)} aria-label="Dismiss error" className="text-red-400 hover:text-red-600">&times;</button>
           </div>
         )}
 
@@ -144,7 +144,7 @@ export default function AdminInstagramPage() {
                   <Instagram className="h-5 w-5 text-pink-500" />
                   Add Instagram Post
                 </h3>
-                <button onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600">
+                <button onClick={() => setShowForm(false)} aria-label="Close add post form" className="text-gray-400 hover:text-gray-600">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -248,6 +248,7 @@ export default function AdminInstagramPage() {
                   size="sm"
                   className="text-red-500 hover:text-red-700 shrink-0"
                   onClick={() => handleDelete(post.id)}
+                  aria-label={`Delete post ${index + 1}`}
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                 </Button>
