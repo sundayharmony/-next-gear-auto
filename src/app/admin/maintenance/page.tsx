@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { compressImage } from "@/lib/utils/compress-image";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -15,6 +15,10 @@ import {
   Pencil,
   Save,
   Loader2,
+  DollarSign,
+  AlertTriangle,
+  Search,
+  Camera,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -68,6 +72,9 @@ export default function AdminMaintenancePage() {
 
   // Temp photos for new record creation (files not yet uploaded)
   const [tempNewPhotos, setTempNewPhotos] = useState<File[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const addFormRef = useRef<HTMLDivElement>(null);
 
   // Detail panel state
   const [selectedRecord, setSelectedRecord] = useState<MaintenanceRecord | null>(null);
@@ -75,6 +82,37 @@ export default function AdminMaintenancePage() {
   const [detailEditMode, setDetailEditMode] = useState(false);
   const [detailEditData, setDetailEditData] = useState<FormState>({} as FormState);
 
+  // Scroll to add form when opened
+  useEffect(() => {
+    if (showAddForm && addFormRef.current) {
+      addFormRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [showAddForm]);
+
+  // Escape key handler
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || saving) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+        (e.target as HTMLElement).blur();
+        return;
+      }
+      if (showDetail) {
+        if (detailEditMode) { setDetailEditMode(false); }
+        else { closeDetail(); }
+      } else if (showAddForm) {
+        newRecord.photoUrls.forEach((url) => {
+          if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+        });
+        setTempNewPhotos([]);
+        setShowAddForm(false);
+        setNewRecord(emptyRecord);
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [showDetail, detailEditMode, showAddForm, saving, newRecord.photoUrls]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -110,9 +148,14 @@ export default function AdminMaintenancePage() {
 
   // Filter and sort records by status for "all" view
   const filteredRecords = useMemo(() => {
-    const filtered = records.filter((r) =>
-      statusFilter === "all" ? true : r.status === statusFilter
-    );
+    const q = searchQuery.toLowerCase().trim();
+    const filtered = records.filter((r) => {
+      const matchesStatus = statusFilter === "all" || r.status === statusFilter;
+      const matchesSearch = !q || [
+        r.title, r.description, r.vehicleName, r.notes
+      ].some((field) => field?.toLowerCase().includes(q));
+      return matchesStatus && matchesSearch;
+    });
 
     if (statusFilter !== "all") return filtered;
 
@@ -123,7 +166,13 @@ export default function AdminMaintenancePage() {
     };
 
     return [...filtered].sort((a, b) => statusOrder[a.status] - statusOrder[b.status]);
-  }, [records, statusFilter]);
+  }, [records, statusFilter, searchQuery]);
+
+  // Total cost of all records
+  const totalCost = useMemo(() =>
+    records.reduce((sum, r) => sum + (r.cost || 0), 0),
+    [records]
+  );
 
   // Count records by status
   const statusCounts = {
@@ -270,7 +319,10 @@ export default function AdminMaintenancePage() {
   };
 
   const deleteRecord = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this maintenance record?")) return;
+    const record = records.find((r) => r.id === id);
+    const label = record ? `"${record.title}" for ${record.vehicleName || "unknown vehicle"}` : "this record";
+    if (!confirm(`Are you sure you want to delete ${label}?`)) return;
+    setDeletingId(id);
     try {
       const res = await adminFetch(`/api/admin/maintenance?id=${id}`, {
         method: "DELETE",
@@ -279,7 +331,6 @@ export default function AdminMaintenancePage() {
       const data = await res.json();
       if (data.success) {
         setRecords((prev) => prev.filter((r) => r.id !== id));
-        // Close detail panel if we just deleted the selected record
         if (selectedRecord?.id === id) {
           closeDetail();
         }
@@ -289,6 +340,7 @@ export default function AdminMaintenancePage() {
     } catch {
       setError("Network error — could not delete record");
     }
+    setDeletingId(null);
   };
 
   const handlePhotoUpload = async (
@@ -419,9 +471,14 @@ export default function AdminMaintenancePage() {
 
   // Render the "Add New Record" form (inline on the page)
   const renderAddForm = () => (
-    <Card className="mb-6 border-purple-200">
+    <Card className="mb-6 border-purple-200" ref={addFormRef}>
       <CardContent className="p-6">
-        <h3 className="font-semibold text-gray-900 mb-6">Add New Maintenance Record</h3>
+        <div className="flex items-center gap-2 mb-6">
+          <div className="rounded-lg bg-purple-100 p-1.5">
+            <Plus className="h-4 w-4 text-purple-600" aria-hidden="true" />
+          </div>
+          <h3 className="font-semibold text-gray-900">Add New Maintenance Record</h3>
+        </div>
 
         <div className="space-y-6">
           {/* Vehicle and Title Row */}
@@ -539,9 +596,14 @@ export default function AdminMaintenancePage() {
 
           {/* Photos Section */}
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-2 block">Photos</label>
+            <label className="text-xs font-medium text-gray-700 mb-2 block">
+              Photos
+              {newRecord.photoUrls.length > 0 && (
+                <Badge variant="secondary" className="ml-2 text-xs">{newRecord.photoUrls.length}</Badge>
+              )}
+            </label>
 
-            {newRecord.photoUrls && newRecord.photoUrls.length > 0 && (
+            {newRecord.photoUrls && newRecord.photoUrls.length > 0 ? (
               <div className="mb-3">
                 <MaintenancePhotoGallery
                   photos={newRecord.photoUrls}
@@ -550,10 +612,15 @@ export default function AdminMaintenancePage() {
                   showDelete={true}
                 />
               </div>
+            ) : (
+              <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
+                <Camera className="h-3.5 w-3.5" aria-hidden="true" />
+                No photos yet — add photos of the maintenance work
+              </p>
             )}
 
-            <label className="cursor-pointer">
-              <div className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">
+            <label className="cursor-pointer inline-block">
+              <div className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 transition-colors">
                 <Upload className="h-4 w-4" />
                 Upload Photo
               </div>
@@ -611,8 +678,13 @@ export default function AdminMaintenancePage() {
             <Button
               onClick={() => setShowAddForm(!showAddForm)}
               className="bg-white text-purple-900 hover:bg-gray-100"
+              aria-expanded={showAddForm}
             >
-              <Plus className="h-4 w-4 mr-2" /> Add Record
+              {showAddForm ? (
+                <><X className="h-4 w-4 mr-2" /> Cancel</>
+              ) : (
+                <><Plus className="h-4 w-4 mr-2" /> Add Record</>
+              )}
             </Button>
           </div>
         </div>
@@ -620,43 +692,76 @@ export default function AdminMaintenancePage() {
 
       <PageContainer className="py-8">
         {/* Error Banner */}
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-            <span>{error}</span>
-            <button
-              onClick={() => setError(null)}
-              aria-label="Dismiss error"
-              className="text-red-400 hover:text-red-600 ml-3"
-            >
-              &times;
-            </button>
-          </div>
-        )}
+        <div aria-live="assertive">
+          {error && (
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+              <span>{error}</span>
+              <button
+                onClick={() => setError(null)}
+                aria-label="Dismiss error"
+                className="text-red-400 hover:text-red-600 ml-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
+              >
+                &times;
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-gray-900">{statusCounts.all}</div>
-              <p className="text-sm text-gray-600 mt-1">Total Records</p>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5 mb-8">
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="rounded-lg bg-purple-100 p-2">
+                <Wrench className="h-5 w-5 text-purple-600" aria-hidden="true" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">{statusCounts.all}</div>
+                <p className="text-sm text-gray-600">Total Records</p>
+              </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</div>
-              <p className="text-sm text-gray-600 mt-1">Pending</p>
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="rounded-lg bg-yellow-100 p-2">
+                <Clock className="h-5 w-5 text-yellow-600" aria-hidden="true" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-yellow-600">{statusCounts.pending}</div>
+                <p className="text-sm text-gray-600">Pending</p>
+              </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-blue-600">{statusCounts["in-progress"]}</div>
-              <p className="text-sm text-gray-600 mt-1">In Progress</p>
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="rounded-lg bg-blue-100 p-2">
+                <AlertTriangle className="h-5 w-5 text-blue-600" aria-hidden="true" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-blue-600">{statusCounts["in-progress"]}</div>
+                <p className="text-sm text-gray-600">In Progress</p>
+              </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="text-2xl font-bold text-green-600">{statusCounts.completed}</div>
-              <p className="text-sm text-gray-600 mt-1">Completed</p>
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="rounded-lg bg-green-100 p-2">
+                <CheckCircle className="h-5 w-5 text-green-600" aria-hidden="true" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-green-600">{statusCounts.completed}</div>
+                <p className="text-sm text-gray-600">Completed</p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card className="transition-shadow hover:shadow-md">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="rounded-lg bg-gray-100 p-2">
+                <DollarSign className="h-5 w-5 text-gray-600" aria-hidden="true" />
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-gray-900">${totalCost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</div>
+                <p className="text-sm text-gray-600">Total Cost</p>
+              </div>
             </CardContent>
           </Card>
         </div>
@@ -664,28 +769,57 @@ export default function AdminMaintenancePage() {
         {/* Add Record Form */}
         {showAddForm && renderAddForm()}
 
-        {/* Status Filter Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
-          {(["all", "pending", "in-progress", "completed"] as const).map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(status)}
-              className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap ${
-                statusFilter === status
-                  ? "bg-purple-600 text-white"
-                  : "bg-gray-100 text-gray-700 hover:bg-gray-200"
-              }`}
-            >
-              {status === "all" ? "All" : formatStatusLabel(status)}{" "}
-              ({status === "all" ? statusCounts.all : statusCounts[status]})
-            </button>
-          ))}
+        {/* Search + Status Filter */}
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
+          <div className="relative flex-1 max-w-sm">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
+            <Input
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search records..."
+              className="pl-9"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                aria-label="Clear search"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0">
+            {(["all", "pending", "in-progress", "completed"] as const).map((status) => (
+              <button
+                key={status}
+                onClick={() => setStatusFilter(status)}
+                aria-pressed={statusFilter === status}
+                className={`px-4 py-2 rounded-lg font-medium text-sm whitespace-nowrap transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 ${
+                  statusFilter === status
+                    ? "bg-purple-600 text-white"
+                    : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                }`}
+              >
+                {status === "all" ? "All" : formatStatusLabel(status)}{" "}
+                ({status === "all" ? statusCounts.all : statusCounts[status]})
+              </button>
+            ))}
+          </div>
         </div>
+
+        {/* Results Count */}
+        {!loading && filteredRecords.length > 0 && (
+          <p className="text-xs text-gray-500 mb-3">
+            Showing {filteredRecords.length} of {records.length} record{records.length !== 1 ? "s" : ""}
+            {searchQuery && <> matching &ldquo;{searchQuery}&rdquo;</>}
+          </p>
+        )}
 
         {/* Records Table */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" role="status" aria-label="Loading records" aria-live="polite" />
+          <div className="text-center py-12" role="status" aria-live="polite">
+            <Loader2 className="h-8 w-8 text-purple-600 animate-spin mx-auto" />
             <p className="mt-4 text-gray-500">Loading records...</p>
           </div>
         ) : filteredRecords.length === 0 ? (
@@ -694,52 +828,64 @@ export default function AdminMaintenancePage() {
             <p className="text-gray-500">
               {records.length === 0
                 ? "No maintenance records yet. Add your first record!"
-                : "No records match the current filter."}
+                : searchQuery
+                  ? `No records match "${searchQuery}".`
+                  : "No records match the current filter."}
             </p>
           </div>
         ) : (
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
+                <caption className="sr-only">Maintenance records</caption>
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Vehicle</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Title</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Status</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Cost</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Start Date</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Completed</th>
-                    <th className="px-6 py-3 text-left font-semibold text-gray-900">Photos</th>
+                    <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-900">Vehicle</th>
+                    <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-900">Title</th>
+                    <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-900">Status</th>
+                    <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-900">Cost</th>
+                    <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-900">Start Date</th>
+                    <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-900">Completed</th>
+                    <th scope="col" className="px-6 py-3 text-left font-semibold text-gray-900">Photos</th>
                   </tr>
                 </thead>
                 <tbody>
                   {filteredRecords.map((record) => (
                     <tr
                       key={record.id}
-                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer"
+                      className="border-b border-gray-100 hover:bg-gray-50 transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-purple-500"
                       onClick={() => openDetail(record)}
+                      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openDetail(record); } }}
+                      tabIndex={0}
+                      role="button"
+                      aria-label={`View ${record.title} for ${record.vehicleName || "unknown vehicle"}`}
                     >
                       <td className="px-6 py-3 max-w-[180px]">
-                        <span className="font-medium text-gray-900 truncate block">
+                        <span className="font-medium text-gray-900 truncate block" title={record.vehicleName || undefined}>
                           {record.vehicleName || "—"}
                         </span>
                       </td>
-                      <td className="px-6 py-3 text-gray-700 max-w-[200px] truncate">{record.title}</td>
+                      <td className="px-6 py-3 text-gray-700 max-w-[200px]">
+                        <span className="truncate block" title={record.title}>{record.title}</span>
+                        {record.description && (
+                          <span className="text-xs text-gray-400 truncate block" title={record.description}>{record.description}</span>
+                        )}
+                      </td>
                       <td className="px-6 py-3">
                         <Badge className={getStatusBadgeColor(record.status)}>
-                          <span className={`mr-1.5 font-bold ${record.status === "pending" ? "text-yellow-700" : record.status === "in-progress" ? "text-blue-700" : "text-green-700"}`}>●</span>
+                          <span className={`mr-1.5 font-bold ${record.status === "pending" ? "text-yellow-700" : record.status === "in-progress" ? "text-blue-700" : "text-green-700"}`} aria-hidden="true">●</span>
                           {getStatusIcon(record.status)}
                           {formatStatusLabel(record.status)}
                         </Badge>
                       </td>
-                      <td className="px-6 py-3 text-gray-700">
-                        {record.cost !== null ? `$${record.cost.toFixed(2)}` : "—"}
+                      <td className="px-6 py-3 text-gray-700 font-medium">
+                        {record.cost !== null ? `$${record.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : <span className="text-gray-400 font-normal">—</span>}
                       </td>
                       <td className="px-6 py-3 text-gray-600 text-xs">
-                        {record.startedDate ? new Date(record.startedDate).toLocaleDateString() : "—"}
+                        {record.startedDate ? new Date(record.startedDate).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : <span className="text-gray-400">—</span>}
                       </td>
                       <td className="px-6 py-3 text-gray-600 text-xs">
-                        {record.completedDate ? new Date(record.completedDate).toLocaleDateString() : "—"}
+                        {record.completedDate ? new Date(record.completedDate).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : <span className="text-gray-400">—</span>}
                       </td>
                       <td className="px-6 py-3">
                         {record.photoUrls.length > 0 ? (
@@ -761,26 +907,31 @@ export default function AdminMaintenancePage() {
 
       {/* Detail Side Panel */}
       {showDetail && selectedRecord && (
-        <div className="fixed inset-0 z-50 flex">
+        <div className="fixed inset-0 z-50 flex" role="dialog" aria-modal="true" aria-label={`Maintenance record: ${selectedRecord.title}`}>
           {/* Backdrop */}
-          <div className="flex-1 bg-black/50" onClick={closeDetail} />
+          <div className="flex-1 bg-black/50 transition-opacity duration-200" onClick={closeDetail} />
           {/* Panel */}
-          <div className="w-full max-w-2xl bg-white shadow-xl overflow-y-auto">
+          <div className="w-full max-w-2xl bg-white shadow-xl overflow-y-auto transition-transform duration-300 ease-in-out" tabIndex={-1}>
             {/* Sticky Header */}
             <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
-              <h2 className="text-lg font-semibold">
-                {detailEditMode ? "Edit Record" : "Maintenance Details"}
-              </h2>
+              <div className="min-w-0">
+                <h2 className="text-lg font-semibold truncate">
+                  {detailEditMode ? `Edit: ${selectedRecord.title}` : selectedRecord.title}
+                </h2>
+                {!detailEditMode && selectedRecord.vehicleName && (
+                  <p className="text-sm text-gray-500 truncate">{selectedRecord.vehicleName}</p>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 {!detailEditMode && (
                   <button
                     onClick={startDetailEdit}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium text-purple-600 bg-purple-50 rounded-lg hover:bg-purple-100 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500"
                   >
                     <Pencil className="h-3.5 w-3.5" /> Edit
                   </button>
                 )}
-                <button onClick={closeDetail} aria-label="Close details" className="text-gray-400 hover:text-gray-600">
+                <button onClick={closeDetail} aria-label="Close details" className="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 rounded">
                   <X className="h-5 w-5" />
                 </button>
               </div>
@@ -907,7 +1058,12 @@ export default function AdminMaintenancePage() {
 
                   {/* Photos */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">Photos</label>
+                    <label className="block text-xs font-medium text-gray-600 mb-2">
+                      Photos
+                      {detailEditData.photoUrls?.length > 0 && (
+                        <Badge variant="secondary" className="ml-2 text-xs">{detailEditData.photoUrls.length}</Badge>
+                      )}
+                    </label>
                     {detailEditData.photoUrls && detailEditData.photoUrls.length > 0 && (
                       <div className="mb-3">
                         <MaintenancePhotoGallery
@@ -918,10 +1074,13 @@ export default function AdminMaintenancePage() {
                         />
                       </div>
                     )}
-                    <label className="cursor-pointer">
-                      <div className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50">
-                        <Upload className="h-4 w-4" />
-                        {uploadingPhoto[selectedRecord.id] ? <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Uploading...</> : "Upload Photo"}
+                    <label className={`${uploadingPhoto[selectedRecord.id] ? "pointer-events-none opacity-60" : "cursor-pointer"} inline-block`}>
+                      <div className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 transition-colors">
+                        {uploadingPhoto[selectedRecord.id] ? (
+                          <><Loader2 className="h-4 w-4 animate-spin" /> Uploading...</>
+                        ) : (
+                          <><Upload className="h-4 w-4" /> Upload Photo</>
+                        )}
                       </div>
                       <input
                         type="file"
@@ -950,27 +1109,16 @@ export default function AdminMaintenancePage() {
               ) : (
                 /* ========== VIEW MODE ========== */
                 <>
-                  {/* Status & ID */}
-                  <div>
-                    <p className="text-xs text-gray-500">Record ID</p>
-                    <p className="font-mono text-purple-600 font-bold text-sm break-all">{selectedRecord.id}</p>
-                    <Badge className={`mt-1 ${getStatusBadgeColor(selectedRecord.status)}`}>
-                      <span className={`mr-1.5 font-bold ${selectedRecord.status === "pending" ? "text-yellow-700" : selectedRecord.status === "in-progress" ? "text-blue-700" : "text-green-700"}`}>●</span>
+                  {/* Status */}
+                  <div className="flex items-center gap-3">
+                    <Badge className={`${getStatusBadgeColor(selectedRecord.status)}`}>
+                      <span className={`mr-1.5 font-bold ${selectedRecord.status === "pending" ? "text-yellow-700" : selectedRecord.status === "in-progress" ? "text-blue-700" : "text-green-700"}`} aria-hidden="true">●</span>
                       {getStatusIcon(selectedRecord.status)}
                       {formatStatusLabel(selectedRecord.status)}
                     </Badge>
-                  </div>
-
-                  {/* Vehicle */}
-                  <div>
-                    <h3 className="font-semibold text-sm text-gray-500 uppercase mb-1">Vehicle</h3>
-                    <p className="font-medium text-gray-900">{selectedRecord.vehicleName || "—"}</p>
-                  </div>
-
-                  {/* Title */}
-                  <div>
-                    <h3 className="font-semibold text-sm text-gray-500 uppercase mb-1">Title</h3>
-                    <p className="font-medium text-gray-900">{selectedRecord.title}</p>
+                    <span className="text-xs text-gray-400">
+                      Created {new Date(selectedRecord.createdAt).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}
+                    </span>
                   </div>
 
                   {/* Description */}
@@ -985,7 +1133,9 @@ export default function AdminMaintenancePage() {
                   <div>
                     <h3 className="font-semibold text-sm text-gray-500 uppercase mb-1">Cost</h3>
                     <p className="text-lg font-bold text-gray-900">
-                      {selectedRecord.cost !== null ? `$${selectedRecord.cost.toFixed(2)}` : "—"}
+                      {selectedRecord.cost !== null
+                        ? `$${selectedRecord.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+                        : <span className="text-gray-400 text-base font-normal">Not specified</span>}
                     </p>
                   </div>
 
@@ -995,16 +1145,16 @@ export default function AdminMaintenancePage() {
                       <h3 className="font-semibold text-sm text-gray-500 uppercase mb-1">Start Date</h3>
                       <p className="text-gray-900">
                         {selectedRecord.startedDate
-                          ? new Date(selectedRecord.startedDate).toLocaleDateString()
-                          : "—"}
+                          ? new Date(selectedRecord.startedDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+                          : <span className="text-gray-400">Not set</span>}
                       </p>
                     </div>
                     <div>
                       <h3 className="font-semibold text-sm text-gray-500 uppercase mb-1">Completed</h3>
                       <p className="text-gray-900">
                         {selectedRecord.completedDate
-                          ? new Date(selectedRecord.completedDate).toLocaleDateString()
-                          : "—"}
+                          ? new Date(selectedRecord.completedDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+                          : <span className="text-gray-400">Not set</span>}
                       </p>
                     </div>
                   </div>
@@ -1013,13 +1163,18 @@ export default function AdminMaintenancePage() {
                   {selectedRecord.notes && (
                     <div>
                       <h3 className="font-semibold text-sm text-gray-500 uppercase mb-1">Notes</h3>
-                      <p className="text-gray-700 text-sm whitespace-pre-wrap">{selectedRecord.notes}</p>
+                      <p className="text-gray-700 text-sm whitespace-pre-wrap bg-gray-50 rounded-lg p-3">{selectedRecord.notes}</p>
                     </div>
                   )}
 
                   {/* Photos */}
                   <div>
-                    <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Photos</h3>
+                    <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">
+                      Photos
+                      {selectedRecord.photoUrls?.length > 0 && (
+                        <span className="ml-2 text-xs font-normal text-gray-400">({selectedRecord.photoUrls.length})</span>
+                      )}
+                    </h3>
                     {selectedRecord.photoUrls && selectedRecord.photoUrls.length > 0 ? (
                       <MaintenancePhotoGallery
                         photos={selectedRecord.photoUrls}
@@ -1027,14 +1182,16 @@ export default function AdminMaintenancePage() {
                         showDelete={false}
                       />
                     ) : (
-                      <p className="text-gray-400 text-sm">No photos attached</p>
+                      <p className="text-gray-400 text-sm flex items-center gap-1">
+                        <Camera className="h-3.5 w-3.5" aria-hidden="true" /> No photos attached
+                      </p>
                     )}
                   </div>
 
-                  {/* Created at */}
+                  {/* Record ID */}
                   <div className="pt-4 border-t">
                     <p className="text-xs text-gray-400">
-                      Created {new Date(selectedRecord.createdAt).toLocaleDateString()}
+                      Record ID: <span className="font-mono text-gray-500 select-all">{selectedRecord.id}</span>
                     </p>
                   </div>
 
@@ -1043,11 +1200,14 @@ export default function AdminMaintenancePage() {
                     <Button
                       variant="outline"
                       className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                      disabled={saving}
+                      disabled={saving || deletingId === selectedRecord.id}
                       onClick={() => deleteRecord(selectedRecord.id)}
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Delete Record
+                      {deletingId === selectedRecord.id ? (
+                        <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Deleting...</>
+                      ) : (
+                        <><Trash2 className="h-4 w-4 mr-2" /> Delete Record</>
+                      )}
                     </Button>
                   </div>
                 </>
