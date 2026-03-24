@@ -35,10 +35,12 @@ export default function AdminInstagramPage() {
     setLoading(true);
     try {
       const res = await adminFetch("/api/instagram");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) setPosts(data.data || []);
-    } catch {
-      logger.error("Failed to fetch posts");
+    } catch (err) {
+      logger.error("Failed to fetch posts:", err);
+      setError("Failed to load Instagram posts");
     }
     setLoading(false);
   };

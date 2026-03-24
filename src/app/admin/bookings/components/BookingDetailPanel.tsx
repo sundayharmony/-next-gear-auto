@@ -133,6 +133,13 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     booking.status as typeof STATUS_STEPS[number]
   );
 
+  // Sync editData when booking prop changes from parent (e.g., status update)
+  useEffect(() => {
+    if (!editMode) {
+      setEditData(booking);
+    }
+  }, [booking, editMode]);
+
   // Handle edit mode toggle
   const toggleEditMode = () => {
     if (!editMode) {
@@ -156,10 +163,10 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   // Update booking status
   const updateStatus = async (newStatus: string) => {
     try {
-      const response = await adminFetch(`/api/bookings/${booking.id}`, {
+      const response = await adminFetch(`/api/bookings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ bookingId: booking.id, status: newStatus }),
       });
 
       if (!response.ok) throw new Error("Failed to update status");
@@ -170,6 +177,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       // Log the status change
       await adminFetch(`/api/admin/booking-activity`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           booking_id: booking.id,
           action: "status_changed",
@@ -197,10 +205,10 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const handleSaveChanges = async () => {
     setSaving(true);
     try {
-      const response = await adminFetch(`/api/bookings/${booking.id}`, {
+      const response = await adminFetch(`/api/bookings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(editData),
+        body: JSON.stringify({ ...editData, bookingId: booking.id }),
       });
 
       if (!response.ok) throw new Error("Failed to save booking");
@@ -225,10 +233,10 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
     setNoteSaving(true);
     try {
-      const response = await adminFetch(`/api/bookings/${booking.id}`, {
+      const response = await adminFetch(`/api/bookings`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ admin_notes: editData.admin_notes }),
+        body: JSON.stringify({ bookingId: booking.id, admin_notes: editData.admin_notes }),
       });
 
       if (!response.ok) throw new Error("Failed to save notes");
@@ -236,12 +244,12 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       const updated = await response.json();
       onUpdateBooking(updated);
 
-      setNoteSaving(false);
-      // Show saved indicator briefly
+      // Keep "saving" indicator visible briefly so user sees feedback
       setTimeout(() => {
         setNoteSaving(false);
-      }, 2000);
+      }, 1500);
     } catch (err) {
+      setNoteSaving(false);
       logger.error("Failed to save notes", err);
       onError("Failed to save notes");
     }
@@ -254,8 +262,9 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Record a payment
   const handleRecordPayment = async () => {
-    if (!paymentForm.amount) {
-      onError("Please enter an amount");
+    const parsedAmount = parseFloat(paymentForm.amount);
+    if (!paymentForm.amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+      onError("Please enter a valid amount");
       return;
     }
 
@@ -263,9 +272,10 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     try {
       const response = await adminFetch(`/api/admin/booking-payments`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           booking_id: booking.id,
-          amount: parseFloat(paymentForm.amount),
+          amount: parsedAmount,
           method: paymentForm.method,
           note: paymentForm.note,
         }),
@@ -277,7 +287,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       setPayments([...payments, newPayment]);
 
       // Update deposit locally
-      const newDeposit = booking.deposit + parseFloat(paymentForm.amount);
+      const newDeposit = booking.deposit + parsedAmount;
       const updated = { ...booking, deposit: newDeposit };
       onUpdateBooking(updated);
 
@@ -292,9 +302,10 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     }
   };
 
-  // Handle ID document upload
-  const handleIdDocumentUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
+  // Handle document upload (ID or insurance proof) via /api/bookings/upload
+  const handleDocumentUpload = async (
+    e: React.ChangeEvent<HTMLInputElement>,
+    docType: "id_document" | "insurance_proof"
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -303,56 +314,29 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("bookingId", booking.id);
+      formData.append("type", docType);
 
-      const response = await adminFetch(
-        `/api/bookings/${booking.id}/id-document`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await adminFetch(`/api/bookings/upload`, {
+        method: "POST",
+        body: formData,
+      });
 
-      if (!response.ok) throw new Error("Upload failed");
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.error || "Upload failed");
+      }
 
-      const updated = await response.json();
+      const result = await response.json();
+
+      // Update the booking locally with the new URL
+      const fieldName = docType === "id_document" ? "id_document_url" : "insurance_proof_url";
+      const updated = { ...booking, [fieldName]: result.url };
       onUpdateBooking(updated);
-      onSuccess("ID document uploaded");
+      onSuccess(`${docType === "id_document" ? "ID document" : "Insurance proof"} uploaded`);
     } catch (err) {
-      logger.error("ID document upload failed", err);
-      onError("Failed to upload ID document");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  // Handle insurance proof upload
-  const handleInsuranceProofUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    setSaving(true);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-
-      const response = await adminFetch(
-        `/api/bookings/${booking.id}/insurance-proof`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
-
-      if (!response.ok) throw new Error("Upload failed");
-
-      const updated = await response.json();
-      onUpdateBooking(updated);
-      onSuccess("Insurance proof uploaded");
-    } catch (err) {
-      logger.error("Insurance proof upload failed", err);
-      onError("Failed to upload insurance proof");
+      logger.error(`${docType} upload failed`, err);
+      onError(`Failed to upload ${docType === "id_document" ? "ID document" : "insurance proof"}`);
     } finally {
       setSaving(false);
     }
@@ -602,7 +586,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   <input
                     type="file"
                     accept="image/*,.pdf"
-                    onChange={handleIdDocumentUpload}
+                    onChange={(e) => handleDocumentUpload(e, "id_document")}
                     disabled={saving}
                     className="hidden"
                   />
@@ -617,7 +601,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 <input
                   type="file"
                   accept="image/*,.pdf"
-                  onChange={handleIdDocumentUpload}
+                  onChange={(e) => handleDocumentUpload(e, "id_document")}
                   disabled={saving}
                   className="hidden"
                 />
@@ -808,7 +792,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     <input
                       type="file"
                       accept="image/*,.pdf"
-                      onChange={handleInsuranceProofUpload}
+                      onChange={(e) => handleDocumentUpload(e, "insurance_proof")}
                       disabled={saving}
                       className="hidden"
                     />
@@ -846,7 +830,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setEditData({
                         ...editData,
-                        total_price: parseFloat(e.target.value),
+                        total_price: parseFloat(e.target.value) || 0,
                       })
                     }
                   />
@@ -862,7 +846,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setEditData({
                         ...editData,
-                        deposit: parseFloat(e.target.value),
+                        deposit: parseFloat(e.target.value) || 0,
                       })
                     }
                   />

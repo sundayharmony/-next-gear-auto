@@ -262,6 +262,7 @@ export default function AdminVehiclesPage() {
           isAvailable: !vehicle.isAvailable,
         }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setVehicles((prev) =>
@@ -316,6 +317,7 @@ export default function AdminVehiclesPage() {
           financingStartDate: editForm.financingStartDate || null,
         }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setVehicles((prev) =>
@@ -393,6 +395,7 @@ export default function AdminVehiclesPage() {
           financingStartDate: newVehicle.financingStartDate || null,
         }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         await fetchVehicles();
@@ -414,6 +417,7 @@ export default function AdminVehiclesPage() {
       const res = await adminFetch(`/api/admin/vehicles?id=${id}`, {
         method: "DELETE",
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setVehicles((prev) => prev.filter((v) => v.id !== id));

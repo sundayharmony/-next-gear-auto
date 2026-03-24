@@ -46,10 +46,12 @@ export default function AdminPromoCodesPage() {
     setLoading(true);
     try {
       const res = await adminFetch("/api/admin/promo-codes");
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) setCodes(data.data);
     } catch (err) {
       logger.error("Failed to fetch promo codes:", err);
+      setError("Failed to load promo codes");
     }
     setLoading(false);
   };
@@ -65,6 +67,7 @@ export default function AdminPromoCodesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(newCode),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         await fetchCodes();
@@ -88,6 +91,7 @@ export default function AdminPromoCodesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code: editingCode, ...editForm }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setCodes((prev) => prev.map((c) => c.code === editingCode ? { ...c, ...editForm } : c));
@@ -105,6 +109,7 @@ export default function AdminPromoCodesPage() {
     if (!confirm(`Delete promo code "${code}"?`)) return;
     try {
       const res = await adminFetch(`/api/admin/promo-codes?code=${code}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setCodes((prev) => prev.filter((c) => c.code !== code));

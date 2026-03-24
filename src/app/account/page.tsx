@@ -80,6 +80,7 @@ export default function AccountPage() {
       const params = new URLSearchParams({ customer_email: user.email.toLowerCase().trim() });
       if (user.id) params.set("customer_id", user.id);
       const res = await fetch(`/api/bookings?${params.toString()}`);
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setBookings(data.data);
@@ -133,12 +134,16 @@ export default function AccountPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId, status: "cancelled" }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, status: "cancelled" } : b));
+      } else {
+        setProfileMsg(data.message || "Failed to cancel booking.");
       }
     } catch (err) {
       logger.error("Cancel error:", err);
+      setProfileMsg("Failed to cancel booking. Please try again.");
     }
     setCancelling(null);
   }, []);
@@ -153,6 +158,7 @@ export default function AccountPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id: user.id, ...profileForm }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setProfileMsg("Profile updated successfully!");

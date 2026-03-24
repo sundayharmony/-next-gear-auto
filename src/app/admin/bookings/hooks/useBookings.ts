@@ -89,7 +89,7 @@ export function useBookings(): UseBookingsReturn {
       const data = await res.json();
       if (data.success) {
         setAllCustomers(
-          (data.data || []).map((c: any) => ({
+          (data.data || []).map((c: { id: string; name: string; email: string; phone?: string }) => ({
             id: c.id,
             name: c.name,
             email: c.email,
@@ -151,7 +151,7 @@ export function useBookings(): UseBookingsReturn {
     } finally {
       setUpdating(null);
     }
-  }, []);
+  }, [setSuccess, setError]);
 
   const bulkUpdateStatus = useCallback(async (ids: Set<string>, newStatus: string): Promise<number> => {
     let successCount = 0;
@@ -182,7 +182,7 @@ export function useBookings(): UseBookingsReturn {
       fetchBookings();
     }
     return successCount;
-  }, [fetchBookings]);
+  }, [fetchBookings, setError, setSuccess]);
 
   // Computed: today's pickups, returns, overdue
   const today = useMemo(() => {

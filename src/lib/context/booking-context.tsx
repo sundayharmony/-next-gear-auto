@@ -212,6 +212,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, bookingAmount: state.pricing?.subtotal ?? 0 }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         dispatch({ type: "SET_PROMO", payload: { code: data.data.code, discount: data.data } });
@@ -265,6 +266,14 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         }),
       });
 
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => null);
+        dispatch({
+          type: "SUBMIT_ERROR",
+          payload: errorData?.message || `Server error (${res.status}). Please try again.`,
+        });
+        return;
+      }
       const data = await res.json();
 
       if (data.success && data.data?.sessionUrl) {

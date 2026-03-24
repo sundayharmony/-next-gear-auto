@@ -41,6 +41,7 @@ export default function AdminDashboardPage() {
     async function fetchData() {
       try {
         const res = await adminFetch("/api/bookings");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const result = await res.json();
         if (result.success) {
           const allBookings = result.data || [];

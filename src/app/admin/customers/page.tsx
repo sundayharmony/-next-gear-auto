@@ -45,6 +45,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { logger } from "@/lib/utils/logger";
 
 interface CustomerRow {
@@ -60,6 +61,7 @@ interface CustomerRow {
 type BookingRow = BookingDbRow;
 
 export default function AdminCustomersPage() {
+  const { error: toastError, setError: setToastError, success: toastSuccess, setSuccess: setToastSuccess } = useAutoToast();
   const [customers, setCustomers] = useState<CustomerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState("");
@@ -139,6 +141,8 @@ export default function AdminCustomersPage() {
         adminFetch(`/api/bookings?customer_id=${encodeURIComponent(customer.id)}`),
         adminFetch(`/api/bookings?customer_email=${encodeURIComponent(customer.email)}`),
       ]);
+      if (!byIdRes.ok) throw new Error(`HTTP ${byIdRes.status}`);
+      if (!byEmailRes.ok) throw new Error(`HTTP ${byEmailRes.status}`);
       const byIdData = await byIdRes.json();
       const byEmailData = await byEmailRes.json();
 
@@ -194,7 +198,7 @@ export default function AdminCustomersPage() {
 
   const saveCustomerEdit = async () => {
     if (!selectedCustomer || !editName || !editEmail) {
-      alert("Name and email are required");
+      setToastError("Name and email are required");
       return;
     }
 
@@ -210,17 +214,18 @@ export default function AdminCustomersPage() {
         }),
       });
 
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setSelectedCustomer(data.data);
         setEditingMode(false);
-        alert("Customer updated successfully");
+        setToastSuccess("Customer updated successfully");
       } else {
-        alert("Failed to update customer: " + (data.error || "Unknown error"));
+        setToastError("Failed to update customer: " + (data.error || "Unknown error"));
       }
     } catch (err) {
       logger.error("Failed to update customer:", err);
-      alert("Error updating customer");
+      setToastError("Error updating customer");
     }
     setSavingEdit(false);
   };
@@ -241,17 +246,18 @@ export default function AdminCustomersPage() {
         method: "DELETE",
       });
 
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
-        alert("Customer deleted successfully");
+        setToastSuccess("Customer deleted successfully");
         closeCustomer();
         fetchCustomers();
       } else {
-        alert("Failed to delete customer: " + (data.error || "Unknown error"));
+        setToastError("Failed to delete customer: " + (data.error || "Unknown error"));
       }
     } catch (err) {
       logger.error("Failed to delete customer:", err);
-      alert("Error deleting customer");
+      setToastError("Error deleting customer");
     }
     setDeletingCustomer(false);
   };
@@ -270,15 +276,16 @@ export default function AdminCustomersPage() {
         }),
       });
 
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
-        alert(`Password link sent to ${selectedCustomer.email}`);
+        setToastSuccess(`Password link sent to ${selectedCustomer.email}`);
       } else {
-        alert("Failed to send password link: " + (data.error || "Unknown error"));
+        setToastError("Failed to send password link: " + (data.error || "Unknown error"));
       }
     } catch (err) {
       logger.error("Failed to send password link:", err);
-      alert("Error sending password link");
+      setToastError("Error sending password link");
     }
     setSendingPasswordLink(false);
   };
@@ -299,20 +306,21 @@ export default function AdminCustomersPage() {
         body: formData,
       });
 
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
       const data = await res.json();
       if (data.success) {
-        alert("Document uploaded successfully");
+        setToastSuccess("Document uploaded successfully");
         setSelectedBookingForUpload(null);
         setUploadDocType("id_document");
         if (selectedCustomer) {
           await openCustomer(selectedCustomer);
         }
       } else {
-        alert("Failed to upload document: " + (data.error || "Unknown error"));
+        setToastError("Failed to upload document: " + (data.error || "Unknown error"));
       }
     } catch (err) {
       logger.error("Failed to upload document:", err);
-      alert("Error uploading document");
+      setToastError("Error uploading document");
     }
     setUploadingDoc(false);
   };
@@ -321,15 +329,16 @@ export default function AdminCustomersPage() {
     if (!confirm(`Delete customer "${customer.name}"?`)) return;
     try {
       const res = await adminFetch(`/api/admin/customers?id=${customer.id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         fetchCustomers();
       } else {
-        alert("Failed to delete customer");
+        setToastError("Failed to delete customer");
       }
     } catch (err) {
       logger.error("Failed to delete:", err);
-      alert("Error deleting customer");
+      setToastError("Error deleting customer");
     }
   };
 
@@ -641,6 +650,17 @@ export default function AdminCustomersPage() {
   if (selectedCustomer) {
     return (
       <>
+        {/* Toast notifications */}
+        {toastSuccess && (
+          <div className="fixed top-4 right-4 z-[60] rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 shadow-lg">
+            {toastSuccess}
+          </div>
+        )}
+        {toastError && (
+          <div className="fixed top-4 right-4 z-[60] rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 shadow-lg">
+            {toastError}
+          </div>
+        )}
         <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <button onClick={closeCustomer} className="flex items-center gap-1 text-sm text-purple-300 hover:text-white mb-2 transition-colors">
@@ -1403,7 +1423,7 @@ export default function AdminCustomersPage() {
 
     const handleAddCustomer = async () => {
       if (!formName || !formEmail) {
-        alert("Name and email are required");
+        setToastError("Name and email are required");
         return;
       }
 
@@ -1426,13 +1446,13 @@ export default function AdminCustomersPage() {
           setFormPhone("");
           setShowAddCustomerModal(false);
           fetchCustomers();
-          alert("Customer created successfully");
+          setToastSuccess("Customer created successfully");
         } else {
-          alert("Failed to create customer: " + (data.error || "Unknown error"));
+          setToastError("Failed to create customer: " + (data.error || "Unknown error"));
         }
       } catch (err) {
         logger.error("Failed to create customer:", err);
-        alert("Error creating customer");
+        setToastError("Error creating customer");
       }
       setSubmitting(false);
     };
@@ -1497,6 +1517,17 @@ export default function AdminCustomersPage() {
   // === CUSTOMER LIST VIEW ===
   return (
     <>
+      {/* Toast notifications */}
+      {toastSuccess && (
+        <div className="fixed top-4 right-4 z-[60] rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 shadow-lg">
+          {toastSuccess}
+        </div>
+      )}
+      {toastError && (
+        <div className="fixed top-4 right-4 z-[60] rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 shadow-lg">
+          {toastError}
+        </div>
+      )}
       <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">

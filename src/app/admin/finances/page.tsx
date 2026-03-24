@@ -32,6 +32,7 @@ import {
   FileText,
   MoreHorizontal,
   Download,
+  CheckCircle2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -233,7 +234,7 @@ export default function AdminFinancesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const { error, setError } = useAutoToast();
+  const { error, setError, success, setSuccess } = useAutoToast();
   const [dateRange, setDateRange] = useState({
     from: new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     to: new Date().toISOString().split("T")[0],
@@ -250,7 +251,7 @@ export default function AdminFinancesPage() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [showDailyRevenue, setShowDailyRevenue] = useState(false);
-  const [tickets, setTickets] = useState<any[]>([]);
+  const [tickets, setTickets] = useState<Array<{ id: string; vehicle_id?: string; amount_due?: number; ticket_type?: string; municipality?: string; state?: string; violation_date?: string; created_at?: string }>>([]);
   const [activeTab, setActiveTab] = useState<"overview" | "expenses" | "revenue" | "profit" | "vehicles">("overview");
 
   // ─── Data Fetching ──────────────────────────────────────────────
@@ -630,7 +631,12 @@ export default function AdminFinancesPage() {
   // ─── Expense CRUD ───────────────────────────────────────────────
   const handleAddExpense = async () => {
     if (!newExpense.amount || !newExpense.date) {
-      alert("Please fill in all required fields");
+      setError("Please fill in all required fields");
+      return;
+    }
+    const parsedAmount = parseFloat(newExpense.amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError("Please enter a valid amount");
       return;
     }
     try {
@@ -640,7 +646,7 @@ export default function AdminFinancesPage() {
         body: JSON.stringify({
           vehicleId: newExpense.vehicleId || null,
           category: newExpense.category,
-          amount: parseFloat(newExpense.amount),
+          amount: parsedAmount,
           description: newExpense.description || null,
           date: newExpense.date,
         }),
@@ -649,15 +655,21 @@ export default function AdminFinancesPage() {
       setNewExpense({ vehicleId: "", category: "maintenance", amount: "", description: "", date: new Date().toISOString().split("T")[0] });
       setAddingExpense(false);
       fetchData();
+      setSuccess("Expense added successfully");
     } catch (err) {
       logger.error("Error creating expense:", err);
-      alert("Failed to create expense");
+      setError("Failed to create expense");
     }
   };
 
   const handleUpdateExpense = async () => {
     if (!editingExpense || !editingExpense.amount || !editingExpense.date) {
-      alert("Please fill in all required fields");
+      setError("Please fill in all required fields");
+      return;
+    }
+    const parsedAmount = parseFloat(editingExpense.amount);
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError("Please enter a valid amount");
       return;
     }
     try {
@@ -668,7 +680,7 @@ export default function AdminFinancesPage() {
           id: editingExpense.id,
           vehicleId: editingExpense.vehicle_id || null,
           category: editingExpense.category,
-          amount: parseFloat(editingExpense.amount),
+          amount: parsedAmount,
           description: editingExpense.description || null,
           date: editingExpense.date,
         }),
@@ -676,9 +688,10 @@ export default function AdminFinancesPage() {
       if (!response.ok) throw new Error("Failed to update expense");
       setEditingExpense(null);
       fetchData();
+      setSuccess("Expense updated successfully");
     } catch (err) {
       logger.error("Error updating expense:", err);
-      alert("Failed to update expense");
+      setError("Failed to update expense");
     }
   };
 
@@ -688,9 +701,10 @@ export default function AdminFinancesPage() {
       if (!response.ok) throw new Error("Failed to delete expense");
       setDeleteConfirm(null);
       fetchData();
+      setSuccess("Expense deleted");
     } catch (err) {
       logger.error("Error deleting expense:", err);
-      alert("Failed to delete expense");
+      setError("Failed to delete expense");
     }
   };
 
@@ -1116,6 +1130,12 @@ export default function AdminFinancesPage() {
       </section>
 
       <PageContainer>
+        {success && (
+          <div className="mb-6 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
+            <CheckCircle2 className="h-4 w-4 shrink-0" />
+            {success}
+          </div>
+        )}
         {error && (
           <div className="mb-6 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
             <AlertCircle className="h-4 w-4 shrink-0" />

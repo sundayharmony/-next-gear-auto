@@ -136,6 +136,7 @@ export default function CreateBookingForm({
           `/api/bookings/check-overlap?vehicleId=${form.vehicleId}&pickupDate=${form.pickupDate}&returnDate=${form.returnDate}`,
           { method: "GET" }
         );
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         setHasOverlappingBookings(data.hasOverlap || false);
       } catch (err) {

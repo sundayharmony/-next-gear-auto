@@ -68,6 +68,7 @@ function BookingPageInner() {
   const [insuranceProofFile, setInsuranceProofFile] = useState<File | null>(null);
   const [insuranceProofUrl, setInsuranceProofUrl] = useState<string | null>(null);
   const [uploadingInsuranceProof, setUploadingInsuranceProof] = useState(false);
+  const [insuranceUploadError, setInsuranceUploadError] = useState("");
   const [showInsuranceWarning, setShowInsuranceWarning] = useState(false);
 
   // Booked dates for vehicle availability
@@ -118,6 +119,7 @@ function BookingPageInner() {
           vehicles.map(async (v) => {
             try {
               const res = await fetch(`/api/vehicles/booked-dates?vehicleId=${v.id}`);
+              if (!res.ok) throw new Error(`HTTP ${res.status}`);
               const data = await res.json();
               if (data.success) {
                 dateMap[v.id] = data.data || [];
@@ -984,13 +986,14 @@ function BookingPageInner() {
                                 // Validate
                                 const validTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
                                 if (!validTypes.includes(file.type)) {
-                                  alert("Please upload a JPG, PNG, WebP, or PDF file.");
+                                  setInsuranceUploadError("Please upload a JPG, PNG, WebP, or PDF file.");
                                   return;
                                 }
                                 if (file.size > 5 * 1024 * 1024) {
-                                  alert("File must be under 5MB.");
+                                  setInsuranceUploadError("File must be under 5MB.");
                                   return;
                                 }
+                                setInsuranceUploadError("");
 
                                 setInsuranceProofFile(file);
                                 setUploadingInsuranceProof(true);
@@ -999,17 +1002,18 @@ function BookingPageInner() {
                                   const formData = new FormData();
                                   formData.append("file", file);
                                   const uploadRes = await csrfFetch("/api/upload-temp", { method: "POST", body: formData });
+                                  if (!uploadRes.ok) throw new Error(`HTTP ${uploadRes.status}`);
                                   const uploadData = await uploadRes.json();
                                   if (uploadData.success) {
                                     setInsuranceProofUrl(uploadData.url);
                                   } else {
-                                    alert("Failed to upload insurance proof: " + (uploadData.error || "Unknown error"));
+                                    setInsuranceUploadError("Failed to upload insurance proof: " + (uploadData.error || "Unknown error"));
                                     setUploadingInsuranceProof(false);
                                     return;
                                   }
                                 } catch (err) {
                                   logger.error("Insurance upload error:", err);
-                                  alert("Failed to upload insurance proof");
+                                  setInsuranceUploadError("Failed to upload insurance proof. Please try again.");
                                   setUploadingInsuranceProof(false);
                                   return;
                                 }
@@ -1022,6 +1026,9 @@ function BookingPageInner() {
                               }}
                             />
                           </label>
+                        )}
+                        {insuranceUploadError && (
+                          <p className="mt-1 text-xs text-red-600">{insuranceUploadError}</p>
                         )}
                       </div>
                     )}

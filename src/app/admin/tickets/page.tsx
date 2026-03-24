@@ -7,6 +7,7 @@ import type { VehicleListItem, BookingDbRow } from "@/lib/types";
 import {
   Ticket,
   Plus,
+  Check,
   X,
   Pencil,
   Trash2,
@@ -74,7 +75,7 @@ export default function AdminTicketsPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const { error, setError } = useAutoToast();
+  const { error, setError, success, setSuccess } = useAutoToast();
   const [statusFilter, setStatusFilter] = useState<"all" | "unpaid" | "paid" | "disputed" | "dismissed">("all");
   const [typeFilter, setTypeFilter] = useState<"all" | "traffic" | "parking">("all");
   const [adding, setAdding] = useState(false);
@@ -186,7 +187,7 @@ export default function AdminTicketsPage() {
   // ─── CRUD ─────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!form.violationDate) {
-      alert("Violation date is required");
+      setError("Violation date is required");
       return;
     }
     try {
@@ -203,7 +204,7 @@ export default function AdminTicketsPage() {
         body: JSON.stringify({
           ...form,
           customerId: customerId || null,
-          amountDue: form.amountDue ? parseFloat(form.amountDue) : 0,
+          amountDue: parseFloat(form.amountDue) || 0,
         }),
       });
       if (!res.ok) throw new Error("Failed to create ticket");
@@ -212,7 +213,7 @@ export default function AdminTicketsPage() {
       fetchData();
     } catch (err) {
       logger.error("Error creating ticket:", err);
-      alert("Failed to create ticket");
+      setError("Failed to create ticket");
     }
   };
 
@@ -232,7 +233,7 @@ export default function AdminTicketsPage() {
           id: selectedTicket.id,
           ...form,
           customerId: customerId || null,
-          amountDue: form.amountDue ? parseFloat(form.amountDue) : 0,
+          amountDue: parseFloat(form.amountDue) || 0,
         }),
       });
       if (!res.ok) throw new Error("Failed to update ticket");
@@ -241,7 +242,7 @@ export default function AdminTicketsPage() {
       fetchData();
     } catch (err) {
       logger.error("Error updating ticket:", err);
-      alert("Failed to update ticket");
+      setError("Failed to update ticket");
     }
   };
 
@@ -254,7 +255,7 @@ export default function AdminTicketsPage() {
       fetchData();
     } catch (err) {
       logger.error("Error deleting ticket:", err);
-      alert("Failed to delete ticket");
+      setError("Failed to delete ticket");
     }
   };
 
@@ -686,6 +687,12 @@ export default function AdminTicketsPage() {
       </section>
 
       <PageContainer>
+        {success && (
+          <div className="mb-6 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
+            <Check className="h-4 w-4 shrink-0" />
+            {success}
+          </div>
+        )}
         {error && (
           <div className="mb-6 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
             <AlertCircle className="h-4 w-4 shrink-0" />

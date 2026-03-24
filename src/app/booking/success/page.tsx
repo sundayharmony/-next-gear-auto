@@ -70,6 +70,7 @@ function SuccessContent() {
           body: JSON.stringify({ bookingId, signatures: validSigs, customerEmail: booking?.customer_email }),
         });
 
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.success) {
           setAgreementStatus("signed");
@@ -96,6 +97,7 @@ function SuccessContent() {
       }
       try {
         const res = await fetch(`/api/bookings?id=${bookingId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.success && data.data) {
           setBooking(data.data);

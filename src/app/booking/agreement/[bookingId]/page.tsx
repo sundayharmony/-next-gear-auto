@@ -66,6 +66,7 @@ export default function AgreementSigningPage() {
     async function fetchBooking() {
       try {
         const res = await fetch(`/api/bookings?id=${bookingId}`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.success && data.data) {
           setBooking(data.data);
@@ -73,6 +74,7 @@ export default function AgreementSigningPage() {
           if (data.data.vehicle_id) {
             try {
               const vRes = await fetch("/api/vehicles");
+              if (!vRes.ok) throw new Error(`HTTP ${vRes.status}`);
               const vData = await vRes.json();
               if (vData.success && Array.isArray(vData.data)) {
                 const v = vData.data.find((veh: { id: string }) => veh.id === data.data.vehicle_id);
@@ -119,6 +121,7 @@ export default function AgreementSigningPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ bookingId, signatures, customerEmail: booking?.customer_email }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
       if (data.success) {
