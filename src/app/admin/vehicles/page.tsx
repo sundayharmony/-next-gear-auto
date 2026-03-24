@@ -99,6 +99,7 @@ export default function AdminVehiclesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<VehicleCategory | "">("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
   const editFormRef = useRef<HTMLDivElement>(null);
 
 
@@ -125,6 +126,22 @@ export default function AdminVehiclesPage() {
     fetchVehicles();
   }, []);
 
+  // Close forms on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (editingId) {
+          setEditingId(null);
+        } else if (showAddForm) {
+          setShowAddForm(false);
+          setNewVehicle(emptyVehicle);
+        }
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [editingId, showAddForm]);
+
   // Compute stats
   const stats = {
     total: vehicles.length,
@@ -140,12 +157,16 @@ export default function AdminVehiclesPage() {
 
   // Filter vehicles
   const filteredVehicles = vehicles.filter((v) => {
+    const q = searchQuery.toLowerCase();
     const displayName = getVehicleDisplayName(v).toLowerCase();
     const matchesSearch =
       searchQuery === "" ||
-      displayName.includes(searchQuery.toLowerCase()) ||
-      v.make.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      v.model.toLowerCase().includes(searchQuery.toLowerCase());
+      displayName.includes(q) ||
+      v.make.toLowerCase().includes(q) ||
+      v.model.toLowerCase().includes(q) ||
+      (v.color && v.color.toLowerCase().includes(q)) ||
+      (v.licensePlate && v.licensePlate.toLowerCase().includes(q)) ||
+      (v.vin && v.vin.toLowerCase().includes(q));
 
     const matchesCategory =
       filterCategory === "" || v.category === filterCategory;
@@ -263,6 +284,7 @@ export default function AdminVehiclesPage() {
   };
 
   const toggleAvailability = async (vehicle: Vehicle) => {
+    setTogglingId(vehicle.id);
     try {
       const res = await adminFetch("/api/admin/vehicles", {
         method: "PUT",
@@ -290,6 +312,8 @@ export default function AdminVehiclesPage() {
       }
     } catch {
       setError("Network error — could not update availability");
+    } finally {
+      setTogglingId(null);
     }
   };
 
@@ -405,7 +429,9 @@ export default function AdminVehiclesPage() {
   };
 
   const deleteVehicle = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this vehicle?")) return;
+    const vehicle = vehicles.find((v) => v.id === id);
+    const name = vehicle ? getVehicleDisplayName(vehicle) : "this vehicle";
+    if (!confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) return;
     setDeletingId(id);
     try {
       const res = await adminFetch(`/api/admin/vehicles?id=${id}`, {
@@ -500,7 +526,9 @@ export default function AdminVehiclesPage() {
     <Card className="mb-6 border-purple-200">
       <CardContent className="p-6">
         <h3 className="font-semibold text-gray-900 mb-6">
-          {formKey === "new" ? "Add New Vehicle" : "Edit Vehicle"}
+          {formKey === "new"
+            ? "Add New Vehicle"
+            : `Edit: ${form.year} ${form.make} ${form.model}`.trim()}
         </h3>
 
         <div className="space-y-6">
@@ -522,22 +550,24 @@ export default function AdminVehiclesPage() {
             </div>
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Make
+                Make <span className="text-red-500">*</span>
               </label>
               <Input
                 value={form.make || ""}
                 onChange={(e) => setForm({ ...form, make: e.target.value })}
                 placeholder="e.g. Toyota"
+                required
               />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Model
+                Model <span className="text-red-500">*</span>
               </label>
               <Input
                 value={form.model || ""}
                 onChange={(e) => setForm({ ...form, model: e.target.value })}
                 placeholder="e.g. Camry"
+                required
               />
             </div>
           </div>
@@ -556,7 +586,7 @@ export default function AdminVehiclesPage() {
                     category: e.target.value as VehicleCategory,
                   })
                 }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
@@ -617,6 +647,9 @@ export default function AdminVehiclesPage() {
                 />
               </button>
             </div>
+            {!form.isFinanced && (
+              <p className="text-xs text-gray-400">Enable to track monthly payments and financing details.</p>
+            )}
             {form.isFinanced && (
               <div className="grid grid-cols-3 gap-3">
                 <div>
@@ -676,7 +709,7 @@ export default function AdminVehiclesPage() {
                 onChange={(e) =>
                   setForm({ ...form, isAvailable: e.target.value === "yes" })
                 }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="yes">Available</option>
                 <option value="no">Unavailable</option>
@@ -691,7 +724,7 @@ export default function AdminVehiclesPage() {
                 onChange={(e) =>
                   setForm({ ...form, isPublished: e.target.value === "yes" })
                 }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="yes">Visible to customers</option>
                 <option value="no">Hidden (draft)</option>
@@ -765,7 +798,7 @@ export default function AdminVehiclesPage() {
                       | "in-maintenance",
                   })
                 }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="good">Good</option>
                 <option value="needs-service">Needs Service</option>
@@ -786,15 +819,22 @@ export default function AdminVehiclesPage() {
               }
               placeholder="Brief description of the vehicle"
               rows={3}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
 
           {/* Images Section */}
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-2 block">
-              Images
-            </label>
+            <div className="flex items-center gap-2 mb-2">
+              <label className="text-xs font-medium text-gray-700 block">
+                Images
+              </label>
+              {(form.images || []).length > 0 && (
+                <span className="text-xs text-gray-500">
+                  ({(form.images || []).length} uploaded)
+                </span>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2 mb-3">
               {(form.images || []).map((img, idx) => (
                 <div
@@ -808,7 +848,7 @@ export default function AdminVehiclesPage() {
                     className="w-full h-full object-cover"
                   />
                   <div className="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
-                    #{idx + 1}
+                    {idx === 0 ? "Primary" : `#${idx + 1}`}
                   </div>
                   <div className="absolute left-1 bottom-1 flex gap-1">
                     <button
@@ -853,7 +893,11 @@ export default function AdminVehiclesPage() {
                   : "border-gray-300 hover:border-purple-400 hover:bg-gray-50"
               } ${uploadingImage[formKey] ? "opacity-60 pointer-events-none" : ""}`}
             >
-              <Upload className="h-5 w-5 mx-auto mb-1 text-gray-400" />
+              {uploadingImage[formKey] ? (
+                <Loader2 className="h-5 w-5 mx-auto mb-1 text-purple-500 animate-spin" />
+              ) : (
+                <Upload className="h-5 w-5 mx-auto mb-1 text-gray-400" />
+              )}
               <p className="text-sm text-gray-600">
                 {uploadingImage[formKey]
                   ? "Uploading..."
@@ -914,18 +958,20 @@ export default function AdminVehiclesPage() {
               <Button
                 type="button"
                 variant="outline"
+                disabled={!form.featureInput?.trim()}
                 onClick={() =>
                   addFeature(formKey, form.featureInput || "")
                 }
               >
-                Add
+                <Plus className="h-3.5 w-3.5 mr-1" /> Add
               </Button>
             </div>
           </div>
 
           {/* Specs Grid */}
           <div className="border-t pt-6">
-            <h4 className="text-sm font-semibold text-gray-900 mb-4">
+            <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <Wrench className="h-4 w-4 text-gray-500" />
               Vehicle Specifications
             </h4>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -1004,7 +1050,7 @@ export default function AdminVehiclesPage() {
                       },
                     })
                   }
-                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   {TRANSMISSION_OPTIONS.map((t) => (
                     <option key={t} value={t}>
@@ -1032,7 +1078,7 @@ export default function AdminVehiclesPage() {
                       },
                     })
                   }
-                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm"
+                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   {FUEL_TYPE_OPTIONS.map((f) => (
                     <option key={f} value={f}>
@@ -1073,7 +1119,7 @@ export default function AdminVehiclesPage() {
               {isSaving ? <><RefreshCw className="h-4 w-4 mr-1 animate-spin" /> Saving...</> : <><Check className="h-4 w-4 mr-1" /> Save</>}
             </Button>
             <Button variant="outline" onClick={onCancel}>
-              Cancel
+              <X className="h-4 w-4 mr-1" /> Cancel
             </Button>
           </div>
         </div>
@@ -1211,7 +1257,7 @@ export default function AdminVehiclesPage() {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
-              placeholder="Search by make, model, or name..."
+              placeholder="Search by make, model, color, plate, or VIN..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               aria-label="Search vehicles"
@@ -1235,7 +1281,7 @@ export default function AdminVehiclesPage() {
                 setFilterCategory(e.target.value as VehicleCategory | "")
               }
               aria-label="Filter by category"
-              className="rounded-md border border-gray-200 px-3 py-2 text-sm"
+              className="rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               <option value="">All Categories</option>
               {CATEGORIES.map((cat) => (
@@ -1296,11 +1342,24 @@ export default function AdminVehiclesPage() {
                 ? "No vehicles yet. Add your first vehicle!"
                 : "No vehicles match your search."}
             </p>
+            {vehicles.length > 0 && (searchQuery || filterCategory) && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => {
+                  setSearchQuery("");
+                  setFilterCategory("");
+                }}
+              >
+                Clear Filters
+              </Button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredVehicles.map((vehicle) => (
-              <Card key={vehicle.id} className="overflow-hidden hover:shadow-lg transition-shadow">
+              <Card key={vehicle.id} className={`overflow-hidden hover:shadow-lg transition-shadow ${editingId === vehicle.id ? "ring-2 ring-purple-500 ring-offset-2" : ""}`}>
                 {/* Image */}
                 <div className="relative h-48 bg-gray-100 overflow-hidden">
                   {vehicle.images && vehicle.images.length > 0 ? (
@@ -1350,7 +1409,7 @@ export default function AdminVehiclesPage() {
 
                   {/* Category and Color */}
                   <div className="flex items-center gap-2 mb-3">
-                    <Badge variant="secondary">{vehicle.category}</Badge>
+                    <Badge variant="secondary" className="capitalize">{vehicle.category}</Badge>
                     <div
                       className="w-4 h-4 rounded-full border border-gray-300"
                       aria-hidden="true"
@@ -1476,9 +1535,9 @@ export default function AdminVehiclesPage() {
                       <span className="font-medium">License Plate:</span>{" "}
                       {vehicle.licensePlate || "—"}
                     </div>
-                    <div>
+                    <div title={vehicle.vin || undefined}>
                       <span className="font-medium">VIN:</span>{" "}
-                      {vehicle.vin ? vehicle.vin.slice(-6) : "—"}
+                      {vehicle.vin ? `...${vehicle.vin.slice(-6)}` : "—"}
                     </div>
                   </div>
 
@@ -1496,16 +1555,19 @@ export default function AdminVehiclesPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => toggleAvailability(vehicle)}
-                      className="flex-1"
+                      disabled={togglingId === vehicle.id}
+                      className={`flex-1 ${
+                        vehicle.isAvailable
+                          ? "text-red-600 hover:text-red-700 hover:border-red-300"
+                          : "text-green-600 hover:text-green-700 hover:border-green-300"
+                      }`}
                     >
-                      {vehicle.isAvailable ? (
-                        <>
-                          <X className="h-3 w-3 mr-1" /> Unavailable
-                        </>
+                      {togglingId === vehicle.id ? (
+                        <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Updating...</>
+                      ) : vehicle.isAvailable ? (
+                        <><X className="h-3 w-3 mr-1" /> Unavailable</>
                       ) : (
-                        <>
-                          <Check className="h-3 w-3 mr-1" /> Available
-                        </>
+                        <><Check className="h-3 w-3 mr-1" /> Available</>
                       )}
                     </Button>
                     <Button
