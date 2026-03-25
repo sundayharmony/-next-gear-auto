@@ -529,19 +529,19 @@ export default function AdminVehiclesPage() {
     onCancel: () => void,
     isSaving: boolean
   ) => (
-    <Card className="mb-6 border-purple-200">
-      <CardContent className="p-6">
-        <h3 className="font-semibold text-gray-900 mb-6">
+    <Card className="mb-4 border-purple-200">
+      <CardContent className="p-4">
+        <h3 className="font-semibold text-gray-900 mb-3">
           {formKey === "new"
             ? "Add New Vehicle"
             : `Edit: ${form.year} ${form.make} ${form.model}`.trim()}
         </h3>
 
-        <div className="space-y-6">
-          {/* Year Make Model Row */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="space-y-3">
+          {/* Year Make Model Category Row */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Year
               </label>
               <Input
@@ -555,7 +555,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Make <span className="text-red-500">*</span>
               </label>
               <Input
@@ -566,7 +566,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Model <span className="text-red-500">*</span>
               </label>
               <Input
@@ -576,12 +576,8 @@ export default function AdminVehiclesPage() {
                 required
               />
             </div>
-          </div>
-
-          {/* Category Pricing Availability Row */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Category
               </label>
               <select
@@ -601,8 +597,12 @@ export default function AdminVehiclesPage() {
                 ))}
               </select>
             </div>
+          </div>
+
+          {/* Pricing Row */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Daily Rate ($)
               </label>
               <Input
@@ -615,7 +615,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Purchase Price ($)
               </label>
               <Input
@@ -628,11 +628,42 @@ export default function AdminVehiclesPage() {
                 step="100"
               />
             </div>
+
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                Available
+              </label>
+              <select
+                value={form.isAvailable ? "yes" : "no"}
+                onChange={(e) =>
+                  setForm({ ...form, isAvailable: e.target.value === "yes" })
+                }
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="yes">Available</option>
+                <option value="no">Unavailable</option>
+              </select>
+            </div>
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                Published
+              </label>
+              <select
+                value={form.isPublished !== false ? "yes" : "no"}
+                onChange={(e) =>
+                  setForm({ ...form, isPublished: e.target.value === "yes" })
+                }
+                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              >
+                <option value="yes">Visible</option>
+                <option value="no">Hidden</option>
+              </select>
+            </div>
           </div>
 
           {/* Financing Section */}
-          <div className="border border-purple-200 rounded-lg p-3 bg-purple-50/50">
-            <div className="flex items-center justify-between mb-3">
+          <div className="border border-purple-200 rounded-lg p-2.5 bg-purple-50/50">
+            <div className="flex items-center justify-between mb-2">
               <label className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
                 Vehicle Financing
               </label>
@@ -642,13 +673,13 @@ export default function AdminVehiclesPage() {
                 aria-checked={form.isFinanced}
                 aria-label="Toggle vehicle financing"
                 onClick={() => setForm({ ...form, isFinanced: !form.isFinanced })}
-                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
                   form.isFinanced ? "bg-purple-600" : "bg-gray-300"
                 }`}
               >
                 <span
-                  className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    form.isFinanced ? "translate-x-6" : "translate-x-1"
+                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                    form.isFinanced ? "translate-x-5" : "translate-x-0.5"
                   }`}
                 />
               </button>
@@ -657,9 +688,9 @@ export default function AdminVehiclesPage() {
               <p className="text-xs text-gray-400">Enable to track monthly payments and financing details.</p>
             )}
             {form.isFinanced && (
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                  <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                     Monthly Payment ($)
                   </label>
                   <Input
@@ -673,7 +704,7 @@ export default function AdminVehiclesPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">
+                  <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                     Payment Day (1-31)
                   </label>
                   <Input
@@ -690,8 +721,8 @@ export default function AdminVehiclesPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">
-                    Financing Start Date
+                  <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                    Financing Start
                   </label>
                   <Input
                     type="date"
@@ -705,43 +736,10 @@ export default function AdminVehiclesPage() {
             )}
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          {/* Color, License, VIN, Mileage, Maintenance Row */}
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Available
-              </label>
-              <select
-                value={form.isAvailable ? "yes" : "no"}
-                onChange={(e) =>
-                  setForm({ ...form, isAvailable: e.target.value === "yes" })
-                }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="yes">Available</option>
-                <option value="no">Unavailable</option>
-              </select>
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Published
-              </label>
-              <select
-                value={form.isPublished !== false ? "yes" : "no"}
-                onChange={(e) =>
-                  setForm({ ...form, isPublished: e.target.value === "yes" })
-                }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="yes">Visible to customers</option>
-                <option value="no">Hidden (draft)</option>
-              </select>
-            </div>
-          </div>
-
-          {/* Color License Plate VIN Row */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Color
               </label>
               <Input
@@ -751,7 +749,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 License Plate
               </label>
               <Input
@@ -763,7 +761,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 VIN
               </label>
               <Input
@@ -772,12 +770,8 @@ export default function AdminVehiclesPage() {
                 placeholder="Vehicle ID Number"
               />
             </div>
-          </div>
-
-          {/* Mileage Maintenance Status Row */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Mileage
               </label>
               <Input
@@ -790,8 +784,8 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
-                Maintenance Status
+              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                Maintenance
               </label>
               <select
                 value={form.maintenanceStatus || "good"}
@@ -815,7 +809,7 @@ export default function AdminVehiclesPage() {
 
           {/* Description */}
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">
+            <label className="text-xs font-medium text-gray-700 mb-0.5 block">
               Description
             </label>
             <textarea
@@ -824,14 +818,14 @@ export default function AdminVehiclesPage() {
                 setForm({ ...form, description: e.target.value })
               }
               placeholder="Brief description of the vehicle"
-              rows={3}
+              rows={2}
               className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
 
           {/* Images Section */}
           <div>
-            <div className="flex items-center gap-2 mb-2">
+            <div className="flex items-center gap-2 mb-1.5">
               <label className="text-xs font-medium text-gray-700 block">
                 Images
               </label>
@@ -841,11 +835,11 @@ export default function AdminVehiclesPage() {
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex flex-wrap gap-1.5 mb-2">
               {(form.images || []).map((img, idx) => (
                 <div
                   key={img}
-                  className="relative w-24 h-24 rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
+                  className="relative w-20 h-20 rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
                 >
                   <img
                     src={img}
@@ -893,7 +887,7 @@ export default function AdminVehiclesPage() {
               onDragOver={(e) => handleDragOver(e, formKey)}
               onDragLeave={(e) => handleDragLeave(e, formKey)}
               onDrop={(e) => handleDrop(e, formKey)}
-              className={`cursor-pointer block rounded-lg border-2 border-dashed p-4 text-center transition-colors ${
+              className={`cursor-pointer block rounded-lg border-2 border-dashed p-2.5 text-center transition-colors ${
                 dragOver[formKey]
                   ? "border-purple-500 bg-purple-50"
                   : "border-gray-300 hover:border-purple-400 hover:bg-gray-50"
@@ -925,10 +919,10 @@ export default function AdminVehiclesPage() {
 
           {/* Features Section */}
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-2 block">
+            <label className="text-xs font-medium text-gray-700 mb-1 block">
               Features
             </label>
-            <div className="flex flex-wrap gap-2 mb-3">
+            <div className="flex flex-wrap gap-1.5 mb-2">
               {(form.features || []).map((feature, idx) => (
                 <Badge
                   key={`${feature}-${idx}`}
@@ -976,14 +970,14 @@ export default function AdminVehiclesPage() {
           </div>
 
           {/* Specs Grid */}
-          <div className="border-t pt-6">
-            <h4 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <Wrench className="h-4 w-4 text-gray-500" />
+          <div className="border-t pt-3">
+            <h4 className="text-sm font-semibold text-gray-900 mb-2 flex items-center gap-1.5">
+              <Wrench className="h-3.5 w-3.5 text-gray-500" />
               Vehicle Specifications
             </h4>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
+                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                   Passengers
                 </label>
                 <Input
@@ -1002,7 +996,7 @@ export default function AdminVehiclesPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
+                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                   Luggage
                 </label>
                 <Input
@@ -1021,7 +1015,7 @@ export default function AdminVehiclesPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
+                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                   Doors
                 </label>
                 <Input
@@ -1041,7 +1035,7 @@ export default function AdminVehiclesPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
+                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                   Transmission
                 </label>
                 <select
@@ -1067,7 +1061,7 @@ export default function AdminVehiclesPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
+                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                   Fuel Type
                 </label>
                 <select
@@ -1095,7 +1089,7 @@ export default function AdminVehiclesPage() {
                 </select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 block">
+                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                   MPG
                 </label>
                 <Input
@@ -1117,7 +1111,7 @@ export default function AdminVehiclesPage() {
           </div>
 
           {/* Actions */}
-          <div className="flex gap-2 pt-4 border-t">
+          <div className="flex gap-2 pt-3 border-t">
             <Button
               onClick={onSave}
               disabled={isSaving || !form.make || !form.model}
