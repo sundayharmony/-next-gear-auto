@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useCallback } from "react";
 import type { BookingDbRow, VehicleListItem } from "@/lib/types";
 import {
   ChevronLeft,
@@ -54,10 +54,10 @@ export default function AdminCalendarPage() {
     setShowBookingDetail(true);
   };
 
-  const closeBookingDetail = () => {
+  const closeBookingDetail = useCallback(() => {
     setShowBookingDetail(false);
     setSelectedBooking(null);
-  };
+  }, []);
 
   // Escape key handler for booking detail panel
   useEffect(() => {
@@ -71,7 +71,7 @@ export default function AdminCalendarPage() {
       window.addEventListener("keydown", handleEscapeKey);
       return () => window.removeEventListener("keydown", handleEscapeKey);
     }
-  }, [showBookingDetail]);
+  }, [showBookingDetail, closeBookingDetail]);
 
   // Build date range for API filtering (3 months window around current view)
   const getDateRange = () => {
@@ -86,7 +86,7 @@ export default function AdminCalendarPage() {
     };
   };
 
-  const fetchBookings = async () => {
+  const fetchBookings = useCallback(async () => {
     const { from, to } = getDateRange();
     try {
       const res = await adminFetch(`/api/bookings?from=${from}&to=${to}`);
@@ -97,7 +97,8 @@ export default function AdminCalendarPage() {
     } catch (error) {
       logger.error("Failed to fetch bookings:", error);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [view, timelineStart, calendarMonth]);
 
   // Fetch data on mount and when view/date range changes
   useEffect(() => {
@@ -121,12 +122,13 @@ export default function AdminCalendarPage() {
     };
 
     fetchData();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Re-fetch bookings when navigating timeline or calendar
   useEffect(() => {
     fetchBookings();
-  }, [timelineStart, calendarMonth]);
+  }, [fetchBookings]);
 
   // Filter bookings
   const filteredBookings = useMemo(() => {

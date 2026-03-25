@@ -90,7 +90,6 @@ export async function GET(request: NextRequest) {
         deposit: rest.deposit,
         status: rest.status,
         customer_name: rest.customer_name,
-        customer_email: rest.customer_email,
         extras: rest.extras,
         agreement_signed_at: rest.agreement_signed_at,
         signed_name: rest.signed_name,

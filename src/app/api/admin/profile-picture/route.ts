@@ -37,7 +37,7 @@ export async function POST(request: NextRequest) {
     }
 
     const ext = file.type === "image/png" ? "png" : file.type === "image/webp" ? "webp" : "jpg";
-    const fileName = `profiles/${customerId}_${Date.now()}.${ext}`;
+    const fileName = `profiles/${customerId}_${crypto.randomUUID()}.${ext}`;
 
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);

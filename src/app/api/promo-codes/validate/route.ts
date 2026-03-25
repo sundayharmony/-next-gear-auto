@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (promo.expiry_date && new Date(promo.expiry_date) < new Date()) {
+    if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
       return NextResponse.json(
         { success: false, error: "This promo code has expired" },
         { status: 400 }

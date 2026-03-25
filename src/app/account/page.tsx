@@ -163,6 +163,7 @@ export default function AccountPage() {
       if (data.success) {
         setProfileMsg("Profile updated successfully!");
         updateProfile(profileForm);
+        setTimeout(() => setProfileMsg(""), 5000);
       } else {
         setProfileMsg(data.message || "Failed to update profile.");
       }

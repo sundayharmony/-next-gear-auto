@@ -18,7 +18,10 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (search) {
-      query = query.or(`name.ilike.%${search}%,email.ilike.%${search}%`);
+      const sanitized = search.replace(/[%_,().*]/g, "");
+      if (sanitized) {
+        query = query.or(`name.ilike.%${sanitized}%,email.ilike.%${sanitized}%`);
+      }
     }
 
     const { data, error } = await query;
