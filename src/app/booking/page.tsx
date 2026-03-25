@@ -1220,17 +1220,29 @@ function BookingPageInner() {
                       </div>
                       {booking.pricing && (
                         <>
-                          <div className="border-t pt-3">
+                          <div className="border-t pt-3 space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Base ({booking.pricing.baseDays} days)</span>
+                              <span className="text-gray-500">Base ({booking.pricing.baseDays} day{booking.pricing.baseDays !== 1 ? "s" : ""})</span>
                               <span>${booking.pricing.baseTotal.toFixed(2)}</span>
                             </div>
+                            {booking.pricing.multiDayDiscount > 0 && (
+                              <div className="flex justify-between text-sm text-green-600">
+                                <span>Multi-day discount (7.5%/day)</span>
+                                <span>-${booking.pricing.multiDayDiscount.toFixed(2)}</span>
+                              </div>
+                            )}
                             {booking.pricing.extras.map((e) => (
                               <div key={e.name} className="flex justify-between text-sm">
                                 <span className="text-gray-500">{e.name}</span>
                                 <span>${e.total.toFixed(2)}</span>
                               </div>
                             ))}
+                            {booking.pricing.insuranceDiscount > 0 && (
+                              <div className="flex justify-between text-sm text-green-600">
+                                <span>Insurance discount (15% off)</span>
+                                <span>-${booking.pricing.insuranceDiscount.toFixed(2)}</span>
+                              </div>
+                            )}
                             {booking.promoDiscount && (
                               <div className="flex justify-between text-sm text-green-600">
                                 <span className="flex items-center gap-1">
@@ -1245,6 +1257,11 @@ function BookingPageInner() {
                               <span>${booking.pricing.tax.toFixed(2)}</span>
                             </div>
                           </div>
+                          {(booking.pricing.multiDayDiscount > 0 || booking.pricing.insuranceDiscount > 0) && (
+                            <div className="bg-green-50 border border-green-100 rounded-lg px-3 py-2 text-xs text-green-700 mt-2">
+                              You&apos;re saving ${(booking.pricing.multiDayDiscount + booking.pricing.insuranceDiscount).toFixed(2)} with multi-day &amp; insurance discounts!
+                            </div>
+                          )}
                           <div className="border-t pt-3 flex justify-between font-semibold text-lg">
                             <span>Total</span>
                             <span className="text-purple-600">${booking.pricing.total.toFixed(2)}</span>

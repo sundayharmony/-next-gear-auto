@@ -148,6 +148,8 @@ export interface PricingBreakdown {
   baseDays: number;
   baseRate: number;
   baseTotal: number;
+  multiDayDiscount: number;
+  insuranceDiscount: number;
   extras: { name: string; total: number }[];
   extrasTotal: number;
   subtotal: number;
