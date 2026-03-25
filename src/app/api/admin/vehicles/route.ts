@@ -58,7 +58,19 @@ export async function POST(request: NextRequest) {
   const supabase = getServiceSupabase();
   try {
     const body = await request.json();
-    const id = "v" + Date.now();
+
+    // Server-side validation
+    if (!body.make?.trim() || !body.model?.trim()) {
+      return NextResponse.json({ success: false, message: "Make and Model are required" }, { status: 400 });
+    }
+    if (body.dailyRate !== undefined && (typeof body.dailyRate !== "number" || body.dailyRate < 0 || !Number.isFinite(body.dailyRate))) {
+      return NextResponse.json({ success: false, message: "Daily rate must be a non-negative number" }, { status: 400 });
+    }
+    if (body.year !== undefined && (typeof body.year !== "number" || body.year < 1900 || body.year > new Date().getFullYear() + 1)) {
+      return NextResponse.json({ success: false, message: "Invalid vehicle year" }, { status: 400 });
+    }
+
+    const id = crypto.randomUUID();
 
     const { data, error } = await supabase
       .from("vehicles")
@@ -111,6 +123,20 @@ export async function PUT(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ success: false, message: "Vehicle ID required" }, { status: 400 });
+    }
+
+    // Server-side validation for updates
+    if (updates.make !== undefined && !updates.make?.trim()) {
+      return NextResponse.json({ success: false, message: "Make cannot be empty" }, { status: 400 });
+    }
+    if (updates.model !== undefined && !updates.model?.trim()) {
+      return NextResponse.json({ success: false, message: "Model cannot be empty" }, { status: 400 });
+    }
+    if (updates.dailyRate !== undefined && (typeof updates.dailyRate !== "number" || updates.dailyRate < 0 || !Number.isFinite(updates.dailyRate))) {
+      return NextResponse.json({ success: false, message: "Daily rate must be a non-negative number" }, { status: 400 });
+    }
+    if (updates.year !== undefined && (typeof updates.year !== "number" || updates.year < 1900 || updates.year > new Date().getFullYear() + 1)) {
+      return NextResponse.json({ success: false, message: "Invalid vehicle year" }, { status: 400 });
     }
 
     const dbUpdates: Record<string, unknown> = {};

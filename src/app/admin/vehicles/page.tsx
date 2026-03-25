@@ -125,12 +125,14 @@ export default function AdminVehiclesPage() {
       const res = await adminFetch("/api/admin/vehicles", { signal });
       if (!res.ok) {
         // Try to extract a specific error message from the response
+        let msg = `HTTP ${res.status}`;
         try {
           const errData = await res.json();
-          throw new Error(errData.message || `HTTP ${res.status}`);
+          if (errData.message) msg = errData.message;
         } catch {
-          throw new Error(`HTTP ${res.status}`);
+          // Response wasn't JSON — use default HTTP status message
         }
+        throw new Error(msg);
       }
       const data = await res.json();
       if (data.success) {
@@ -221,11 +223,16 @@ export default function AdminVehiclesPage() {
     let failedCount = 0;
 
     try {
-      // Compress images client-side to stay under Vercel's 4.5MB body limit
+      // Compress raster images client-side to stay under Vercel's 4.5MB body limit
+      // SVGs are vector and should not be passed through canvas compression
       const files: File[] = [];
       for (const raw of rawFiles) {
-        const compressed = await compressImage(raw, 4, 2048, 0.8);
-        files.push(compressed);
+        if (raw.type === "image/svg+xml") {
+          files.push(raw);
+        } else {
+          const compressed = await compressImage(raw, 4, 2048, 0.8);
+          files.push(compressed);
+        }
       }
 
       for (const file of files) {
@@ -312,6 +319,9 @@ export default function AdminVehiclesPage() {
   const handleDragLeave = (e: React.DragEvent, formKey: string) => {
     e.preventDefault();
     e.stopPropagation();
+    // Only clear drag state when actually leaving the drop zone,
+    // not when entering a child element inside it
+    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
     setDragOver((prev) => ({ ...prev, [formKey]: false }));
   };
 
@@ -365,7 +375,10 @@ export default function AdminVehiclesPage() {
   };
 
   const startEdit = (vehicle: Vehicle) => {
-    setShowAddForm(false);
+    if (showAddForm) {
+      setShowAddForm(false);
+      setNewVehicle(emptyVehicle);
+    }
     setEditingId(vehicle.id);
     setEditForm({ ...vehicle });
     // Scroll to edit form after React re-renders it
@@ -392,8 +405,8 @@ export default function AdminVehiclesPage() {
         body: JSON.stringify({
           id: editingId,
           year: editForm.year,
-          make: editForm.make,
-          model: editForm.model,
+          make: editForm.make.trim(),
+          model: editForm.model.trim(),
           category: editForm.category,
           images: editForm.images,
           specs: editForm.specs,
@@ -453,8 +466,8 @@ export default function AdminVehiclesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           year: newVehicle.year,
-          make: newVehicle.make,
-          model: newVehicle.model,
+          make: newVehicle.make.trim(),
+          model: newVehicle.model.trim(),
           category: newVehicle.category,
           images: newVehicle.images || [],
           specs: newVehicle.specs,
@@ -985,7 +998,7 @@ export default function AdminVehiclesPage() {
                     ? "Drop images here"
                     : "Drag & drop images or click to browse"}
               </p>
-              <p className="text-xs text-gray-400 mt-0.5">JPEG, PNG, WebP up to 5MB</p>
+              <p className="text-xs text-gray-400 mt-0.5">JPEG, PNG, WebP, SVG up to 5MB</p>
               <input
                 type="file"
                 accept="image/*"

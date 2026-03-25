@@ -37,8 +37,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    // Generate unique filename
-    const ext = file.name.split(".").pop() || "jpg";
+    // Generate unique filename with safe extension
+    const SAFE_EXTENSIONS: Record<string, string> = {
+      "image/jpeg": "jpg",
+      "image/png": "png",
+      "image/webp": "webp",
+      "image/svg+xml": "svg",
+    };
+    const ext = SAFE_EXTENSIONS[file.type] || "jpg";
     const folder = vehicleId || "temp";
     const fileName = `${folder}/${crypto.randomUUID()}.${ext}`;
 
@@ -86,8 +92,8 @@ export async function POST(request: NextRequest) {
         });
       }
 
-      const currentImages = vehicle?.images || [];
-      const updatedImages = [...(currentImages || []), publicUrl];
+      const currentImages = (vehicle?.images as string[]) || [];
+      const updatedImages = [...currentImages, publicUrl];
 
       const { error: updateError } = await supabase
         .from("vehicles")
