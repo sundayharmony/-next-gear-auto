@@ -123,3 +123,35 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// DELETE: Remove a single image from Supabase storage
+export async function DELETE(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
+  try {
+    const { url } = await request.json();
+    if (!url || typeof url !== "string") {
+      return NextResponse.json({ success: false, error: "Image URL required" }, { status: 400 });
+    }
+
+    const supabase = getServiceSupabase();
+    const bucket = "vehicle-images";
+    const marker = `/storage/v1/object/public/${bucket}/`;
+    const idx = url.indexOf(marker);
+    if (idx === -1) {
+      return NextResponse.json({ success: false, error: "Invalid storage URL" }, { status: 400 });
+    }
+
+    const filePath = url.substring(idx + marker.length);
+    const { error } = await supabase.storage.from(bucket).remove([filePath]);
+    if (error) {
+      logger.error("Failed to remove image from storage:", error);
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    logger.error("Unexpected error in DELETE /api/admin/vehicles/upload:", error);
+    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+  }
+}

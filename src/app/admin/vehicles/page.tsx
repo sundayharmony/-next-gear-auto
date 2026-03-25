@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { compressImage } from "@/lib/utils/compress-image";
@@ -43,16 +43,31 @@ const CATEGORIES: VehicleCategory[] = [
   "van",
 ];
 
+const CURRENT_YEAR = new Date().getFullYear();
+const MAX_VEHICLE_YEAR = CURRENT_YEAR + 1;
 const TRANSMISSION_OPTIONS = ["Automatic", "Manual"] as const;
 const FUEL_TYPE_OPTIONS = ["Gasoline", "Diesel", "Hybrid", "Electric"] as const;
-const MAINTENANCE_STATUS_OPTIONS = [
-  "good",
-  "needs-service",
-  "in-maintenance",
-] as const;
+const COLOR_HEX_MAP: Record<string, string> = {
+  White: "#FFFFFF",
+  Black: "#000000",
+  Silver: "#C0C0C0",
+  Gray: "#808080",
+  Grey: "#808080",
+  Blue: "#3B82F6",
+  Red: "#EF4444",
+  Green: "#22C55E",
+  Yellow: "#EAB308",
+  Orange: "#F97316",
+  Brown: "#92400E",
+  Beige: "#D4C5A9",
+  Gold: "#CA8A04",
+  Navy: "#1E3A5F",
+  Maroon: "#7F1D1D",
+  Purple: "#9333EA",
+};
 
 const emptyVehicle: Omit<Vehicle, "id"> = {
-  year: new Date().getFullYear(),
+  year: CURRENT_YEAR,
   make: "",
   model: "",
   category: "sedan",
@@ -148,8 +163,8 @@ export default function AdminVehiclesPage() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [editingId, showAddForm, saving]);
 
-  // Compute stats
-  const stats = {
+  // Compute stats (memoized to avoid 3 array filters + reduce per render)
+  const stats = useMemo(() => ({
     total: vehicles.length,
     available: vehicles.filter((v) => v.isAvailable).length,
     inMaintenance: vehicles.filter((v) => v.maintenanceStatus === "in-maintenance" || v.maintenanceStatus === "needs-service").length,
@@ -159,10 +174,10 @@ export default function AdminVehiclesPage() {
             vehicles.reduce((sum, v) => sum + v.dailyRate, 0) / vehicles.length
           )
         : 0,
-  };
+  }), [vehicles]);
 
-  // Filter vehicles
-  const filteredVehicles = vehicles.filter((v) => {
+  // Filter vehicles (memoized to avoid re-filtering on unrelated state changes)
+  const filteredVehicles = useMemo(() => vehicles.filter((v) => {
     const q = searchQuery.toLowerCase();
     const displayName = getVehicleDisplayName(v).toLowerCase();
     const matchesSearch =
@@ -178,7 +193,7 @@ export default function AdminVehiclesPage() {
       filterCategory === "" || v.category === filterCategory;
 
     return matchesSearch && matchesCategory;
-  });
+  }), [vehicles, searchQuery, filterCategory]);
 
   // Core upload logic — accepts raw File[] so both input change and drag-and-drop can share it
   const uploadImageFiles = async (rawFiles: File[], formKey: "new" | string) => {
@@ -369,9 +384,12 @@ export default function AdminVehiclesPage() {
       const data = await res.json();
       if (data.success) {
         setVehicles((prev) =>
-          prev.map((v) =>
-            v.id === editingId ? { ...v, ...editForm } : v
-          )
+          prev.map((v) => {
+            if (v.id !== editingId) return v;
+            // Destructure out form-only UI fields before spreading into vehicle state
+            const { featureInput: _, ...vehicleFields } = editForm;
+            return { ...v, ...vehicleFields };
+          })
         );
         setEditingId(null);
         setSuccess("Vehicle updated successfully!");
@@ -470,6 +488,12 @@ export default function AdminVehiclesPage() {
         images: (prev.images || []).filter((img) => img !== url),
       }));
     }
+    // Fire-and-forget: clean up the file from Supabase storage
+    adminFetch("/api/admin/vehicles/upload", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ url }),
+    }).catch((err) => logger.error("Failed to clean up removed image:", err));
   };
 
   const moveImage = (formKey: "new" | string, index: number, direction: -1 | 1) => {
@@ -490,20 +514,29 @@ export default function AdminVehiclesPage() {
   };
 
   const addFeature = (formKey: "new" | string, featureInput: string) => {
-    if (!featureInput.trim()) return;
+    const trimmed = featureInput.trim();
+    if (!trimmed) return;
 
     if (formKey === "new") {
-      setNewVehicle((prev) => ({
-        ...prev,
-        features: [...(prev.features || []), featureInput.trim()],
-        featureInput: "",
-      }));
+      setNewVehicle((prev) => {
+        const existing = (prev.features || []).map((f) => f.toLowerCase());
+        if (existing.includes(trimmed.toLowerCase())) return { ...prev, featureInput: "" };
+        return {
+          ...prev,
+          features: [...(prev.features || []), trimmed],
+          featureInput: "",
+        };
+      });
     } else {
-      setEditForm((prev) => ({
-        ...prev,
-        features: [...(prev.features || []), featureInput.trim()],
-        featureInput: "",
-      }));
+      setEditForm((prev) => {
+        const existing = (prev.features || []).map((f) => f.toLowerCase());
+        if (existing.includes(trimmed.toLowerCase())) return { ...prev, featureInput: "" };
+        return {
+          ...prev,
+          features: [...(prev.features || []), trimmed],
+          featureInput: "",
+        };
+      });
     }
   };
 
@@ -546,12 +579,12 @@ export default function AdminVehiclesPage() {
               </label>
               <Input
                 type="number"
-                value={form.year || ""}
+                value={form.year ?? ""}
                 onChange={(e) =>
                   setForm({ ...form, year: Number(e.target.value) })
                 }
                 min="1990"
-                max={new Date().getFullYear() + 1}
+                max={MAX_VEHICLE_YEAR}
               />
             </div>
             <div>
@@ -709,7 +742,7 @@ export default function AdminVehiclesPage() {
                   </label>
                   <Input
                     type="number"
-                    value={form.paymentDayOfMonth || 1}
+                    value={form.paymentDayOfMonth ?? 1}
                     onChange={(e) =>
                       setForm({
                         ...form,
@@ -982,7 +1015,7 @@ export default function AdminVehiclesPage() {
                 </label>
                 <Input
                   type="number"
-                  value={form.specs?.passengers || 5}
+                  value={form.specs?.passengers ?? 5}
                   onChange={(e) =>
                     setForm({
                       ...form,
@@ -1001,7 +1034,7 @@ export default function AdminVehiclesPage() {
                 </label>
                 <Input
                   type="number"
-                  value={form.specs?.luggage || 2}
+                  value={form.specs?.luggage ?? 2}
                   onChange={(e) =>
                     setForm({
                       ...form,
@@ -1020,7 +1053,7 @@ export default function AdminVehiclesPage() {
                 </label>
                 <Input
                   type="number"
-                  value={form.specs?.doors || 4}
+                  value={form.specs?.doors ?? 4}
                   onChange={(e) =>
                     setForm({
                       ...form,
@@ -1094,7 +1127,7 @@ export default function AdminVehiclesPage() {
                 </label>
                 <Input
                   type="number"
-                  value={form.specs?.mpg || 30}
+                  value={form.specs?.mpg ?? 30}
                   onChange={(e) =>
                     setForm({
                       ...form,
@@ -1435,25 +1468,7 @@ export default function AdminVehiclesPage() {
                       className="w-4 h-4 rounded-full border border-gray-300"
                       aria-hidden="true"
                       style={{
-                        backgroundColor:
-                          {
-                            White: "#FFFFFF",
-                            Black: "#000000",
-                            Silver: "#C0C0C0",
-                            Gray: "#808080",
-                            Grey: "#808080",
-                            Blue: "#3B82F6",
-                            Red: "#EF4444",
-                            Green: "#22C55E",
-                            Yellow: "#EAB308",
-                            Orange: "#F97316",
-                            Brown: "#92400E",
-                            Beige: "#D4C5A9",
-                            Gold: "#CA8A04",
-                            Navy: "#1E3A5F",
-                            Maroon: "#7F1D1D",
-                            Purple: "#9333EA",
-                          }[vehicle.color] || "#666666",
+                        backgroundColor: COLOR_HEX_MAP[vehicle.color] || "#666666",
                       }}
                       title={vehicle.color}
                     />

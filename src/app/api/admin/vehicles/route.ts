@@ -14,40 +14,41 @@ export async function GET(req: NextRequest) {
       .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at")
       .order("created_at", { ascending: true });
 
-    if (!error && data && data.length > 0) {
-      const vehicles = data.map((v) => ({
-        id: v.id,
-        year: v.year || 2024,
-        make: v.make || "",
-        model: v.model || "",
-        category: v.category,
-        images: v.images || [],
-        specs: v.specs || {},
-        dailyRate: v.daily_rate,
-        features: v.features || [],
-        isAvailable: v.is_available,
-        description: v.description || "",
-        color: v.color || "",
-        mileage: v.mileage ?? 0,
-        licensePlate: v.license_plate || "",
-        vin: v.vin || "",
-        maintenanceStatus: v.maintenance_status || "good",
-        purchasePrice: v.purchase_price ?? 0,
-        isFinanced: v.is_financed ?? false,
-        monthlyPayment: v.monthly_payment ?? 0,
-        paymentDayOfMonth: v.payment_day_of_month ?? 1,
-        financingStartDate: v.financing_start_date || null,
-        isPublished: v.is_published !== false,
-        createdAt: v.created_at || null,
-      }));
-      return NextResponse.json({ success: true, data: vehicles });
+    if (error) {
+      logger.error("Admin vehicles GET Supabase error:", error);
+      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
+
+    const vehicles = (data || []).map((v) => ({
+      id: v.id,
+      year: v.year || 2024,
+      make: v.make || "",
+      model: v.model || "",
+      category: v.category,
+      images: v.images || [],
+      specs: v.specs || {},
+      dailyRate: v.daily_rate,
+      features: v.features || [],
+      isAvailable: v.is_available,
+      description: v.description || "",
+      color: v.color || "",
+      mileage: v.mileage ?? 0,
+      licensePlate: v.license_plate || "",
+      vin: v.vin || "",
+      maintenanceStatus: v.maintenance_status || "good",
+      purchasePrice: v.purchase_price ?? 0,
+      isFinanced: v.is_financed ?? false,
+      monthlyPayment: v.monthly_payment ?? 0,
+      paymentDayOfMonth: v.payment_day_of_month ?? 1,
+      financingStartDate: v.financing_start_date || null,
+      isPublished: v.is_published !== false,
+      createdAt: v.created_at || null,
+    }));
+    return NextResponse.json({ success: true, data: vehicles });
   } catch (error) {
     logger.error("Admin vehicles GET error:", error);
+    return NextResponse.json({ success: false, message: "Failed to load vehicles" }, { status: 500 });
   }
-
-  // Return empty array if no vehicles found or error
-  return NextResponse.json({ success: true, data: [] });
 }
 
 // POST: Add a new vehicle
@@ -164,11 +165,37 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Vehicle ID required" }, { status: 400 });
     }
 
+    // Fetch vehicle first to get image URLs for storage cleanup
+    const { data: vehicle } = await supabase
+      .from("vehicles")
+      .select("images")
+      .eq("id", id)
+      .single();
+
     const { error } = await supabase.from("vehicles").delete().eq("id", id);
 
     if (error) {
       logger.error("Vehicle delete error:", error);
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    }
+
+    // Clean up images from Supabase storage after successful delete
+    if (vehicle?.images && vehicle.images.length > 0) {
+      try {
+        const bucket = "vehicle-images";
+        const filePaths = (vehicle.images as string[])
+          .map((url: string) => {
+            const marker = `/storage/v1/object/public/${bucket}/`;
+            const idx = url.indexOf(marker);
+            return idx !== -1 ? url.substring(idx + marker.length) : null;
+          })
+          .filter(Boolean) as string[];
+        if (filePaths.length > 0) {
+          await supabase.storage.from(bucket).remove(filePaths);
+        }
+      } catch (cleanupErr) {
+        logger.error("Failed to clean up vehicle images from storage:", cleanupErr);
+      }
     }
 
     return NextResponse.json({ success: true, message: "Vehicle deleted" });
