@@ -1383,7 +1383,7 @@ export default function AdminVehiclesPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={fetchVehicles}
+            onClick={() => fetchVehicles()}
             disabled={loading}
             className="whitespace-nowrap"
           >
