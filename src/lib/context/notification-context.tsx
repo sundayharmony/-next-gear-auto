@@ -42,6 +42,10 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const showToast = useCallback((type: ToastType, title: string, message?: string) => {
     const id = Date.now().toString() + Math.random().toString(36).slice(2);
     dispatch({ type: "ADD_TOAST", payload: { id, type, title, message } });
+    // Auto-dismiss after 6 seconds to prevent unbounded toast accumulation
+    setTimeout(() => {
+      dispatch({ type: "DISMISS_TOAST", payload: id });
+    }, 6000);
   }, []);
 
   const dismissToast = useCallback((id: string) => {

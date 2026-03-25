@@ -207,6 +207,8 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
   const applyPromoCode = useCallback(async (code: string): Promise<{ success: boolean; error?: string }> => {
     try {
+      // Read subtotal from latest state via functional pattern isn't possible with
+      // useReducer dispatch, so we accept the dep-array value as the best proxy.
       const res = await csrfFetch("/api/promo-codes/validate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -224,7 +226,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     } catch {
       return { success: false, error: "Failed to validate promo code" };
     }
-  }, [state.pricing?.subtotal]);
+  }, [state.pricing?.subtotal, state.selectedVehicle, state.pickupDate, state.returnDate, state.extras]);
 
   const clearPromoCode = useCallback(() => {
     dispatch({ type: "CLEAR_PROMO" });

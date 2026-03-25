@@ -2,7 +2,7 @@ import type { BookingExtra, PricingBreakdown } from "@/lib/types";
 
 const TAX_RATE = 0.08;
 const MULTI_DAY_DISCOUNT_RATE = 0.075; // 7.5% per additional day
-const MAX_MULTI_DAY_DISCOUNT = 0.40;  // cap at 40% max discount per day
+const MAX_MULTI_DAY_DISCOUNT = 0.25;  // cap at 25% max discount per day
 const INSURANCE_DISCOUNT_RATE = 0.15;  // 15% off insurance
 const INSURANCE_EXTRA_ID = "e1";
 

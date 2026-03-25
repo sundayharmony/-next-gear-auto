@@ -10,7 +10,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 export function getServiceSupabase() {
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
   if (!serviceKey) {
-    // Fall back to anon key if service key not set
+    if (process.env.NODE_ENV === "production") {
+      throw new Error("SUPABASE_SERVICE_KEY is required in production");
+    }
+    // Fall back to anon key in development only
+    console.warn("SUPABASE_SERVICE_KEY not set — falling back to anon key (dev only)");
     return supabase;
   }
   return createClient(supabaseUrl, serviceKey);

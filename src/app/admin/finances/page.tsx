@@ -813,13 +813,13 @@ export default function AdminFinancesPage() {
                     <XAxis
                       dataKey="date"
                       tick={{ fontSize: 10 }}
-                      tickFormatter={(d) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                      tickFormatter={(d) => { const [y, m, day] = d.split("-").map(Number); return new Date(y, m - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric" }); }}
                       interval={Math.max(0, Math.floor(Math.min(30, allTimeDailyRevenue.length) / 8))}
                     />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
                     <Tooltip
                       formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
-                      labelFormatter={(d) => new Date(d + "T00:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" })}
+                      labelFormatter={(d) => { const [y, m, day] = d.split("-").map(Number); return new Date(y, m - 1, day).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }); }}
                       contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
                     />
                     <Bar dataKey="revenue" fill="#7C3AED" radius={[4, 4, 0, 0]} />

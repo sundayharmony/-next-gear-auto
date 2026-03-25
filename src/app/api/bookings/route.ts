@@ -143,7 +143,11 @@ export async function GET(request: NextRequest) {
     }
     // Server-side search: filter by customer_name, customer_email, or id (case-insensitive)
     if (search) {
-      query = query.or(`customer_name.ilike.%${search}%,customer_email.ilike.%${search}%,id.eq.${search}`);
+      // Sanitize search to prevent PostgREST filter injection
+      const sanitized = search.replace(/[%_,().*]/g, "");
+      if (sanitized) {
+        query = query.or(`customer_name.ilike.%${sanitized}%,customer_email.ilike.%${sanitized}%,id.eq.${sanitized}`);
+      }
     }
     if (limitParam) {
       const limit = parseInt(limitParam, 10);
@@ -333,7 +337,7 @@ export async function POST(request: Request) {
       return_time: body.returnTime || null,
       extras: body.extras || [],
       total_price: body.totalPrice ?? 0,
-      deposit: body.totalPrice ?? 0,
+      deposit: body.deposit ?? body.totalPrice ?? 0,
       status: bookingStatus,
       signed_name: body.signedName || null,
       agreement_signed_at: body.signedName ? new Date().toISOString() : null,

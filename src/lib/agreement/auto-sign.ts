@@ -79,7 +79,8 @@ export async function autoSignAgreement(bookingId: string) {
   // Compact MM/DD/YYYY formatter for PDF form fields (different from email fmtDate)
   const pdfDate = (d: string) => {
     if (!d) return "";
-    const date = new Date(d + "T00:00:00");
+    const [y, m, day] = d.split("-").map(Number);
+    const date = new Date(y, m - 1, day);
     return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
   };
 

@@ -80,7 +80,7 @@ export function Header() {
                     </Button>
                   </Link>
                 )}
-                <Button variant="outline" size="sm" onClick={() => { logout(); router.push("/"); }} aria-label="Sign out">
+                <Button variant="outline" size="sm" onClick={async () => { await logout(); router.push("/"); }} aria-label="Sign out">
                   <LogOut className="h-3.5 w-3.5" />
                 </Button>
               </div>

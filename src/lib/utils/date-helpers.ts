@@ -1,6 +1,18 @@
+/**
+ * Parse a date string as LOCAL time (not UTC).
+ * "2024-01-15" → January 15 in user's timezone, not UTC.
+ * If the string already contains "T" (ISO datetime), use it as-is.
+ */
+function parseLocalDate(dateStr: string): Date {
+  if (dateStr.includes("T")) return new Date(dateStr);
+  // Parse YYYY-MM-DD as local date by extracting components
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(y, m - 1, d);
+}
+
 export function formatDate(dateStr: string | null | undefined): string {
   if (!dateStr) return "—";
-  const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
+  const date = parseLocalDate(dateStr);
   if (isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-US", {
     weekday: "short",
@@ -19,7 +31,7 @@ export function formatTime(timeStr: string | null | undefined): string {
 }
 
 export function formatDateShort(dateStr: string): string {
-  const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
+  const date = parseLocalDate(dateStr);
   if (isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-US", {
     month: "short",
@@ -36,11 +48,15 @@ export function formatCurrency(amount: number): string {
 }
 
 export function isDateInPast(dateStr: string): boolean {
-  return new Date(dateStr) < new Date();
+  const date = parseLocalDate(dateStr);
+  const now = new Date();
+  // Compare date portion only (ignore time)
+  now.setHours(0, 0, 0, 0);
+  return date < now;
 }
 
 export function isDateAfter(dateStr1: string, dateStr2: string): boolean {
-  return new Date(dateStr1) > new Date(dateStr2);
+  return parseLocalDate(dateStr1) > parseLocalDate(dateStr2);
 }
 
 export function getMinPickupDate(): string {
@@ -54,8 +70,8 @@ export function getMinPickupDate(): string {
 }
 
 export function daysBetween(date1: string, date2: string): number {
-  const d1 = new Date(date1 + (date1.includes("T") ? "" : "T00:00:00"));
-  const d2 = new Date(date2 + (date2.includes("T") ? "" : "T00:00:00"));
+  const d1 = parseLocalDate(date1);
+  const d2 = parseLocalDate(date2);
   const diffTime = Math.abs(d2.getTime() - d1.getTime());
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }
