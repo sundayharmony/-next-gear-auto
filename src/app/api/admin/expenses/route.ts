@@ -96,7 +96,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getServiceSupabase();
-    const id = "exp" + Date.now();
+    const id = "exp_" + crypto.randomUUID();
 
     const { data, error } = await supabase
       .from("expenses")

@@ -96,7 +96,7 @@ export async function POST(req: NextRequest) {
     const safeName = customerName.replace(/<[^>]*>/g, "").trim();
 
     // Insert into Supabase
-    const reviewId = `rev_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const reviewId = `rev_${crypto.randomUUID()}`;
 
     const { data, error } = await supabase.from("reviews").insert({
       id: reviewId,

@@ -16,15 +16,16 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
 
   try {
-    if (webhookSecret && webhookSecret !== "whsec_REPLACE_WITH_ACTUAL_WEBHOOK_SECRET" && sig) {
+    if (webhookSecret && !webhookSecret.startsWith("whsec_REPLACE") && sig) {
       event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
     } else if (process.env.NODE_ENV === "development") {
       // Allow unverified events in development only
       logger.warn("DEV WARNING: Webhook secret not configured - parsing unverified event");
       event = JSON.parse(body) as Stripe.Event;
     } else {
-      logger.error("SECURITY: Webhook secret not configured in production - rejecting request");
-      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
+      // CRITICAL: Always reject unverified webhooks in production
+      logger.error("SECURITY: Webhook secret not configured or signature missing in production - rejecting request");
+      return NextResponse.json({ error: "Webhook verification failed" }, { status: 403 });
     }
   } catch (err) {
     logger.error("Webhook signature verification failed:", err);

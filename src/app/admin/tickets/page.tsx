@@ -193,6 +193,11 @@ export default function AdminTicketsPage() {
       setError("Violation date is required");
       return;
     }
+    const parsedAmount = parseFloat(form.amountDue);
+    if (isNaN(parsedAmount) || parsedAmount < 0) {
+      setError("Amount due must be a non-negative number");
+      return;
+    }
     setIsSubmitting(true);
     try {
       // Resolve customerId from booking

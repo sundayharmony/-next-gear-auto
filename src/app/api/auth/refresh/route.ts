@@ -26,7 +26,8 @@ export async function POST(req: NextRequest) {
 
   const payload = await verifyToken(refreshTokenCookie);
 
-  if (!payload || !payload.sub || !payload.role || !payload.email) {
+  // Ensure this is actually a refresh token, not an access token being reused
+  if (!payload || !payload.sub || !payload.role || !payload.email || payload.type !== "refresh") {
     const response = NextResponse.json(
       { success: false, message: "Invalid or expired refresh token." },
       { status: 401 }

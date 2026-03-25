@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getServiceSupabase();
-    const id = "bp" + Date.now();
+    const id = "bp_" + crypto.randomUUID();
 
     // Insert the payment record
     const { data: paymentData, error: paymentError } = await supabase

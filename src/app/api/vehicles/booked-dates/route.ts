@@ -32,13 +32,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Return booking date ranges with time info for 60-minute gap checks
+    // Note: IDs and status are excluded to avoid leaking internal booking details
     const bookedRanges = (bookings || []).map((b) => ({
-      id: b.id,
       pickupDate: b.pickup_date,
       returnDate: b.return_date,
       pickupTime: b.pickup_time || "00:00",
       returnTime: b.return_time || "23:59",
-      status: b.status,
     }));
 
     return NextResponse.json({

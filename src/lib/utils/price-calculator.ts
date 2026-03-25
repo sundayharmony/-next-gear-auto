@@ -2,6 +2,7 @@ import type { BookingExtra, PricingBreakdown } from "@/lib/types";
 
 const TAX_RATE = 0.08;
 const MULTI_DAY_DISCOUNT_RATE = 0.075; // 7.5% per additional day
+const MAX_MULTI_DAY_DISCOUNT = 0.40;  // cap at 40% max discount per day
 const INSURANCE_DISCOUNT_RATE = 0.15;  // 15% off insurance
 const INSURANCE_EXTRA_ID = "e1";
 
@@ -30,7 +31,7 @@ export function calculateBaseRate(days: number, dailyRate: number): { total: num
   let total = 0;
   for (let d = 0; d < days; d++) {
     const discountForDay = d * MULTI_DAY_DISCOUNT_RATE; // 0 for day 1, 0.075 for day 2, etc.
-    const cappedDiscount = Math.min(discountForDay, 1); // never exceed 100%
+    const cappedDiscount = Math.min(discountForDay, MAX_MULTI_DAY_DISCOUNT); // cap at 40%
     total += dailyRate * (1 - cappedDiscount);
   }
 

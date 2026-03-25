@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getServiceSupabase();
-    const id = "ba" + Date.now();
+    const id = "ba_" + crypto.randomUUID();
 
     const { data, error } = await supabase
       .from("booking_activity")

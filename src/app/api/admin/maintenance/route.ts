@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const id = "mt" + Date.now();
+    const id = "mt_" + crypto.randomUUID();
     const recordStatus = status || "pending";
 
     const { data, error } = await supabase

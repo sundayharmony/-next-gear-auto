@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const customerId = "c" + Date.now();
+    const customerId = "c_" + crypto.randomUUID();
 
     const { data, error } = await supabase
       .from("customers")

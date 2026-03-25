@@ -38,8 +38,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // Sanitize inputs for email (strip HTML and CRLF for SMTP header injection prevention)
-    const clean = (s: string) => s.replace(/<[^>]*>/g, "").replace(/[\r\n]/g, " ").trim();
+    // Sanitize inputs for email: escape HTML entities and strip CRLF for SMTP header injection prevention
+    const escapeHtml = (s: string) =>
+      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    const clean = (s: string) => escapeHtml(s.replace(/[\r\n]/g, " ").trim());
     const safeName = clean(name);
     const safeEmail = clean(email);
     const safePhone = clean(phone || "Not provided");

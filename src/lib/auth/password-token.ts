@@ -4,7 +4,7 @@
  * Tokens encode: email + timestamp, signed with JWT_SECRET.
  * They expire after TOKEN_EXPIRY_HOURS (default: 48h).
  */
-import { createHmac } from "crypto";
+import { createHmac, timingSafeEqual } from "crypto";
 
 const TOKEN_EXPIRY_HOURS = 48;
 
@@ -44,17 +44,12 @@ export function validatePasswordToken(token: string): string | null {
     const expectedPayload = `${email}:${timestamp}`;
     const expectedHmac = createHmac("sha256", getSecret()).update(expectedPayload).digest("hex");
 
-    // Timing-safe comparison
+    // Timing-safe comparison using Node.js built-in
     if (hmac.length !== expectedHmac.length) return null;
     const a = Buffer.from(hmac, "hex");
     const b = Buffer.from(expectedHmac, "hex");
     if (a.length !== b.length) return null;
-
-    let match = true;
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) match = false; // constant-time comparison
-    }
-    if (!match) return null;
+    if (!timingSafeEqual(a, b)) return null;
 
     // Check expiry
     const expiryMs = TOKEN_EXPIRY_HOURS * 60 * 60 * 1000;

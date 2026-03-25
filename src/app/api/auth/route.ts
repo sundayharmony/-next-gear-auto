@@ -264,7 +264,7 @@ export async function POST(request: Request) {
       // Hash the password
       const passwordHash = await bcrypt.hash(body.password, 12);
 
-      const newId = "c" + Date.now();
+      const newId = "c_" + crypto.randomUUID();
       const { data: newCustomer, error } = await adminDb
         .from("customers")
         .insert({

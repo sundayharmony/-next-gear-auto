@@ -253,7 +253,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const bookingId = "bk" + Date.now() + Math.floor(Math.random() * 1000);
+    const bookingId = "bk_" + crypto.randomUUID();
 
     // Normalize email for consistent matching
     const normalizedEmail = body.customerDetails?.email?.toLowerCase().trim() || null;
@@ -284,7 +284,7 @@ export async function POST(request: Request) {
           .eq("id", existingCustomer.id);
       } else {
         // Create new customer
-        const newCustId = "c" + Date.now();
+        const newCustId = "c_" + crypto.randomUUID();
         const { data: newCustomer } = await supabase
           .from("customers")
           .insert({
@@ -571,7 +571,7 @@ export async function PATCH(request: Request) {
         await supabase.from("bookings").update({ customer_id: existingCust.id }).eq("id", bookingId);
       } else {
         // Create new customer for this email
-        const newCustId = "c" + Date.now();
+        const newCustId = "c_" + crypto.randomUUID();
         const { data: newCust } = await supabase
           .from("customers")
           .insert({

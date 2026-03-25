@@ -103,8 +103,9 @@ export default function AdminPromoCodesPage() {
       }
     } catch {
       setError("Network error — could not update promo code");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const deleteCode = async (code: string) => {

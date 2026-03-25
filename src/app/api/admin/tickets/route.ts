@@ -138,7 +138,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const id = "tkt" + Date.now();
+    const id = "tkt_" + crypto.randomUUID();
 
     const { data, error } = await supabase
       .from("tickets")

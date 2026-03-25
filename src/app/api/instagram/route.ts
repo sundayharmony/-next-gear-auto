@@ -107,7 +107,7 @@ export async function POST(req: NextRequest) {
 
     const nextOrder = (existing?.[0]?.sort_order ?? 0) + 1;
 
-    const id = `ig_${Date.now()}`;
+    const id = `ig_${crypto.randomUUID()}`;
     const { error } = await supabase.from("instagram_posts").insert({
       id,
       url: url.trim(),

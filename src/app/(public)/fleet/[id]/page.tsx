@@ -154,6 +154,8 @@ export default async function VehicleDetailPage({ params }: PageProps) {
       .from("vehicles")
       .select("*")
       .eq("category", vehicle.category)
+      .eq("is_published", true)
+      .eq("is_available", true)
       .neq("id", vehicle.id)
       .limit(3);
     similarVehicles = data || [];

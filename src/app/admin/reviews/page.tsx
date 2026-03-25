@@ -54,6 +54,7 @@ export default function AdminReviewsPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, status }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setReviews((prev) => prev.map((r) => r.id === id ? { ...r, status } : r));
@@ -70,6 +71,7 @@ export default function AdminReviewsPage() {
     if (!confirm("Are you sure you want to delete this review?")) return;
     try {
       const res = await adminFetch(`/api/reviews?id=${id}`, { method: "DELETE" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
         setReviews((prev) => prev.filter((r) => r.id !== id));
