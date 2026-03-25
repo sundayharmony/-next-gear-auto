@@ -105,7 +105,7 @@ export default function AdminVehiclesPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editForm, setEditForm] = useState<FormState>({} as FormState);
+  const [editForm, setEditForm] = useState<FormState>({ ...emptyVehicle });
   const [showAddForm, setShowAddForm] = useState(false);
   const [newVehicle, setNewVehicle] = useState<FormState>(emptyVehicle);
   const [saving, setSaving] = useState(false);
@@ -119,27 +119,43 @@ export default function AdminVehiclesPage() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const editFormRef = useRef<HTMLDivElement>(null);
 
-  const fetchVehicles = async () => {
+  const fetchVehicles = async (signal?: AbortSignal) => {
     setLoading(true);
     try {
-      const res = await adminFetch("/api/admin/vehicles");
-      if (!res.ok) throw new Error("Failed to fetch");
+      const res = await adminFetch("/api/admin/vehicles", { signal });
+      if (!res.ok) {
+        // Try to extract a specific error message from the response
+        try {
+          const errData = await res.json();
+          throw new Error(errData.message || `HTTP ${res.status}`);
+        } catch {
+          throw new Error(`HTTP ${res.status}`);
+        }
+      }
       const data = await res.json();
       if (data.success) {
         setVehicles(data.data);
-        // source field removed (legacy JSON data hint)
       } else {
-        setError("Failed to load vehicles");
+        setError(data.message || "Failed to load vehicles");
       }
     } catch (err) {
+      // Don't set error state if the request was intentionally aborted
+      if (err instanceof DOMException && err.name === "AbortError") return;
       logger.error("Failed to fetch vehicles:", err);
-      setError("Network error — could not load vehicles");
+      setError(
+        err instanceof Error && err.message !== "Failed to fetch"
+          ? `Failed to load vehicles: ${err.message}`
+          : "Network error — could not load vehicles"
+      );
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   useEffect(() => {
-    fetchVehicles();
+    const controller = new AbortController();
+    fetchVehicles(controller.signal);
+    return () => controller.abort();
   }, []);
 
   // Close forms on Escape key (only when not focused on an input)
@@ -201,6 +217,9 @@ export default function AdminVehiclesPage() {
 
     setUploadingImage((prev) => ({ ...prev, [formKey]: true }));
 
+    const uploadedUrls: string[] = [];
+    let failedCount = 0;
+
     try {
       // Compress images client-side to stay under Vercel's 4.5MB body limit
       const files: File[] = [];
@@ -209,39 +228,47 @@ export default function AdminVehiclesPage() {
         files.push(compressed);
       }
 
-      const uploadedUrls: string[] = [];
-
       for (const file of files) {
-        const formData = new FormData();
-        formData.append("file", file);
-        if (formKey !== "new") {
-          formData.append("vehicleId", formKey);
-        }
-
-        const res = await adminFetch("/api/admin/vehicles/upload", {
-          method: "POST",
-          body: formData,
-        });
-
-        if (!res.ok) {
-          if (res.status === 413) {
-            throw new Error(
-              "Upload is too large for the server. Try a smaller image file."
-            );
+        try {
+          const formData = new FormData();
+          formData.append("file", file);
+          if (formKey !== "new") {
+            formData.append("vehicleId", formKey);
           }
-          throw new Error(`Upload failed (HTTP ${res.status})`);
-        }
-        const contentType = res.headers.get("content-type") || "";
-        if (!contentType.includes("application/json")) {
-          throw new Error("Upload failed with a non-JSON server response.");
-        }
-        const data = await res.json();
-        if (!data.success || !data.url) {
-          throw new Error(data.error || "Failed to upload image");
-        }
-        uploadedUrls.push(data.url as string);
-      }
 
+          const res = await adminFetch("/api/admin/vehicles/upload", {
+            method: "POST",
+            body: formData,
+          });
+
+          if (!res.ok) {
+            if (res.status === 413) {
+              throw new Error("Upload is too large for the server.");
+            }
+            throw new Error(`Upload failed (HTTP ${res.status})`);
+          }
+          const contentType = res.headers.get("content-type") || "";
+          if (!contentType.includes("application/json")) {
+            throw new Error("Upload failed with a non-JSON server response.");
+          }
+          const data = await res.json();
+          if (!data.success || !data.url) {
+            throw new Error(data.error || "Failed to upload image");
+          }
+          uploadedUrls.push(data.url as string);
+        } catch (fileErr) {
+          failedCount++;
+          logger.error(`Image upload error (${file.name}):`, fileErr);
+        }
+      }
+    } catch (err) {
+      // Compression or other outer error
+      logger.error("Image processing error:", err);
+      setError(
+        err instanceof Error ? err.message : "Network error — could not process images"
+      );
+    } finally {
+      // Always apply whatever uploads succeeded, even if some failed
       if (uploadedUrls.length > 0) {
         if (formKey === "new") {
           setNewVehicle((prev) => ({
@@ -255,12 +282,11 @@ export default function AdminVehiclesPage() {
           }));
         }
       }
-    } catch (err) {
-      logger.error("Image upload error:", err);
-      setError(
-        err instanceof Error ? err.message : "Network error — could not upload image"
-      );
-    } finally {
+      if (failedCount > 0) {
+        setError(
+          `${failedCount} of ${failedCount + uploadedUrls.length} image${failedCount + uploadedUrls.length > 1 ? "s" : ""} failed to upload.`
+        );
+      }
       setUploadingImage((prev) => ({ ...prev, [formKey]: false }));
     }
   };
@@ -350,6 +376,14 @@ export default function AdminVehiclesPage() {
 
   const saveEdit = async () => {
     if (!editingId || !editForm) return;
+    if (!editForm.make?.trim() || !editForm.model?.trim()) {
+      setError("Make and Model are required");
+      return;
+    }
+    if (!editForm.dailyRate || editForm.dailyRate <= 0 || !Number.isFinite(editForm.dailyRate)) {
+      setError("Daily rate must be a positive number");
+      return;
+    }
     setSaving(true);
     try {
       const res = await adminFetch("/api/admin/vehicles", {
@@ -398,13 +432,18 @@ export default function AdminVehiclesPage() {
       }
     } catch {
       setError("Network error — could not save changes");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const addVehicle = async () => {
-    if (!newVehicle.make || !newVehicle.model) {
+    if (!newVehicle.make?.trim() || !newVehicle.model?.trim()) {
       setError("Make and Model are required");
+      return;
+    }
+    if (!newVehicle.dailyRate || newVehicle.dailyRate <= 0 || !Number.isFinite(newVehicle.dailyRate)) {
+      setError("Daily rate must be a positive number");
       return;
     }
     setSaving(true);
@@ -448,8 +487,9 @@ export default function AdminVehiclesPage() {
       }
     } catch {
       setError("Network error — could not add vehicle");
+    } finally {
+      setSaving(false);
     }
-    setSaving(false);
   };
 
   const deleteVehicle = async (id: string) => {
@@ -465,6 +505,8 @@ export default function AdminVehiclesPage() {
       const data = await res.json();
       if (data.success) {
         setVehicles((prev) => prev.filter((v) => v.id !== id));
+        // Close edit form if we just deleted the vehicle being edited
+        if (editingId === id) setEditingId(null);
         setSuccess("Vehicle deleted successfully");
       } else {
         setError(data.message || "Failed to delete vehicle");
@@ -580,9 +622,10 @@ export default function AdminVehiclesPage() {
               <Input
                 type="number"
                 value={form.year ?? ""}
-                onChange={(e) =>
-                  setForm({ ...form, year: Number(e.target.value) })
-                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm({ ...form, year: val === "" ? CURRENT_YEAR : Number(val) });
+                }}
                 min="1990"
                 max={MAX_VEHICLE_YEAR}
               />
@@ -641,9 +684,10 @@ export default function AdminVehiclesPage() {
               <Input
                 type="number"
                 value={form.dailyRate || 0}
-                onChange={(e) =>
-                  setForm({ ...form, dailyRate: Number(e.target.value) })
-                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm({ ...form, dailyRate: val === "" ? 0 : Number(val) });
+                }}
                 min="0"
               />
             </div>
@@ -654,9 +698,10 @@ export default function AdminVehiclesPage() {
               <Input
                 type="number"
                 value={form.purchasePrice || 0}
-                onChange={(e) =>
-                  setForm({ ...form, purchasePrice: Number(e.target.value) })
-                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm({ ...form, purchasePrice: val === "" ? 0 : Number(val) });
+                }}
                 min="0"
                 step="100"
               />
@@ -729,9 +774,10 @@ export default function AdminVehiclesPage() {
                   <Input
                     type="number"
                     value={form.monthlyPayment || 0}
-                    onChange={(e) =>
-                      setForm({ ...form, monthlyPayment: Number(e.target.value) })
-                    }
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setForm({ ...form, monthlyPayment: val === "" ? 0 : Number(val) });
+                    }}
                     min="0"
                     step="0.01"
                   />
@@ -810,9 +856,10 @@ export default function AdminVehiclesPage() {
               <Input
                 type="number"
                 value={form.mileage || 0}
-                onChange={(e) =>
-                  setForm({ ...form, mileage: Number(e.target.value) })
-                }
+                onChange={(e) => {
+                  const val = e.target.value;
+                  setForm({ ...form, mileage: val === "" ? 0 : Number(val) });
+                }}
                 min="0"
               />
             </div>
@@ -871,7 +918,7 @@ export default function AdminVehiclesPage() {
             <div className="flex flex-wrap gap-1.5 mb-2">
               {(form.images || []).map((img, idx) => (
                 <div
-                  key={img}
+                  key={`${img}-${idx}`}
                   className="relative w-20 h-20 rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
                 >
                   <img
@@ -1016,15 +1063,16 @@ export default function AdminVehiclesPage() {
                 <Input
                   type="number"
                   value={form.specs?.passengers ?? 5}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setForm({
                       ...form,
                       specs: {
-                        ...form.specs!,
-                        passengers: Number(e.target.value),
+                        ...(form.specs || emptyVehicle.specs),
+                        passengers: val === "" ? 1 : Number(val),
                       },
-                    })
-                  }
+                    });
+                  }}
                   min="1"
                 />
               </div>
@@ -1035,15 +1083,16 @@ export default function AdminVehiclesPage() {
                 <Input
                   type="number"
                   value={form.specs?.luggage ?? 2}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setForm({
                       ...form,
                       specs: {
-                        ...form.specs!,
-                        luggage: Number(e.target.value),
+                        ...(form.specs || emptyVehicle.specs),
+                        luggage: val === "" ? 0 : Number(val),
                       },
-                    })
-                  }
+                    });
+                  }}
                   min="0"
                 />
               </div>
@@ -1054,15 +1103,16 @@ export default function AdminVehiclesPage() {
                 <Input
                   type="number"
                   value={form.specs?.doors ?? 4}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setForm({
                       ...form,
                       specs: {
-                        ...form.specs!,
-                        doors: Number(e.target.value),
+                        ...(form.specs || emptyVehicle.specs),
+                        doors: val === "" ? 4 : Number(val),
                       },
-                    })
-                  }
+                    });
+                  }}
                   min="2"
                   max="5"
                 />
@@ -1128,15 +1178,16 @@ export default function AdminVehiclesPage() {
                 <Input
                   type="number"
                   value={form.specs?.mpg ?? 30}
-                  onChange={(e) =>
+                  onChange={(e) => {
+                    const val = e.target.value;
                     setForm({
                       ...form,
                       specs: {
-                        ...form.specs!,
-                        mpg: Number(e.target.value),
+                        ...(form.specs || emptyVehicle.specs),
+                        mpg: val === "" ? 0 : Number(val),
                       },
-                    })
-                  }
+                    });
+                  }}
                   min="5"
                 />
               </div>
@@ -1147,7 +1198,7 @@ export default function AdminVehiclesPage() {
           <div className="flex gap-2 pt-3 border-t">
             <Button
               onClick={onSave}
-              disabled={isSaving || !form.make || !form.model}
+              disabled={isSaving || !form.make?.trim() || !form.model?.trim()}
               className="bg-purple-600 hover:bg-purple-700"
             >
               {isSaving ? <><RefreshCw className="h-4 w-4 mr-1 animate-spin" /> Saving...</> : <><Check className="h-4 w-4 mr-1" /> Save</>}
@@ -1175,6 +1226,10 @@ export default function AdminVehiclesPage() {
             </div>
             <Button
               onClick={() => {
+                if (showAddForm) {
+                  // Closing: reset form state to avoid orphaning uploaded images
+                  setNewVehicle(emptyVehicle);
+                }
                 setShowAddForm(!showAddForm);
                 setEditingId(null);
               }}
@@ -1504,26 +1559,26 @@ export default function AdminVehiclesPage() {
                     <div className="flex justify-between">
                       <span>Mileage:</span>
                       <span className="font-medium">
-                        {vehicle.mileage.toLocaleString()} miles
+                        {(vehicle.mileage ?? 0).toLocaleString()} miles
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Passengers:</span>
                       <span className="font-medium">
-                        {vehicle.specs.passengers}
+                        {vehicle.specs?.passengers ?? "—"}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Transmission:</span>
                       <span className="font-medium">
-                        {vehicle.specs.transmission}
+                        {vehicle.specs?.transmission ?? "—"}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Fuel:</span>
                       <span className="font-medium flex items-center gap-1">
                         <Fuel className="h-3 w-3" aria-hidden="true" />
-                        {vehicle.specs.fuelType}
+                        {vehicle.specs?.fuelType ?? "—"}
                       </span>
                     </div>
                   </div>
@@ -1552,9 +1607,9 @@ export default function AdminVehiclesPage() {
                   {/* Features Tags */}
                   {vehicle.features && vehicle.features.length > 0 && (
                     <div className="mb-4 flex flex-wrap gap-1">
-                      {vehicle.features.slice(0, 3).map((feature) => (
+                      {vehicle.features.slice(0, 3).map((feature, idx) => (
                         <Badge
-                          key={feature}
+                          key={`${feature}-${idx}`}
                           variant="secondary"
                           className="text-xs"
                         >
@@ -1598,7 +1653,7 @@ export default function AdminVehiclesPage() {
                       size="sm"
                       variant="outline"
                       onClick={() => toggleAvailability(vehicle)}
-                      disabled={togglingId === vehicle.id}
+                      disabled={togglingId === vehicle.id || saving || deletingId !== null}
                       className={`flex-1 ${
                         vehicle.isAvailable
                           ? "text-red-600 hover:text-red-700 hover:border-red-300"
@@ -1618,7 +1673,7 @@ export default function AdminVehiclesPage() {
                       variant="outline"
                       className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
                       onClick={() => deleteVehicle(vehicle.id)}
-                      disabled={deletingId === vehicle.id}
+                      disabled={deletingId === vehicle.id || saving}
                       aria-label={`Delete ${getVehicleDisplayName(vehicle)}`}
                     >
                       {deletingId === vehicle.id ? (
