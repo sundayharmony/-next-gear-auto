@@ -107,9 +107,12 @@ function AdminBookingsContent() {
   const handleBulkUpdate = useCallback(async (newStatus: string) => {
     if (selectedIds.size === 0) return;
     setBulkUpdating(true);
-    await bulkUpdateStatus(selectedIds, newStatus);
-    setSelectedIds(new Set());
-    setBulkUpdating(false);
+    try {
+      await bulkUpdateStatus(selectedIds, newStatus);
+      setSelectedIds(new Set());
+    } finally {
+      setBulkUpdating(false);
+    }
   }, [selectedIds, bulkUpdateStatus]);
 
   const handleBulkEmail = useCallback(async () => {

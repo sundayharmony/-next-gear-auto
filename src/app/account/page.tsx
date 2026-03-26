@@ -148,6 +148,13 @@ export default function AccountPage() {
     setCancelling(null);
   }, []);
 
+  // Auto-clear profile messages after 5 seconds (with proper cleanup)
+  useEffect(() => {
+    if (!profileMsg) return;
+    const timer = setTimeout(() => setProfileMsg(""), 5000);
+    return () => clearTimeout(timer);
+  }, [profileMsg]);
+
   const handleSaveProfile = useCallback(async () => {
     if (!user) return;
     setProfileSaving(true);
@@ -163,7 +170,6 @@ export default function AccountPage() {
       if (data.success) {
         setProfileMsg("Profile updated successfully!");
         updateProfile(profileForm);
-        setTimeout(() => setProfileMsg(""), 5000);
       } else {
         setProfileMsg(data.message || "Failed to update profile.");
       }

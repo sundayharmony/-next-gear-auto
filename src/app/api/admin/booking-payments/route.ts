@@ -107,7 +107,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Calculate total payments for this booking
+    // Calculate total payments — re-fetch after insert to include the new payment
     const { data: allPayments, error: sumError } = await supabase
       .from("booking_payments")
       .select("amount")
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newDeposit = (allPayments || []).reduce(
-      (sum, payment) => sum + (payment.amount || 0),
+      (sum: number, p: { amount: number }) => sum + (p.amount || 0),
       0
     );
 

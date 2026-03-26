@@ -196,6 +196,13 @@ export async function POST(request: Request) {
     // Always use server-calculated price
     const chargeAmount = serverTotal;
 
+    if (!Number.isFinite(chargeAmount) || chargeAmount < 0) {
+      return NextResponse.json(
+        { success: false, message: "Invalid charge amount calculated" },
+        { status: 500 }
+      );
+    }
+
     // 1. Find or create customer in Supabase
     let customerId: string | null = null;
     const { data: existingCustomer } = await supabase

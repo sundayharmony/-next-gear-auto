@@ -91,8 +91,8 @@ export async function GET(req: NextRequest) {
         return_date: searchParams.get("returnDate") || "",
         pickup_time: searchParams.get("pickupTime") || null,
         return_time: searchParams.get("returnTime") || null,
-        total_price: parseFloat(searchParams.get("totalPrice") || "0"),
-        deposit: parseFloat(searchParams.get("deposit") || "0"),
+        total_price: Number.isFinite(parseFloat(searchParams.get("totalPrice") || "0")) ? parseFloat(searchParams.get("totalPrice") || "0") : 0,
+        deposit: Number.isFinite(parseFloat(searchParams.get("deposit") || "0")) ? parseFloat(searchParams.get("deposit") || "0") : 0,
         vehicle_id: vehicleId || "",
       };
     }

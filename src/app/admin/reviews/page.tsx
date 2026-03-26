@@ -36,7 +36,12 @@ export default function AdminReviewsPage() {
       const res = await adminFetch(`/api/reviews?admin=true&status=${filter}`);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.success) setReviews(data.data);
+      if (data.success) {
+        setReviews(data.data);
+      } else {
+        setReviews([]);
+        setError(data.message || "Failed to load reviews");
+      }
     } catch (err) {
       logger.error("Failed to fetch reviews:", err);
       setError("Failed to load reviews");
