@@ -171,7 +171,13 @@ export async function PUT(request: NextRequest) {
     const updates: Record<string, unknown> = {};
     if (vehicleId !== undefined) updates.vehicle_id = vehicleId || null;
     if (category !== undefined) updates.category = category;
-    if (amount !== undefined) updates.amount = parseFloat(amount);
+    if (amount !== undefined) {
+      const parsed = parseFloat(amount);
+      if (isNaN(parsed) || !Number.isFinite(parsed)) {
+        return NextResponse.json({ success: false, error: "Amount must be a valid number" }, { status: 400 });
+      }
+      updates.amount = parsed;
+    }
     if (description !== undefined) updates.description = description || null;
     if (date !== undefined) updates.date = date;
 

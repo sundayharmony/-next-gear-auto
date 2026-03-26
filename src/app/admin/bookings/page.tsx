@@ -115,31 +115,34 @@ function AdminBookingsContent() {
   const handleBulkEmail = useCallback(async () => {
     if (selectedIds.size === 0) return;
     setBulkUpdating(true);
-    let sentCount = 0;
-    let failCount = 0;
-    for (const id of selectedIds) {
-      try {
-        const res = await adminFetch("/api/admin/send-booking-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bookingId: id }),
-        });
-        if (!res.ok) { failCount++; continue; }
-        const data = await res.json();
-        if (data.success) sentCount++;
-        else failCount++;
-      } catch {
-        failCount++;
+    try {
+      let sentCount = 0;
+      let failCount = 0;
+      for (const id of selectedIds) {
+        try {
+          const res = await adminFetch("/api/admin/send-booking-email", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ bookingId: id }),
+          });
+          if (!res.ok) { failCount++; continue; }
+          const data = await res.json();
+          if (data.success) sentCount++;
+          else failCount++;
+        } catch {
+          failCount++;
+        }
       }
+      if (sentCount > 0) {
+        setSuccess(`Sent ${sentCount} booking email${sentCount > 1 ? "s" : ""}`);
+      }
+      if (failCount > 0) {
+        setError(`Failed to send ${failCount} email${failCount > 1 ? "s" : ""}`);
+      }
+      setSelectedIds(new Set());
+    } finally {
+      setBulkUpdating(false);
     }
-    if (sentCount > 0) {
-      setSuccess(`Sent ${sentCount} booking email${sentCount > 1 ? "s" : ""}`);
-    }
-    if (failCount > 0) {
-      setError(`Failed to send ${failCount} email${failCount > 1 ? "s" : ""}`);
-    }
-    setSelectedIds(new Set());
-    setBulkUpdating(false);
   }, [selectedIds, setSuccess, setError]);
 
   // CSV export

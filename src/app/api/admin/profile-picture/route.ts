@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     // If profile-pictures bucket still fails, fall back to booking-documents bucket
     if (uploadResult.error) {
       bucketName = "booking-documents";
-      const fallbackFileName = `profiles/${customerId}_${Date.now()}.${ext}`;
+      const fallbackFileName = `profiles/${customerId}_${crypto.randomUUID()}.${ext}`;
       uploadResult = await supabase.storage
         .from(bucketName)
         .upload(fallbackFileName, buffer, { contentType: file.type, upsert: true });

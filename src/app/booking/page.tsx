@@ -347,6 +347,7 @@ function BookingPageInner() {
         }
         // Age validation: must be 18+
         const dob = new Date(details.dob);
+        if (isNaN(dob.getTime())) return false;
         const today = new Date();
         let age = today.getFullYear() - dob.getFullYear();
         const monthDiff = today.getMonth() - dob.getMonth();

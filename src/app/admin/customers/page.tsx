@@ -563,6 +563,7 @@ export default function AdminCustomersPage() {
         body: formData,
       });
 
+      if (!uploadRes.ok) throw new Error(`HTTP ${uploadRes.status}`);
       const data = await uploadRes.json();
       if (data.success) {
         setProfilePictureUrl(data.url);
@@ -579,8 +580,9 @@ export default function AdminCustomersPage() {
     } catch (err) {
       logger.error("Failed to save profile picture:", err);
       setCropError("Network error saving profile picture. Please try again.");
+    } finally {
+      setSavingProfilePic(false);
     }
-    setSavingProfilePic(false);
   };
 
   // Update imageDisplaySize when the crop image loads in the modal
@@ -613,9 +615,14 @@ export default function AdminCustomersPage() {
     const totalBookings = customerBookings.length;
 
     const totalDays = nonCancelled.reduce((sum, b) => {
-      const pickup = new Date((b.pickup_date || "") + "T00:00:00");
-      const ret = new Date((b.return_date || "") + "T00:00:00");
-      const days = Math.max(1, Math.ceil((ret.getTime() - pickup.getTime()) / (1000 * 60 * 60 * 24)));
+      if (!b.pickup_date || !b.return_date) return sum;
+      const [py, pm, pd] = b.pickup_date.split("-").map(Number);
+      const [ry, rm, rd] = b.return_date.split("-").map(Number);
+      const pickup = new Date(py, pm - 1, pd);
+      const ret = new Date(ry, rm - 1, rd);
+      const diff = ret.getTime() - pickup.getTime();
+      if (isNaN(diff)) return sum;
+      const days = Math.max(1, Math.ceil(diff / (1000 * 60 * 60 * 24)));
       return sum + days;
     }, 0);
 

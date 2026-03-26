@@ -73,23 +73,18 @@ export default function AdminCalendarPage() {
     }
   }, [showBookingDetail, closeBookingDetail]);
 
-  // Build date range for API filtering (3 months window around current view)
-  const getDateRange = () => {
+  const fetchBookings = useCallback(async () => {
+    // Build date range for API filtering (3 months window around current view)
+    const pad = (n: number) => String(n).padStart(2, "0");
     const from = new Date(view === "timeline" ? timelineStart : calendarMonth);
     from.setMonth(from.getMonth() - 1);
     const to = new Date(view === "timeline" ? timelineStart : calendarMonth);
     to.setMonth(to.getMonth() + 2);
-    const pad = (n: number) => String(n).padStart(2, "0");
-    return {
-      from: `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`,
-      to: `${to.getFullYear()}-${pad(to.getMonth() + 1)}-${pad(to.getDate())}`,
-    };
-  };
+    const fromStr = `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`;
+    const toStr = `${to.getFullYear()}-${pad(to.getMonth() + 1)}-${pad(to.getDate())}`;
 
-  const fetchBookings = useCallback(async () => {
-    const { from, to } = getDateRange();
     try {
-      const res = await adminFetch(`/api/bookings?from=${from}&to=${to}`);
+      const res = await adminFetch(`/api/bookings?from=${fromStr}&to=${toStr}`);
       if (res.ok) {
         const data = await res.json();
         setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
@@ -97,7 +92,6 @@ export default function AdminCalendarPage() {
     } catch (error) {
       logger.error("Failed to fetch bookings:", error);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [view, timelineStart, calendarMonth]);
 
   // Fetch data on mount and when view/date range changes

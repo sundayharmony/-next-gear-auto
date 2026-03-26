@@ -219,6 +219,11 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: "vehicleId, pickupDate, and returnDate are required" }, { status: 400 });
     }
 
+    // Validate totalPrice is numeric if provided
+    if (body.totalPrice !== undefined && (typeof body.totalPrice !== "number" || !Number.isFinite(body.totalPrice) || body.totalPrice < 0)) {
+      return NextResponse.json({ success: false, error: "totalPrice must be a non-negative number" }, { status: 400 });
+    }
+
     // Double-booking check — admins can always overlap; clients need 60min gap
     if (!body.adminCreated && body.vehicleId && body.pickupDate && body.returnDate) {
       const { data: conflicting } = await supabase

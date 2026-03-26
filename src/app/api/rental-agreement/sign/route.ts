@@ -95,14 +95,18 @@ export async function POST(req: NextRequest) {
     }
 
     // Verify the requester owns this booking (check customer email matches)
-    if (customerEmail && booking.customer_email) {
-      if (customerEmail.toLowerCase().trim() !== booking.customer_email.toLowerCase().trim()) {
-        logger.warn(`Agreement sign attempt by non-owner: ${customerEmail} for booking ${bookingId}`);
-        return NextResponse.json(
-          { success: false, error: "You are not authorized to sign this agreement" },
-          { status: 403 }
-        );
-      }
+    if (!customerEmail) {
+      return NextResponse.json(
+        { success: false, error: "Customer email is required to sign this agreement" },
+        { status: 400 }
+      );
+    }
+    if (booking.customer_email && customerEmail.toLowerCase().trim() !== booking.customer_email.toLowerCase().trim()) {
+      logger.warn(`Agreement sign attempt by non-owner: ${customerEmail} for booking ${bookingId}`);
+      return NextResponse.json(
+        { success: false, error: "You are not authorized to sign this agreement" },
+        { status: 403 }
+      );
     }
 
     // Verify booking hasn't already been signed
