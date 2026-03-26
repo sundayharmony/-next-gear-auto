@@ -43,21 +43,25 @@ export default function SocialPage() {
   const scriptLoadedRef = useRef(false);
 
   useEffect(() => {
+    let cancelled = false;
     async function fetchPosts() {
       try {
         const res = await fetch("/api/instagram");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        if (data.success) {
+        if (!cancelled && data.success) {
           setPosts(data.data || []);
         }
       } catch (error) {
-        logger.error("Failed to fetch Instagram posts", error);
-        setFetchError(true);
+        if (!cancelled) {
+          logger.error("Failed to fetch Instagram posts", error);
+          setFetchError(true);
+        }
       }
-      setLoading(false);
+      if (!cancelled) setLoading(false);
     }
     fetchPosts();
+    return () => { cancelled = true; };
   }, []);
 
   // Load Instagram embed script once

@@ -102,10 +102,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Persist user to localStorage on changes
   useEffect(() => {
-    if (state.user) {
-      localStorage.setItem("nga_user", JSON.stringify(state.user));
-    } else {
-      localStorage.removeItem("nga_user");
+    try {
+      if (state.user) {
+        localStorage.setItem("nga_user", JSON.stringify(state.user));
+      } else {
+        localStorage.removeItem("nga_user");
+      }
+    } catch {
+      // localStorage unavailable (private browsing, storage full, etc.)
     }
   }, [state.user]);
 

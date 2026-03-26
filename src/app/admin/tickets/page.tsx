@@ -238,6 +238,13 @@ export default function AdminTicketsPage() {
         if (booking) customerId = booking.customer_id ?? "";
       }
 
+      const parsedAmount = parseFloat(form.amountDue);
+      if (isNaN(parsedAmount) || parsedAmount < 0) {
+        setError("Amount due must be a non-negative number");
+        setIsSubmitting(false);
+        return;
+      }
+
       const res = await adminFetch("/api/admin/tickets", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -245,7 +252,7 @@ export default function AdminTicketsPage() {
           id: selectedTicket.id,
           ...form,
           customerId: customerId || null,
-          amountDue: parseFloat(form.amountDue) || 0,
+          amountDue: parsedAmount,
         }),
       });
       if (!res.ok) throw new Error("Failed to update ticket");

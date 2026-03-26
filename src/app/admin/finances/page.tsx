@@ -637,7 +637,7 @@ export default function AdminFinancesPage() {
       return;
     }
     const parsedAmount = parseFloat(newExpense.amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    if (isNaN(parsedAmount) || parsedAmount < 0) {
       setError("Please enter a valid amount");
       return;
     }
@@ -673,7 +673,7 @@ export default function AdminFinancesPage() {
       return;
     }
     const parsedAmount = parseFloat(editingExpense.amount);
-    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+    if (isNaN(parsedAmount) || parsedAmount < 0) {
       setError("Please enter a valid amount");
       return;
     }

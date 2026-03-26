@@ -108,7 +108,7 @@ export async function POST(req: NextRequest) {
     }
 
     const id = "mt_" + crypto.randomUUID();
-    const VALID_STATUSES = ["pending", "in_progress", "completed", "cancelled"];
+    const VALID_STATUSES = ["pending", "in-progress", "completed", "cancelled"];
     const recordStatus = VALID_STATUSES.includes(status) ? status : "pending";
 
     const { data, error } = await supabase
