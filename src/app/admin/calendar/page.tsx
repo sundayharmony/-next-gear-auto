@@ -559,8 +559,8 @@ function TimelineView({
     vehicles.forEach((v) => {
       const vBookings = bookingsByVehicle[v.id] || [];
       counts[v.id] = vBookings.filter((b) => {
-        const pk = b.pickup_date.split("T")[0];
-        const rk = b.return_date.split("T")[0];
+        const pk = (b.pickup_date || "").split("T")[0];
+        const rk = (b.return_date || "").split("T")[0];
         return !(rk < rangeStart || pk > rangeEnd);
       }).length;
     });

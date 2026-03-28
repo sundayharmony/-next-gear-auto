@@ -616,8 +616,11 @@ export default function AdminCustomersPage() {
 
     const totalDays = nonCancelled.reduce((sum, b) => {
       if (!b.pickup_date || !b.return_date) return sum;
-      const [py, pm, pd] = b.pickup_date.split("-").map(Number);
-      const [ry, rm, rd] = b.return_date.split("-").map(Number);
+      const pParts = b.pickup_date.split("-").map(Number);
+      const rParts = b.return_date.split("-").map(Number);
+      if (pParts.length < 3 || rParts.length < 3) return sum;
+      const [py, pm, pd] = pParts;
+      const [ry, rm, rd] = rParts;
       const pickup = new Date(py, pm - 1, pd);
       const ret = new Date(ry, rm - 1, rd);
       const diff = ret.getTime() - pickup.getTime();
@@ -809,7 +812,7 @@ export default function AdminCustomersPage() {
                   <Card>
                     <CardContent className="p-4 text-center">
                       <CreditCard className="mx-auto h-5 w-5 text-amber-500 mb-1" />
-                      <p className="text-2xl font-bold text-gray-900">${stats.avgBookingValue.toFixed(0)}</p>
+                      <p className="text-2xl font-bold text-gray-900">${(stats.avgBookingValue ?? 0).toFixed(0)}</p>
                       <p className="text-xs text-gray-500">Avg. Booking</p>
                     </CardContent>
                   </Card>
@@ -1083,25 +1086,25 @@ export default function AdminCustomersPage() {
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600">Cancellation Rate</span>
                             <span className={`text-sm font-bold ${
-                              stats.cancelledTrips / stats.totalBookings > 0.3
+                              stats.totalBookings > 0 && stats.cancelledTrips / stats.totalBookings > 0.3
                                 ? "text-red-600"
-                                : stats.cancelledTrips / stats.totalBookings > 0.15
+                                : stats.totalBookings > 0 && stats.cancelledTrips / stats.totalBookings > 0.15
                                   ? "text-yellow-600"
                                   : "text-green-600"
                             }`}>
-                              {((stats.cancelledTrips / stats.totalBookings) * 100).toFixed(0)}%
+                              {stats.totalBookings > 0 ? ((stats.cancelledTrips / stats.totalBookings) * 100).toFixed(0) : "0"}%
                             </span>
                           </div>
                           <div className="w-full bg-gray-100 rounded-full h-2">
                             <div
                               className={`h-2 rounded-full ${
-                                stats.cancelledTrips / stats.totalBookings > 0.3
+                                stats.totalBookings > 0 && stats.cancelledTrips / stats.totalBookings > 0.3
                                   ? "bg-red-500"
-                                  : stats.cancelledTrips / stats.totalBookings > 0.15
+                                  : stats.totalBookings > 0 && stats.cancelledTrips / stats.totalBookings > 0.15
                                     ? "bg-yellow-500"
                                     : "bg-green-500"
                               }`}
-                              style={{ width: `${Math.min(100, (stats.cancelledTrips / stats.totalBookings) * 100)}%` }}
+                              style={{ width: `${stats.totalBookings > 0 ? Math.min(100, (stats.cancelledTrips / stats.totalBookings) * 100) : 0}%` }}
                             />
                           </div>
                           <div className="flex justify-between items-center mt-2">

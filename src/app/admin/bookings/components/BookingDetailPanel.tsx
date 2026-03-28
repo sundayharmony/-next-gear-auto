@@ -75,6 +75,9 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const [activityLog, setActivityLog] = useState<ActivityRecord[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
 
+  // Email sending
+  const [sendingEmail, setSendingEmail] = useState(false);
+
   // UI toggles
   const [showNotes, setShowNotes] = useState(false);
   const [showActivity, setShowActivity] = useState(false);
@@ -223,6 +226,29 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     } catch (err) {
       logger.error("Status update failed", err);
       onError("Failed to update status");
+    }
+  };
+
+  // Send email to customer
+  const handleSendEmail = async () => {
+    setSendingEmail(true);
+    try {
+      const res = await adminFetch("/api/admin/send-booking-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        onSuccess("Email sent to " + (booking.customer_email || "customer"));
+      } else {
+        onError(data.message || data.error || "Failed to send email");
+      }
+    } catch (err) {
+      logger.error("Failed to send booking email:", err);
+      onError("Network error — could not send email");
+    } finally {
+      setSendingEmail(false);
     }
   };
 
@@ -1220,9 +1246,11 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   variant="outline"
                   className="flex-1 text-xs"
                   title="Send email to customer"
+                  disabled={sendingEmail}
+                  onClick={handleSendEmail}
                 >
                   <Mail className="w-3 h-3 mr-1" />
-                  Send Email
+                  {sendingEmail ? "Sending..." : "Send Email"}
                 </Button>
               </div>
 

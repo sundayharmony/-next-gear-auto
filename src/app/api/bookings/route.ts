@@ -5,9 +5,7 @@ import {
   sendBookingPendingEmail,
   sendAdminNewBooking,
   sendCancellationEmail,
-  sendAgreementEmail,
 } from "@/lib/email/mailer";
-import { autoSignAgreement } from "@/lib/agreement/auto-sign";
 import { logger } from "@/lib/utils/logger";
 import { getAuthFromRequest, type TokenPayload } from "@/lib/auth/jwt";
 
@@ -409,27 +407,6 @@ export async function POST(request: Request) {
       // Always notify admin of new booking
       sendAdminNewBooking(emailData).catch(logger.error);
     }
-
-    // Auto-generate rental agreement and email it to the customer for signing
-    autoSignAgreement(bookingId)
-      .then((result) => {
-        if (result && emailRecipient) {
-          sendAgreementEmail({
-            bookingId,
-            customerName: emailName,
-            customerEmail: emailRecipient,
-            vehicleName,
-            pickupDate: body.pickupDate,
-            returnDate: body.returnDate,
-            pickupTime: body.pickupTime || undefined,
-            returnTime: body.returnTime || undefined,
-            totalPrice: body.totalPrice ?? 0,
-            deposit: body.deposit ?? body.totalPrice ?? 0,
-            pdfBytes: result.pdfBytes,
-          }).catch(logger.error);
-        }
-      })
-      .catch(logger.error);
 
     return NextResponse.json(
       { data: { id: bookingId, customer_id: customerId }, success: true },

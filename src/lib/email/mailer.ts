@@ -70,6 +70,7 @@ export async function sendBookingConfirmation(data: BookingEmailData) {
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
       subject: `Booking Confirmed - ${data.bookingId}`,
       html: bookingConfirmationTemplate(enriched),
     });
@@ -87,6 +88,7 @@ export async function sendBookingPendingEmail(data: BookingEmailData) {
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
       subject: `Booking Received - ${data.bookingId}`,
       html: bookingPendingTemplate(enriched),
     });
@@ -251,10 +253,11 @@ export async function sendBookingSignAgreement(data: BookingEmailData) {
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
       subject: `Your Booking Details - Please Sign Agreement | ${data.bookingId}`,
       html: bookingSignAgreementTemplate(data),
     });
-    logger.info("Booking sign-agreement email sent to:", data.customerEmail);
+    logger.info("Booking sign-agreement email sent to:", data.customerEmail + " (bcc admin)");
   } catch (error) {
     logger.error("Failed to send booking sign-agreement email:", error);
     throw error;

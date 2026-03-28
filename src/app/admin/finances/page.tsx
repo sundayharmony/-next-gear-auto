@@ -813,13 +813,13 @@ export default function AdminFinancesPage() {
                     <XAxis
                       dataKey="date"
                       tick={{ fontSize: 10 }}
-                      tickFormatter={(d) => { if (!d) return ""; const [y, m, day] = d.split("-").map(Number); return new Date(y, m - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric" }); }}
+                      tickFormatter={(d) => { if (!d) return ""; const parts = d.split("-").map(Number); if (parts.length < 3 || parts.some(isNaN)) return d; const [y, m, day] = parts; return new Date(y, m - 1, day).toLocaleDateString("en-US", { month: "short", day: "numeric" }); }}
                       interval={Math.max(0, Math.floor(Math.min(30, allTimeDailyRevenue.length) / 8))}
                     />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
                     <Tooltip
                       formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
-                      labelFormatter={(d) => { if (!d) return ""; const [y, m, day] = d.split("-").map(Number); return new Date(y, m - 1, day).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }); }}
+                      labelFormatter={(d) => { if (!d) return ""; const parts = d.split("-").map(Number); if (parts.length < 3 || parts.some(isNaN)) return d; const [y, m, day] = parts; return new Date(y, m - 1, day).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }); }}
                       contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
                     />
                     <Bar dataKey="revenue" fill="#7C3AED" radius={[4, 4, 0, 0]} />

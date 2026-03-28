@@ -17,7 +17,7 @@ import type { Vehicle } from "@/lib/types";
 
 function ComparisonContent() {
   const searchParams = useSearchParams();
-  const ids = searchParams.get("ids")?.split(",").filter(Boolean) || [];
+  const ids = (searchParams.get("ids") || "").split(",").filter(Boolean);
   const { vehicles, loading } = useVehicles();
 
   const selectedVehicles = useMemo(
