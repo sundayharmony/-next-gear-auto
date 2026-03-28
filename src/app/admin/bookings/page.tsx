@@ -61,6 +61,22 @@ function AdminBookingsContent() {
     customerPhone?: string;
   } | undefined>(undefined);
 
+  // Auto-open a booking from URL param (e.g., navigated from dashboard or notifications)
+  const [highlightApplied, setHighlightApplied] = useState(false);
+
+  useEffect(() => {
+    if (highlightApplied || loading) return;
+    const highlightId = searchParams.get("booking") || searchParams.get("highlight");
+    if (highlightId && bookings.length > 0) {
+      const found = bookings.find((b: BookingRow) => b.id === highlightId);
+      if (found) {
+        setSelectedBooking(found);
+        setShowDetail(true);
+      }
+      setHighlightApplied(true);
+    }
+  }, [searchParams, bookings, loading, highlightApplied]);
+
   useEffect(() => {
     if (prefillApplied) return;
     const customerName = searchParams.get("customerName");

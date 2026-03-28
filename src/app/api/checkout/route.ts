@@ -232,7 +232,7 @@ export async function POST(request: Request) {
 
     // 2. Create booking in Supabase (status: pending)
     // Use crypto for better collision prevention
-    const bookingId = "bk_" + crypto.randomUUID();
+    const bookingId = "bk" + crypto.randomUUID().replace(/-/g, "").slice(0, 7);
     const { error: bookingError } = await supabase.from("bookings").insert({
       id: bookingId,
       customer_id: customerId,

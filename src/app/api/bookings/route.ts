@@ -264,7 +264,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const bookingId = "bk_" + crypto.randomUUID();
+    const bookingId = "bk" + crypto.randomUUID().replace(/-/g, "").slice(0, 7);
 
     // Normalize email for consistent matching
     // Accept both nested customerDetails (public booking flow) and flat keys (admin create form)

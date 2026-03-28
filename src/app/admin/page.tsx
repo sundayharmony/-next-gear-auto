@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import {
   Car, DollarSign, Calendar, CalendarDays, Users, TrendingUp, Clock,
@@ -43,6 +44,7 @@ function formatCurrency(amount: number): string {
 }
 
 export default function AdminDashboardPage() {
+  const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -197,13 +199,13 @@ export default function AdminDashboardPage() {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b bg-gray-50">
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Customer</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Vehicle</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500 hidden md:table-cell">Pickup</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500 hidden md:table-cell">Return</th>
-                      <th className="px-4 py-3 text-right font-medium text-gray-500">Total</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
+                    <tr className="border-b bg-gray-50/80">
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wider">Customer</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wider">Vehicle</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wider hidden md:table-cell">Pickup</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wider hidden md:table-cell">Return</th>
+                      <th className="px-4 py-3 text-right font-semibold text-gray-600 text-xs uppercase tracking-wider">Total</th>
+                      <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wider">Status</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -215,22 +217,26 @@ export default function AdminDashboardPage() {
                       </tr>
                     ) : (
                       data.recentBookings.map((booking) => (
-                        <tr key={booking.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
-                          <td className="px-4 py-3">
-                            <div className="text-gray-900 font-medium truncate max-w-[140px]" title={booking.customer_name || "—"}>{booking.customer_name || "—"}</div>
-                            <div className="text-xs text-gray-400 font-mono truncate max-w-[140px]" title={booking.id}>{booking.id}</div>
+                        <tr
+                          key={booking.id}
+                          onClick={() => router.push(`/admin/bookings?booking=${booking.id}`)}
+                          className="border-b last:border-0 hover:bg-purple-50/60 transition-colors cursor-pointer group"
+                        >
+                          <td className="px-4 py-3.5">
+                            <div className="text-gray-900 font-medium truncate max-w-[160px] group-hover:text-purple-700 transition-colors" title={booking.customer_name || "—"}>{booking.customer_name || "—"}</div>
+                            <div className="text-[11px] text-gray-400 font-mono mt-0.5" title={booking.id}>{booking.id}</div>
                           </td>
-                          <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate" title={booking.vehicleName || "—"}>{booking.vehicleName || "—"}</td>
-                          <td className="px-4 py-3 hidden md:table-cell">
-                            <div className="text-gray-900">{formatDate(booking.pickup_date)}</div>
-                            <div className="text-xs text-purple-600 font-medium">{formatTime(booking.pickup_time)}</div>
+                          <td className="px-4 py-3.5 text-gray-700 max-w-[180px] truncate" title={booking.vehicleName || "—"}>{booking.vehicleName || "—"}</td>
+                          <td className="px-4 py-3.5 hidden md:table-cell">
+                            <div className="text-gray-900 font-medium">{formatDate(booking.pickup_date)}</div>
+                            <div className="text-xs text-purple-600 font-medium mt-0.5">{formatTime(booking.pickup_time)}</div>
                           </td>
-                          <td className="px-4 py-3 hidden md:table-cell">
-                            <div className="text-gray-900">{formatDate(booking.return_date)}</div>
-                            <div className="text-xs text-purple-600 font-medium">{formatTime(booking.return_time)}</div>
+                          <td className="px-4 py-3.5 hidden md:table-cell">
+                            <div className="text-gray-900 font-medium">{formatDate(booking.return_date)}</div>
+                            <div className="text-xs text-purple-600 font-medium mt-0.5">{formatTime(booking.return_time)}</div>
                           </td>
-                          <td className="px-4 py-3 text-right font-medium tabular-nums">${(booking.total_price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                          <td className="px-4 py-3">
+                          <td className="px-4 py-3.5 text-right font-semibold tabular-nums text-gray-900">${(booking.total_price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                          <td className="px-4 py-3.5">
                             <Badge className={statusColors[booking.status] || "bg-gray-100 text-gray-600"}>
                               {booking.status}
                             </Badge>

@@ -152,7 +152,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                       {recentBookings.map((b) => (
                         <Link
                           key={b.id}
-                          href={`/admin/bookings?highlight=${b.id}`}
+                          href={`/admin/bookings?booking=${b.id}`}
                           onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
                           className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 border-b last:border-0"
                         >
