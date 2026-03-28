@@ -264,14 +264,16 @@ export async function POST(request: Request) {
     const bookingId = "bk_" + crypto.randomUUID();
 
     // Normalize email for consistent matching
-    const normalizedEmail = body.customerDetails?.email?.toLowerCase().trim() || null;
+    // Accept both nested customerDetails (public booking flow) and flat keys (admin create form)
+    const rawEmail = body.customerDetails?.email || body.customerEmail || null;
+    const normalizedEmail = rawEmail?.toLowerCase().trim() || null;
 
     // If customer details provided, find or create customer in the customers table
     let customerId = body.customerId || null;
     if (!customerId && normalizedEmail) {
       const customerEmail = normalizedEmail;
-      const customerName = (body.customerDetails.name || "Customer").slice(0, 100);
-      const customerPhone = (body.customerDetails.phone || "").slice(0, 20);
+      const customerName = (body.customerDetails?.name || body.customerName || "Customer").slice(0, 100);
+      const customerPhone = (body.customerDetails?.phone || body.customerPhone || "").slice(0, 20);
 
       // Check if customer already exists
       const { data: existingCustomer } = await supabase
@@ -311,8 +313,8 @@ export async function POST(request: Request) {
 
     // If admin provided customerId but no email, look up the customer's email for consistent matching
     let bookingEmail = normalizedEmail;
-    let bookingName = body.customerDetails?.name || null;
-    let bookingPhone = body.customerDetails?.phone || null;
+    let bookingName = body.customerDetails?.name || body.customerName || null;
+    let bookingPhone = body.customerDetails?.phone || body.customerPhone || null;
     if (customerId && !bookingEmail) {
       const { data: custLookup } = await supabase
         .from("customers")
@@ -327,7 +329,7 @@ export async function POST(request: Request) {
     }
 
     // Admin can set initial status directly (e.g. "confirmed"); clients always start as "pending"
-    const bookingStatus = body.adminCreated && body.initialStatus ? body.initialStatus : "pending";
+    const bookingStatus = body.adminCreated && body.initialStatus ? body.initialStatus : (body.status || "pending");
 
     const { error } = await supabase.from("bookings").insert({
       id: bookingId,
