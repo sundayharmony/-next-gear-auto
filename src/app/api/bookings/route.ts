@@ -372,10 +372,14 @@ export async function POST(request: Request) {
     }
 
     // Send emails for new bookings (only when email is provided)
-    if (body.customerDetails?.email) {
+    // Support both nested (public flow) and flat (admin form) customer fields
+    const emailRecipient = body.customerDetails?.email || body.customerEmail || null;
+    const emailName = body.customerDetails?.name || body.customerName || "Customer";
+
+    if (emailRecipient) {
       // Check if customer needs a password
       let needsPassword = false;
-      const custEmail = body.customerDetails.email.toLowerCase().trim();
+      const custEmail = emailRecipient.toLowerCase().trim();
       const { data: cust } = await supabase
         .from("customers")
         .select("password_hash")
@@ -385,7 +389,7 @@ export async function POST(request: Request) {
 
       const emailData = {
         bookingId,
-        customerName: body.customerDetails.name || "Customer",
+        customerName: emailName,
         customerEmail: custEmail,
         vehicleName,
         pickupDate: body.pickupDate,
@@ -393,7 +397,7 @@ export async function POST(request: Request) {
         pickupTime: body.pickupTime || null,
         returnTime: body.returnTime || null,
         totalPrice: body.totalPrice ?? 0,
-        deposit: body.totalPrice ?? 0,
+        deposit: body.deposit ?? body.totalPrice ?? 0,
         needsPassword,
       };
 
@@ -409,21 +413,21 @@ export async function POST(request: Request) {
       }
     }
 
-    // Auto-sign rental agreement with client initials (admin-created bookings)
+    // Auto-generate rental agreement and email it to the customer for signing
     autoSignAgreement(bookingId)
       .then((result) => {
-        if (result && body.customerDetails?.email) {
+        if (result && emailRecipient) {
           sendAgreementEmail({
             bookingId,
-            customerName: body.customerDetails.name || "Customer",
-            customerEmail: body.customerDetails.email,
+            customerName: emailName,
+            customerEmail: emailRecipient,
             vehicleName,
             pickupDate: body.pickupDate,
             returnDate: body.returnDate,
             pickupTime: body.pickupTime || undefined,
             returnTime: body.returnTime || undefined,
             totalPrice: body.totalPrice ?? 0,
-            deposit: body.totalPrice ?? 0,
+            deposit: body.deposit ?? body.totalPrice ?? 0,
             pdfBytes: result.pdfBytes,
           }).catch(logger.error);
         }
@@ -600,7 +604,14 @@ export async function PATCH(request: Request) {
       }
     }
 
-    return NextResponse.json({ success: true, message: "Booking updated" });
+    // Re-fetch the full updated booking to return to the client
+    const { data: updatedBooking } = await supabase
+      .from("bookings")
+      .select("*")
+      .eq("id", bookingId)
+      .single();
+
+    return NextResponse.json({ success: true, message: "Booking updated", data: updatedBooking });
   } catch {
     return NextResponse.json(
       { success: false, message: "Invalid request" },

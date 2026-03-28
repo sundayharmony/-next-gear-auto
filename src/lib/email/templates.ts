@@ -196,7 +196,7 @@ function bookingEmailTemplate(
                 ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
                 ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
-                ${detailRow('Total', '$' + data.totalPrice.toFixed(2), true)}
+                ${detailRow('Total', '$' + (data.totalPrice ?? 0).toFixed(2), true)}
               </table>
             </td>
           </tr>
@@ -247,7 +247,7 @@ export function bookingPendingTemplate(data: EmailData): string {
 }
 
 export function bookingConfirmationTemplate(data: EmailData): string {
-  const paymentText = data.totalPrice > 0 ? ` and your payment of <strong>$${data.totalPrice.toFixed(2)}</strong> has been received` : '';
+  const paymentText = data.totalPrice > 0 ? ` and your payment of <strong>$${(data.totalPrice ?? 0).toFixed(2)}</strong> has been received` : '';
   const bottomNote = data.totalPrice > 0 ? "Please bring a valid driver's license at pickup." : "Your complimentary rental is confirmed. Please bring a valid driver's license at pickup.";
 
   const result = bookingEmailTemplate(
@@ -282,7 +282,7 @@ export function adminNewBookingTemplate(data: EmailData): string {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td style="padding: 16px 0; color: #6b7280; font-size: 14px;">Total Paid</td>
-            <td style="padding: 16px 0; color: #10b981; font-size: 22px; font-weight: 800; text-align: right;">$${data.totalPrice.toFixed(2)}</td>
+            <td style="padding: 16px 0; color: #10b981; font-size: 22px; font-weight: 800; text-align: right;">$${(data.totalPrice ?? 0).toFixed(2)}</td>
           </tr>
         </table>
         ${ctaButton('View in Admin Dashboard', 'https://rentnextgearauto.com/admin/bookings', '#059669')}
@@ -441,8 +441,8 @@ export function bookingSignAgreementTemplate(data: EmailData): string {
                 ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
                 ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
-                ${detailRow('Total', '$' + data.totalPrice.toFixed(2), true)}
-                ${data.deposit > 0 ? detailRow('Deposit Paid', '$' + data.deposit.toFixed(2)) : ''}
+                ${detailRow('Total', '$' + (data.totalPrice ?? 0).toFixed(2), true)}
+                ${data.deposit > 0 ? detailRow('Deposit Paid', '$' + (data.deposit ?? 0).toFixed(2)) : ''}
               </table>
             </td>
           </tr>

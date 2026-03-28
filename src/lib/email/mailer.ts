@@ -203,7 +203,7 @@ function agreementEmailTemplate(data: BookingEmailData): string {
         <p style="margin:0 0 16px;font-size:16px;color:#1f2937;font-weight:600;">${vehicle}</p>
         <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Pickup: <strong style="color:#1f2937;">${fmtDate(data.pickupDate)}${fmtTimeAt(data.pickupTime)}</strong></p>
         <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Return: <strong style="color:#1f2937;">${fmtDate(data.returnDate)}${fmtTimeAt(data.returnTime)}</strong></p>
-        <p style="margin:0;font-size:13px;color:#6b7280;">Total: <strong style="color:#7C3AED;">$${data.totalPrice.toFixed(2)}</strong></p>
+        <p style="margin:0;font-size:13px;color:#6b7280;">Total: <strong style="color:#7C3AED;">$${(data.totalPrice ?? 0).toFixed(2)}</strong></p>
       </td></tr>
     </table>
     <p style="margin:0 0 8px;font-size:14px;color:#6b7280;">If you have any questions, reply to this email or call us.</p>

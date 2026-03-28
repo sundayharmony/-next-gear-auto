@@ -116,8 +116,8 @@ export default function BookingTable({
             const isSelected = selectedIds.has(booking.id);
             const rentalDays = calculateRentalDays(booking.pickup_date, booking.return_date);
             const statusActions = getStatusActions(booking.status);
-            const balance = booking.total_price - booking.deposit;
-            const balanceColor = getBalanceColor(booking.total_price, booking.deposit);
+            const balance = (booking.total_price ?? 0) - (booking.deposit ?? 0);
+            const balanceColor = getBalanceColor(booking.total_price ?? 0, booking.deposit ?? 0);
 
             return (
               <tr
@@ -171,7 +171,7 @@ export default function BookingTable({
 
                 {/* Total */}
                 <td className="px-4 py-3">
-                  <div className="font-semibold text-gray-900">${booking.total_price.toFixed(2)}</div>
+                  <div className="font-semibold text-gray-900">${(booking.total_price ?? 0).toFixed(2)}</div>
                 </td>
 
                 {/* Balance */}

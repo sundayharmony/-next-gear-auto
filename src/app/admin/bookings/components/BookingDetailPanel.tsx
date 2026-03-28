@@ -123,8 +123,9 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           `/api/admin/booking-activity?booking_id=${booking.id}`
         );
         if (activityRes.ok) {
-          const activityData = await activityRes.json();
-          setActivityLog(Array.isArray(activityData) ? activityData : []);
+          const activityResult = await activityRes.json();
+          const activityItems = activityResult.data ?? activityResult;
+          setActivityLog(Array.isArray(activityItems) ? activityItems : []);
         }
 
         // Fetch payments
@@ -132,8 +133,9 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           `/api/admin/booking-payments?booking_id=${booking.id}`
         );
         if (paymentsRes.ok) {
-          const paymentsData = await paymentsRes.json();
-          setPayments(Array.isArray(paymentsData) ? paymentsData : []);
+          const paymentsResult = await paymentsRes.json();
+          const paymentItems = paymentsResult.data ?? paymentsResult;
+          setPayments(Array.isArray(paymentItems) ? paymentItems : []);
         }
       } catch (err) {
         logger.error("Failed to fetch booking details", err);
@@ -205,8 +207,9 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
         `/api/admin/booking-activity?booking_id=${booking.id}`
       );
       if (activityRes.ok) {
-        const activityData = await activityRes.json();
-        setActivityLog(Array.isArray(activityData) ? activityData : []);
+        const activityResult = await activityRes.json();
+        const activityItems = activityResult.data ?? activityResult;
+        setActivityLog(Array.isArray(activityItems) ? activityItems : []);
       }
 
       onSuccess(`Booking moved to ${newStatus}`);
@@ -228,8 +231,14 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
       if (!response.ok) throw new Error("Failed to save booking");
 
-      const updated = await response.json();
-      onUpdateBooking(updated);
+      const result = await response.json();
+      // The PATCH endpoint returns { success, data: updatedBooking }
+      // Merge server data with existing booking to ensure all fields are present
+      const updatedBooking = result.data
+        ? { ...booking, ...result.data }
+        : { ...booking, ...editData };
+      onUpdateBooking(updatedBooking);
+      setEditData(updatedBooking);
       setEditMode(false);
       onSuccess("Booking updated successfully");
     } catch (err) {
@@ -256,8 +265,11 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
       if (!response.ok) throw new Error("Failed to save notes");
 
-      const updated = await response.json();
-      onUpdateBooking(updated);
+      const result = await response.json();
+      const updatedBooking = result.data
+        ? { ...booking, ...result.data }
+        : { ...booking, admin_notes: editData.admin_notes };
+      onUpdateBooking(updatedBooking);
 
       // Keep "saving" indicator visible briefly so user sees feedback
       notesTimeoutRef.current = setTimeout(() => {
@@ -375,7 +387,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   };
 
   // Calculate balance due
-  const balanceDue = Math.max(0, booking.total_price - booking.deposit);
+  const balanceDue = Math.max(0, (booking.total_price ?? 0) - (booking.deposit ?? 0));
 
   // Get vehicle name
   const vehicleObj = vehicles.find((v) => v.id === booking.vehicle_id);
@@ -389,8 +401,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     booking.payment_method ||
     "Not specified";
 
-  const paymentPercentage = booking.total_price > 0
-    ? Math.round((booking.deposit / booking.total_price) * 100)
+  const paymentPercentage = (booking.total_price ?? 0) > 0
+    ? Math.round(((booking.deposit ?? 0) / booking.total_price) * 100)
     : 0;
 
   return (
@@ -896,13 +908,13 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Total Price</span>
                   <span className="font-semibold">
-                    ${booking.total_price.toFixed(2)}
+                    ${(booking.total_price ?? 0).toFixed(2)}
                   </span>
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Amount Paid</span>
                   <span className="font-semibold">
-                    ${booking.deposit.toFixed(2)}
+                    ${(booking.deposit ?? 0).toFixed(2)}
                   </span>
                 </div>
 
@@ -1106,7 +1118,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       {formatDate(ticket.violationDate)}
                     </p>
                     <p className="font-semibold text-red-600">
-                      ${ticket.amountDue.toFixed(2)}
+                      ${(ticket.amountDue ?? 0).toFixed(2)}
                     </p>
                   </div>
                 ))}
