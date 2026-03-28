@@ -60,6 +60,7 @@ export default function CreateBookingForm({
   const [searchValue, setSearchValue] = useState("");
   const [hasOverlappingBookings, setHasOverlappingBookings] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [manualPriceOverride, setManualPriceOverride] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -149,8 +150,10 @@ export default function CreateBookingForm({
     return () => { cancelled = true; };
   }, [form.vehicleId, form.pickupDate, form.returnDate]);
 
-  // Auto-calculate price
+  // Auto-calculate price (skipped when admin has manually set a custom price)
   useEffect(() => {
+    if (manualPriceOverride) return;
+
     const selectedVehicle = vehicles.find((v) => v.id === form.vehicleId);
     if (!selectedVehicle || !form.pickupDate || !form.returnDate) {
       setForm((prev) => ({ ...prev, totalPrice: 0 }));
@@ -179,7 +182,7 @@ export default function CreateBookingForm({
     const total = Math.round((subtotal + tax) * 100) / 100;
 
     setForm((prev) => ({ ...prev, totalPrice: total }));
-  }, [form.vehicleId, form.pickupDate, form.returnDate, form.selectedExtras, vehicles]);
+  }, [form.vehicleId, form.pickupDate, form.returnDate, form.selectedExtras, vehicles, manualPriceOverride]);
 
   // Toggle extra
   const toggleExtra = (extraId: string) => {
@@ -257,6 +260,7 @@ export default function CreateBookingForm({
       onSuccess("Booking created successfully");
       setForm(emptyForm);
       setSearchValue("");
+      setManualPriceOverride(false);
       onCreated();
     } catch (err) {
       onError(err instanceof Error ? err.message : "An error occurred");
@@ -489,18 +493,33 @@ export default function CreateBookingForm({
         <div className="grid grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Total Price ($)</label>
-            <Input
-              type="number"
-              step="0.01"
-              value={form.totalPrice}
-              onChange={(e) => {
-                const amount = parseFloat(e.target.value);
-                setForm({ ...form, totalPrice: isNaN(amount) ? 0 : amount });
-              }}
-              placeholder="0.00"
-            />
+            <div className="relative">
+              <Input
+                type="number"
+                step="0.01"
+                value={form.totalPrice}
+                onChange={(e) => {
+                  const amount = parseFloat(e.target.value);
+                  setManualPriceOverride(true);
+                  setForm({ ...form, totalPrice: isNaN(amount) ? 0 : amount });
+                }}
+                placeholder="0.00"
+                className={manualPriceOverride ? "border-amber-400 bg-amber-50/50 pr-20" : ""}
+              />
+              {manualPriceOverride && (
+                <button
+                  type="button"
+                  onClick={() => setManualPriceOverride(false)}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-medium text-purple-600 hover:text-purple-800 bg-white px-2 py-0.5 rounded border border-purple-200 hover:border-purple-400 transition-colors"
+                >
+                  Recalculate
+                </button>
+              )}
+            </div>
             <div className="text-xs text-gray-500 mt-1">
-              Auto-calculated from daily rate, editable for custom pricing
+              {manualPriceOverride
+                ? "Custom price set — click Recalculate to restore auto-pricing"
+                : "Auto-calculated from daily rate, editable for custom pricing"}
             </div>
           </div>
           <div>
