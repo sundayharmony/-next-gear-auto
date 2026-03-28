@@ -24,7 +24,9 @@ export function formatDate(dateStr: string | null | undefined): string {
 
 export function formatTime(timeStr: string | null | undefined): string {
   if (!timeStr) return "";
-  const [h, m] = timeStr.split(":").map(Number);
+  const parts = timeStr.split(":");
+  if (parts.length < 2) return timeStr;
+  const [h, m] = parts.map(Number);
   if (isNaN(h) || isNaN(m)) return timeStr;
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;

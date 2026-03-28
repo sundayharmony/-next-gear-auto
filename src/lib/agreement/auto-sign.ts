@@ -1,6 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { fmtTime } from "@/lib/email/templates";
+import { logger } from "@/lib/utils/logger";
 import path from "path";
 import fs from "fs/promises";
 
@@ -117,6 +118,12 @@ export async function autoSignAgreement(bookingId: string) {
 
   const totalPrice = booking.total_price ?? 0;
   const deposit = booking.deposit ?? 0;
+
+  if (!booking.pickup_date || !booking.return_date) {
+    logger.error("Auto-sign: missing pickup or return date for booking", booking.id);
+    return null;
+  }
+
   const pickupDate = new Date(booking.pickup_date + "T00:00:00");
   const returnDate = new Date(booking.return_date + "T00:00:00");
   const totalDays = Math.max(1, Math.ceil((returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24)));

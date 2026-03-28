@@ -209,8 +209,16 @@ export async function PUT(req: NextRequest) {
     if (updates.courtId !== undefined) dbUpdates.court_id = updates.courtId;
     if (updates.prefix !== undefined) dbUpdates.prefix = updates.prefix;
     if (updates.ticketNumber !== undefined) dbUpdates.ticket_number = updates.ticketNumber;
-    if (updates.amountDue !== undefined)
-      dbUpdates.amount_due = parseFloat(updates.amountDue);
+    if (updates.amountDue !== undefined) {
+      const parsedAmount = parseFloat(updates.amountDue);
+      if (!Number.isFinite(parsedAmount) || parsedAmount < 0) {
+        return NextResponse.json(
+          { success: false, error: "amountDue must be a valid non-negative number" },
+          { status: 400 }
+        );
+      }
+      dbUpdates.amount_due = parsedAmount;
+    }
     if (updates.status !== undefined) dbUpdates.status = updates.status;
     if (updates.notes !== undefined) dbUpdates.notes = updates.notes;
 

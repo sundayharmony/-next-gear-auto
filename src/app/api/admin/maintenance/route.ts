@@ -145,10 +145,14 @@ export async function POST(req: NextRequest) {
       vehicleMaintenanceStatus = "in-maintenance";
     }
 
-    await supabase
+    const { error: vehicleUpdateError } = await supabase
       .from("vehicles")
       .update({ maintenance_status: vehicleMaintenanceStatus })
       .eq("id", vehicleId);
+
+    if (vehicleUpdateError) {
+      logger.error("Failed to update vehicle maintenance status:", vehicleUpdateError);
+    }
 
     const response = {
       id: data.id,

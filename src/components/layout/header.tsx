@@ -76,7 +76,7 @@ export function Header() {
                 ) : (
                   <Link href="/account">
                     <Button variant="outline" size="sm">
-                      <User className="h-3.5 w-3.5 mr-1" /> {user.name.split(" ")[0]}
+                      <User className="h-3.5 w-3.5 mr-1" /> {(user.name || "Account").split(" ")[0]}
                     </Button>
                   </Link>
                 )}

@@ -152,7 +152,7 @@ export default async function AboutPage() {
             <Card key={member.name} className="p-6 text-center card-hover overflow-hidden relative">
               <div className={`mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br ${member.gradient} shadow-lg`}>
                 <span className="text-3xl font-bold text-white">
-                  {member.name.split(" ").map((n) => n[0]).join("")}
+                  {(member.name || "").split(" ").filter(Boolean).map((n) => n[0]).join("")}
                 </span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900">{member.name}</h3>

@@ -46,6 +46,8 @@ export function validatePasswordToken(token: string): string | null {
 
     // Timing-safe comparison using Node.js built-in
     if (hmac.length !== expectedHmac.length) return null;
+    // Validate hex format before creating buffers
+    if (!/^[0-9a-f]+$/i.test(hmac)) return null;
     const a = Buffer.from(hmac, "hex");
     const b = Buffer.from(expectedHmac, "hex");
     if (a.length !== b.length) return null;

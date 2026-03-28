@@ -735,7 +735,7 @@ function TimelineView({
                                   <ChevronLeft className="w-3 h-3 text-gray-500 flex-shrink-0 -ml-1" />
                                 )}
                                 <span className="text-xs font-bold text-gray-800 truncate">
-                                  {booking.customer_name.split(" ")[0]}
+                                  {(booking.customer_name || "Unknown").split(" ")[0]}
                                 </span>
                                 {fullDaySpan >= 2 && (
                                   <span className="text-[10px] text-gray-600 truncate hidden sm:inline">
@@ -929,7 +929,7 @@ function CalendarView({
                             className={`text-xs p-1 rounded truncate ${statusColors[booking.status]}`}
                             title={booking.vehicleName}
                           >
-                            {booking.vehicleName.split(" ").slice(1).join(" ")}
+                            {(booking.vehicleName || "Vehicle").split(" ").slice(1).join(" ") || booking.vehicleName || "Vehicle"}
                           </div>
                         ))}
                         {dayBookings.length > 2 && (

@@ -25,7 +25,7 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
       const stored = localStorage.getItem("nga_user");
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (parsed.id) {
+        if (typeof parsed === "object" && parsed !== null && typeof parsed.id === "string" && parsed.id) {
           headers.set("x-admin-id", parsed.id);
         }
       }

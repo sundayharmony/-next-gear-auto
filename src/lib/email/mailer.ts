@@ -22,10 +22,14 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com";
 let _transporter: nodemailer.Transporter | null = null;
 export function getTransporter() {
   if (!_transporter) {
+    const port = parseInt(process.env.SMTP_PORT || "465", 10);
+    if (isNaN(port) || port < 1 || port > 65535) {
+      throw new Error(`Invalid SMTP_PORT: ${process.env.SMTP_PORT}`);
+    }
     _transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.hostinger.com",
-      port: parseInt(process.env.SMTP_PORT || "465"),
-      secure: true, // port 465 = SSL
+      port,
+      secure: port === 465, // port 465 = SSL
       auth: {
         user: SMTP_USER,
         pass: process.env.SMTP_PASS,

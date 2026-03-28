@@ -739,7 +739,7 @@ export default function AccountPage() {
                   <CardContent className="p-5">
                     <h3 className="font-semibold text-gray-900 mb-3">Need Help?</h3>
                     <div className="flex flex-col sm:flex-row gap-4 text-sm text-gray-600">
-                      <a href="tel:+1234567890" className="flex items-center gap-2 hover:text-purple-600 transition-colors">
+                      <a href="tel:+15514293472" className="flex items-center gap-2 hover:text-purple-600 transition-colors">
                         <Phone className="h-4 w-4" /> Call Us
                       </a>
                       <a href="mailto:contact@rentnextgearauto.com" className="flex items-center gap-2 hover:text-purple-600 transition-colors">

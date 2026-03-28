@@ -211,7 +211,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                 <div className="mt-2 flex items-center gap-2">
                   <div className="flex gap-0.5">
                     {Array.from({ length: 5 }).map((_, i) => (
-                      <Star key={i} className={`h-4 w-4 ${i < Math.floor(Number(avgRating)) ? "fill-amber-400 text-amber-400" : "text-gray-500"}`} aria-hidden="true" />
+                      <Star key={i} className={`h-4 w-4 ${i < Math.floor(parseFloat(avgRating) || 0) ? "fill-amber-400 text-amber-400" : "text-gray-500"}`} aria-hidden="true" />
                     ))}
                   </div>
                   <span className="text-sm text-purple-200">{avgRating}/5 ({vehicleReviews.length} reviews)</span>

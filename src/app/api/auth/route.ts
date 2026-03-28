@@ -352,9 +352,9 @@ export async function PATCH(request: NextRequest) {
 
     const adminDb = getServiceSupabase();
 
-    // Check if it's an admin
+    // Check if it's an admin — table name is strictly whitelisted
     const { data: admin } = await adminDb.from("admins").select("id").eq("id", id).single();
-    const table = admin ? "admins" : "customers";
+    const table: "admins" | "customers" = admin ? "admins" : "customers";
 
     const updates: Record<string, string> = {};
     if (name) updates.name = name.trim().slice(0, 100);

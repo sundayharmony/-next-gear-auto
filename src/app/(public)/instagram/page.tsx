@@ -135,13 +135,11 @@ export default function SocialPage() {
 
   // Prevent body scroll when modal is open
   useEffect(() => {
-    if (activePost) {
-      document.body.style.overflow = "hidden";
-    } else {
-      document.body.style.overflow = "";
-    }
+    if (!activePost) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = originalOverflow;
     };
   }, [activePost]);
 

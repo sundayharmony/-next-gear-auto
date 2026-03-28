@@ -28,6 +28,10 @@ export async function compressImage(
 
       // Calculate new dimensions maintaining aspect ratio
       let { width, height } = img;
+      if (width <= 0 || height <= 0) {
+        resolve(file); // Broken image — return original
+        return;
+      }
       if (width > maxWidthOrHeight || height > maxWidthOrHeight) {
         if (width > height) {
           height = Math.round((height * maxWidthOrHeight) / width);
@@ -68,7 +72,8 @@ export async function compressImage(
                   return;
                 }
                 const ext = outputType === "image/png" ? ".png" : ".jpg";
-                const newName = file.name.replace(/\.[^.]+$/, ext);
+                const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_\-. ]/g, "_");
+                const newName = baseName + ext;
                 resolve(new File([blob2], newName, { type: outputType }));
               },
               outputType,
@@ -78,7 +83,8 @@ export async function compressImage(
           }
 
           const ext = outputType === "image/png" ? ".png" : ".jpg";
-          const newName = file.name.replace(/\.[^.]+$/, ext);
+          const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_\-. ]/g, "_");
+                const newName = baseName + ext;
           resolve(new File([blob], newName, { type: outputType }));
         },
         outputType,

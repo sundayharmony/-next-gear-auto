@@ -325,7 +325,7 @@ export async function POST(request: Request) {
               name: `NextGearAuto - Vehicle Rental`,
               description: `${vehicleName || "Vehicle"} rental: ${pickupDate}${pickupTime ? " at " + pickupTime : ""} to ${returnDate}${returnTime ? " at " + returnTime : ""}`,
             },
-            unit_amount: Math.round(Number((chargeAmount || 0).toFixed(2)) * 100) || 1, // Stripe uses cents, min 1 cent
+            unit_amount: Math.max(1, Math.round((Number.isFinite(chargeAmount) ? chargeAmount : 0) * 100)), // Stripe uses cents, min 1 cent
           },
           quantity: 1,
         },
