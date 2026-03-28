@@ -12,20 +12,21 @@ export interface ValidationRules {
 }
 
 export function validate(value: string, rules: ValidationRule): string | null {
-  if (rules.required && (!value || value.trim() === "")) {
+  const trimmedValue = value.trim();
+  if (rules.required && (!trimmedValue || trimmedValue === "")) {
     return rules.message || "This field is required";
   }
-  if (value && rules.minLength && value.length < rules.minLength) {
+  if (trimmedValue && rules.minLength && trimmedValue.length < rules.minLength) {
     return `Must be at least ${rules.minLength} characters`;
   }
-  if (value && rules.maxLength && value.length > rules.maxLength) {
+  if (trimmedValue && rules.maxLength && trimmedValue.length > rules.maxLength) {
     return `Must be no more than ${rules.maxLength} characters`;
   }
-  if (value && rules.pattern && !rules.pattern.test(value)) {
+  if (trimmedValue && rules.pattern && !rules.pattern.test(trimmedValue)) {
     return rules.message || "Invalid format";
   }
-  if (value && rules.custom) {
-    return rules.custom(value);
+  if (trimmedValue && rules.custom) {
+    return rules.custom(trimmedValue);
   }
   return null;
 }

@@ -31,6 +31,7 @@ export function generatePasswordToken(email: string): string {
 export function validatePasswordToken(token: string): string | null {
   try {
     const decoded = Buffer.from(token, "base64url").toString("utf-8");
+    if (!decoded || decoded.length === 0) return null;
     const parts = decoded.split(":");
     if (parts.length < 3) return null;
 

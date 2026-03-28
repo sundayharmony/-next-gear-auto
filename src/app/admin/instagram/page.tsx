@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { ArrowLeft, Plus, Trash2, RefreshCw, Instagram, ExternalLink, X, Loader2 } from "lucide-react";
 import { Card } from "@/components/ui/card";

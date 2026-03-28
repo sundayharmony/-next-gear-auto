@@ -49,6 +49,9 @@ export default function AdminCalendarPage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [showBookingDetail, setShowBookingDetail] = useState(false);
 
+  // Track abort controller for fetch cancellation
+  const bookingsAbortControllerRef = React.useRef<AbortController | null>(null);
+
   const openBookingDetail = (booking: BookingRow) => {
     setSelectedBooking(booking);
     setShowBookingDetail(true);
@@ -74,6 +77,13 @@ export default function AdminCalendarPage() {
   }, [showBookingDetail, closeBookingDetail]);
 
   const fetchBookings = useCallback(async () => {
+    // Abort previous request if it's still pending
+    if (bookingsAbortControllerRef.current) {
+      bookingsAbortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this fetch
+    bookingsAbortControllerRef.current = new AbortController();
     // Build date range for API filtering (3 months window around current view)
     const pad = (n: number) => String(n).padStart(2, "0");
     const from = new Date(view === "timeline" ? timelineStart : calendarMonth);
@@ -84,12 +94,16 @@ export default function AdminCalendarPage() {
     const toStr = `${to.getFullYear()}-${pad(to.getMonth() + 1)}-${pad(to.getDate())}`;
 
     try {
-      const res = await adminFetch(`/api/bookings?from=${fromStr}&to=${toStr}`);
+      const res = await adminFetch(`/api/bookings?from=${fromStr}&to=${toStr}`, {
+        signal: bookingsAbortControllerRef.current?.signal,
+      });
       if (res.ok) {
         const data = await res.json();
         setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
       }
     } catch (error) {
+      // Ignore abort errors
+      if (error instanceof Error && error.name === "AbortError") return;
       logger.error("Failed to fetch bookings:", error);
     }
   }, [view, timelineStart, calendarMonth]);

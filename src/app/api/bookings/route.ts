@@ -361,32 +361,51 @@ export async function POST(request: Request) {
       );
     }
 
-    // Fetch vehicle name once (used for emails and agreement)
+    // Fetch vehicle name and check customer password in parallel
+    const emailRecipient = body.customerDetails?.email || body.customerEmail || null;
+    const emailName = body.customerDetails?.name || body.customerName || "Customer";
+
     let vehicleName = "Vehicle";
-    if (body.vehicleId) {
-      const { data: vehicle } = await supabase
-        .from("vehicles")
-        .select("year, make, model")
-        .eq("id", body.vehicleId)
-        .single();
+    let needsPassword = false;
+
+    if (body.vehicleId || emailRecipient) {
+      const promises = [];
+
+      // Vehicle fetch
+      let vehiclePromise = Promise.resolve(null);
+      if (body.vehicleId) {
+        vehiclePromise = supabase
+          .from("vehicles")
+          .select("year, make, model")
+          .eq("id", body.vehicleId)
+          .single()
+          .then((res) => res.data);
+      }
+      promises.push(vehiclePromise);
+
+      // Customer password check
+      let custPromise = Promise.resolve(null);
+      if (emailRecipient) {
+        const custEmail = emailRecipient.toLowerCase().trim();
+        custPromise = supabase
+          .from("customers")
+          .select("password_hash")
+          .eq("email", custEmail)
+          .single()
+          .then((res) => res.data);
+      }
+      promises.push(custPromise);
+
+      const [vehicle, cust] = await Promise.all(promises);
+
       if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+      needsPassword = !cust?.password_hash;
     }
 
     // Send emails for new bookings (only when email is provided)
     // Support both nested (public flow) and flat (admin form) customer fields
-    const emailRecipient = body.customerDetails?.email || body.customerEmail || null;
-    const emailName = body.customerDetails?.name || body.customerName || "Customer";
 
     if (emailRecipient) {
-      // Check if customer needs a password
-      let needsPassword = false;
-      const custEmail = emailRecipient.toLowerCase().trim();
-      const { data: cust } = await supabase
-        .from("customers")
-        .select("password_hash")
-        .eq("email", custEmail)
-        .single();
-      needsPassword = !cust?.password_hash;
 
       const emailData = {
         bookingId,
@@ -423,8 +442,19 @@ export async function POST(request: Request) {
 // PATCH - Update booking (status change OR field edits)
 export async function PATCH(request: Request) {
   const supabase = getServiceSupabase();
+
+  // Separate JSON parsing from logic
+  let body: any;
   try {
-    const body = await request.json();
+    body = await request.json();
+  } catch {
+    return NextResponse.json(
+      { success: false, message: "Invalid JSON" },
+      { status: 400 }
+    );
+  }
+
+  try {
     const { bookingId } = body;
 
     if (!bookingId) {

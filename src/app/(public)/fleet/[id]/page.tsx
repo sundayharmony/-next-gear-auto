@@ -117,10 +117,10 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     : null;
 
   const displayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
-  const specs = vehicle.specs;
+  const specs = vehicle.specs || {};
   return {
     title: `${displayName} Rental - $${vehicle.daily_rate}/day`,
-    description: `Rent a ${displayName} in Jersey City, NJ. ${specs.passengers} passengers, ${specs.luggage} bags, ${specs.mpg} MPG. Starting at $${vehicle.daily_rate}/day.${avgRating ? ` Rated ${avgRating}/5.` : ""}`,
+    description: `Rent a ${displayName} in Jersey City, NJ. ${specs.passengers ?? "?"} passengers, ${specs.luggage ?? "?"} bags, ${specs.mpg ?? "?"} MPG. Starting at $${vehicle.daily_rate}/day.${avgRating ? ` Rated ${avgRating}/5.` : ""}`,
     alternates: {
       canonical: `${SITE_URL}/fleet/${vehicle.id}`,
     },
@@ -163,14 +163,14 @@ export default async function VehicleDetailPage({ params }: PageProps) {
     // If error, similar vehicles will be empty
   }
 
-  const specs = vehicle.specs;
+  const specs = vehicle.specs || {};
   const specRows = [
-    { icon: Users, label: "Passengers", value: `${specs.passengers} seats` },
-    { icon: Briefcase, label: "Luggage", value: `${specs.luggage} bags` },
-    { icon: Settings, label: "Transmission", value: specs.transmission },
-    { icon: Fuel, label: "Fuel Type", value: specs.fuelType },
-    { icon: Gauge, label: "Fuel Economy", value: `${specs.mpg} MPG` },
-    { icon: DoorOpen, label: "Doors", value: `${specs.doors} doors` },
+    { icon: Users, label: "Passengers", value: `${specs.passengers ?? "N/A"} seats` },
+    { icon: Briefcase, label: "Luggage", value: `${specs.luggage ?? "N/A"} bags` },
+    { icon: Settings, label: "Transmission", value: specs.transmission ?? "N/A" },
+    { icon: Fuel, label: "Fuel Type", value: specs.fuelType ?? "N/A" },
+    { icon: Gauge, label: "Fuel Economy", value: `${specs.mpg ?? "N/A"} MPG` },
+    { icon: DoorOpen, label: "Doors", value: `${specs.doors ?? "N/A"} doors` },
   ];
 
   const vehicleDisplayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
@@ -291,7 +291,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                       <div key={review.id} className="border-b border-gray-100 pb-4 last:border-0 last:pb-0">
                         <div className="flex items-center gap-2 mb-2">
                           <div className="flex gap-0.5">
-                            {Array.from({ length: review.rating }).map((_, i) => (
+                            {Array.from({ length: review.rating ?? 0 }).map((_, i) => (
                               <Star key={i} className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                             ))}
                           </div>

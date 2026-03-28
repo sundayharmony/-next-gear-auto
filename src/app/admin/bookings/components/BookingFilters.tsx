@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Search,
   RefreshCw,
@@ -69,6 +69,23 @@ export default function BookingFilters({
   onClearSelection,
   bulkUpdating,
 }: BookingFiltersProps) {
+  const [localSearch, setLocalSearch] = useState(searchQuery);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    timeoutRef.current = setTimeout(() => {
+      onSearchChange(localSearch);
+    }, 300);
+
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
+  }, [localSearch, onSearchChange]);
+
+  useEffect(() => {
+    setLocalSearch(searchQuery);
+  }, [searchQuery]);
+
   return (
     <div className="space-y-4">
       {/* Status filter pills */}
@@ -96,8 +113,8 @@ export default function BookingFilters({
           <Input
             type="text"
             placeholder="Search by customer name, email, phone..."
-            value={searchQuery}
-            onChange={(e) => onSearchChange(e.target.value)}
+            value={localSearch}
+            onChange={(e) => setLocalSearch(e.target.value)}
             className="pl-10 focus-visible:outline-2 focus-visible:outline-purple-600 focus-visible:outline-offset-0"
           />
         </div>

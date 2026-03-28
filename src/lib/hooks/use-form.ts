@@ -50,7 +50,9 @@ export function useForm<T extends Record<string, string>>({
     let isValid = true;
 
     for (const field of Object.keys(validationRules)) {
-      const error = validate(values[field as keyof T] || "", validationRules[field]);
+      const rule = validationRules[field];
+      if (!rule) continue;
+      const error = validate(values[field as keyof T] || "", rule);
       if (error) {
         newErrors[field as keyof T] = error;
         isValid = false;

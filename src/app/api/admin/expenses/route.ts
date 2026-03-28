@@ -13,6 +13,28 @@ const VALID_CATEGORIES = [
   "other",
 ];
 
+function validateExpenseInput(
+  category: unknown,
+  amount: unknown
+): { valid: boolean; error?: string } {
+  // Validate category
+  if (!category || !VALID_CATEGORIES.includes(category as string)) {
+    return { valid: false, error: "Invalid category" };
+  }
+
+  // Validate amount
+  const parsedAmount =
+    typeof amount === "number" ? amount : parseFloat(amount as string);
+  if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
+    return {
+      valid: false,
+      error: "Amount must be a valid positive number",
+    };
+  }
+
+  return { valid: true };
+}
+
 export async function GET(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (!auth.authorized) return auth.response;
@@ -74,20 +96,16 @@ export async function POST(request: NextRequest) {
     const { vehicleId, category, amount, description, date } = body;
 
     // Validation
-    if (!category || !VALID_CATEGORIES.includes(category)) {
+    const validation = validateExpenseInput(category, amount);
+    if (!validation.valid) {
       return NextResponse.json(
-        { success: false, error: "Invalid category" },
+        { success: false, error: validation.error },
         { status: 400 }
       );
     }
 
-    const parsedAmount = typeof amount === "number" ? amount : parseFloat(amount);
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      return NextResponse.json(
-        { success: false, error: "Amount must be a valid positive number" },
-        { status: 400 }
-      );
-    }
+    const parsedAmount =
+      typeof amount === "number" ? amount : parseFloat(amount as string);
 
     if (!date) {
       return NextResponse.json(
@@ -153,18 +171,28 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (category && !VALID_CATEGORIES.includes(category)) {
-      return NextResponse.json(
-        { success: false, error: "Invalid category" },
-        { status: 400 }
+    // Only validate if category or amount is provided
+    if (category !== undefined || amount !== undefined) {
+      const validation = validateExpenseInput(
+        category || "maintenance", // Use dummy value if not provided (won't validate)
+        amount || 1
       );
-    }
-
-    if (amount !== undefined && amount <= 0) {
-      return NextResponse.json(
-        { success: false, error: "Invalid amount" },
-        { status: 400 }
-      );
+      // For PUT, only validate the fields that were actually provided
+      if (category && !VALID_CATEGORIES.includes(category)) {
+        return NextResponse.json(
+          { success: false, error: "Invalid category" },
+          { status: 400 }
+        );
+      }
+      if (amount !== undefined) {
+        const parsedCheck = parseFloat(amount as any);
+        if (!Number.isFinite(parsedCheck) || parsedCheck <= 0) {
+          return NextResponse.json(
+            { success: false, error: "Invalid amount" },
+            { status: 400 }
+          );
+        }
+      }
     }
 
     const supabase = getServiceSupabase();

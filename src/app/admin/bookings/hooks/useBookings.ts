@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { logger } from "@/lib/utils/logger";
@@ -46,7 +46,17 @@ export function useBookings(): UseBookingsReturn {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [updating, setUpdating] = useState<string | null>(null);
 
+  // Track abort controller for fetch cancellation
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
   const fetchBookings = useCallback(async () => {
+    // Abort previous request if it's still pending
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this fetch
+    abortControllerRef.current = new AbortController();
     setLoading(true);
     try {
       const params = new URLSearchParams();
@@ -56,7 +66,7 @@ export function useBookings(): UseBookingsReturn {
       params.set("order", sortOrder);
 
       const url = `/api/bookings${params.toString() ? `?${params}` : ""}`;
-      const res = await adminFetch(url);
+      const res = await adminFetch(url, { signal: abortControllerRef.current?.signal });
       if (!res.ok) throw new Error(`Failed to fetch bookings: ${res.status}`);
       const data = await res.json();
       if (data.success) {
@@ -72,6 +82,8 @@ export function useBookings(): UseBookingsReturn {
         setBookings(results);
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === "AbortError") return;
       logger.error("Failed to fetch bookings:", err);
     }
     setLoading(false);
@@ -160,26 +172,32 @@ export function useBookings(): UseBookingsReturn {
   }, [setSuccess, setError]);
 
   const bulkUpdateStatus = useCallback(async (ids: Set<string>, newStatus: string): Promise<number> => {
-    let successCount = 0;
-    const failedIds: string[] = [];
-    for (const id of ids) {
-      try {
-        const res = await adminFetch("/api/bookings", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bookingId: id, status: newStatus }),
-        });
+    const promises = Array.from(ids).map((id) =>
+      adminFetch("/api/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: id, status: newStatus }),
+      }).then(async (res) => {
         if (!res.ok) throw new Error(`Failed: ${res.status}`);
         const data = await res.json();
-        if (data.success) {
-          successCount++;
-        } else {
-          failedIds.push(id);
-        }
-      } catch (err) {
-        failedIds.push(id);
+        return { id, success: data.success };
+      }).catch(() => ({ id, success: false }))
+    );
+
+    const results = await Promise.allSettled(promises);
+    let successCount = 0;
+    const failedIds: string[] = [];
+
+    results.forEach((result) => {
+      if (result.status === "fulfilled" && result.value.success) {
+        successCount++;
+      } else if (result.status === "fulfilled") {
+        failedIds.push(result.value.id);
+      } else {
+        failedIds.push("unknown");
       }
-    }
+    });
+
     if (failedIds.length > 0) {
       setError(`Failed to update ${failedIds.length} booking${failedIds.length > 1 ? "s" : ""}`);
     }

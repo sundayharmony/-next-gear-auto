@@ -70,7 +70,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: "LOGIN_SUCCESS", payload: user });
         }
       }
-    } catch {
+    } catch (err) {
+      console.warn("Failed to parse stored user data:", err);
       localStorage.removeItem("nga_user");
     }
 

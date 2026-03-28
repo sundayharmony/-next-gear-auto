@@ -57,7 +57,14 @@ export async function GET(request: Request) {
         vin: v.vin || "",
         maintenanceStatus: v.maintenance_status || "good",
       }));
-      return NextResponse.json({ data: vehicles, success: true });
+      return NextResponse.json(
+        { data: vehicles, success: true },
+        {
+          headers: {
+            "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
+          },
+        }
+      );
     }
   } catch (error) {
     logger.error("Vehicles API error:", error);

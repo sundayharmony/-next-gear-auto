@@ -6,7 +6,9 @@
 function parseLocalDate(dateStr: string): Date {
   if (dateStr.includes("T")) return new Date(dateStr);
   // Parse YYYY-MM-DD as local date by extracting components
-  const [y, m, d] = dateStr.split("-").map(Number);
+  const parts = dateStr.split("-");
+  if (parts.length !== 3) return new Date(NaN);
+  const [y, m, d] = parts.map(Number);
   return new Date(y, m - 1, d);
 }
 

@@ -37,6 +37,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const [showNotifications, setShowNotifications] = useState(false);
   const [recentBookings, setRecentBookings] = useState<Array<{ id: string; customer_name: string; created_at: string; total_price: number }>>([]);
 
+  // Track abort controller for fetch cancellation
+  const abortControllerRef = React.useRef<AbortController | null>(null);
+
   // Handle Escape key to close notifications dropdown
   useEffect(() => {
     const handleEscapeKey = (e: KeyboardEvent) => {
@@ -49,8 +52,18 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }, [showNotifications]);
 
   const fetchPendingBookings = useCallback(async () => {
+    // Abort previous request if it's still pending
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this fetch
+    abortControllerRef.current = new AbortController();
+
     try {
-      const res = await adminFetch("/api/bookings?status=pending");
+      const res = await adminFetch("/api/bookings?status=pending", {
+        signal: abortControllerRef.current.signal,
+      });
       if (!res.ok) return;
       const data = await res.json();
       if (data.success && data.data) {
@@ -69,6 +82,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         );
       }
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === "AbortError") return;
       logger.error("Failed to fetch pending bookings:", err);
     }
   }, []);
@@ -76,7 +91,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   useEffect(() => {
     fetchPendingBookings();
     const interval = setInterval(fetchPendingBookings, 60000); // Poll every 60s
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      // Abort fetch on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [fetchPendingBookings]);
 
   if (!isAuthenticated || user?.role !== "admin") {

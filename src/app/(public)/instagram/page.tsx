@@ -49,19 +49,32 @@ export default function SocialPage() {
         const res = await fetch("/api/instagram");
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        if (!cancelled && data.success) {
-          setPosts(data.data || []);
+        if (!cancelled) {
+          if (data.success) {
+            setPosts(data.data || []);
+          }
+          setLoading(false);
         }
       } catch (error) {
         if (!cancelled) {
           logger.error("Failed to fetch Instagram posts", error);
           setFetchError(true);
+          setLoading(false);
         }
       }
-      if (!cancelled) setLoading(false);
     }
     fetchPosts();
     return () => { cancelled = true; };
+  }, []);
+
+  // Cleanup embed script on unmount
+  useEffect(() => {
+    return () => {
+      const script = document.querySelector('script[src="https://www.instagram.com/embed.js"]');
+      if (script) {
+        script.remove();
+      }
+    };
   }, []);
 
   // Load Instagram embed script once

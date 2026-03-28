@@ -87,22 +87,30 @@ export default function CreateBookingForm({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Handle customer search
+  // Handle customer search with debounce
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setSearchValue(value);
-    if (value.trim()) {
-      const filtered = allCustomers.filter(
-        (c) =>
-          (c.name || "").toLowerCase().includes(value.toLowerCase()) ||
-          (c.email || "").toLowerCase().includes(value.toLowerCase())
-      );
-      setFilteredCustomers(filtered.slice(0, 8));
-      setShowDropdown(true);
-    } else {
-      setFilteredCustomers([]);
-      setShowDropdown(false);
+
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
     }
+
+    searchTimeoutRef.current = setTimeout(() => {
+      if (value.trim()) {
+        const filtered = allCustomers.filter(
+          (c) =>
+            (c.name || "").toLowerCase().includes(value.toLowerCase()) ||
+            (c.email || "").toLowerCase().includes(value.toLowerCase())
+        );
+        setFilteredCustomers(filtered.slice(0, 8));
+        setShowDropdown(true);
+      } else {
+        setFilteredCustomers([]);
+        setShowDropdown(false);
+      }
+    }, 300);
   };
 
   // Select customer from dropdown
@@ -126,28 +134,45 @@ export default function CreateBookingForm({
   };
 
   // Check for overlapping bookings
+  const overlapAbortControllerRef = useRef<AbortController | null>(null);
+
   useEffect(() => {
-    let cancelled = false;
     const checkOverlap = async () => {
       if (!form.vehicleId || !form.pickupDate || !form.returnDate) {
-        if (!cancelled) setHasOverlappingBookings(false);
+        setHasOverlappingBookings(false);
         return;
       }
+
+      // Abort previous request if it's still pending
+      if (overlapAbortControllerRef.current) {
+        overlapAbortControllerRef.current.abort();
+      }
+
+      // Create new abort controller for this fetch
+      overlapAbortControllerRef.current = new AbortController();
+
       try {
         const res = await adminFetch(
           `/api/bookings/check-overlap?vehicleId=${form.vehicleId}&pickupDate=${form.pickupDate}&returnDate=${form.returnDate}`,
-          { method: "GET" }
+          { method: "GET", signal: overlapAbortControllerRef.current.signal }
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        if (!cancelled) setHasOverlappingBookings(data.hasOverlap || false);
+        setHasOverlappingBookings(data.hasOverlap || false);
       } catch (err) {
+        // Ignore abort errors
+        if (err instanceof Error && err.name === "AbortError") return;
         logger.error("Failed to check booking overlap:", err);
-        if (!cancelled) setHasOverlappingBookings(false);
+        setHasOverlappingBookings(false);
       }
     };
     checkOverlap();
-    return () => { cancelled = true; };
+    return () => {
+      // Abort fetch on unmount
+      if (overlapAbortControllerRef.current) {
+        overlapAbortControllerRef.current.abort();
+      }
+    };
   }, [form.vehicleId, form.pickupDate, form.returnDate]);
 
   // Auto-calculate price (skipped when admin has manually set a custom price)

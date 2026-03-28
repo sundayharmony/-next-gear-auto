@@ -51,6 +51,16 @@ export function createRateLimiter(options: RateLimiterOptions) {
 
   return {
     check(identifier: string): RateLimitResult {
+      // Emergency cleanup if store grows too large
+      if (store.size > 10000) {
+        const now = Date.now();
+        for (const [key, entry] of store) {
+          if (entry.resetAt <= now) {
+            store.delete(key);
+          }
+        }
+      }
+
       cleanup();
 
       const now = Date.now();
