@@ -283,13 +283,14 @@ export async function POST(request: Request) {
       if (existingCustomer) {
         customerId = existingCustomer.id;
         // Update name/phone if they were previously empty
-        await supabase
+        const { error: updateErr } = await supabase
           .from("customers")
           .update({
             name: customerName,
             ...(customerPhone ? { phone: customerPhone } : {}),
           })
           .eq("id", existingCustomer.id);
+        if (updateErr) logger.warn("Failed to update existing customer info:", updateErr);
       } else {
         // Create new customer
         const newCustId = "c_" + crypto.randomUUID();

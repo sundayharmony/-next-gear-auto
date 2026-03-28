@@ -71,7 +71,10 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ success: false, error: retryError.message }, { status: 500 });
       }
 
-      const { data: retryUrl } = supabase.storage.from("booking-documents").getPublicUrl(retryData!.path);
+      if (!retryData) {
+        return NextResponse.json({ success: false, error: "Upload succeeded but file path unavailable" }, { status: 500 });
+      }
+      const { data: retryUrl } = supabase.storage.from("booking-documents").getPublicUrl(retryData.path);
       return NextResponse.json({ success: true, url: retryUrl.publicUrl });
     }
 

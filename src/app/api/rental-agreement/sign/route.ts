@@ -172,11 +172,11 @@ export async function POST(req: NextRequest) {
 
     // Fill all auto-fill fields (same logic as generate)
     if (vehicle) {
-      setText("t1", `${vehicle.make} ${vehicle.model}`);
-      setText("t2", vehicle.year);
-      setText("t3", vehicle.license_plate);
-      setText("t4", vehicle.vin);
-      setText("t5", vehicle.color);
+      setText("t1", `${vehicle.make || ""} ${vehicle.model || ""}`.trim());
+      setText("t2", vehicle.year ?? "");
+      setText("t3", vehicle.license_plate ?? "");
+      setText("t4", vehicle.vin ?? "");
+      setText("t5", vehicle.color ?? "");
       setText("t6", vehicle.mileage ? `${Number(vehicle.mileage).toLocaleString()} mi` : "");
       setCheck("c7", false);
       setCheck("c8", true);

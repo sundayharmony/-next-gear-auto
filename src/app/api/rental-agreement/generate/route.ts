@@ -135,11 +135,11 @@ export async function GET(req: NextRequest) {
 
     // === PAGE 1: Vehicle Information ===
     if (vehicle) {
-      setText("t1", `${vehicle.make} ${vehicle.model}`); // Make & Model
-      setText("t2", vehicle.year); // Year
-      setText("t3", vehicle.license_plate); // License Plate
-      setText("t4", vehicle.vin); // VIN
-      setText("t5", vehicle.color); // Color
+      setText("t1", `${vehicle.make || ""} ${vehicle.model || ""}`.trim()); // Make & Model
+      setText("t2", vehicle.year ?? ""); // Year
+      setText("t3", vehicle.license_plate ?? ""); // License Plate
+      setText("t4", vehicle.vin ?? ""); // VIN
+      setText("t5", vehicle.color ?? ""); // Color
       setText("t6", vehicle.mileage ? `${Number(vehicle.mileage).toLocaleString()} mi` : ""); // Mileage
 
       // Condition checkboxes — default to "Good"

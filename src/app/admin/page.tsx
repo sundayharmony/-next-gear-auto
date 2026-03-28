@@ -1,9 +1,13 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { Car, DollarSign, Calendar, CalendarDays, Users, TrendingUp, Clock, ArrowRight, Tag, Star, BarChart3, AlertCircle } from "lucide-react";
+import {
+  Car, DollarSign, Calendar, CalendarDays, Users, TrendingUp, Clock,
+  ArrowRight, Tag, Star, BarChart3, AlertCircle, ClipboardList, Wrench,
+  RefreshCw, CheckCircle2, Settings,
+} from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +21,7 @@ interface DashboardData {
   confirmedBookings: number;
   pendingBookings: number;
   activeBookings: number;
+  completedBookings: number;
   totalRevenue: number;
   totalDeposits: number;
   recentBookings: Array<{
@@ -33,59 +38,79 @@ interface DashboardData {
   }>;
 }
 
+function formatCurrency(amount: number): string {
+  return amount.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
+}
+
 export default function AdminDashboardPage() {
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
-  async function fetchData() {
+  const fetchData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
     setError(false);
     try {
-      const res = await adminFetch("/api/bookings");
+      const res = await adminFetch("/api/bookings", { signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const result = await res.json();
       if (result.success) {
         const allBookings = result.data || [];
-        // Exclude cancelled bookings from dashboard
         const bookings = allBookings.filter((b: { status: string }) => b.status !== "cancelled");
         const confirmed = bookings.filter((b: { status: string }) => b.status === "confirmed");
         const pending = bookings.filter((b: { status: string }) => b.status === "pending");
         const active = bookings.filter((b: { status: string }) => b.status === "active");
-        const totalRevenue = bookings
-          .filter((b: { status: string }) => ["confirmed", "active", "completed"].includes(b.status))
-          .reduce((sum: number, b: { total_price: number }) => sum + (b.total_price ?? 0), 0);
-        const totalDeposits = bookings
-          .filter((b: { status: string }) => ["confirmed", "active", "completed"].includes(b.status))
-          .reduce((sum: number, b: { deposit: number }) => sum + (b.deposit ?? 0), 0);
+        const completed = bookings.filter((b: { status: string }) => b.status === "completed");
+        const revenueBookings = bookings.filter((b: { status: string }) => ["confirmed", "active", "completed"].includes(b.status));
+        const totalRevenue = revenueBookings.reduce((sum: number, b: { total_price: number }) => sum + (b.total_price ?? 0), 0);
+        const totalDeposits = revenueBookings.reduce((sum: number, b: { deposit: number }) => sum + (b.deposit ?? 0), 0);
 
         setData({
           totalBookings: bookings.length,
           confirmedBookings: confirmed.length,
           pendingBookings: pending.length,
           activeBookings: active.length,
+          completedBookings: completed.length,
           totalRevenue,
           totalDeposits,
           recentBookings: bookings.slice(0, 10),
         });
+      } else {
+        setError(true);
       }
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return;
       logger.error("Failed to fetch dashboard data:", err);
       setError(true);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  }
+  }, []);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    const controller = new AbortController();
+    fetchData(controller.signal);
+    return () => controller.abort();
+  }, [fetchData]);
 
   return (
     <>
       <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-          <p className="mt-1 text-purple-200">Overview of your rental business.</p>
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <p className="mt-1 text-purple-200">Overview of your rental business.</p>
+          </div>
+          {data && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="border-purple-400 text-purple-200 hover:bg-purple-800 hover:text-white"
+              onClick={() => fetchData()}
+            >
+              <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
+            </Button>
+          )}
         </div>
       </section>
 
@@ -95,25 +120,35 @@ export default function AdminDashboardPage() {
             <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" role="status" aria-label="Loading dashboard" />
             <p className="mt-4 text-gray-500">Loading dashboard...</p>
           </div>
+        ) : error ? (
+          <div className="text-center py-12">
+            <div className="flex justify-center mb-4">
+              <AlertCircle className="h-12 w-12 text-red-500" />
+            </div>
+            <p className="text-gray-600 mb-4">Failed to load dashboard data.</p>
+            <Button onClick={() => fetchData()}>Retry</Button>
+          </div>
         ) : data ? (
           <>
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-4 lg:grid-cols-4 mb-8">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6 mb-8">
               {[
-                { label: "Total Bookings", value: data.totalBookings, icon: Calendar, color: "text-purple-600" },
-                { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600" },
-                { label: "Revenue", value: `$${(data.totalRevenue ?? 0).toFixed(0)}`, icon: DollarSign, color: "text-green-600" },
-                { label: "Payments Collected", value: `$${(data.totalDeposits ?? 0).toFixed(0)}`, icon: TrendingUp, color: "text-emerald-600" },
+                { label: "Total Bookings", value: data.totalBookings, icon: Calendar, color: "text-purple-600", bg: "bg-purple-50" },
+                { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600", bg: "bg-blue-50" },
+                { label: "Confirmed", value: data.confirmedBookings, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
+                { label: "Pending", value: data.pendingBookings, icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50" },
+                { label: "Revenue", value: formatCurrency(data.totalRevenue ?? 0), icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
+                { label: "Collected", value: formatCurrency(data.totalDeposits ?? 0), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
               ].map((stat) => (
                 <Card key={stat.label}>
-                  <CardContent className="p-5">
+                  <CardContent className="p-4">
                     <div className="flex items-center gap-3">
-                      <div className={`rounded-lg bg-gray-50 p-2.5 ${stat.color}`}>
+                      <div className={`rounded-lg ${stat.bg} p-2.5 ${stat.color}`}>
                         <stat.icon className="h-5 w-5" />
                       </div>
-                      <div>
-                        <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                        <p className="text-xs text-gray-500">{stat.label}</p>
+                      <div className="min-w-0">
+                        <p className="text-xl font-bold text-gray-900 truncate">{stat.value}</p>
+                        <p className="text-xs text-gray-500 truncate">{stat.label}</p>
                       </div>
                     </div>
                   </CardContent>
@@ -121,50 +156,21 @@ export default function AdminDashboardPage() {
               ))}
             </div>
 
-            {/* Quick Status */}
-            <div className="grid grid-cols-1 gap-4 lg:grid-cols-3 mb-8">
-              <Card className="border-yellow-200 bg-yellow-50">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <Clock className="h-8 w-8 text-yellow-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-yellow-700">{data.pendingBookings}</p>
-                    <p className="text-sm text-yellow-600">Pending Payments</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-green-200 bg-green-50">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <Calendar className="h-8 w-8 text-green-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-green-700">{data.confirmedBookings}</p>
-                    <p className="text-sm text-green-600">Confirmed Bookings</p>
-                  </div>
-                </CardContent>
-              </Card>
-              <Card className="border-blue-200 bg-blue-50">
-                <CardContent className="p-4 flex items-center gap-3">
-                  <Users className="h-8 w-8 text-blue-600" />
-                  <div>
-                    <p className="text-2xl font-bold text-blue-700">{data.activeBookings}</p>
-                    <p className="text-sm text-blue-600">Active Rentals</p>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
             {/* Management Quick Links */}
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Manage</h2>
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-3 mb-8">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mb-8">
               {[
-                { label: "Calendar", desc: "View trip timeline", icon: CalendarDays, href: "/admin/calendar", color: "bg-indigo-100 text-indigo-700" },
-                { label: "Vehicles", desc: "Manage fleet", icon: Car, href: "/admin/vehicles", color: "bg-purple-100 text-purple-700" },
+                { label: "Bookings", desc: "All reservations", icon: ClipboardList, href: "/admin/bookings", color: "bg-purple-100 text-purple-700" },
+                { label: "Calendar", desc: "Trip timeline", icon: CalendarDays, href: "/admin/calendar", color: "bg-indigo-100 text-indigo-700" },
+                { label: "Vehicles", desc: "Manage fleet", icon: Car, href: "/admin/vehicles", color: "bg-blue-100 text-blue-700" },
+                { label: "Customers", desc: "View all users", icon: Users, href: "/admin/customers", color: "bg-sky-100 text-sky-700" },
                 { label: "Finances", desc: "Revenue & expenses", icon: BarChart3, href: "/admin/finances", color: "bg-emerald-100 text-emerald-700" },
+                { label: "Maintenance", desc: "Service records", icon: Wrench, href: "/admin/maintenance", color: "bg-orange-100 text-orange-700" },
                 { label: "Promo Codes", desc: "Discounts & coupons", icon: Tag, href: "/admin/promo-codes", color: "bg-green-100 text-green-700" },
                 { label: "Reviews", desc: "Moderate feedback", icon: Star, href: "/admin/reviews", color: "bg-amber-100 text-amber-700" },
-                { label: "Customers", desc: "View all users", icon: Users, href: "/admin/customers", color: "bg-blue-100 text-blue-700" },
               ].map((item) => (
                 <Link key={item.href} href={item.href}>
-                  <Card className="group cursor-pointer transition-all hover:shadow-md hover:border-purple-200 focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2">
+                  <Card className="group h-full cursor-pointer transition-all hover:shadow-md hover:border-purple-200 focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2">
                     <CardContent className="p-5">
                       <div className={`inline-flex rounded-lg p-2.5 mb-3 ${item.color}`}>
                         <item.icon className="h-5 w-5" />
@@ -192,11 +198,11 @@ export default function AdminDashboardPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-gray-50">
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">ID</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-500">Customer</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-500">Vehicle</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Dates</th>
-                      <th className="px-4 py-3 text-left font-medium text-gray-500">Total</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500 hidden md:table-cell">Pickup</th>
+                      <th className="px-4 py-3 text-left font-medium text-gray-500 hidden md:table-cell">Return</th>
+                      <th className="px-4 py-3 text-right font-medium text-gray-500">Total</th>
                       <th className="px-4 py-3 text-left font-medium text-gray-500">Status</th>
                     </tr>
                   </thead>
@@ -209,15 +215,21 @@ export default function AdminDashboardPage() {
                       </tr>
                     ) : (
                       data.recentBookings.map((booking) => (
-                        <tr key={booking.id} className="border-b last:border-0 hover:bg-gray-50">
-                          <td className="px-4 py-3 font-mono text-xs text-purple-600 max-w-[120px] truncate" title={booking.id}>{booking.id}</td>
-                          <td className="px-4 py-3 text-gray-900 max-w-[150px] truncate" title={booking.customer_name || "—"}>{booking.customer_name || "—"}</td>
-                          <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate" title={booking.vehicleName}>{booking.vehicleName}</td>
+                        <tr key={booking.id} className="border-b last:border-0 hover:bg-gray-50 transition-colors">
                           <td className="px-4 py-3">
-                            <div><span className="text-sm font-bold text-black">{formatDate(booking.pickup_date)}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.pickup_time)}</span></div>
-                            <div><span className="text-sm font-bold text-black">{formatDate(booking.return_date)}</span> at <span className="text-sm font-bold text-purple-600">{formatTime(booking.return_time)}</span></div>
+                            <div className="text-gray-900 font-medium truncate max-w-[140px]" title={booking.customer_name || "—"}>{booking.customer_name || "—"}</div>
+                            <div className="text-xs text-gray-400 font-mono truncate max-w-[140px]" title={booking.id}>{booking.id}</div>
                           </td>
-                          <td className="px-4 py-3 font-medium">${(booking.total_price ?? 0).toFixed(2)}</td>
+                          <td className="px-4 py-3 text-gray-600 max-w-[160px] truncate" title={booking.vehicleName || "—"}>{booking.vehicleName || "—"}</td>
+                          <td className="px-4 py-3 hidden md:table-cell">
+                            <div className="text-gray-900">{formatDate(booking.pickup_date)}</div>
+                            <div className="text-xs text-purple-600 font-medium">{formatTime(booking.pickup_time)}</div>
+                          </td>
+                          <td className="px-4 py-3 hidden md:table-cell">
+                            <div className="text-gray-900">{formatDate(booking.return_date)}</div>
+                            <div className="text-xs text-purple-600 font-medium">{formatTime(booking.return_time)}</div>
+                          </td>
+                          <td className="px-4 py-3 text-right font-medium tabular-nums">${(booking.total_price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                           <td className="px-4 py-3">
                             <Badge className={statusColors[booking.status] || "bg-gray-100 text-gray-600"}>
                               {booking.status}
@@ -231,17 +243,7 @@ export default function AdminDashboardPage() {
               </div>
             </Card>
           </>
-        ) : error ? (
-          <div className="text-center py-12">
-            <div className="flex justify-center mb-4">
-              <AlertCircle className="h-12 w-12 text-red-500" />
-            </div>
-            <p className="text-gray-600 mb-4">Failed to load dashboard data.</p>
-            <Button onClick={fetchData}>Retry</Button>
-          </div>
-        ) : (
-          <p className="text-center text-gray-500 py-12">Failed to load dashboard data.</p>
-        )}
+        ) : null}
       </PageContainer>
     </>
   );
