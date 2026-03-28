@@ -9,14 +9,23 @@ import {
   X,
   Check,
   Mail,
+  Car,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { SortField, SortOrder } from "../types";
 
+interface VehicleOption {
+  id: string;
+  name: string;
+}
+
 interface BookingFiltersProps {
   statusFilter: string;
   onStatusChange: (status: string) => void;
+  vehicleFilter: string;
+  onVehicleChange: (vehicle: string) => void;
+  vehicleOptions: VehicleOption[];
   searchQuery: string;
   onSearchChange: (query: string) => void;
   sortField: SortField;
@@ -41,6 +50,9 @@ const statuses = ["all", "pending", "confirmed", "active", "completed", "cancell
 export default function BookingFilters({
   statusFilter,
   onStatusChange,
+  vehicleFilter,
+  onVehicleChange,
+  vehicleOptions,
   searchQuery,
   onSearchChange,
   bookingCount,
@@ -77,7 +89,7 @@ export default function BookingFilters({
         ))}
       </div>
 
-      {/* Search bar + actions row */}
+      {/* Search bar + vehicle filter + actions row */}
       <div className="flex gap-3 items-center">
         <div className="flex-1 relative">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
@@ -88,6 +100,20 @@ export default function BookingFilters({
             onChange={(e) => onSearchChange(e.target.value)}
             className="pl-10 focus-visible:outline-2 focus-visible:outline-purple-600 focus-visible:outline-offset-0"
           />
+        </div>
+        <div className="relative">
+          <Car className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+          <select
+            value={vehicleFilter}
+            onChange={(e) => onVehicleChange(e.target.value)}
+            className="pl-8 pr-3 py-2 border rounded text-sm bg-white text-gray-700 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none min-w-[180px] appearance-none cursor-pointer"
+            aria-label="Filter by vehicle"
+          >
+            <option value="all">All Vehicles</option>
+            {vehicleOptions.map((v) => (
+              <option key={v.id} value={v.name}>{v.name}</option>
+            ))}
+          </select>
         </div>
         <Button
           variant="outline"

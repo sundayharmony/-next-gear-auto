@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Check, AlertTriangle } from "lucide-react";
+import { X, Check, AlertTriangle, Calculator } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -504,21 +504,22 @@ export default function CreateBookingForm({
                   setForm({ ...form, totalPrice: isNaN(amount) ? 0 : amount });
                 }}
                 placeholder="0.00"
-                className={manualPriceOverride ? "border-amber-400 bg-amber-50/50 pr-20" : ""}
+                className={manualPriceOverride ? "border-amber-400 bg-amber-50/50 pr-10" : ""}
               />
               {manualPriceOverride && (
                 <button
                   type="button"
                   onClick={() => setManualPriceOverride(false)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[11px] font-medium text-purple-600 hover:text-purple-800 bg-white px-2 py-0.5 rounded border border-purple-200 hover:border-purple-400 transition-colors"
+                  title="Recalculate from daily rate"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-purple-500 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
                 >
-                  Recalculate
+                  <Calculator className="w-4 h-4" />
                 </button>
               )}
             </div>
             <div className="text-xs text-gray-500 mt-1">
               {manualPriceOverride
-                ? "Custom price set — click Recalculate to restore auto-pricing"
+                ? "Custom price — tap calculator to restore auto-pricing"
                 : "Auto-calculated from daily rate, editable for custom pricing"}
             </div>
           </div>

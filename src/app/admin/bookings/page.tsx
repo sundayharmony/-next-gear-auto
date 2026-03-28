@@ -38,6 +38,7 @@ function AdminBookingsContent() {
     bookings, vehicles, allCustomers, loading,
     error, success, setError, setSuccess,
     statusFilter, setStatusFilter,
+    vehicleFilter, setVehicleFilter,
     searchQuery, setSearchQuery,
     sortField, sortOrder, setSort,
     fetchBookings, updateStatus, bulkUpdateStatus, updating,
@@ -95,7 +96,19 @@ function AdminBookingsContent() {
   // Reset page when filters change
   useEffect(() => {
     resetPage();
-  }, [statusFilter, searchQuery, resetPage]);
+  }, [statusFilter, vehicleFilter, searchQuery, resetPage]);
+
+  // Build unique vehicle options for the filter dropdown
+  const vehicleOptions = React.useMemo(() => {
+    const uniqueNames = new Map<string, string>();
+    vehicles.forEach((v) => {
+      const name = `${v.year} ${v.make} ${v.model}`;
+      if (!uniqueNames.has(name)) uniqueNames.set(name, v.id);
+    });
+    return Array.from(uniqueNames.entries())
+      .map(([name, id]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [vehicles]);
 
   // Paginate bookings
   const paginatedBookings = paginateArray(bookings);
@@ -243,6 +256,9 @@ function AdminBookingsContent() {
         <BookingFilters
           statusFilter={statusFilter}
           onStatusChange={setStatusFilter}
+          vehicleFilter={vehicleFilter}
+          onVehicleChange={setVehicleFilter}
+          vehicleOptions={vehicleOptions}
           searchQuery={searchQuery}
           onSearchChange={setSearchQuery}
           sortField={sortField}

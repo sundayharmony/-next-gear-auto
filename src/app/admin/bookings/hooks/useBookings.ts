@@ -17,6 +17,8 @@ interface UseBookingsReturn {
   setSuccess: (msg: string | null) => void;
   statusFilter: string;
   setStatusFilter: (s: string) => void;
+  vehicleFilter: string;
+  setVehicleFilter: (v: string) => void;
   searchQuery: string;
   setSearchQuery: (q: string) => void;
   sortField: SortField;
@@ -38,6 +40,7 @@ export function useBookings(): UseBookingsReturn {
   const [loading, setLoading] = useState(true);
   const { error, setError, success, setSuccess } = useAutoToast();
   const [statusFilter, setStatusFilter] = useState("all");
+  const [vehicleFilter, setVehicleFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [sortField, setSortField] = useState<SortField>("pickup_date");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -57,19 +60,22 @@ export function useBookings(): UseBookingsReturn {
       if (!res.ok) throw new Error(`Failed to fetch bookings: ${res.status}`);
       const data = await res.json();
       if (data.success) {
-        const results = data.data || [];
+        let results = data.data || [];
         // Hide cancelled unless specifically filtering for them
         if (statusFilter === "all") {
-          setBookings(results.filter((b: BookingRow) => b.status !== "cancelled"));
-        } else {
-          setBookings(results);
+          results = results.filter((b: BookingRow) => b.status !== "cancelled");
         }
+        // Client-side vehicle filter
+        if (vehicleFilter && vehicleFilter !== "all") {
+          results = results.filter((b: BookingRow) => b.vehicleName === vehicleFilter);
+        }
+        setBookings(results);
       }
     } catch (err) {
       logger.error("Failed to fetch bookings:", err);
     }
     setLoading(false);
-  }, [statusFilter, searchQuery, sortField, sortOrder]);
+  }, [statusFilter, vehicleFilter, searchQuery, sortField, sortOrder]);
 
   const fetchVehicles = useCallback(async () => {
     try {
@@ -209,6 +215,7 @@ export function useBookings(): UseBookingsReturn {
     bookings, vehicles, allCustomers, loading,
     error, success, setError, setSuccess,
     statusFilter, setStatusFilter,
+    vehicleFilter, setVehicleFilter,
     searchQuery, setSearchQuery,
     sortField, sortOrder, setSort,
     fetchBookings, updateStatus, bulkUpdateStatus, updating,
