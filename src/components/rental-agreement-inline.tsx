@@ -27,8 +27,11 @@ interface RentalAgreementInlineProps {
 
 const formatDate = (d: string | undefined) => {
   if (!d) return "___________";
-  const [y, m, day] = d.split("-").map(Number);
+  const parts = d.split("-").map(Number);
+  if (parts.length < 3 || parts.some(isNaN)) return "___________";
+  const [y, m, day] = parts;
   const date = new Date(y, m - 1, day);
+  if (isNaN(date.getTime())) return "___________";
   return date.toLocaleDateString("en-US", {
     weekday: "short",
     month: "2-digit",
@@ -83,12 +86,12 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
           VEHICLE INFORMATION
         </h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-          <div><span className="font-semibold">Make & Model:</span>{" "}<Field value={vehicle ? `${vehicle.make} ${vehicle.model}` : undefined} width="180px" /></div>
+          <div><span className="font-semibold">Make & Model:</span>{" "}<Field value={vehicle ? `${vehicle.make || ""} ${vehicle.model || ""}`.trim() || undefined : undefined} width="180px" /></div>
           <div><span className="font-semibold">Year:</span>{" "}<Field value={vehicle?.year} width="80px" /></div>
           <div><span className="font-semibold">License Plate:</span>{" "}<Field value={vehicle?.licensePlate} width="120px" /></div>
           <div><span className="font-semibold">VIN:</span>{" "}<Field value={vehicle?.vin} width="180px" /></div>
           <div><span className="font-semibold">Color:</span>{" "}<Field value={vehicle?.color} width="100px" /></div>
-          <div><span className="font-semibold">Mileage:</span>{" "}<Field value={vehicle?.mileage ? `${Number(vehicle.mileage).toLocaleString()} mi` : undefined} width="120px" /></div>
+          <div><span className="font-semibold">Mileage:</span>{" "}<Field value={vehicle?.mileage && Number.isFinite(Number(vehicle.mileage)) ? `${Number(vehicle.mileage).toLocaleString()} mi` : undefined} width="120px" /></div>
         </div>
         <div className="mt-2">
           <span className="font-semibold">Condition:</span>{" "}

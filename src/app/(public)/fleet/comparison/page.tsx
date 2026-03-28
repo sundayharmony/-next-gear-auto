@@ -148,11 +148,13 @@ function ComparisonContent() {
                 <tr key={row.label} className="border-b border-gray-100">
                   <td className="p-3 text-sm text-gray-500">{row.label}</td>
                   {selectedVehicles.map((v) => {
-                    const value = row.getValue(v);
+                    const value = row.getValue(v) || "";
                     const isLowest = selectedVehicles.every(
-                      (other) =>
-                        parseFloat(row.getValue(other).replace("$", "")) >=
-                        parseFloat(value.replace("$", ""))
+                      (other) => {
+                        const otherVal = row.getValue(other) || "";
+                        return parseFloat(otherVal.replace("$", "") || "0") >=
+                          parseFloat(value.replace("$", "") || "0");
+                      }
                     );
                     return (
                       <td

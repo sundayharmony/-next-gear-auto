@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       category: v.category,
       images: v.images || [],
       specs: v.specs || {},
-      dailyRate: v.daily_rate,
+      dailyRate: v.daily_rate ?? 0,
       features: v.features || [],
       isAvailable: v.is_available,
       description: v.description || "",

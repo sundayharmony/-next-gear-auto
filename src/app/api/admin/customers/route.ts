@@ -86,7 +86,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Failed to create customer" }, { status: 500 });
     }
 
-    const customer = (data && data[0]) ? {
+    const customer = (data && data.length > 0) ? {
       id: data[0].id,
       name: data[0].name,
       email: data[0].email,

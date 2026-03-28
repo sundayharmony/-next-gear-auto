@@ -202,11 +202,13 @@ export default function AccountPage() {
   }
 
   const initials = (user?.name || "User")
-    .split(" ")
-    .map((n: string) => n[0])
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((n: string) => n[0] || "")
     .join("")
     .toUpperCase()
-    .slice(0, 2);
+    .slice(0, 2) || "U";
 
   const tabs = [
     { id: "overview" as Tab, label: "Overview", icon: BarChart3 },

@@ -93,8 +93,8 @@ export default function CreateBookingForm({
     if (value.trim()) {
       const filtered = allCustomers.filter(
         (c) =>
-          c.name.toLowerCase().includes(value.toLowerCase()) ||
-          c.email.toLowerCase().includes(value.toLowerCase())
+          (c.name || "").toLowerCase().includes(value.toLowerCase()) ||
+          (c.email || "").toLowerCase().includes(value.toLowerCase())
       );
       setFilteredCustomers(filtered.slice(0, 8));
       setShowDropdown(true);
@@ -158,7 +158,7 @@ export default function CreateBookingForm({
     }
 
     const days = calculateDays();
-    let baseTotal = days * selectedVehicle.dailyRate;
+    let baseTotal = days * (selectedVehicle.dailyRate ?? 0);
     let extrasTotal = 0;
 
     form.selectedExtras.forEach((extraId) => {

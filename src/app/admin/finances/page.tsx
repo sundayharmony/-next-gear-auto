@@ -279,11 +279,11 @@ export default function AdminFinancesPage() {
       const maintenanceData = maintenanceRes.ok ? await maintenanceRes.json() : { data: [] };
       const ticketsData = ticketsRes.ok ? await ticketsRes.json() : { data: [] };
 
-      setBookings(bookingsData.data || []);
-      setExpenses(expensesData.data || []);
-      setVehicles(vehiclesData.data || []);
-      setMaintenance(maintenanceData.data || []);
-      setTickets(ticketsData.data || []);
+      setBookings(Array.isArray(bookingsData?.data) ? bookingsData.data : []);
+      setExpenses(Array.isArray(expensesData?.data) ? expensesData.data : []);
+      setVehicles(Array.isArray(vehiclesData?.data) ? vehiclesData.data : []);
+      setMaintenance(Array.isArray(maintenanceData?.data) ? maintenanceData.data : []);
+      setTickets(Array.isArray(ticketsData?.data) ? ticketsData.data : []);
     } catch (err) {
       logger.error("Error fetching data:", err);
       setError(err instanceof Error ? err.message : "Failed to load dashboard data");

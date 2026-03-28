@@ -240,10 +240,13 @@ export async function PUT(req: NextRequest) {
 
       // Use the new vehicleId if it was changed, otherwise use the existing one
       const targetVehicleId = updates.vehicleId || record.vehicle_id;
-      await supabase
-        .from("vehicles")
-        .update({ maintenance_status: vehicleStatus })
-        .eq("id", targetVehicleId);
+      if (targetVehicleId) {
+        const { error: vErr } = await supabase
+          .from("vehicles")
+          .update({ maintenance_status: vehicleStatus })
+          .eq("id", targetVehicleId);
+        if (vErr) logger.error("Failed to update vehicle status:", vErr);
+      }
     }
 
     return NextResponse.json({ success: true, message: "Record updated" });

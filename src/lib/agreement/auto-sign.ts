@@ -23,7 +23,7 @@ export async function autoSignAgreement(bookingId: string) {
     .single();
 
   if (bookingErr || !booking) {
-    console.error("Auto-sign: booking not found", bookingId);
+    logger.error("Auto-sign: booking not found", { bookingId, error: bookingErr?.message });
     return null;
   }
 
@@ -87,11 +87,11 @@ export async function autoSignAgreement(bookingId: string) {
 
   // === Fill all fields (same as generate route) ===
   if (vehicle) {
-    setText("t1", `${vehicle.make} ${vehicle.model}`);
-    setText("t2", vehicle.year);
-    setText("t3", vehicle.license_plate);
-    setText("t4", vehicle.vin);
-    setText("t5", vehicle.color);
+    setText("t1", `${vehicle.make || ""} ${vehicle.model || ""}`.trim());
+    setText("t2", vehicle.year || "");
+    setText("t3", vehicle.license_plate || "");
+    setText("t4", vehicle.vin || "");
+    setText("t5", vehicle.color || "");
     setText("t6", vehicle.mileage ? `${Number(vehicle.mileage).toLocaleString()} mi` : "");
     setCheck("c7", false);
     setCheck("c8", true);

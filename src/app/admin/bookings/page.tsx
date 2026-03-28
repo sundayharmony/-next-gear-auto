@@ -130,7 +130,7 @@ function AdminBookingsContent() {
           });
           if (!res.ok) { failCount++; continue; }
           const data = await res.json();
-          if (data.success) sentCount++;
+          if (data?.success) sentCount++;
           else failCount++;
         } catch {
           failCount++;

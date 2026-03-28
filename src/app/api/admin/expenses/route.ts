@@ -81,9 +81,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!amount || amount <= 0) {
+    const parsedAmount = typeof amount === "number" ? amount : parseFloat(amount);
+    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
       return NextResponse.json(
-        { success: false, error: "Invalid amount" },
+        { success: false, error: "Amount must be a valid positive number" },
         { status: 400 }
       );
     }
@@ -105,7 +106,7 @@ export async function POST(request: NextRequest) {
           id,
           vehicle_id: vehicleId || null,
           category,
-          amount: parseFloat(amount),
+          amount: parsedAmount,
           description: description || null,
           date,
           created_at: new Date().toISOString(),

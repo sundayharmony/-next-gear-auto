@@ -32,7 +32,8 @@ export function formatTime(timeStr: string | null | undefined): string {
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
 
-export function formatDateShort(dateStr: string): string {
+export function formatDateShort(dateStr: string | null | undefined): string {
+  if (!dateStr) return "—";
   const date = parseLocalDate(dateStr);
   if (isNaN(date.getTime())) return "—";
   return date.toLocaleDateString("en-US", {
@@ -49,16 +50,22 @@ export function formatCurrency(amount: number): string {
   }).format(amount);
 }
 
-export function isDateInPast(dateStr: string): boolean {
+export function isDateInPast(dateStr: string | null | undefined): boolean {
+  if (!dateStr) return false;
   const date = parseLocalDate(dateStr);
+  if (isNaN(date.getTime())) return false;
   const now = new Date();
   // Compare date portion only (ignore time)
   now.setHours(0, 0, 0, 0);
   return date < now;
 }
 
-export function isDateAfter(dateStr1: string, dateStr2: string): boolean {
-  return parseLocalDate(dateStr1) > parseLocalDate(dateStr2);
+export function isDateAfter(dateStr1: string | null | undefined, dateStr2: string | null | undefined): boolean {
+  if (!dateStr1 || !dateStr2) return false;
+  const d1 = parseLocalDate(dateStr1);
+  const d2 = parseLocalDate(dateStr2);
+  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return false;
+  return d1 > d2;
 }
 
 export function getMinPickupDate(): string {
@@ -71,9 +78,11 @@ export function getMinPickupDate(): string {
   return `${y}-${m}-${d}`;
 }
 
-export function daysBetween(date1: string, date2: string): number {
+export function daysBetween(date1: string | null | undefined, date2: string | null | undefined): number {
+  if (!date1 || !date2) return 0;
   const d1 = parseLocalDate(date1);
   const d2 = parseLocalDate(date2);
+  if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
   const diffTime = Math.abs(d2.getTime() - d1.getTime());
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }

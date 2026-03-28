@@ -126,13 +126,13 @@ export default function AdminMaintenancePage() {
       const recordsData = await recordsRes.json();
       const vehiclesData = await vehiclesRes.json();
 
-      if (recordsData.success) {
+      if (recordsData?.success && Array.isArray(recordsData.data)) {
         setRecords(recordsData.data);
       } else {
         setError("Failed to load maintenance records");
       }
 
-      if (vehiclesData.success) {
+      if (vehiclesData?.success && Array.isArray(vehiclesData.data)) {
         setVehicles(vehiclesData.data);
       }
     } catch (err) {

@@ -32,8 +32,10 @@ export function getTransporter() {
       secure: port === 465, // port 465 = SSL
       auth: {
         user: SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        pass: process.env.SMTP_PASS || "",
       },
+      connectionTimeout: 10000,
+      greetingTimeout: 10000,
     });
   }
   return _transporter;
@@ -153,6 +155,12 @@ export async function sendPickupReminder(data: BookingEmailData) {
 
 export async function sendAgreementEmail(data: BookingEmailData & { pdfBytes: Uint8Array }) {
   try {
+    if (!data.pdfBytes || data.pdfBytes.length === 0) {
+      throw new Error("Cannot send agreement email: PDF bytes are empty");
+    }
+    if (!data.customerEmail) {
+      throw new Error("Cannot send agreement email: no customer email");
+    }
     const transporter = getTransporter();
     await transporter.sendMail({
       from: FROM_CUSTOMER,

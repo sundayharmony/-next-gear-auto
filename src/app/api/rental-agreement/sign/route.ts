@@ -211,9 +211,10 @@ export async function POST(req: NextRequest) {
 
     const totalPrice = booking.total_price ?? 0;
     const deposit = booking.deposit ?? 0;
-    const pickupDate = new Date(booking.pickup_date + "T00:00:00");
-    const returnDate = new Date(booking.return_date + "T00:00:00");
-    const totalDays = Math.max(1, Math.ceil((returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24)));
+    const pickupDate = booking.pickup_date ? new Date(booking.pickup_date + "T00:00:00") : new Date();
+    const returnDate = booking.return_date ? new Date(booking.return_date + "T00:00:00") : new Date();
+    const daysDiff = (returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24);
+    const totalDays = Math.max(1, Math.ceil(Number.isFinite(daysDiff) ? daysDiff : 1));
 
     setText("t26", `$${totalPrice.toFixed(2)}`);
     setText("t27", String(totalDays));

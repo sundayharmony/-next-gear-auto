@@ -112,8 +112,8 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!vehicle) return {};
 
   const vehicleReviews = await getVehicleReviews(id);
-  const avgRating = vehicleReviews.length
-    ? (vehicleReviews.reduce((sum, r) => sum + r.rating, 0) / vehicleReviews.length).toFixed(1)
+  const avgRating = vehicleReviews.length > 0
+    ? (vehicleReviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / vehicleReviews.length).toFixed(1)
     : null;
 
   const displayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
@@ -142,8 +142,8 @@ export default async function VehicleDetailPage({ params }: PageProps) {
   }
 
   const vehicleReviews = await getVehicleReviews(id);
-  const avgRating = vehicleReviews.length
-    ? (vehicleReviews.reduce((sum, r) => sum + r.rating, 0) / vehicleReviews.length).toFixed(1)
+  const avgRating = vehicleReviews.length > 0
+    ? (vehicleReviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / vehicleReviews.length).toFixed(1)
     : null;
 
   // Fetch similar vehicles: same category, excluding current

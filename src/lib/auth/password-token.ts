@@ -34,8 +34,10 @@ export function validatePasswordToken(token: string): string | null {
     const parts = decoded.split(":");
     if (parts.length < 3) return null;
 
-    const hmac = parts.pop()!;
-    const timestamp = parseInt(parts.pop()!, 10);
+    const hmac = parts.pop();
+    const timestampStr = parts.pop();
+    if (!hmac || !timestampStr) return null;
+    const timestamp = parseInt(timestampStr, 10);
     const email = parts.join(":"); // handles emails with colons (rare but safe)
 
     if (!email || isNaN(timestamp)) return null;

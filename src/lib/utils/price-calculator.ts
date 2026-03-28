@@ -6,6 +6,11 @@ const MAX_MULTI_DAY_DISCOUNT = 0.25;  // cap at 25% max discount per day
 const INSURANCE_DISCOUNT_RATE = 0.15;  // 15% off insurance
 const INSURANCE_EXTRA_ID = "e1";
 
+/** Round to 2 decimal places with epsilon correction for floating-point precision */
+function roundCents(n: number): number {
+  return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
 export function calculateRentalDays(pickupDate: string, returnDate: string): number {
   const pickup = new Date(pickupDate);
   const returnD = new Date(returnDate);
@@ -35,9 +40,9 @@ export function calculateBaseRate(days: number, dailyRate: number): { total: num
     total += dailyRate * (1 - cappedDiscount);
   }
 
-  total = Math.round(total * 100) / 100;
+  total = roundCents(total);
   const fullPrice = days * dailyRate;
-  const discount = Math.round((fullPrice - total) * 100) / 100;
+  const discount = roundCents(fullPrice - total);
 
   return { total, discount };
 }
@@ -66,8 +71,8 @@ export function calculateExtrasTotal(
       // Apply 15% insurance discount
       if (extra.id === INSURANCE_EXTRA_ID) {
         const fullTotal = total;
-        total = Math.round(total * (1 - INSURANCE_DISCOUNT_RATE) * 100) / 100;
-        insuranceDiscount = Math.round((fullTotal - total) * 100) / 100;
+        total = roundCents(total * (1 - INSURANCE_DISCOUNT_RATE));
+        insuranceDiscount = roundCents(fullTotal - total);
       }
 
       return { name: extra.name, total };
@@ -85,7 +90,7 @@ export function calculatePricing(
   const extrasResult = calculateExtrasTotal(extras, days);
   const extrasTotal = extrasResult.items.reduce((sum, e) => sum + e.total, 0);
   const subtotal = base.total + extrasTotal;
-  const tax = Math.round(subtotal * TAX_RATE * 100) / 100;
+  const tax = roundCents(subtotal * TAX_RATE);
   const total = subtotal + tax;
 
   return {
@@ -118,11 +123,11 @@ export function applyDiscount(
   discount: PromoDiscount
 ): PricingBreakdown & { discount: PromoDiscount } {
   const discountAmount = discount.discountType === "percentage"
-    ? Math.round(pricing.subtotal * (discount.discountValue / 100) * 100) / 100
+    ? roundCents(pricing.subtotal * (discount.discountValue / 100))
     : Math.min(discount.discountValue, pricing.subtotal);
 
   const discountedSubtotal = pricing.subtotal - discountAmount;
-  const tax = Math.round(discountedSubtotal * TAX_RATE * 100) / 100;
+  const tax = roundCents(discountedSubtotal * TAX_RATE);
   const total = discountedSubtotal + tax;
 
   return {

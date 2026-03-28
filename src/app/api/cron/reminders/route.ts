@@ -51,11 +51,11 @@ export async function GET(request: Request) {
             bookingId: booking.id,
             customerName: booking.customer_name || "Customer",
             customerEmail: booking.customer_email,
-            vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
+            vehicleName: vehicle ? `${vehicle.year ?? ""} ${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim() || "Vehicle" : "Vehicle",
             pickupDate: booking.pickup_date,
             returnDate: booking.return_date,
-            totalPrice: booking.total_price,
-            deposit: booking.deposit,
+            totalPrice: booking.total_price ?? 0,
+            deposit: booking.deposit ?? 0,
           });
           pickupCount++;
         } catch (err) {
@@ -85,11 +85,11 @@ export async function GET(request: Request) {
             bookingId: booking.id,
             customerName: booking.customer_name || "Customer",
             customerEmail: booking.customer_email,
-            vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
+            vehicleName: vehicle ? `${vehicle.year ?? ""} ${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim() || "Vehicle" : "Vehicle",
             pickupDate: booking.pickup_date,
             returnDate: booking.return_date,
-            totalPrice: booking.total_price,
-            deposit: booking.deposit,
+            totalPrice: booking.total_price ?? 0,
+            deposit: booking.deposit ?? 0,
           });
           returnCount++;
         } catch (err) {

@@ -61,8 +61,9 @@ export function calculateFinancing(
   const rawDay = Number(vehicle.paymentDayOfMonth) || 1;
   const paymentDay = Math.min(Math.max(rawDay, 1), 31);
   const purchasePrice = vehicle.purchasePrice ?? 0;
-  const startDate = new Date(vehicle.financingStartDate);
+  if (purchasePrice < 0) return null;
 
+  const startDate = new Date(vehicle.financingStartDate);
   if (isNaN(startDate.getTime())) return null;
 
   let paymentsProcessed = 0;

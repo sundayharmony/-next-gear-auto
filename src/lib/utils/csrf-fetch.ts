@@ -12,7 +12,12 @@
 export function getCsrfToken(): string {
   if (typeof document === "undefined") return "";
   const match = document.cookie.match(/(?:^|;\s*)nga_csrf=([^;]*)/);
-  return match ? decodeURIComponent(match[1]) : "";
+  if (!match || !match[1]) return "";
+  try {
+    return decodeURIComponent(match[1]);
+  } catch {
+    return "";
+  }
 }
 
 /** Fetch wrapper that automatically includes the CSRF token header */

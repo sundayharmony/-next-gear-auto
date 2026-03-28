@@ -262,7 +262,7 @@ export default function AgreementSigningPage() {
                   pickupTime={booking.pickup_time}
                   returnTime={booking.return_time}
                   totalPrice={booking.total_price}
-                  totalDays={Math.max(1, Math.ceil((new Date(booking.return_date + "T00:00:00").getTime() - new Date(booking.pickup_date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)))}
+                  totalDays={(() => { const diff = (new Date((booking.return_date || "") + "T00:00:00").getTime() - new Date((booking.pickup_date || "") + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24); return Math.max(1, Math.ceil(Number.isFinite(diff) ? diff : 1)); })()}
                   currentPage={getPageForStep(currentStep)}
                 />
                 <p className="text-xs text-gray-400 mt-2">

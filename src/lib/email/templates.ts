@@ -75,8 +75,8 @@ function headerBlock(title: string, subtitle: string, bgColor = '#7C3AED', bgEnd
   <tr>
     <td style="background: linear-gradient(135deg, ${bgColor}, ${bgEnd}); padding: 40px 32px; text-align: center;">
       <p style="margin: 0 0 12px; color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
-      <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 26px; font-weight: 800; line-height: 1.2;">${title}</h1>
-      <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 14px;">${subtitle}</p>
+      <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 26px; font-weight: 800; line-height: 1.2;">${escHtml(title)}</h1>
+      <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 14px;">${escHtml(subtitle)}</p>
     </td>
   </tr>`;
 }

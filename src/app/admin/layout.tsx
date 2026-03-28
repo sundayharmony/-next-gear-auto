@@ -101,7 +101,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         onClick={() => setSidebarOpen(!sidebarOpen)}
         aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
         aria-expanded={sidebarOpen}
-        className="fixed bottom-4 right-4 z-50 lg:hidden rounded-full bg-purple-600 p-3 text-white shadow-lg"
+        className="fixed bottom-4 right-4 z-[60] lg:hidden rounded-full bg-purple-600 p-3 text-white shadow-lg"
       >
         {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -157,9 +157,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                           className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 border-b last:border-0"
                         >
                           <div>
-                            <p className="text-sm font-medium text-gray-900">{b.customer_name}</p>
+                            <p className="text-sm font-medium text-gray-900">{b.customer_name || "Unknown"}</p>
                             <p className="text-xs text-gray-400">
-                              {new Date(b.created_at).toLocaleDateString()}
+                              {b.created_at ? new Date(b.created_at).toLocaleDateString() : "—"}
                             </p>
                           </div>
                           <span className="text-sm font-semibold text-purple-600">${b.total_price}</span>

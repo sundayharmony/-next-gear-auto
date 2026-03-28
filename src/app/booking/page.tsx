@@ -273,6 +273,14 @@ function BookingPageInner() {
 
   const handleFileUpload = async (file: File) => {
     setUploadError("");
+    if (!file || !file.name) {
+      setUploadError("No file selected.");
+      return;
+    }
+    if (file.size <= 0) {
+      setUploadError("File appears to be empty.");
+      return;
+    }
     const validTypes = ["image/jpeg", "image/png", "application/pdf"];
     if (!validTypes.includes(file.type)) {
       setUploadError("Please upload a JPG, PNG, or PDF file.");

@@ -83,7 +83,7 @@ export async function POST(req: NextRequest) {
 
       let discountAmount = 0;
       if (jsonPromo.discountType === "percentage") {
-        discountAmount = bookingAmount ? Math.round(bookingAmount * (jsonPromo.discountValue / 100) * 100) / 100 : 0;
+        discountAmount = (bookingAmount && Number.isFinite(bookingAmount)) ? Math.round(bookingAmount * (jsonPromo.discountValue / 100) * 100) / 100 : 0;
       } else {
         discountAmount = jsonPromo.discountValue;
       }
