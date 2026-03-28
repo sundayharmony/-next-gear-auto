@@ -126,9 +126,12 @@ export async function GET(request: NextRequest) {
       } else if (customerEmail) {
         query = query.ilike("customer_email", customerEmail);
       }
-    } else {
+    } else if (callerEmail) {
       // Customers can only see their own bookings — enforce by caller's JWT email
-      query = query.ilike("customer_email", callerEmail!);
+      query = query.ilike("customer_email", callerEmail);
+    } else {
+      // No email in token — return nothing
+      return NextResponse.json({ data: [], total: 0 });
     }
     if (status) {
       query = query.eq("status", status);
@@ -328,8 +331,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // Admin can set initial status directly (e.g. "confirmed"); clients always start as "pending"
-    const bookingStatus = body.adminCreated && body.initialStatus ? body.initialStatus : (body.status || "pending");
+    // Bookings always start as "pending" — cannot be confirmed until agreement is signed
+    const bookingStatus = "pending";
 
     const { error } = await supabase.from("bookings").insert({
       id: bookingId,
@@ -401,16 +404,10 @@ export async function POST(request: Request) {
         needsPassword,
       };
 
-      // Send the right email based on booking status
-      if (bookingStatus === "confirmed") {
-        sendBookingConfirmation(emailData).catch(logger.error);
-      } else {
-        sendBookingPendingEmail(emailData).catch(logger.error);
-      }
-      // Always notify admin of new booking (unless admin created it themselves)
-      if (!body.adminCreated) {
-        sendAdminNewBooking(emailData).catch(logger.error);
-      }
+      // New bookings always start as pending
+      sendBookingPendingEmail(emailData).catch(logger.error);
+      // Always notify admin of new booking
+      sendAdminNewBooking(emailData).catch(logger.error);
     }
 
     // Auto-generate rental agreement and email it to the customer for signing
@@ -497,6 +494,18 @@ export async function PATCH(request: Request) {
     if (Object.keys(updateFields).length === 0) {
       return NextResponse.json(
         { success: false, message: "No fields to update" },
+        { status: 400 }
+      );
+    }
+
+    // Block confirming a booking if the rental agreement hasn't been signed yet
+    if (
+      updateFields.status === "confirmed" &&
+      booking.status === "pending" &&
+      !booking.agreement_signed_at
+    ) {
+      return NextResponse.json(
+        { success: false, message: "Cannot confirm booking — the rental agreement has not been signed yet." },
         { status: 400 }
       );
     }

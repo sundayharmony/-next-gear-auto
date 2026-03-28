@@ -40,7 +40,7 @@ const emptyForm = {
   pickupTime: "10:00",
   returnTime: "10:00",
   totalPrice: 0,
-  status: "confirmed",
+  status: "pending",
   selectedExtras: ["e1"],
   paymentMethod: "stripe",
 };
@@ -505,14 +505,9 @@ export default function CreateBookingForm({
           </div>
           <div>
             <label className="block text-sm font-medium mb-1">Initial Status</label>
-            <select
-              value={form.status}
-              onChange={(e) => setForm({ ...form, status: e.target.value })}
-              className="w-full px-3 py-2 border rounded text-sm"
-            >
-              <option value="confirmed">Confirmed (paid outside site)</option>
-              <option value="pending">Pending (awaiting payment)</option>
-            </select>
+            <p className="text-sm text-gray-500 px-3 py-2 bg-gray-50 border rounded">
+              Pending — booking can be confirmed after the customer signs the rental agreement
+            </p>
           </div>
         </div>
 

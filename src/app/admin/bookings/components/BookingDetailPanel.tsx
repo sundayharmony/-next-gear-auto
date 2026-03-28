@@ -172,6 +172,13 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     }
 
     const newStatus = STATUS_STEPS[stepIndex];
+
+    // Block confirming if the rental agreement hasn't been signed
+    if (newStatus === "confirmed" && !booking.agreement_signed_at) {
+      onError("Cannot confirm — the customer has not signed the rental agreement yet.");
+      return;
+    }
+
     if (window.confirm(`Move booking to "${newStatus}"?`)) {
       updateStatus(newStatus);
     }
@@ -310,11 +317,12 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
       if (!response.ok) throw new Error("Failed to record payment");
 
-      const newPayment = await response.json();
-      setPayments([...payments, newPayment]);
+      const newPaymentResult = await response.json();
+      const newPaymentRecord = newPaymentResult.data ?? newPaymentResult;
+      setPayments([...payments, newPaymentRecord]);
 
       // Update deposit locally
-      const newDeposit = booking.deposit + parsedAmount;
+      const newDeposit = (booking.deposit ?? 0) + parsedAmount;
       const updated = { ...booking, deposit: newDeposit };
       onUpdateBooking(updated);
 
@@ -469,17 +477,19 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   const isCompleted = idx < currentStatusIndex;
                   const isCurrent = idx === currentStatusIndex;
                   const isFuture = idx > currentStatusIndex;
-                  const isClickable = isFuture;
+                  const isLocked = step === "confirmed" && isFuture && !booking.agreement_signed_at;
+                  const isClickable = isFuture && !isLocked;
 
                   return (
                     <React.Fragment key={step}>
                       <div
                         className={`flex flex-col items-center gap-2 flex-1 ${
-                          isClickable ? "cursor-pointer" : ""
+                          isClickable ? "cursor-pointer" : isLocked ? "cursor-not-allowed opacity-60" : ""
                         }`}
                         onClick={() =>
-                          isClickable && handleStatusStepClick(idx)
+                          isClickable ? handleStatusStepClick(idx) : isLocked ? onError("Cannot confirm — the customer has not signed the rental agreement yet.") : undefined
                         }
+                        title={isLocked ? "Agreement must be signed before confirming" : undefined}
                       >
                         <div
                           className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold transition-colors ${
@@ -487,17 +497,21 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                               ? "bg-green-500"
                               : isCurrent
                               ? "bg-purple-600"
+                              : isLocked
+                              ? "bg-amber-400"
                               : "bg-gray-300"
                           } ${isClickable ? "hover:opacity-80" : ""}`}
                         >
                           {isCompleted ? (
                             <Check className="w-4 h-4" />
+                          ) : isLocked ? (
+                            <AlertTriangle className="w-4 h-4" />
                           ) : (
                             <span className="text-xs">{idx + 1}</span>
                           )}
                         </div>
                         <span className="text-xs font-medium capitalize">
-                          {step}
+                          {isLocked ? "Awaiting signature" : step}
                         </span>
                       </div>
 
@@ -1216,13 +1230,23 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 <div className="space-y-2">
                   {/* Next status button */}
                   {booking.status === "pending" && (
-                    <Button
-                      onClick={() => updateStatus("confirmed")}
-                      className="w-full bg-green-600 hover:bg-green-700 text-white text-xs"
-                    >
-                      <Check className="w-3 h-3 mr-1" />
-                      Confirm Booking
-                    </Button>
+                    booking.agreement_signed_at ? (
+                      <Button
+                        onClick={() => updateStatus("confirmed")}
+                        className="w-full bg-green-600 hover:bg-green-700 text-white text-xs"
+                      >
+                        <Check className="w-3 h-3 mr-1" />
+                        Confirm Booking
+                      </Button>
+                    ) : (
+                      <Button
+                        onClick={() => onError("Cannot confirm — the customer has not signed the rental agreement yet.")}
+                        className="w-full bg-amber-500 text-white text-xs cursor-not-allowed"
+                      >
+                        <AlertTriangle className="w-3 h-3 mr-1" />
+                        Awaiting Agreement Signature
+                      </Button>
+                    )
                   )}
                   {booking.status === "confirmed" && (
                     <Button

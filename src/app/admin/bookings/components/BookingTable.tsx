@@ -176,7 +176,7 @@ export default function BookingTable({
 
                 {/* Balance */}
                 <td className="px-4 py-3">
-                  <div className={`font-semibold ${balanceColor}`}>${balance.toFixed(2)}</div>
+                  <div className={`font-semibold ${balanceColor}`}>${(balance ?? 0).toFixed(2)}</div>
                 </td>
 
                 {/* Status */}
