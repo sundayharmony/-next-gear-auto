@@ -116,7 +116,7 @@ function BookingPageInner() {
     const controller = new AbortController();
 
     const fetchAllBookedDates = async () => {
-      setCheckingAvailability(true);
+      if (!cancelled) setCheckingAvailability(true);
       const dateMap: Record<string, BookedRange[]> = {};
       try {
         await Promise.all(

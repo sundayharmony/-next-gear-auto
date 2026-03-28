@@ -101,7 +101,7 @@ export default function AdminCustomersPage() {
   const cropImageRef = useRef<HTMLImageElement>(null);
   const cropContainerRef = useRef<HTMLDivElement>(null);
 
-  const fetchCustomers = async (query = "") => {
+  const fetchCustomers = useCallback(async (query = "") => {
     setLoading(true);
     try {
       const url = query ? `/api/admin/customers?search=${encodeURIComponent(query)}` : "/api/admin/customers";
@@ -113,7 +113,7 @@ export default function AdminCustomersPage() {
       logger.error("Failed to fetch customers:", err);
     }
     setLoading(false);
-  };
+  }, []);
 
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("highlight");

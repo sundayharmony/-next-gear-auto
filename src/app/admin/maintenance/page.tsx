@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { compressImage } from "@/lib/utils/compress-image";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -114,7 +114,7 @@ export default function AdminMaintenancePage() {
     return () => document.removeEventListener("keydown", handleKeyDown);
   }, [showDetail, detailEditMode, showAddForm, saving, newRecord.photoUrls]);
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [recordsRes, vehiclesRes] = await Promise.all([
@@ -140,7 +140,7 @@ export default function AdminMaintenancePage() {
       setError("Network error — could not load data");
     }
     setLoading(false);
-  };
+  }, [setError]);
 
   useEffect(() => {
     fetchData();

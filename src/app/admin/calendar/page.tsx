@@ -130,6 +130,13 @@ export default function AdminCalendarPage() {
     };
 
     fetchData();
+
+    return () => {
+      // Abort fetch on unmount
+      if (bookingsAbortControllerRef.current) {
+        bookingsAbortControllerRef.current.abort();
+      }
+    };
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

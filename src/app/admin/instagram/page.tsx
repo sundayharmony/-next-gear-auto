@@ -30,15 +30,25 @@ export default function AdminInstagramPage() {
   const [adding, setAdding] = useState(false);
   const { error, setError, setSuccess } = useAutoToast();
   const [showForm, setShowForm] = useState(false);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchPosts = async () => {
+    // Abort previous request if it's still pending
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+
+    // Create new abort controller for this fetch
+    abortControllerRef.current = new AbortController();
     setLoading(true);
     try {
-      const res = await adminFetch("/api/instagram");
+      const res = await adminFetch("/api/instagram", { signal: abortControllerRef.current.signal });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) setPosts(data.data || []);
     } catch (err) {
+      // Ignore abort errors
+      if (err instanceof Error && err.name === "AbortError") return;
       logger.error("Failed to fetch posts:", err);
       setError("Failed to load Instagram posts");
     }
@@ -47,6 +57,12 @@ export default function AdminInstagramPage() {
 
   useEffect(() => {
     fetchPosts();
+    return () => {
+      // Abort fetch on unmount
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, []);
 
   const handleAdd = async () => {

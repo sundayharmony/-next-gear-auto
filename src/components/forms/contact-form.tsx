@@ -55,17 +55,17 @@ export function ContactForm() {
       <p className="text-xs text-gray-400 -mt-1 mb-2">We typically respond within 2-4 hours during business hours.</p>
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
-        <Input {...form.register("name")} placeholder="John Doe" />
+        <Input {...form.register("name")} id="name" placeholder="John Doe" />
         {form.errors.name && <p className="mt-1 text-xs text-red-500">{form.errors.name}</p>}
       </div>
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-        <Input {...form.register("email")} type="email" placeholder="john@example.com" />
+        <Input {...form.register("email")} id="email" type="email" placeholder="john@example.com" />
         {form.errors.email && <p className="mt-1 text-xs text-red-500">{form.errors.email}</p>}
       </div>
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-        <Input {...form.register("phone")} type="tel" placeholder="(555) 123-4567" />
+        <Input {...form.register("phone")} id="phone" type="tel" placeholder="(555) 123-4567" />
         {form.errors.phone && <p className="mt-1 text-xs text-red-500">{form.errors.phone}</p>}
       </div>
       <div>

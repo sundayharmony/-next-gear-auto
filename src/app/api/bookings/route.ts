@@ -369,34 +369,21 @@ export async function POST(request: Request) {
     let needsPassword = false;
 
     if (body.vehicleId || emailRecipient) {
-      const promises = [];
-
       // Vehicle fetch
-      let vehiclePromise = Promise.resolve(null);
-      if (body.vehicleId) {
-        vehiclePromise = supabase
-          .from("vehicles")
-          .select("year, make, model")
-          .eq("id", body.vehicleId)
-          .single()
-          .then((res) => res.data);
-      }
-      promises.push(vehiclePromise);
+      const vehiclePromise = body.vehicleId
+        ? Promise.resolve(
+            supabase.from("vehicles").select("year, make, model").eq("id", body.vehicleId).single()
+          ).then((res) => res.data as { year: string; make: string; model: string } | null)
+        : Promise.resolve(null as { year: string; make: string; model: string } | null);
 
       // Customer password check
-      let custPromise = Promise.resolve(null);
-      if (emailRecipient) {
-        const custEmail = emailRecipient.toLowerCase().trim();
-        custPromise = supabase
-          .from("customers")
-          .select("password_hash")
-          .eq("email", custEmail)
-          .single()
-          .then((res) => res.data);
-      }
-      promises.push(custPromise);
+      const custPromise = emailRecipient
+        ? Promise.resolve(
+            supabase.from("customers").select("password_hash").eq("email", emailRecipient.toLowerCase().trim()).single()
+          ).then((res) => res.data as { password_hash: string } | null)
+        : Promise.resolve(null as { password_hash: string } | null);
 
-      const [vehicle, cust] = await Promise.all(promises);
+      const [vehicle, cust] = await Promise.all([vehiclePromise, custPromise]);
 
       if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
       needsPassword = !cust?.password_hash;
@@ -410,7 +397,7 @@ export async function POST(request: Request) {
       const emailData = {
         bookingId,
         customerName: emailName,
-        customerEmail: custEmail,
+        customerEmail: emailRecipient,
         vehicleName,
         pickupDate: body.pickupDate,
         returnDate: body.returnDate,

@@ -641,7 +641,7 @@ export default function AccountPage() {
                     <CardContent className="p-4 text-center">
                       <BarChart3 className="mx-auto h-6 w-6 text-amber-500 mb-2" />
                       <p className="text-2xl font-bold text-gray-900">
-                        ${bookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0).toFixed(0)}
+                        ${(bookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0) || 0).toFixed(0)}
                       </p>
                       <p className="text-xs text-gray-500">Total Spent</p>
                     </CardContent>
