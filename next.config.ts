@@ -15,16 +15,6 @@ const nextConfig: NextConfig = {
       { protocol: "https", hostname: "scontent.cdninstagram.com" },
     ],
   },
-  async redirects() {
-    return [
-      {
-        source: "/:path*",
-        has: [{ type: "host", value: "www.rentnextgearauto.com" }],
-        destination: "https://rentnextgearauto.com/:path*",
-        permanent: true,
-      },
-    ];
-  },
   async headers() {
     return [
       {
