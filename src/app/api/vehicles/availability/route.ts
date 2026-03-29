@@ -72,6 +72,20 @@ export async function GET(req: NextRequest) {
       available = !hasRealConflict;
     }
 
+    // Also check blocked_dates (Turo sync, manual blocks, etc.)
+    if (available) {
+      const { data: blocks, error: blockErr } = await supabase
+        .from("blocked_dates")
+        .select("id, start_date, end_date, source")
+        .eq("vehicle_id", vehicleId)
+        .lte("start_date", endDate)
+        .gte("end_date", startDate);
+
+      if (!blockErr && blocks && blocks.length > 0) {
+        available = false;
+      }
+    }
+
     return NextResponse.json({
       success: true,
       data: {
