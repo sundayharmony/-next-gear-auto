@@ -572,6 +572,20 @@ function TimelineView({
   const today = toDateKey(new Date());
   const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6;
 
+  // Calculate time-of-day as a percentage for the "now" marker position
+  const [nowPercent, setNowPercent] = useState(() => {
+    const n = new Date();
+    return ((n.getHours() * 60 + n.getMinutes()) / 1440) * 100;
+  });
+  useEffect(() => {
+    const tick = () => {
+      const n = new Date();
+      setNowPercent(((n.getHours() * 60 + n.getMinutes()) / 1440) * 100);
+    };
+    const id = setInterval(tick, 60000); // Update every minute
+    return () => clearInterval(id);
+  }, []);
+
   // Count total bookings per vehicle in view
   const vehicleBookingCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -667,9 +681,9 @@ function TimelineView({
                           {date.toLocaleDateString("en-US", { month: "short" })}
                         </div>
                       ) : null}
-                      {/* Today indicator dot */}
+                      {/* Today indicator dot — moves with time of day */}
                       {isDateToday && (
-                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full" />
+                        <div className="absolute bottom-0 -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full" style={{ left: `${nowPercent}%` }} />
                       )}
                     </th>
                   );
@@ -718,9 +732,9 @@ function TimelineView({
                               : ""
                           }`}
                         >
-                          {/* Today vertical line */}
+                          {/* Today vertical line — moves with time of day */}
                           {isDateToday && (
-                            <div className="absolute top-0 bottom-0 left-1/2 w-0.5 bg-red-400/60 z-[3] pointer-events-none" />
+                            <div className="absolute top-0 bottom-0 w-0.5 bg-red-400/60 z-[3] pointer-events-none" style={{ left: `${nowPercent}%` }} />
                           )}
                           {bookingStartingHere.map(({ booking, startIdx, endIdx, extendsLeft, extendsRight, startFraction, endFraction }) => {
                             const fullDaySpan = endIdx - startIdx + 1;

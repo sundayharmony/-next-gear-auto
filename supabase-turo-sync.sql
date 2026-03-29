@@ -5,8 +5,8 @@
 
 -- 1. Create blocked_dates table for external calendar blocks
 CREATE TABLE IF NOT EXISTS blocked_dates (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  vehicle_id UUID NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
+  id TEXT PRIMARY KEY DEFAULT gen_random_uuid()::text,
+  vehicle_id TEXT NOT NULL REFERENCES vehicles(id) ON DELETE CASCADE,
   start_date TEXT NOT NULL,        -- YYYY-MM-DD format (matches bookings table)
   end_date TEXT NOT NULL,          -- YYYY-MM-DD format
   source TEXT NOT NULL DEFAULT 'manual',  -- 'turo', 'manual', 'getaround', etc.
