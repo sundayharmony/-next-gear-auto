@@ -44,7 +44,7 @@ function loadGoogleMaps(): Promise<void> {
       return;
     }
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=marker`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=marker,places&v=weekly`;
     script.async = true;
     script.defer = true;
     script.onload = () => { mapsLoaded = true; resolve(); };
