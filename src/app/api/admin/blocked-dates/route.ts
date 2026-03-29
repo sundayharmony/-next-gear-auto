@@ -1,0 +1,136 @@
+import { NextRequest, NextResponse } from "next/server";
+import { getServiceSupabase } from "@/lib/db/supabase";
+import { verifyAdmin } from "@/lib/auth/admin-check";
+import { logger } from "@/lib/utils/logger";
+
+/**
+ * GET /api/admin/blocked-dates?vehicleId=...
+ * List blocked dates, optionally filtered by vehicle.
+ */
+export async function GET(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const supabase = getServiceSupabase();
+    const { searchParams } = new URL(req.url);
+    const vehicleId = searchParams.get("vehicleId");
+
+    let query = supabase
+      .from("blocked_dates")
+      .select("*")
+      .gte("end_date", new Date().toISOString().split("T")[0])
+      .order("start_date", { ascending: true });
+
+    if (vehicleId) {
+      query = query.eq("vehicle_id", vehicleId);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      logger.error("Blocked dates GET error:", error);
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data: data || [] });
+  } catch (err) {
+    logger.error("Blocked dates GET error:", err);
+    return NextResponse.json({ success: false, error: "Failed to fetch blocked dates" }, { status: 500 });
+  }
+}
+
+/**
+ * POST /api/admin/blocked-dates
+ * Create a new blocked date range.
+ * Body: { vehicleId, startDate, endDate, source?, reason? }
+ */
+export async function POST(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const supabase = getServiceSupabase();
+    const body = await req.json();
+    const { vehicleId, startDate, endDate, source, reason } = body;
+
+    if (!vehicleId || !startDate || !endDate) {
+      return NextResponse.json({ success: false, error: "vehicleId, startDate, and endDate are required" }, { status: 400 });
+    }
+
+    // Validate date format
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+      return NextResponse.json({ success: false, error: "Dates must be YYYY-MM-DD format" }, { status: 400 });
+    }
+
+    if (endDate < startDate) {
+      return NextResponse.json({ success: false, error: "End date must be on or after start date" }, { status: 400 });
+    }
+
+    // Verify vehicle exists
+    const { data: vehicle } = await supabase
+      .from("vehicles")
+      .select("id")
+      .eq("id", vehicleId)
+      .single();
+
+    if (!vehicle) {
+      return NextResponse.json({ success: false, error: "Vehicle not found" }, { status: 404 });
+    }
+
+    const { data, error } = await supabase
+      .from("blocked_dates")
+      .insert({
+        vehicle_id: vehicleId,
+        start_date: startDate,
+        end_date: endDate,
+        source: source || "manual",
+        reason: reason || null,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      logger.error("Blocked dates POST error:", error);
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, data }, { status: 201 });
+  } catch (err) {
+    logger.error("Blocked dates POST error:", err);
+    return NextResponse.json({ success: false, error: "Failed to create blocked date" }, { status: 500 });
+  }
+}
+
+/**
+ * DELETE /api/admin/blocked-dates?id=...
+ * Remove a blocked date range.
+ */
+export async function DELETE(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const supabase = getServiceSupabase();
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+      return NextResponse.json({ success: false, error: "id param is required" }, { status: 400 });
+    }
+
+    const { error } = await supabase
+      .from("blocked_dates")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      logger.error("Blocked dates DELETE error:", error);
+      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true, message: "Blocked date removed" });
+  } catch (err) {
+    logger.error("Blocked dates DELETE error:", err);
+    return NextResponse.json({ success: false, error: "Failed to delete blocked date" }, { status: 500 });
+  }
+}

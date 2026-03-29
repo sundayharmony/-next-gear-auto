@@ -60,10 +60,26 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // Also check blocked_dates (manual blocks, Turo email sync, etc.)
+    let blockedConflict = false;
+    if (!hasRealOverlap) {
+      const { data: blocks } = await supabase
+        .from("blocked_dates")
+        .select("start_date, end_date, source, reason")
+        .eq("vehicle_id", vehicleId)
+        .lte("start_date", returnDate)
+        .gte("end_date", pickupDate);
+
+      if (blocks && blocks.length > 0) {
+        blockedConflict = true;
+      }
+    }
+
     return NextResponse.json({
       success: true,
-      hasOverlap: hasRealOverlap,
+      hasOverlap: hasRealOverlap || blockedConflict,
       conflicting: conflicting || [],
+      blockedDates: blockedConflict ? "Vehicle has blocked dates in this range (Turo or manual block)" : null,
     });
   } catch (error) {
     logger.error("Check overlap error:", error);

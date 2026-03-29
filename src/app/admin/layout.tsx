@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Instagram, Ticket, Bell, MapPin
+  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Instagram, Ticket, Bell, MapPin, ShieldBan
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/auth-context";
@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
   { href: "/admin/bookings", label: "Bookings", icon: Calendar },
   { href: "/admin/vehicles", label: "Vehicles", icon: Car },
+  { href: "/admin/blocked-dates", label: "Blocked Dates", icon: ShieldBan },
   { href: "/admin/maintenance", label: "Maintenance", icon: Wrench },
   { href: "/admin/locations", label: "Locations", icon: MapPin },
   { href: "/admin/finances", label: "Finances", icon: DollarSign },

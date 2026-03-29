@@ -49,6 +49,9 @@ export default function AdminCalendarPage() {
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [showBookingDetail, setShowBookingDetail] = useState(false);
 
+  // Blocked dates state
+  const [blockedDates, setBlockedDates] = useState<{ id: string; vehicle_id: string; start_date: string; end_date: string; source: string; reason: string | null }[]>([]);
+
   // Track abort controller for fetch cancellation
   const bookingsAbortControllerRef = React.useRef<AbortController | null>(null);
 
@@ -113,14 +116,19 @@ export default function AdminCalendarPage() {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [, vehiclesRes] = await Promise.all([
+        const [, vehiclesRes, blockedRes] = await Promise.all([
           fetchBookings(),
           adminFetch("/api/admin/vehicles"),
+          adminFetch("/api/admin/blocked-dates"),
         ]);
 
         if (vehiclesRes.ok) {
           const data = await vehiclesRes.json();
           setVehicles(data.data || []);
+        }
+        if (blockedRes.ok) {
+          const data = await blockedRes.json();
+          setBlockedDates(data.data || []);
         }
       } catch (error) {
         logger.error("Failed to fetch calendar data:", error);
@@ -271,6 +279,7 @@ export default function AdminCalendarPage() {
             <TimelineView
               bookings={filteredBookings}
               vehicles={vehicles}
+              blockedDates={blockedDates}
               start={timelineStart}
               onPrevious={() => {
                 const newStart = new Date(timelineStart);
@@ -475,9 +484,19 @@ export default function AdminCalendarPage() {
   );
 }
 
+interface BlockedDateEntry {
+  id: string;
+  vehicle_id: string;
+  start_date: string;
+  end_date: string;
+  source: string;
+  reason: string | null;
+}
+
 interface TimelineViewProps {
   bookings: BookingRow[];
   vehicles: Vehicle[];
+  blockedDates: BlockedDateEntry[];
   start: Date;
   onPrevious: () => void;
   onNext: () => void;
@@ -488,6 +507,7 @@ interface TimelineViewProps {
 function TimelineView({
   bookings,
   vehicles,
+  blockedDates,
   start,
   onPrevious,
   onNext,
@@ -789,6 +809,33 @@ function TimelineView({
                               </div>
                             );
                           })}
+                          {/* Blocked date bars (Turo/manual) */}
+                          {blockedDates
+                            .filter((bd) => bd.vehicle_id === vehicle.id)
+                            .filter((bd) => {
+                              const dateKey = toDateKey(date);
+                              return bd.start_date <= dateKey && bd.end_date >= dateKey && bd.start_date === dateKey;
+                            })
+                            .map((bd) => {
+                              const bdStartIdx = dateRange.findIndex((d) => toDateKey(d) >= bd.start_date);
+                              const bdEndIdx = dateRange.findIndex((d) => toDateKey(d) > bd.end_date);
+                              const endIdx = bdEndIdx === -1 ? dateRange.length - 1 : bdEndIdx - 1;
+                              const startIdx = bdStartIdx === -1 ? 0 : bdStartIdx;
+                              const span = endIdx - startIdx + 1;
+                              return (
+                                <div
+                                  key={bd.id}
+                                  className="absolute top-1 bottom-1 rounded-md bg-gray-300/50 border border-dashed border-gray-400 z-[1] flex items-center px-2 pointer-events-none"
+                                  style={{ left: "0%", width: `${span * 100}%` }}
+                                  title={bd.reason || `Blocked (${bd.source})`}
+                                >
+                                  <span className="text-[10px] text-gray-500 font-medium truncate">
+                                    {bd.source === "turo-email" ? "Turo" : "Blocked"}
+                                    {bd.reason ? ` — ${bd.reason}` : ""}
+                                  </span>
+                                </div>
+                              );
+                            })}
                         </td>
                       );
                     })}
@@ -826,6 +873,10 @@ function TimelineView({
                 <span className="capitalize text-gray-600">{status}</span>
               </div>
             ))}
+          <div className="flex items-center gap-1.5">
+            <div className="w-3 h-3 rounded-sm bg-gray-300/50 border border-dashed border-gray-400" />
+            <span className="text-gray-600">Blocked</span>
+          </div>
         </div>
       </CardContent>
     </Card>

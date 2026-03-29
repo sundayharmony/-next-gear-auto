@@ -41,9 +41,24 @@ export async function GET(req: NextRequest) {
       returnTime: b.return_time || "23:59",
     }));
 
+    // Also fetch blocked dates (manual blocks, Turo email sync, etc.)
+    const { data: blocks } = await supabase
+      .from("blocked_dates")
+      .select("start_date, end_date")
+      .eq("vehicle_id", vehicleId)
+      .gte("end_date", new Date().toISOString().split("T")[0])
+      .order("start_date", { ascending: true });
+
+    const blockedRanges = (blocks || []).map((b) => ({
+      pickupDate: b.start_date,
+      returnDate: b.end_date,
+      pickupTime: "00:00",
+      returnTime: "23:59",
+    }));
+
     return NextResponse.json({
       success: true,
-      data: bookedRanges,
+      data: [...bookedRanges, ...blockedRanges],
     });
   } catch (err) {
     logger.error("Booked dates API error:", err);
