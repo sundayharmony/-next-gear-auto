@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
+import { MapPin, Search, X, Check } from "lucide-react";
 
 export interface AddressResult {
   address: string;
@@ -20,25 +21,44 @@ interface AddressAutocompleteProps {
   className?: string;
 }
 
-interface Suggestion {
-  id: string;
-  mainText: string;
-  secondaryText: string;
-  result: AddressResult;
+/* ────────────────────────────────────────
+   Google Maps script loader
+   ──────────────────────────────────────── */
+let mapsLoadPromise: Promise<void> | null = null;
+
+function loadGoogleMaps(): Promise<void> {
+  if (mapsLoadPromise) return mapsLoadPromise;
+  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+  if (!key) return Promise.reject(new Error("No key"));
+
+  if (typeof google !== "undefined" && google.maps) return Promise.resolve();
+
+  mapsLoadPromise = new Promise((resolve, reject) => {
+    const existing = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existing) {
+      if (typeof google !== "undefined" && google.maps) { resolve(); return; }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(), { once: true });
+      return;
+    }
+    const script = document.createElement("script");
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=marker&v=weekly`;
+    script.async = true;
+    script.defer = true;
+    script.onload = () => resolve();
+    script.onerror = () => reject(new Error("Failed to load Google Maps"));
+    document.head.appendChild(script);
+  });
+  return mapsLoadPromise;
 }
 
 /* ────────────────────────────────────────
-   Parse Google Geocoding API response
+   Parse geocoding result
    ──────────────────────────────────────── */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseGeocodingResult(r: any): { suggestion: Suggestion; fullAddress: string } {
+function parseGeocodingResult(r: any): AddressResult {
   const comps: any[] = r.address_components || [];
-  let streetNumber = "";
-  let route = "";
-  let city = "";
-  let state = "";
-  let zip = "";
-
+  let streetNumber = "", route = "", city = "", state = "", zip = "";
   for (const c of comps) {
     const types: string[] = c.types || [];
     if (types.includes("street_number")) streetNumber = c.long_name;
@@ -48,187 +68,202 @@ function parseGeocodingResult(r: any): { suggestion: Suggestion; fullAddress: st
     else if (types.includes("administrative_area_level_1")) state = c.short_name;
     else if (types.includes("postal_code")) zip = c.long_name;
   }
-
-  const streetAddress = [streetNumber, route].filter(Boolean).join(" ");
+  const address = [streetNumber, route].filter(Boolean).join(" ");
   const loc = r.geometry?.location;
-  const secondary = [city, state, zip].filter(Boolean).join(", ");
-
   return {
-    fullAddress: r.formatted_address || "",
-    suggestion: {
-      id: r.place_id || `geo-${Math.random()}`,
-      mainText: streetAddress || r.formatted_address || "",
-      secondaryText: secondary,
-      result: {
-        address: streetAddress || r.formatted_address || "",
-        city,
-        state,
-        zip,
-        lat: loc?.lat ?? 0,
-        lng: loc?.lng ?? 0,
-      },
-    },
+    address: address || r.formatted_address || "",
+    city, state, zip,
+    lat: loc?.lat ?? 0,
+    lng: loc?.lng ?? 0,
   };
 }
 
-/* ═══════════════════════════════════════════════
-   AddressAutocomplete
+/* ═══════════════════════════════════════════════════
+   Map Location Picker
 
-   Uses the Google Geocoding API for address
-   search. This API is reliable, doesn't require
-   the Places API, and works with any Maps key.
-   ═══════════════════════════════════════════════ */
+   Shows a button that opens an interactive Google Map
+   with a search bar. User searches an address, sees
+   it on the map, and confirms to fill in the form.
+   ═══════════════════════════════════════════════════ */
 export function AddressAutocomplete({
   value,
   onChange,
   onSelect,
-  placeholder = "Start typing an address...",
+  placeholder = "Search for an address...",
   className,
 }: AddressAutocompleteProps) {
-  const [suggestions, setSuggestions] = useState<Suggestion[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [activeIndex, setActiveIndex] = useState(-1);
-  const [loading, setLoading] = useState(false);
+  const [showMap, setShowMap] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchResults, setSearchResults] = useState<Array<{ formatted: string; result: AddressResult }>>([]);
+  const [selectedResult, setSelectedResult] = useState<{ formatted: string; result: AddressResult } | null>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [error, setError] = useState("");
 
-  const inputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const abortRef = useRef<AbortController | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
+  const mapRef = useRef<google.maps.Map | null>(null);
+  const markerRef = useRef<google.maps.Marker | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
-  // Close dropdown on outside click
+  // Initialize map when modal opens
   useEffect(() => {
-    const handler = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node) &&
-        inputRef.current &&
-        !inputRef.current.contains(e.target as Node)
-      ) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
-  }, []);
+    if (!showMap || !apiKey) return;
+    let cancelled = false;
 
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (debounceRef.current) clearTimeout(debounceRef.current);
-      if (abortRef.current) abortRef.current.abort();
-    };
-  }, []);
+    loadGoogleMaps()
+      .then(() => {
+        if (cancelled || !mapContainerRef.current) return;
 
-  /* ── Fetch address suggestions via Geocoding API ── */
-  const fetchSuggestions = useCallback(
-    async (input: string) => {
-      if (!apiKey || input.length < 3) {
-        setSuggestions([]);
-        setShowDropdown(false);
+        const map = new google.maps.Map(mapContainerRef.current, {
+          center: { lat: 40.7128, lng: -74.006 },
+          zoom: 12,
+          mapTypeControl: false,
+          streetViewControl: false,
+          fullscreenControl: false,
+          styles: [
+            { featureType: "poi", stylers: [{ visibility: "off" }] },
+            { featureType: "transit", stylers: [{ visibility: "simplified" }] },
+          ],
+        });
+
+        // Click on map to drop pin + reverse geocode
+        map.addListener("click", async (e: google.maps.MapMouseEvent) => {
+          if (!e.latLng) return;
+          const lat = e.latLng.lat();
+          const lng = e.latLng.lng();
+
+          // Place marker
+          if (markerRef.current) markerRef.current.setMap(null);
+          markerRef.current = new google.maps.Marker({
+            position: { lat, lng },
+            map,
+            icon: {
+              path: google.maps.SymbolPath.CIRCLE,
+              scale: 12,
+              fillColor: "#7c3aed",
+              fillOpacity: 1,
+              strokeColor: "#4c1d95",
+              strokeWeight: 2,
+            },
+          });
+
+          // Reverse geocode
+          try {
+            const res = await fetch(
+              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`
+            );
+            const data = await res.json();
+            if (data.results?.[0]) {
+              const parsed = parseGeocodingResult(data.results[0]);
+              setSelectedResult({
+                formatted: data.results[0].formatted_address,
+                result: parsed,
+              });
+              setSearchResults([]);
+            }
+          } catch {
+            // Silently fail reverse geocode
+          }
+        });
+
+        mapRef.current = map;
+        setMapReady(true);
+
+        // Focus search input
+        setTimeout(() => searchInputRef.current?.focus(), 200);
+      })
+      .catch(() => {
+        if (!cancelled) setError("Could not load Google Maps");
+      });
+
+    return () => { cancelled = true; };
+  }, [showMap, apiKey]);
+
+  // Search using Geocoding API
+  const handleSearch = useCallback(async () => {
+    if (!apiKey || !searchQuery.trim()) return;
+    setSearching(true);
+    setError("");
+    setSelectedResult(null);
+
+    try {
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&components=country:US&key=${apiKey}`
+      );
+      const data = await res.json();
+
+      if (data.status === "ZERO_RESULTS" || !data.results?.length) {
+        setError("No addresses found. Try a more specific search.");
+        setSearchResults([]);
         return;
       }
 
-      // Abort any in-flight request
-      if (abortRef.current) abortRef.current.abort();
-      const controller = new AbortController();
-      abortRef.current = controller;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const results = data.results.slice(0, 5).map((r: any) => ({
+        formatted: r.formatted_address,
+        result: parseGeocodingResult(r),
+      }));
 
-      setLoading(true);
+      setSearchResults(results);
 
-      try {
-        const res = await fetch(
-          `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(input)}&components=country:US&key=${apiKey}`,
-          { signal: controller.signal }
-        );
-
-        if (!res.ok) {
-          setSuggestions([]);
-          setShowDropdown(false);
-          return;
-        }
-
-        const data = await res.json();
-
-        if (data.status !== "OK" || !data.results?.length) {
-          setSuggestions([]);
-          setShowDropdown(false);
-          return;
-        }
-
-        const mapped = data.results
-          .slice(0, 5)
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          .map((r: any) => parseGeocodingResult(r).suggestion);
-
-        setSuggestions(mapped);
-        setActiveIndex(-1);
-        setShowDropdown(mapped.length > 0);
-      } catch (err) {
-        if ((err as Error).name !== "AbortError") {
-          setSuggestions([]);
-          setShowDropdown(false);
-        }
-      } finally {
-        setLoading(false);
+      // Auto-select first result and move map
+      if (results[0]) {
+        selectOnMap(results[0]);
       }
-    },
-    [apiKey]
-  );
-
-  /* ── Handle selection ── */
-  const handleSelectSuggestion = useCallback(
-    (suggestion: Suggestion) => {
-      setShowDropdown(false);
-      setSuggestions([]);
-      onChange(suggestion.result.address);
-      if (onSelect) {
-        onSelect(suggestion.result);
-      }
-    },
-    [onChange, onSelect]
-  );
-
-  /* ── Input change with debounce ── */
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const val = e.target.value;
-    onChange(val);
-
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-
-    if (val.length < 3) {
-      setSuggestions([]);
-      setShowDropdown(false);
-      return;
+    } catch {
+      setError("Search failed. Check your internet connection.");
+    } finally {
+      setSearching(false);
     }
+  }, [apiKey, searchQuery]);
 
-    debounceRef.current = setTimeout(() => {
-      fetchSuggestions(val);
-    }, 300);
+  // Place a result on the map
+  const selectOnMap = (item: { formatted: string; result: AddressResult }) => {
+    setSelectedResult(item);
+    const map = mapRef.current;
+    if (!map || !item.result.lat || !item.result.lng) return;
+
+    const pos = { lat: item.result.lat, lng: item.result.lng };
+    map.panTo(pos);
+    map.setZoom(16);
+
+    if (markerRef.current) markerRef.current.setMap(null);
+    markerRef.current = new google.maps.Marker({
+      position: pos,
+      map,
+      icon: {
+        path: google.maps.SymbolPath.CIRCLE,
+        scale: 12,
+        fillColor: "#7c3aed",
+        fillOpacity: 1,
+        strokeColor: "#4c1d95",
+        strokeWeight: 2,
+      },
+      animation: google.maps.Animation.DROP,
+    });
   };
 
-  /* ── Keyboard navigation ── */
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (!showDropdown || suggestions.length === 0) {
-      // Allow Enter to submit the form when no dropdown
-      return;
-    }
+  // Confirm selection
+  const handleConfirm = () => {
+    if (!selectedResult) return;
+    onChange(selectedResult.result.address || selectedResult.formatted);
+    if (onSelect) onSelect(selectedResult.result);
+    setShowMap(false);
+    setSearchQuery("");
+    setSearchResults([]);
+    setSelectedResult(null);
+  };
 
-    if (e.key === "ArrowDown") {
-      e.preventDefault();
-      setActiveIndex((prev) => (prev < suggestions.length - 1 ? prev + 1 : 0));
-    } else if (e.key === "ArrowUp") {
-      e.preventDefault();
-      setActiveIndex((prev) => (prev > 0 ? prev - 1 : suggestions.length - 1));
-    } else if (e.key === "Enter") {
-      e.preventDefault();
-      if (activeIndex >= 0) {
-        handleSelectSuggestion(suggestions[activeIndex]);
-      }
-    } else if (e.key === "Escape") {
-      setShowDropdown(false);
-    }
+  // Close modal
+  const handleClose = () => {
+    setShowMap(false);
+    setSearchQuery("");
+    setSearchResults([]);
+    setSelectedResult(null);
+    setError("");
+    if (markerRef.current) markerRef.current.setMap(null);
   };
 
   // No API key — plain input
@@ -245,54 +280,145 @@ export function AddressAutocomplete({
   }
 
   return (
-    <div className="relative">
-      <div className="relative">
+    <>
+      {/* Address input with search button */}
+      <div className="flex gap-2">
         <input
-          ref={inputRef}
           type="text"
           value={value}
-          onChange={handleInputChange}
-          onKeyDown={handleKeyDown}
-          onFocus={() => {
-            if (suggestions.length > 0) setShowDropdown(true);
-          }}
-          placeholder={placeholder}
-          autoComplete="off"
-          className={`w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${className || ""}`}
+          onChange={(e) => onChange(e.target.value)}
+          placeholder="Enter address or search on map →"
+          className={`flex-1 rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent ${className || ""}`}
         />
-        {loading && (
-          <div className="absolute right-2 top-1/2 -translate-y-1/2">
-            <div className="w-4 h-4 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
-          </div>
-        )}
+        <button
+          type="button"
+          onClick={() => setShowMap(true)}
+          className="px-3 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center gap-1.5 text-sm font-medium shrink-0"
+          title="Search address on Google Maps"
+        >
+          <MapPin className="w-4 h-4" />
+          Map
+        </button>
       </div>
 
-      {showDropdown && suggestions.length > 0 && (
-        <div
-          ref={dropdownRef}
-          className="absolute z-50 mt-1 w-full bg-white border border-gray-200 rounded-lg shadow-lg max-h-60 overflow-y-auto"
-        >
-          {suggestions.map((s, i) => (
-            <button
-              key={s.id}
-              type="button"
-              className={`w-full text-left px-3 py-2.5 text-sm transition-colors ${
-                i === activeIndex ? "bg-purple-50" : "hover:bg-gray-50"
-              } ${i > 0 ? "border-t border-gray-100" : ""}`}
-              onMouseDown={(e) => {
-                e.preventDefault();
-                handleSelectSuggestion(s);
-              }}
-              onMouseEnter={() => setActiveIndex(i)}
-            >
-              <div className="font-medium text-gray-900">{s.mainText}</div>
-              {s.secondaryText && (
-                <div className="text-gray-500 text-xs mt-0.5">{s.secondaryText}</div>
+      {/* Map Modal */}
+      {showMap && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col" style={{ maxHeight: "85vh" }}>
+            {/* Header */}
+            <div className="flex items-center justify-between px-4 py-3 border-b bg-gray-50">
+              <h3 className="font-semibold text-gray-900 flex items-center gap-2">
+                <MapPin className="w-5 h-5 text-purple-600" />
+                Find Address on Map
+              </h3>
+              <button
+                type="button"
+                onClick={handleClose}
+                className="p-1 rounded hover:bg-gray-200 text-gray-500"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search bar */}
+            <div className="px-4 py-3 border-b">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    ref={searchInputRef}
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleSearch();
+                      }
+                    }}
+                    placeholder="Search address, city, or zip..."
+                    className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleSearch}
+                  disabled={searching || !searchQuery.trim()}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-sm font-medium"
+                >
+                  {searching ? "Searching..." : "Search"}
+                </button>
+              </div>
+
+              {/* Error */}
+              {error && (
+                <p className="text-xs text-red-600 mt-2">{error}</p>
               )}
-            </button>
-          ))}
+
+              {/* Search results list */}
+              {searchResults.length > 1 && (
+                <div className="mt-2 max-h-32 overflow-y-auto border border-gray-200 rounded-lg divide-y divide-gray-100">
+                  {searchResults.map((item, i) => (
+                    <button
+                      key={i}
+                      type="button"
+                      onClick={() => selectOnMap(item)}
+                      className={`w-full text-left px-3 py-2 text-xs hover:bg-purple-50 transition-colors ${
+                        selectedResult?.formatted === item.formatted ? "bg-purple-50 font-medium" : ""
+                      }`}
+                    >
+                      {item.formatted}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Map */}
+            <div className="flex-1 relative" style={{ minHeight: "300px" }}>
+              <div ref={mapContainerRef} className="w-full h-full" />
+              {!mapReady && (
+                <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
+                  <div className="flex items-center gap-2 text-gray-500 text-sm">
+                    <div className="w-5 h-5 border-2 border-purple-300 border-t-purple-600 rounded-full animate-spin" />
+                    Loading map...
+                  </div>
+                </div>
+              )}
+              {/* Tip overlay */}
+              {mapReady && !selectedResult && searchResults.length === 0 && (
+                <div className="absolute bottom-3 left-3 right-3 bg-white/90 backdrop-blur rounded-lg px-3 py-2 text-xs text-gray-600 text-center shadow">
+                  Search for an address above, or click anywhere on the map to pick a location
+                </div>
+              )}
+            </div>
+
+            {/* Selected address + confirm */}
+            {selectedResult && (
+              <div className="px-4 py-3 border-t bg-purple-50 flex items-center gap-3">
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs text-purple-600 font-medium">Selected Address</p>
+                  <p className="text-sm font-semibold text-gray-900 truncate">
+                    {selectedResult.result.address || selectedResult.formatted}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {[selectedResult.result.city, selectedResult.result.state, selectedResult.result.zip].filter(Boolean).join(", ")}
+                    {selectedResult.result.lat ? ` · ${selectedResult.result.lat.toFixed(4)}, ${selectedResult.result.lng.toFixed(4)}` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleConfirm}
+                  className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium flex items-center gap-1.5 shrink-0"
+                >
+                  <Check className="w-4 h-4" />
+                  Use This
+                </button>
+              </div>
+            )}
+          </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
