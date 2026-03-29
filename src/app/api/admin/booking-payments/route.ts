@@ -80,16 +80,13 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = getServiceSupabase();
-    const id = "bp_" + crypto.randomUUID().replace(/-/g, "").slice(0, 12);
 
-    // Insert the payment record (omit created_at — let DB default handle it)
+    // Let the DB generate the UUID id and received_at timestamp via defaults
     const insertPayload: Record<string, unknown> = {
-      id,
       booking_id,
       amount: parseFloat(amount),
       method,
       note: note || null,
-      received_at: new Date().toISOString(),
     };
 
     const { data: paymentData, error: paymentError } = await supabase
@@ -143,7 +140,7 @@ export async function POST(request: NextRequest) {
       {
         success: true,
         data: {
-          id: paymentData?.id || id,
+          id: paymentData?.id,
           new_deposit: newDeposit,
         },
       },

@@ -27,24 +27,21 @@ function createLogEntry(level: LogLevel, message: string, context?: unknown): Lo
 }
 
 function log(entry: LogEntry): void {
-  if (isDev) {
-    const prefix = `[${entry.level.toUpperCase()}] ${entry.timestamp}`;
-    switch (entry.level) {
-      case "debug":
-        console.debug(prefix, entry.message, entry.context || "");
-        break;
-      case "info":
-        console.info(prefix, entry.message, entry.context || "");
-        break;
-      case "warn":
-        console.warn(prefix, entry.message, entry.context || "");
-        break;
-      case "error":
-        console.error(prefix, entry.message, entry.context || "");
-        break;
-    }
+  const prefix = `[${entry.level.toUpperCase()}] ${entry.timestamp}`;
+  switch (entry.level) {
+    case "debug":
+      if (isDev) console.debug(prefix, entry.message, entry.context || "");
+      break;
+    case "info":
+      console.info(prefix, entry.message, entry.context || "");
+      break;
+    case "warn":
+      console.warn(prefix, entry.message, entry.context || "");
+      break;
+    case "error":
+      console.error(prefix, entry.message, entry.context || "");
+      break;
   }
-  // In production, send to external service (Sentry, LogRocket, etc.)
 }
 
 export const logger = {
