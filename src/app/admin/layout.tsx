@@ -151,61 +151,90 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Logo area */}
         <div className="px-5 py-5 border-b border-gray-800">
           <div className="flex items-center justify-between">
-            <h2 className="text-lg font-bold">Admin Panel</h2>
+            <div>
+              <h2 className="text-lg font-bold">Admin Panel</h2>
+              <p className="text-xs text-gray-500 mt-0.5">{user?.email}</p>
+            </div>
             <div className="relative">
               <button
                 onClick={() => setShowNotifications(!showNotifications)}
-                aria-label="Toggle notifications dropdown"
+                aria-label={`Notifications${pendingCount > 0 ? ` — ${pendingCount} pending` : ""}`}
                 aria-expanded={showNotifications}
-                title="Unread notifications"
-                className="relative p-1.5 rounded-lg hover:bg-gray-800 transition-colors"
+                className={cn(
+                  "relative p-2 rounded-lg transition-colors",
+                  pendingCount > 0
+                    ? "bg-purple-600/20 hover:bg-purple-600/30"
+                    : "hover:bg-gray-800"
+                )}
               >
-                <Bell className="h-5 w-5 text-gray-400" />
+                <Bell className={cn("h-5 w-5", pendingCount > 0 ? "text-white" : "text-gray-500")} />
                 {pendingCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 ring-2 ring-gray-900 animate-pulse">
                     {pendingCount}
                   </span>
                 )}
               </button>
+
+              {/* Notification dropdown */}
               {showNotifications && (
-                <div className="absolute right-0 top-full mt-2 w-72 bg-white rounded-lg shadow-xl border z-50">
-                  <div className="p-3 border-b">
-                    <h3 className="text-sm font-semibold text-gray-900">Pending Bookings</h3>
-                  </div>
-                  {recentBookings.length === 0 ? (
-                    <div className="p-4 text-center text-sm text-gray-500">No pending bookings</div>
-                  ) : (
-                    <div className="max-h-64 overflow-y-auto">
-                      {recentBookings.map((b) => (
-                        <Link
-                          key={b.id}
-                          href={`/admin/bookings?booking=${b.id}`}
-                          onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
-                          className="flex items-center justify-between px-3 py-2.5 hover:bg-gray-50 border-b last:border-0"
-                        >
-                          <div>
-                            <p className="text-sm font-medium text-gray-900">{b.customer_name || "Unknown"}</p>
-                            <p className="text-xs text-gray-400">
-                              {b.created_at ? new Date(b.created_at).toLocaleDateString() : "—"}
-                            </p>
-                          </div>
-                          <span className="text-sm font-semibold text-purple-600">${b.total_price}</span>
-                        </Link>
-                      ))}
+                <>
+                  {/* Click-outside overlay */}
+                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                  <div className="absolute left-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                    <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Pending Bookings
+                        {pendingCount > 0 && (
+                          <span className="ml-2 inline-flex items-center justify-center bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                            {pendingCount}
+                          </span>
+                        )}
+                      </h3>
+                      <button
+                        onClick={() => setShowNotifications(false)}
+                        className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"
+                        aria-label="Close notifications"
+                      >
+                        <X className="h-4 w-4" />
+                      </button>
                     </div>
-                  )}
-                  <Link
-                    href="/admin/bookings?status=pending"
-                    onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
-                    className="block p-2.5 text-center text-xs font-medium text-purple-600 hover:bg-purple-50 border-t"
-                  >
-                    View all pending bookings
-                  </Link>
-                </div>
+                    {recentBookings.length === 0 ? (
+                      <div className="px-4 py-8 text-center">
+                        <Bell className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                        <p className="text-sm text-gray-500">No pending bookings</p>
+                      </div>
+                    ) : (
+                      <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+                        {recentBookings.map((b) => (
+                          <Link
+                            key={b.id}
+                            href={`/admin/bookings?booking=${b.id}`}
+                            onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
+                            className="flex items-center justify-between px-4 py-3 hover:bg-purple-50 transition-colors group"
+                          >
+                            <div className="min-w-0 flex-1">
+                              <p className="text-sm font-medium text-gray-900 truncate group-hover:text-purple-700">{b.customer_name || "Unknown"}</p>
+                              <p className="text-xs text-gray-400 mt-0.5">
+                                {b.created_at ? new Date(b.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
+                              </p>
+                            </div>
+                            <span className="text-sm font-bold text-purple-600 ml-3">${b.total_price.toLocaleString()}</span>
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                    <Link
+                      href="/admin/bookings?status=pending"
+                      onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
+                      className="block px-4 py-3 text-center text-xs font-semibold text-purple-600 hover:bg-purple-50 border-t transition-colors"
+                    >
+                      View all pending bookings →
+                    </Link>
+                  </div>
+                </>
               )}
             </div>
           </div>
-          <p className="text-xs text-gray-400 mt-0.5">{user?.email}</p>
         </div>
 
         {/* Nav links */}

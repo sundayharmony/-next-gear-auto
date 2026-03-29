@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useMemo } from "react";
-import { MapPin, Plus, Pencil, Trash2, Loader2, ToggleLeft, ToggleRight, Star } from "lucide-react";
+import { MapPin, Plus, Pencil, Trash2, Loader2, ToggleLeft, ToggleRight, Star, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -283,7 +283,7 @@ export default function AdminLocationsPage() {
 
   /* ── Main render ── */
   return (
-    <PageContainer>
+    <>
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 right-4 z-50">
@@ -294,18 +294,26 @@ export default function AdminLocationsPage() {
       )}
 
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
-            <MapPin className="h-8 w-8 text-purple-600" /> Locations
-          </h1>
-          <p className="text-gray-500 text-sm mt-1">Manage pickup and dropoff locations</p>
+      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
+        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold">Locations</h1>
+              <p className="mt-1 text-purple-200">Manage pickup and dropoff locations</p>
+            </div>
+            <Button onClick={() => { setEditId(null); setShowAdd(!showAdd); if (showAdd) setAddForm({ ...blank }); }}
+              className="bg-white text-purple-900 hover:bg-gray-100">
+              {showAdd ? (
+                <><X className="h-4 w-4 mr-2" /> Cancel</>
+              ) : (
+                <><Plus className="h-4 w-4 mr-2" /> Add Location</>
+              )}
+            </Button>
+          </div>
         </div>
-        <Button onClick={() => { setEditId(null); setShowAdd(!showAdd); if (showAdd) setAddForm({ ...blank }); }}
-          className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white">
-          <Plus className="h-4 w-4" /> Add Location
-        </Button>
-      </div>
+      </section>
+
+      <PageContainer className="py-8">
 
       {/* Stats */}
       {!loading && (
@@ -391,6 +399,7 @@ export default function AdminLocationsPage() {
           </CardContent>
         </Card>
       )}
-    </PageContainer>
+      </PageContainer>
+    </>
   );
 }
