@@ -58,7 +58,7 @@ function loadGoogleMaps(): Promise<void> {
 export function LocationMap({ locations, selectedId, onSelect, className }: LocationMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
-  const markersRef = useRef<google.maps.Marker[]>([]);
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -80,13 +80,10 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
         const map = new google.maps.Map(mapRef.current, {
           center,
           zoom: 11,
+          mapId: "location-map",
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
-          styles: [
-            { featureType: "poi", stylers: [{ visibility: "off" }] },
-            { featureType: "transit", stylers: [{ visibility: "simplified" }] },
-          ],
         });
 
         mapInstanceRef.current = map;
@@ -106,7 +103,7 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
     if (!map || !mapReady) return;
 
     // Clear existing markers
-    markersRef.current.forEach(m => m.setMap(null));
+    markersRef.current.forEach(m => { m.map = null; });
     markersRef.current = [];
 
     if (mappableLocations.length === 0) return;
@@ -117,18 +114,15 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
       const position = { lat: loc.lat!, lng: loc.lng! };
       const isSelected = loc.id === selectedId;
 
-      const marker = new google.maps.Marker({
+      const pin = document.createElement("div");
+      const size = isSelected ? 24 : 18;
+      pin.style.cssText = `width:${size}px;height:${size}px;border-radius:50%;background:${isSelected ? "#7c3aed" : "#9ca3af"};border:2px solid ${isSelected ? "#4c1d95" : "#6b7280"};cursor:pointer;transition:transform 0.15s;`;
+      pin.title = loc.name;
+
+      const marker = new google.maps.marker.AdvancedMarkerElement({
         position,
         map,
-        title: loc.name,
-        icon: {
-          path: google.maps.SymbolPath.CIRCLE,
-          scale: isSelected ? 12 : 9,
-          fillColor: isSelected ? "#7c3aed" : "#9ca3af",
-          fillOpacity: 1,
-          strokeColor: isSelected ? "#4c1d95" : "#6b7280",
-          strokeWeight: 2,
-        },
+        content: pin,
         zIndex: isSelected ? 10 : 1,
       });
 
@@ -144,7 +138,7 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
               ${loc.is_default ? '<p style="font-size:11px;color:#9333ea;margin:2px 0 0;">★ Default location</p>' : ''}
             </div>
           `);
-          infoWindow.open(map, marker);
+          infoWindow.open({ anchor: marker, map });
         }
       });
 

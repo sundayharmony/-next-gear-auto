@@ -92,7 +92,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder = "
 
   const containerRef = useRef<HTMLDivElement>(null);
   const mapObjRef = useRef<google.maps.Map | null>(null);
-  const markerObjRef = useRef<google.maps.Marker | null>(null);
+  const markerObjRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const listenerRef = useRef<google.maps.MapsEventListener | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -113,13 +113,10 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder = "
         const map = new google.maps.Map(el, {
           center: { lat: 40.7178, lng: -74.0431 },
           zoom: 12,
+          mapId: "address-picker",
           mapTypeControl: false,
           streetViewControl: false,
           fullscreenControl: false,
-          styles: [
-            { featureType: "poi", stylers: [{ visibility: "off" }] },
-            { featureType: "transit", stylers: [{ visibility: "simplified" }] },
-          ],
         });
 
         listenerRef.current = map.addListener("click", async (e: google.maps.MapMouseEvent) => {
@@ -140,7 +137,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder = "
     return () => {
       dead = true;
       if (listenerRef.current) { google.maps.event.removeListener(listenerRef.current); listenerRef.current = null; }
-      if (markerObjRef.current) { markerObjRef.current.setMap(null); markerObjRef.current = null; }
+      if (markerObjRef.current) { markerObjRef.current.map = null; markerObjRef.current = null; }
       mapObjRef.current = null;
       setMapReady(false);
     };
@@ -149,12 +146,13 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder = "
   /* ── Helpers ── */
 
   function placeMarker(map: google.maps.Map, lat: number, lng: number) {
-    if (markerObjRef.current) markerObjRef.current.setMap(null);
-    markerObjRef.current = new google.maps.Marker({
+    if (markerObjRef.current) markerObjRef.current.map = null;
+    const pin = document.createElement("div");
+    pin.style.cssText = "width:24px;height:24px;border-radius:50%;background:#7c3aed;border:2px solid #4c1d95;";
+    markerObjRef.current = new google.maps.marker.AdvancedMarkerElement({
       position: { lat, lng },
       map,
-      animation: google.maps.Animation.DROP,
-      icon: { path: google.maps.SymbolPath.CIRCLE, scale: 12, fillColor: "#7c3aed", fillOpacity: 1, strokeColor: "#4c1d95", strokeWeight: 2 },
+      content: pin,
     });
   }
 
