@@ -165,14 +165,19 @@ export default function AdminCalendarPage() {
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      const [, vehiclesRes] = await Promise.all([
+      const [, vehiclesRes, blockedRes] = await Promise.all([
         fetchBookings(),
         adminFetch("/api/admin/vehicles"),
+        adminFetch("/api/admin/blocked-dates"),
       ]);
 
       if (vehiclesRes.ok) {
         const data = await vehiclesRes.json();
         setVehicles(data.data || []);
+      }
+      if (blockedRes.ok) {
+        const data = await blockedRes.json();
+        setBlockedDates(data.data || []);
       }
     } catch (error) {
       logger.error("Failed to refresh calendar data:", error);
@@ -813,14 +818,15 @@ function TimelineView({
                           {blockedDates
                             .filter((bd) => bd.vehicle_id === vehicle.id)
                             .filter((bd) => {
-                              const dateKey = toDateKey(date);
-                              return bd.start_date <= dateKey && bd.end_date >= dateKey && bd.start_date === dateKey;
+                              // Only render from the cell where the blocked bar should start
+                              const clampedStart = bd.start_date < dateKeys[0] ? dateKeys[0] : bd.start_date;
+                              return toDateKey(date) === clampedStart && bd.end_date >= dateKeys[0] && bd.start_date <= dateKeys[dateKeys.length - 1];
                             })
                             .map((bd) => {
-                              const bdStartIdx = dateRange.findIndex((d) => toDateKey(d) >= bd.start_date);
-                              const bdEndIdx = dateRange.findIndex((d) => toDateKey(d) > bd.end_date);
-                              const endIdx = bdEndIdx === -1 ? dateRange.length - 1 : bdEndIdx - 1;
-                              const startIdx = bdStartIdx === -1 ? 0 : bdStartIdx;
+                              const clampedStartKey = bd.start_date < dateKeys[0] ? dateKeys[0] : bd.start_date;
+                              const clampedEndKey = bd.end_date > dateKeys[dateKeys.length - 1] ? dateKeys[dateKeys.length - 1] : bd.end_date;
+                              const startIdx = dateKeys.indexOf(clampedStartKey);
+                              const endIdx = dateKeys.indexOf(clampedEndKey);
                               const span = endIdx - startIdx + 1;
                               return (
                                 <div

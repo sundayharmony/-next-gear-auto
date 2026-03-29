@@ -170,7 +170,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               >
                 <Bell className={cn("h-5 w-5", pendingCount > 0 ? "text-white" : "text-gray-500")} />
                 {pendingCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 ring-2 ring-gray-900 animate-pulse">
+                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1 ring-2 ring-gray-900">
                     {pendingCount}
                   </span>
                 )}
@@ -180,7 +180,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               {showNotifications && (
                 <>
                   {/* Click-outside overlay */}
-                  <div className="fixed inset-0 z-40" onClick={() => setShowNotifications(false)} />
+                  <div className="fixed inset-0 z-[45]" onClick={() => setShowNotifications(false)} />
                   <div className="absolute left-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
                     <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-gray-900">

@@ -25,6 +25,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    if (emailText.length > 50000) {
+      return NextResponse.json(
+        { success: false, error: "Email text too long (max 50,000 characters)" },
+        { status: 400 }
+      );
+    }
+
     const result = parseTuroEmail(emailText);
 
     return NextResponse.json({

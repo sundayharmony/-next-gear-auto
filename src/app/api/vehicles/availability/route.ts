@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    if (endParsed <= startParsed) {
+    if (endParsed < startParsed) {
       return NextResponse.json(
         { success: false, error: "End date must be after start date" },
         { status: 400 }

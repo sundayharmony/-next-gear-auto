@@ -98,7 +98,7 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
 
     // Numeric date range: "04/05/2026 - 04/08/2026" or "2026-04-05 to 2026-04-08"
     const numRangeMatch = text.match(
-      /(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})\s*[–—to-]+\s*(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/i
+      /(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})\s*(?:[–—-]+|to)\s*(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/i
     );
     if (numRangeMatch) {
       const s = parseFlexibleDate(numRangeMatch[1]);
@@ -192,7 +192,7 @@ function stripHtml(text: string): string {
     .replace(/&gt;/gi, ">")
     .replace(/&quot;/gi, '"')
     .replace(/&#39;/gi, "'")
-    .replace(/\s+/g, " ")
+    .replace(/[^\S\n]+/g, " ")
     .replace(/ \n/g, "\n")
     .trim();
 }
@@ -246,9 +246,12 @@ function parseFlexibleDate(dateStr: string): string | null {
   if (withDayName !== s) return parseFlexibleDate(withDayName);
 
   // Fallback: try Date.parse
-  const parsed = new Date(s);
+  const parsed = new Date(s + "T12:00:00");
   if (!isNaN(parsed.getTime()) && parsed.getFullYear() > 2020) {
-    return parsed.toISOString().split("T")[0];
+    const y = parsed.getFullYear();
+    const m = String(parsed.getMonth() + 1).padStart(2, "0");
+    const d = String(parsed.getDate()).padStart(2, "0");
+    return `${y}-${m}-${d}`;
   }
 
   return null;

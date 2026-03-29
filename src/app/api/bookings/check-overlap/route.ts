@@ -22,6 +22,8 @@ export async function GET(req: NextRequest) {
     const vehicleId = searchParams.get("vehicleId");
     const pickupDate = searchParams.get("pickupDate");
     const returnDate = searchParams.get("returnDate");
+    const pickupTime = searchParams.get("pickupTime") || "00:00";
+    const returnTime = searchParams.get("returnTime") || "23:59";
 
     if (!vehicleId || !pickupDate || !returnDate) {
       return NextResponse.json(
@@ -43,8 +45,8 @@ export async function GET(req: NextRequest) {
     // Apply time-based gap logic: allow same-day turnovers with 60+ minute gap
     let hasRealOverlap = false;
     if (conflicting && conflicting.length > 0) {
-      const newPickup = new Date(`${pickupDate}T00:00:00`);
-      const newReturn = new Date(`${returnDate}T23:59:00`);
+      const newPickup = new Date(`${pickupDate}T${pickupTime}`);
+      const newReturn = new Date(`${returnDate}T${returnTime}`);
 
       hasRealOverlap = conflicting.some((existing) => {
         const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time || "00:00"}`);

@@ -66,6 +66,10 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "End date must be on or after start date" }, { status: 400 });
     }
 
+    // Validate source
+    const validSources = ["manual", "turo-email"];
+    const safeSource = validSources.includes(source) ? source : "manual";
+
     // Verify vehicle exists
     const { data: vehicle } = await supabase
       .from("vehicles")
@@ -77,13 +81,28 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Vehicle not found" }, { status: 404 });
     }
 
+    // Check for overlapping blocked dates
+    const { data: existing } = await supabase
+      .from("blocked_dates")
+      .select("id, start_date, end_date")
+      .eq("vehicle_id", vehicleId)
+      .lte("start_date", endDate)
+      .gte("end_date", startDate);
+
+    if (existing && existing.length > 0) {
+      return NextResponse.json(
+        { success: false, error: `Overlapping blocked dates already exist (${existing[0].start_date} to ${existing[0].end_date})` },
+        { status: 409 }
+      );
+    }
+
     const { data, error } = await supabase
       .from("blocked_dates")
       .insert({
         vehicle_id: vehicleId,
         start_date: startDate,
         end_date: endDate,
-        source: source || "manual",
+        source: safeSource,
         reason: reason || null,
       })
       .select()
@@ -118,14 +137,19 @@ export async function DELETE(req: NextRequest) {
       return NextResponse.json({ success: false, error: "id param is required" }, { status: 400 });
     }
 
-    const { error } = await supabase
+    const { data: deleted, error } = await supabase
       .from("blocked_dates")
       .delete()
-      .eq("id", id);
+      .eq("id", id)
+      .select("id");
 
     if (error) {
       logger.error("Blocked dates DELETE error:", error);
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+    }
+
+    if (!deleted || deleted.length === 0) {
+      return NextResponse.json({ success: false, error: "Blocked date not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, message: "Blocked date removed" });

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { PageContainer } from "@/components/layout/page-container";
@@ -170,7 +170,7 @@ export default function BlockedDatesPage() {
           const match = vehicles.find((v) => {
             const name = getVehicleDisplayName(v).toLowerCase();
             return name.includes(desc) || desc.includes(name) ||
-              desc.includes(v.make.toLowerCase()) && desc.includes(v.model.toLowerCase());
+              (desc.includes(v.make.toLowerCase()) && desc.includes(v.model.toLowerCase()));
           });
           if (match) setEmailVehicleId(match.id);
         }
@@ -227,6 +227,7 @@ export default function BlockedDatesPage() {
 
   // ── Delete ──
   const handleDelete = async (id: string) => {
+    if (!window.confirm("Remove this blocked date range?")) return;
     setDeletingId(id);
     try {
       const res = await adminFetch(`/api/admin/blocked-dates?id=${id}`, { method: "DELETE" });
@@ -249,7 +250,7 @@ export default function BlockedDatesPage() {
     ? blockedDates.filter((b) => b.vehicle_id === filterVehicleId)
     : blockedDates;
 
-  const today = new Date().toISOString().split("T")[0];
+  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
 
   return (
     <>
@@ -374,6 +375,7 @@ export default function BlockedDatesPage() {
                         value={emailVehicleId}
                         onChange={(e) => setEmailVehicleId(e.target.value)}
                         className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                        aria-label="Vehicle for email block"
                       >
                         <option value="">Choose vehicle...</option>
                         {vehicles.map((v) => (
@@ -424,6 +426,7 @@ export default function BlockedDatesPage() {
                     value={manualVehicleId}
                     onChange={(e) => setManualVehicleId(e.target.value)}
                     className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                    aria-label="Vehicle for manual block"
                   >
                     <option value="">Choose vehicle...</option>
                     {vehicles.map((v) => (
@@ -478,6 +481,7 @@ export default function BlockedDatesPage() {
             value={filterVehicleId}
             onChange={(e) => setFilterVehicleId(e.target.value)}
             className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
+            aria-label="Filter blocked dates by vehicle"
           >
             <option value="">All Vehicles</option>
             {vehicles.map((v) => (
@@ -510,6 +514,7 @@ export default function BlockedDatesPage() {
                 Math.ceil(
                   (new Date(block.end_date).getTime() - new Date(block.start_date).getTime()) / 86400000
                 ) + 1;
+              // Note: API currently only returns future blocks; isPast check retained for when history view is added
               const isPast = block.end_date < today;
 
               return (

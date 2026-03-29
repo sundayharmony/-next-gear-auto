@@ -46,7 +46,7 @@ export async function GET(req: NextRequest) {
       .from("blocked_dates")
       .select("start_date, end_date")
       .eq("vehicle_id", vehicleId)
-      .gte("end_date", new Date().toISOString().split("T")[0])
+      .gte("end_date", new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0])
       .order("start_date", { ascending: true });
 
     const blockedRanges = (blocks || []).map((b) => ({
