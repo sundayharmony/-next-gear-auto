@@ -166,6 +166,9 @@ export function SignaturePad({
           ref={canvasRef}
           className="cursor-crosshair touch-none"
           style={{ touchAction: "none" }}
+          role="img"
+          aria-label={hasContent ? `${label} - signed` : `${label} - awaiting signature`}
+          tabIndex={0}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}

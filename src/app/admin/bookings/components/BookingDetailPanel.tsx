@@ -83,6 +83,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState<Partial<BookingRow>>(booking);
   const [saving, setSaving] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState(false);
 
   // Fetched data
   const [bookingTickets, setBookingTickets] = useState<TicketRecord[]>([]);
@@ -238,9 +240,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       return;
     }
 
-    if (window.confirm(`Move booking to "${newStatus}"?`)) {
-      updateStatus(newStatus);
-    }
+    setPendingStatus(newStatus);
   };
 
   // Update booking status
@@ -764,6 +764,16 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   );
                 })}
               </div>
+              {pendingStatus && (
+                <div className="mt-2 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                  <span className="text-amber-800">Move to &quot;{pendingStatus}&quot;?</span>
+                  <div className="ml-auto flex gap-1.5">
+                    <button onClick={() => { updateStatus(pendingStatus); setPendingStatus(null); }} className="px-3 py-1 bg-purple-600 text-white rounded text-xs font-medium hover:bg-purple-700">Yes</button>
+                    <button onClick={() => setPendingStatus(null)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-xs font-medium hover:bg-gray-300">No</button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
@@ -1652,17 +1662,23 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
                   {/* Cancel button */}
                   <Button
-                    onClick={() => {
-                      if (window.confirm("Cancel this booking?")) {
-                        updateStatus("cancelled");
-                      }
-                    }}
+                    onClick={() => setConfirmingCancel(true)}
                     variant="outline"
                     className="w-full text-red-600 border-red-200 hover:bg-red-50 text-xs"
                   >
                     <X className="w-3 h-3 mr-1" />
                     Cancel Booking
                   </Button>
+                  {confirmingCancel && (
+                    <div className="mt-2 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
+                      <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                      <span className="text-amber-800">Cancel this booking?</span>
+                      <div className="ml-auto flex gap-1.5">
+                        <button onClick={() => { updateStatus("cancelled"); setConfirmingCancel(false); }} className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700">Yes</button>
+                        <button onClick={() => setConfirmingCancel(false)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-xs font-medium hover:bg-gray-300">No</button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </>

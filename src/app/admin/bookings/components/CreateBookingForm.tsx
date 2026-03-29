@@ -264,6 +264,11 @@ export default function CreateBookingForm({
       onError("Customer email is required");
       return false;
     }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (form.customerEmail && !emailRegex.test(form.customerEmail)) {
+      onError("Please enter a valid email address");
+      return false;
+    }
     if (!form.vehicleId) {
       onError("Vehicle is required");
       return false;

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Send, CheckCircle } from "lucide-react";
+import { Send, CheckCircle, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useForm } from "@/lib/hooks/use-form";
@@ -10,6 +10,7 @@ import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
 export function ContactForm() {
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState("");
 
   const form = useForm({
     initialValues: {
@@ -25,15 +26,21 @@ export function ContactForm() {
       message: { required: true, minLength: 10, message: "Please enter at least 10 characters" },
     },
     onSubmit: async (values) => {
-      const res = await csrfFetch("/api/contact", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(values),
-      });
-      if (!res.ok) throw new Error(`Server error (${res.status})`);
-      const data = await res.json();
-      if (!data.success) throw new Error(data.message || "Failed to send");
-      setSubmitted(true);
+      setSubmitError("");
+      try {
+        const res = await csrfFetch("/api/contact", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(values),
+        });
+        if (!res.ok) throw new Error(`Server error (${res.status})`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "Failed to send");
+        setSubmitted(true);
+      } catch (err) {
+        setSubmitError(err instanceof Error ? err.message : "An error occurred. Please try again.");
+        throw err;
+      }
     },
   });
 
@@ -86,6 +93,15 @@ export function ContactForm() {
         {form.isSubmitting ? "Sending..." : "Send Message"}
         {!form.isSubmitting && <Send className="h-4 w-4 ml-1" />}
       </Button>
+      {submitError && (
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <AlertCircle className="h-4 w-4 flex-shrink-0" />
+            <span>{submitError}</span>
+          </div>
+          <button onClick={() => setSubmitError("")} className="ml-2 text-red-400 hover:text-red-600 text-xs font-medium">Dismiss</button>
+        </div>
+      )}
     </form>
   );
 }

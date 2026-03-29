@@ -51,6 +51,7 @@ function AdminBookingsContent() {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
+  const [bulkSending, setBulkSending] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
   const detailDirtyRef = React.useRef(false);
 
@@ -100,6 +101,20 @@ function AdminBookingsContent() {
   useEffect(() => {
     resetPage();
   }, [statusFilter, vehicleFilter, searchQuery, resetPage]);
+
+  // Auto-dismiss error message after 5 seconds
+  useEffect(() => {
+    if (!error) return;
+    const timer = setTimeout(() => setError(null), 5000);
+    return () => clearTimeout(timer);
+  }, [error, setError]);
+
+  // Auto-dismiss success message after 4 seconds
+  useEffect(() => {
+    if (!success) return;
+    const timer = setTimeout(() => setSuccess(null), 4000);
+    return () => clearTimeout(timer);
+  }, [success, setSuccess]);
 
   // Build unique vehicle options for the filter dropdown
   const vehicleOptions = React.useMemo(() => {
@@ -156,8 +171,9 @@ function AdminBookingsContent() {
   }, [selectedIds, bulkUpdateStatus]);
 
   const handleBulkEmail = useCallback(async () => {
+    if (bulkSending) return;
     if (selectedIds.size === 0) return;
-    setBulkUpdating(true);
+    setBulkSending(true);
     try {
       const ids = Array.from(selectedIds);
       let sentCount = 0;
@@ -196,9 +212,9 @@ function AdminBookingsContent() {
       }
       setSelectedIds(new Set());
     } finally {
-      setBulkUpdating(false);
+      setBulkSending(false);
     }
-  }, [selectedIds, setSuccess, setError]);
+  }, [selectedIds, bulkSending, setSuccess, setError]);
 
   // CSV export
   const handleExportCSV = useCallback(() => {
@@ -303,7 +319,7 @@ function AdminBookingsContent() {
           onBulkCancel={() => handleBulkUpdate("cancelled")}
           onBulkEmail={handleBulkEmail}
           onClearSelection={() => setSelectedIds(new Set())}
-          bulkUpdating={bulkUpdating}
+          bulkUpdating={bulkUpdating || bulkSending}
         />
 
         {/* Create Booking Form */}

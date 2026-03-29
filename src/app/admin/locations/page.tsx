@@ -253,7 +253,7 @@ export default function AdminLocationsPage() {
                 <Input type="number" step="any" value={form.lng ?? ""} onChange={(e) => setForm({ ...form, lng: e.target.value ? parseFloat(e.target.value) : null })} placeholder="-74.0060" />
               </div>
             </div>
-            <button type="button" onClick={() => geocodeFromAddress(form, setForm)} disabled={geocoding} className="text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 disabled:cursor-not-allowed">{geocoding ? "Detecting..." : "Auto-detect from address"}</button>
+            <button type="button" onClick={() => geocodeFromAddress(form, setForm)} disabled={geocoding} aria-label={geocoding ? "Detecting coordinates..." : "Auto-detect coordinates from address"} aria-busy={geocoding} className="text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 disabled:cursor-not-allowed">{geocoding ? "Detecting..." : "Auto-detect from address"}</button>
           </div>
 
           {/* Default checkbox */}

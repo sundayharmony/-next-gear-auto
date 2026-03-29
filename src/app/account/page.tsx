@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import {
   Calendar, Clock, User,
   Car, Download, XCircle, Star, LogOut, Shield,
-  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw, CheckCircle2, ShieldCheck, Loader2
+  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw, CheckCircle2, ShieldCheck, Loader2, AlertTriangle
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,6 +62,7 @@ export default function AccountPage() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [reviewTarget, setReviewTarget] = useState<{ vehicleId: string; vehicleName: string; bookingId: string } | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
+  const [confirmingCancel, setConfirmingCancel] = useState<string | null>(null);
   const [profileForm, setProfileForm] = useState({ name: "", phone: "", dob: "" });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState("");
@@ -132,8 +133,7 @@ export default function AccountPage() {
     router.push("/");
   }, [logout, router]);
 
-  const handleCancelBooking = useCallback(async (bookingId: string) => {
-    if (!confirm("Are you sure you want to cancel this booking? This action cannot be undone.")) return;
+  const performCancelBooking = useCallback(async (bookingId: string) => {
     setCancelling(bookingId);
     try {
       const res = await csrfFetch("/api/bookings", {
@@ -145,6 +145,7 @@ export default function AccountPage() {
       const data = await res.json();
       if (res.ok && data.success) {
         setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, status: "cancelled" } : b));
+        setProfileMsg("Booking cancelled successfully.");
       } else {
         setProfileMsg(data.message || "Failed to cancel booking.");
       }
@@ -153,7 +154,12 @@ export default function AccountPage() {
       setProfileMsg("Failed to cancel booking. Please try again.");
     } finally {
       setCancelling(null);
+      setConfirmingCancel(null);
     }
+  }, []);
+
+  const handleCancelBooking = useCallback((bookingId: string) => {
+    setConfirmingCancel(bookingId);
   }, []);
 
   // Auto-clear profile messages after 5 seconds (with proper cleanup)
@@ -403,6 +409,16 @@ export default function AccountPage() {
                             </Button>
                           )}
                         </div>
+                        {confirmingCancel === booking.id && (
+                          <div className="mt-3 flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm">
+                            <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0" />
+                            <span className="text-amber-800 flex-1">Cancel this booking? This action cannot be undone.</span>
+                            <div className="flex gap-1.5 ml-auto">
+                              <button onClick={() => performCancelBooking(booking.id)} className="px-3 py-1 bg-red-600 text-white rounded text-xs font-medium hover:bg-red-700">Yes, Cancel</button>
+                              <button onClick={() => setConfirmingCancel(null)} className="px-3 py-1 bg-gray-200 text-gray-700 rounded text-xs font-medium hover:bg-gray-300">No, Keep</button>
+                            </div>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   ))

@@ -321,7 +321,7 @@ export default function AdminCalendarPage() {
           {/* Backdrop */}
           <div className="flex-1 bg-black/50" onClick={closeBookingDetail} />
           {/* Panel */}
-          <div className="w-full max-w-lg bg-white shadow-xl overflow-y-auto" tabIndex={0} autoFocus>
+          <div className="w-full max-w-lg bg-white shadow-xl overflow-y-auto" tabIndex={0} autoFocus role="dialog" aria-modal="true" aria-label="Booking details">
             <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
               <h2 className="text-lg font-semibold">Booking Details</h2>
               <button onClick={closeBookingDetail} aria-label="Close booking details" className="text-gray-400 hover:text-gray-600">
