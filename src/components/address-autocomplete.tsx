@@ -138,6 +138,10 @@ export function AddressAutocomplete({
 
     loadGoogleMaps()
       .then(() => {
+        // Wait for React to flush the modal DOM before accessing the ref
+        return new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      })
+      .then(() => {
         if (cancelled || !mapContainerRef.current || typeof google === "undefined" || !google.maps) return;
 
         // Force the container to have a measurable size before init
