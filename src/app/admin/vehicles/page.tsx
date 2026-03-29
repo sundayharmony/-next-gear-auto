@@ -117,7 +117,6 @@ export default function AdminVehiclesPage() {
   const [filterCategory, setFilterCategory] = useState<VehicleCategory | "">("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [syncingTuro, setSyncingTuro] = useState(false);
   const editFormRef = useRef<HTMLDivElement>(null);
 
   const fetchVehicles = async (signal?: AbortSignal) => {
@@ -426,7 +425,6 @@ export default function AdminVehiclesPage() {
           monthlyPayment: editForm.monthlyPayment,
           paymentDayOfMonth: editForm.paymentDayOfMonth,
           financingStartDate: editForm.financingStartDate || null,
-          turoIcalUrl: editForm.turoIcalUrl || null,
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -488,7 +486,6 @@ export default function AdminVehiclesPage() {
           monthlyPayment: newVehicle.monthlyPayment,
           paymentDayOfMonth: newVehicle.paymentDayOfMonth,
           financingStartDate: newVehicle.financingStartDate || null,
-          turoIcalUrl: newVehicle.turoIcalUrl || null,
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -609,30 +606,6 @@ export default function AdminVehiclesPage() {
         ...prev,
         features: (prev.features || []).filter((_, i) => i !== index),
       }));
-    }
-  };
-
-  const handleTuroSyncAll = async () => {
-    setSyncingTuro(true);
-    try {
-      const res = await adminFetch("/api/cron/turo-sync", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success) {
-        setSuccess(data.message || "Turo sync completed");
-        // Refresh vehicles to get updated sync timestamps
-        fetchVehicles();
-      } else {
-        setError(data.error || "Turo sync failed");
-      }
-    } catch {
-      setError("Network error — could not run Turo sync");
-    } finally {
-      setSyncingTuro(false);
     }
   };
 
@@ -853,37 +826,6 @@ export default function AdminVehiclesPage() {
                 </div>
               </div>
             )}
-          </div>
-
-          {/* Turo Calendar Sync Section */}
-          <div className="border border-blue-200 rounded-lg p-2.5 bg-blue-50/50">
-            <label className="text-xs font-semibold text-blue-700 uppercase tracking-wide block mb-2">
-              Turo Calendar Sync
-            </label>
-            <div className="space-y-2">
-              <div>
-                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
-                  Turo iCal URL
-                </label>
-                <Input
-                  type="url"
-                  value={form.turoIcalUrl || ""}
-                  onChange={(e) => setForm({ ...form, turoIcalUrl: e.target.value })}
-                  placeholder="https://turo.com/reservations/subscribe/ical.ics?driverId=...&key=..."
-                  className="text-xs"
-                />
-                <p className="text-[10px] text-gray-400 mt-0.5">
-                  Paste the iCal URL from your Turo host dashboard. Syncs every 30 minutes.
-                </p>
-              </div>
-              {form.turoIcalUrl && (
-                <p className="text-[10px] text-blue-600">
-                  {(form as Vehicle).turoLastSyncedAt
-                    ? `Last synced: ${new Date((form as Vehicle).turoLastSyncedAt!).toLocaleString()}`
-                    : "Not synced yet — will sync within 30 minutes after saving."}
-                </p>
-              )}
-            </div>
           </div>
 
           {/* Color, License, VIN, Mileage, Maintenance Row */}
@@ -1295,38 +1237,22 @@ export default function AdminVehiclesPage() {
                 Manage your rental vehicle fleet{vehicles.length > 0 && ` · ${vehicles.length} vehicle${vehicles.length !== 1 ? "s" : ""}`}
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              {vehicles.some((v) => v.turoIcalUrl) && (
-                <Button
-                  onClick={handleTuroSyncAll}
-                  disabled={syncingTuro}
-                  variant="outline"
-                  className="border-blue-300 text-blue-100 hover:bg-blue-800/30"
-                >
-                  {syncingTuro ? (
-                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Syncing Turo...</>
-                  ) : (
-                    <><RefreshCw className="h-4 w-4 mr-2" /> Sync Turo</>
-                  )}
-                </Button>
-              )}
-              <Button
-                onClick={() => {
-                  if (showAddForm) {
-                    setNewVehicle(emptyVehicle);
-                  }
-                  setShowAddForm(!showAddForm);
-                  setEditingId(null);
-                }}
-                className="bg-white text-purple-900 hover:bg-gray-100"
-              >
-                {showAddForm ? (
-                  <><X className="h-4 w-4 mr-2" /> Cancel</>
+            <Button
+              onClick={() => {
+                if (showAddForm) {
+                  setNewVehicle(emptyVehicle);
+                }
+                setShowAddForm(!showAddForm);
+                setEditingId(null);
+              }}
+              className="bg-white text-purple-900 hover:bg-gray-100"
+            >
+              {showAddForm ? (
+                <><X className="h-4 w-4 mr-2" /> Cancel</>
                 ) : (
                   <><Plus className="h-4 w-4 mr-2" /> Add Vehicle</>
                 )}
               </Button>
-            </div>
           </div>
         </div>
       </section>
@@ -1692,28 +1618,6 @@ export default function AdminVehiclesPage() {
                         : "In Maintenance"}
                     </Badge>
                   </div>
-
-                  {/* Turo Sync Status */}
-                  {vehicle.turoIcalUrl && (
-                    <div className="mb-4 flex items-center gap-2">
-                      <Badge
-                        variant="outline"
-                        className="text-blue-600 border-blue-300 bg-blue-50 text-[10px]"
-                      >
-                        Turo Synced
-                        {vehicle.turoLastSyncedAt && (
-                          <span className="ml-1 text-gray-400">
-                            {(() => {
-                              const mins = Math.round((Date.now() - new Date(vehicle.turoLastSyncedAt).getTime()) / 60000);
-                              if (mins < 60) return `${mins}m ago`;
-                              if (mins < 1440) return `${Math.round(mins / 60)}h ago`;
-                              return `${Math.round(mins / 1440)}d ago`;
-                            })()}
-                          </span>
-                        )}
-                      </Badge>
-                    </div>
-                  )}
 
                   {/* Features Tags */}
                   {vehicle.features && vehicle.features.length > 0 && (

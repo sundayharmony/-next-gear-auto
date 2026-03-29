@@ -34,8 +34,6 @@ export interface Vehicle {
   paymentDayOfMonth?: number;
   financingStartDate?: string;
   createdAt?: string;
-  turoIcalUrl?: string | null;
-  turoLastSyncedAt?: string | null;
 }
 
 /** Helper to get display name like "2024 Toyota Camry" */

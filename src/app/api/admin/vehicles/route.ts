@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
   try {
     const { data, error } = await supabase
       .from("vehicles")
-      .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at, turo_ical_url, turo_last_synced_at")
+      .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at")
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -43,8 +43,6 @@ export async function GET(req: NextRequest) {
       financingStartDate: v.financing_start_date || null,
       isPublished: v.is_published !== false,
       createdAt: v.created_at || null,
-      turoIcalUrl: v.turo_ical_url || null,
-      turoLastSyncedAt: v.turo_last_synced_at || null,
     }));
     return NextResponse.json({ success: true, data: vehicles });
   } catch (error) {
@@ -163,7 +161,6 @@ export async function PUT(request: NextRequest) {
     if (updates.monthlyPayment !== undefined) dbUpdates.monthly_payment = updates.monthlyPayment;
     if (updates.paymentDayOfMonth !== undefined) dbUpdates.payment_day_of_month = updates.paymentDayOfMonth;
     if (updates.financingStartDate !== undefined) dbUpdates.financing_start_date = updates.financingStartDate;
-    if (updates.turoIcalUrl !== undefined) dbUpdates.turo_ical_url = updates.turoIcalUrl || null;
 
     const { error } = await supabase
       .from("vehicles")
