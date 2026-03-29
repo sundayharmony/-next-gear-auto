@@ -101,14 +101,14 @@ export default function CreateBookingForm({
       .then(data => {
         if (data.success && !cancelled) {
           setLocationsState(data.data);
-          const def = data.data.find((l: Location) => l.is_default);
+          const def = (data.data || []).find((l: Location) => l.is_default);
           if (def) {
             setPickupLocationId(def.id);
             setReturnLocationId(def.id);
           }
         }
       })
-      .catch(() => {})
+      .catch((err) => console.warn("Failed to load locations:", err))
       .finally(() => {
         if (!cancelled) setLocationsLoading(false);
       });
@@ -290,6 +290,8 @@ export default function CreateBookingForm({
 
     setLoading(true);
     try {
+      const pickupLoc = locations.find(l => l.id === pickupLocationId);
+      const returnLoc = locations.find(l => l.id === (differentDropoff ? returnLocationId : pickupLocationId));
       const payload = {
         customerName: form.customerName,
         customerEmail: form.customerEmail,
@@ -305,9 +307,9 @@ export default function CreateBookingForm({
         paymentMethod: form.paymentMethod,
         pickup_location_id: pickupLocationId || null,
         return_location_id: differentDropoff ? returnLocationId : pickupLocationId || null,
-        pickup_location_name: locations.find(l => l.id === pickupLocationId)?.name || null,
-        return_location_name: locations.find(l => l.id === (differentDropoff ? returnLocationId : pickupLocationId))?.name || null,
-        location_surcharge: (locations.find(l => l.id === pickupLocationId)?.surcharge || 0) + (differentDropoff ? (locations.find(l => l.id === returnLocationId)?.surcharge || 0) : 0),
+        pickup_location_name: pickupLoc?.name || null,
+        return_location_name: returnLoc?.name || null,
+        location_surcharge: (pickupLoc?.surcharge ?? 0) + (differentDropoff ? (returnLoc?.surcharge ?? 0) : 0),
       };
 
       const res = await adminFetch("/api/bookings", {

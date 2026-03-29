@@ -15,9 +15,11 @@ export function calculateRentalDays(pickupDate: string, returnDate: string): num
   // Ensure consistent date parsing: append T00:00:00 if date string doesn't contain time component
   const pickup = new Date(pickupDate.includes("T") ? pickupDate : pickupDate + "T00:00:00");
   const returnD = new Date(returnDate.includes("T") ? returnDate : returnDate + "T00:00:00");
-  const diffTime = Math.abs(returnD.getTime() - pickup.getTime());
+  // Time stripping is intentional: we strip time components to calculate days at midnight boundaries
+  const diffTime = returnD.getTime() - pickup.getTime();
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(diffDays, 1);
+  // Guard against negative dates and return 1 for same-day or invalid date ranges
+  return diffDays < 0 ? 1 : Math.max(diffDays, 1);
 }
 
 /**
@@ -62,11 +64,11 @@ export function calculateExtrasTotal(
     .map((extra) => {
       let total: number;
       if (extra.billingType === "one-time") {
-        total = extra.pricePerDay;
+        total = Math.max(0, extra.pricePerDay);
       } else if (extra.billingType === "per-day-capped" && extra.maxPrice) {
-        total = Math.min(extra.pricePerDay * days, extra.maxPrice);
+        total = Math.min(Math.max(0, extra.pricePerDay) * days, Math.max(0, extra.maxPrice ?? Infinity));
       } else {
-        total = extra.pricePerDay * days;
+        total = Math.max(0, extra.pricePerDay) * days;
       }
 
       // Apply 15% insurance discount

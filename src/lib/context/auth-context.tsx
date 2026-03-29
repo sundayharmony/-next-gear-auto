@@ -66,8 +66,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const stored = localStorage.getItem("nga_user");
       if (stored) {
         const user = JSON.parse(stored);
-        if (user?.id && user?.email) {
+        if (user && typeof user === 'object' && user.id && user.email) {
           dispatch({ type: "LOGIN_SUCCESS", payload: user });
+        } else {
+          localStorage.removeItem("nga_user");
         }
       }
     } catch (err) {

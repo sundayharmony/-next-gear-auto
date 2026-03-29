@@ -50,8 +50,8 @@ export async function GET(request: NextRequest) {
   const isAscending = orderParam === "asc";
 
   // Pagination
-  const page = pageParam ? Math.max(1, parseInt(pageParam, 10)) : null;
-  const perPage = perPageParam ? Math.min(Math.max(1, parseInt(perPageParam, 10)), 200) : 50;
+  const page = pageParam ? Math.max(1, parseInt(pageParam, 10) || 1) : null;
+  const perPage = perPageParam ? Math.min(Math.max(1, parseInt(perPageParam, 10) || 50), 200) : 50;
   const offset = page && page > 0 ? (page - 1) * perPage : null;
 
   try {
@@ -145,8 +145,8 @@ export async function GET(request: NextRequest) {
     if (search) {
       // Limit search length to 100 characters (Bug 19)
       const safeSearch = (search || "").slice(0, 100);
-      // Sanitize search to prevent PostgREST filter injection
-      const sanitized = safeSearch.replace(/[%_,().*]/g, "");
+      // Sanitize search to prevent PostgREST filter injection - only remove SQL-dangerous chars
+      const sanitized = safeSearch.replace(/[%_*]/g, "");
       if (sanitized) {
         query = query.or(`customer_name.ilike.%${sanitized}%,customer_email.ilike.%${sanitized}%,id.eq.${sanitized}`);
       }
@@ -156,6 +156,9 @@ export async function GET(request: NextRequest) {
       if (!isNaN(limit) && limit > 0) {
         query = query.limit(limit);
       }
+    } else if (offset === null) {
+      // Default limit of 100 when no pagination params provided
+      query = query.limit(100);
     }
 
     // Apply sorting
@@ -356,7 +359,7 @@ export async function POST(request: Request) {
       return_date: body.returnDate,
       pickup_time: body.pickupTime || null,
       return_time: body.returnTime || null,
-      extras: body.extras || [],
+      extras: Array.isArray(body.extras) ? body.extras : [],
       total_price: body.totalPrice ?? 0,
       deposit: body.deposit ?? body.totalPrice ?? 0,
       status: bookingStatus,

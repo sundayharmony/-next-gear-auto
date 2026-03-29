@@ -224,8 +224,12 @@ export default function AdminLocationsPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
+        if (!data.data) {
+          setError("Failed to update location");
+          return;
+        }
         setLocations((prev) =>
-          prev.map((l) => (l.id === editingId ? { ...data.data } : l))
+          prev.map((l) => (l.id === editingId ? { ...l, ...data.data } : l))
         );
         setEditingId(null);
         setSuccess("Location updated successfully!");
@@ -366,6 +370,10 @@ export default function AdminLocationsPage() {
       const res = await fetch(
         `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addr)}&key=${key}`
       );
+      if (!res.ok) {
+        setError("Geocoding request failed. Check your API key.");
+        return;
+      }
       const data = await res.json();
       if (data.results?.[0]?.geometry?.location) {
         const { lat, lng } = data.results[0].geometry.location;

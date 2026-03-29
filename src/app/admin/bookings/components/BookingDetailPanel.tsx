@@ -129,23 +129,35 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
         ]);
 
         // Handle tickets result
-        if (results[0].status === "fulfilled" && results[0].value.ok) {
-          const ticketsData = await results[0].value.json();
-          setBookingTickets(Array.isArray(ticketsData) ? ticketsData : []);
+        if (results[0]?.status === "fulfilled") {
+          try {
+            const ticketsData = await results[0].value.json();
+            setBookingTickets(Array.isArray(ticketsData) ? ticketsData : []);
+          } catch {
+            // Ignore JSON parse errors
+          }
         }
 
         // Handle activity result
-        if (results[1].status === "fulfilled" && results[1].value.ok) {
-          const activityResult = await results[1].value.json();
-          const activityItems = activityResult.data ?? activityResult;
-          setActivityLog(Array.isArray(activityItems) ? activityItems : []);
+        if (results[1]?.status === "fulfilled") {
+          try {
+            const activityResult = await results[1].value.json();
+            const activityItems = activityResult.data ?? activityResult;
+            setActivityLog(Array.isArray(activityItems) ? activityItems : []);
+          } catch {
+            // Ignore JSON parse errors
+          }
         }
 
         // Handle payments result
-        if (results[2].status === "fulfilled" && results[2].value.ok) {
-          const paymentsResult = await results[2].value.json();
-          const paymentItems = paymentsResult.data ?? paymentsResult;
-          setPayments(Array.isArray(paymentItems) ? paymentItems : []);
+        if (results[2]?.status === "fulfilled") {
+          try {
+            const paymentsResult = await results[2].value.json();
+            const paymentItems = paymentsResult.data ?? paymentsResult;
+            setPayments(Array.isArray(paymentItems) ? paymentItems : []);
+          } catch {
+            // Ignore JSON parse errors
+          }
         }
       } catch (err) {
         logger.error("Failed to fetch booking details", err);
@@ -162,7 +174,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       .then(data => {
         if (data.success) setLocationsState(data.data);
       })
-      .catch(() => {});
+      .catch((err) => console.warn("Failed to load locations:", err));
   }, []);
 
   // Calculate current status index
@@ -271,6 +283,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Save edited booking
   const handleSaveChanges = async () => {
+    if (saving) return;
     // Validate required fields
     if (!editData.pickup_date) {
       onError("Pickup date is required");
@@ -357,6 +370,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Record a payment
   const handleRecordPayment = async () => {
+    if (saving) return;
     const parsedAmount = parseFloat(paymentForm.amount);
     if (!paymentForm.amount || isNaN(parsedAmount) || parsedAmount <= 0) {
       onError("Please enter a valid amount");
@@ -400,6 +414,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Quick-toggle payment status (mark fully paid or unpaid)
   const handleTogglePaymentStatus = async (markPaid: boolean) => {
+    if (saving) return;
     setSaving(true);
     try {
       const newDeposit = markPaid ? (booking.total_price ?? 0) : 0;

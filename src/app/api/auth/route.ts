@@ -199,6 +199,15 @@ export async function POST(request: Request) {
         );
       }
 
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(body.email)) {
+        return NextResponse.json(
+          { success: false, message: "Invalid email format" },
+          { status: 400 }
+        );
+      }
+
       const pwCheck = validatePassword(body.password);
       if (!pwCheck.valid) {
         return NextResponse.json(

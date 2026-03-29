@@ -416,9 +416,13 @@ function BookingPageInner() {
         }
         // If same day, validate return time is at least 1 hour after pickup time
         if (searchDates.pickup === searchDates.return) {
-          const [ph, pm] = searchDates.pickupTime.split(":").map(Number);
-          const [rh, rm] = searchDates.returnTime.split(":").map(Number);
-          return (rh * 60 + rm) > (ph * 60 + pm);
+          const [ph, pm] = (searchDates.pickupTime || "00:00").split(":").map(Number);
+          const [rh, rm] = (searchDates.returnTime || "00:00").split(":").map(Number);
+          const phVal = parseInt(String(ph)) || 0;
+          const pmVal = parseInt(String(pm)) || 0;
+          const rhVal = parseInt(String(rh)) || 0;
+          const rmVal = parseInt(String(rm)) || 0;
+          return (rhVal * 60 + rmVal) > (phVal * 60 + pmVal);
         }
         // Require location selection if locations are available
         if (locations.length > 0 && !selectedPickupLocation) return false;

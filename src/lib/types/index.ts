@@ -314,16 +314,21 @@ export interface VehicleListItem {
   isAvailable: boolean;
 }
 
-/** Pre-generated time slot options (8 AM – 4 AM, 30-min intervals) */
-export const TIME_SLOTS = Array.from({ length: 41 }, (_, i) => {
-  const hour = 8 + Math.floor(i / 2);
-  const minute = i % 2 === 0 ? 0 : 30;
-  const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-  const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-  const ampm = hour >= 12 && hour < 24 ? "PM" : "AM";
-  const label = `${h12}:${String(minute).padStart(2, "0")} ${ampm}`;
-  return { value, label };
-});
+/** Pre-generated time slot options (8 AM – midnight, 30-min intervals) */
+export const TIME_SLOTS = (() => {
+  const slots = [];
+  for (let i = 0; i < 32; i++) {
+    const hour = 8 + Math.floor(i / 2);
+    if (hour >= 24) break;
+    const minute = i % 2 === 0 ? 0 : 30;
+    const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+    const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
+    const ampm = hour >= 12 && hour < 24 ? "PM" : "AM";
+    const label = `${h12}:${String(minute).padStart(2, "0")} ${ampm}`;
+    slots.push({ value, label });
+  }
+  return slots;
+})();
 
 /** Payment method options for admin booking forms */
 export const PAYMENT_METHODS = [
@@ -336,4 +341,4 @@ export const PAYMENT_METHODS = [
 ] as const;
 
 /** Booking status progression steps */
-export const STATUS_STEPS = ["pending", "confirmed", "active", "completed"] as const;
+export const STATUS_STEPS = ["pending", "confirmed", "active", "completed", "cancelled", "no-show"] as const;

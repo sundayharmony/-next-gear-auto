@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       logger.error("Storage upload error:", JSON.stringify(uploadError));
       // If bucket doesn't exist, try creating it
-      if (uploadError.message?.includes("not found") || uploadError.message?.includes("Bucket")) {
+      if (uploadError.message?.includes("not found") || uploadError.message?.includes("Bucket") || (uploadError as any)?.statusCode === 404) {
         try {
           await supabase.storage.createBucket("booking-documents", {
             public: false,

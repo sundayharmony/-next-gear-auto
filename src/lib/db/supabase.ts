@@ -1,10 +1,14 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY environment variables");
+}
 
 // Client-side Supabase client (uses anon key)
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl as string, supabaseAnonKey as string);
 
 // Server-side Supabase client (uses service role key for admin operations)
 export function getServiceSupabase() {
@@ -17,7 +21,7 @@ export function getServiceSupabase() {
     console.warn("SUPABASE_SERVICE_KEY not set — falling back to anon key (dev only)");
     return supabase;
   }
-  return createClient(supabaseUrl, serviceKey);
+  return createClient(supabaseUrl as string, serviceKey);
 }
 
 // Database types matching our schema

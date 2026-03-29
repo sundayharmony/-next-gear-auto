@@ -39,7 +39,7 @@ function loadGoogleMaps(): Promise<void> {
     }
     const existing = document.querySelector('script[src*="maps.googleapis.com"]');
     if (existing) {
-      existing.addEventListener("load", () => { mapsLoaded = true; resolve(); });
+      existing.addEventListener("load", () => { mapsLoaded = true; resolve(); }, { once: true });
       if (typeof google !== "undefined" && google.maps) { mapsLoaded = true; resolve(); }
       return;
     }

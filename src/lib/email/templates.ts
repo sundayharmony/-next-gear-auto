@@ -1,4 +1,5 @@
 const COMPANY_ADDRESS = "92 Forrest Street, Jersey City, NJ 07304";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://rentnextgearauto.com";
 
 interface EmailData {
   bookingId: string;
@@ -24,6 +25,7 @@ function escHtml(s: string): string {
 /** Format "2026-03-06" → "Fri, Mar 6, 2026" */
 export function fmtDate(dateStr: string): string {
   const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
+  if (isNaN(date.getTime())) return dateStr;
   return date.toLocaleDateString("en-US", {
     weekday: "short",
     year: "numeric",
@@ -128,14 +130,14 @@ function ctaButton(text: string, url: string, color = '#7C3AED'): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0 8px;">
     <tr>
       <td align="center">
-        <a href="${url}" style="display: inline-block; background: ${color}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; letter-spacing: 0.3px;">${text}</a>
+        <a href="${escHtml(url)}" style="display: inline-block; background: ${color}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; letter-spacing: 0.3px;">${text}</a>
       </td>
     </tr>
   </table>`;
 }
 
 function outlineButton(text: string, url: string, color = '#7C3AED'): string {
-  return `<a href="${url}" style="display: inline-block; background: #ffffff; color: ${color}; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; border: 2px solid ${color}; margin-left: 8px;">${text}</a>`;
+  return `<a href="${escHtml(url)}" style="display: inline-block; background: #ffffff; color: ${color}; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; border: 2px solid ${color}; margin-left: 8px;">${text}</a>`;
 }
 
 function infoBox(title: string, text: string, color: string, bg: string): string {
@@ -215,7 +217,7 @@ function bookingEmailTemplate(
             <td style="background: #f0f9ff; border-radius: 10px; padding: 16px 20px; text-align: center;">
               <p style="margin: 0 0 8px; color: #1e40af; font-size: 14px; font-weight: 600;">Create Your Account</p>
               <p style="margin: 0 0 12px; color: #4b5563; font-size: 13px;">Set up a password to manage your bookings and speed up future reservations.</p>
-              <a href="https://rentnextgearauto.com/set-password?email=${encodeURIComponent(data.customerEmail || '')}${data.passwordToken ? '&token=' + encodeURIComponent(data.passwordToken) : ''}" style="display: inline-block; background: #1e40af; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 13px;">Set Up My Password</a>
+              <a href="${SITE_URL}/set-password?email=${encodeURIComponent(data.customerEmail || '')}${data.passwordToken ? '&token=' + encodeURIComponent(data.passwordToken) : ''}" style="display: inline-block; background: #1e40af; color: #ffffff; text-decoration: none; padding: 10px 24px; border-radius: 8px; font-weight: 600; font-size: 13px;">Set Up My Password</a>
             </td>
           </tr>
         </table>` : ''}
@@ -245,7 +247,7 @@ export function bookingPendingTemplate(data: EmailData): string {
       heading: 'Booking Received',
       message: "we've received your reservation. Here are your details:",
       showConfirmationLink: false,
-      accountUrl: 'https://rentnextgearauto.com/account',
+      accountUrl: `${SITE_URL}/account`,
       accountLinkText: 'View My Booking',
       bottomNote: "You'll receive a confirmation once your payment is verified. Please bring a valid driver's license at pickup.",
     }
@@ -264,8 +266,8 @@ export function bookingConfirmationTemplate(data: EmailData): string {
       heading: 'Booking Confirmed',
       message: `your reservation is confirmed${paymentText}.`,
       showConfirmationLink: true,
-      confirmationUrl: `https://rentnextgearauto.com/booking/agreement/${data.bookingId}`,
-      accountUrl: 'https://rentnextgearauto.com/account',
+      confirmationUrl: `${SITE_URL}/booking/agreement/${data.bookingId}`,
+      accountUrl: `${SITE_URL}/account`,
       accountLinkText: 'Sign Rental Agreement',
       bottomNote,
     }
@@ -297,7 +299,7 @@ export function adminNewBookingTemplate(data: EmailData): string {
             <td style="padding: 16px 0; color: #10b981; font-size: 22px; font-weight: 800; text-align: right;">$${(data.totalPrice ?? 0).toFixed(2)}</td>
           </tr>
         </table>
-        ${ctaButton('View in Admin Dashboard', 'https://rentnextgearauto.com/admin/bookings', '#059669')}
+        ${ctaButton('View in Admin Dashboard', `${SITE_URL}/admin/bookings`, '#059669')}
       </td>
     </tr>
   `);
@@ -463,12 +465,12 @@ export function bookingSignAgreementTemplate(data: EmailData): string {
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 8px;">
           <tr>
             <td align="center" style="padding: 0 0 8px;">
-              <a href="https://rentnextgearauto.com/booking/agreement/${data.bookingId}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Sign Rental Agreement</a>
+              <a href="${SITE_URL}/booking/agreement/${data.bookingId}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Sign Rental Agreement</a>
             </td>
           </tr>
           <tr>
             <td align="center">
-              <a href="https://rentnextgearauto.com/account" style="color: #6b7280; text-decoration: underline; font-size: 13px;">View Bookings</a>
+              <a href="${SITE_URL}/account" style="color: #6b7280; text-decoration: underline; font-size: 13px;">View Bookings</a>
             </td>
           </tr>
         </table>
@@ -493,7 +495,7 @@ export function passwordResetTemplate(data: { customerName: string; customerEmai
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 20px;">
           <tr>
             <td align="center">
-              <a href="https://rentnextgearauto.com/set-password?email=${encodedEmail}${tokenParam}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Set My Password</a>
+              <a href="${SITE_URL}/set-password?email=${encodedEmail}${tokenParam}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Set My Password</a>
             </td>
           </tr>
         </table>

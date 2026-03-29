@@ -52,6 +52,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    if (!pickupDate || !returnDate || typeof pickupDate !== 'string' || typeof returnDate !== 'string') {
+      return NextResponse.json(
+        { success: false, message: "Pickup and return dates must be non-empty strings" },
+        { status: 400 }
+      );
+    }
+
     // Validate dates
     const pickup = new Date(pickupDate);
     const returnDt = new Date(returnDate);
@@ -99,7 +106,13 @@ export async function POST(request: NextRequest) {
     }
 
     // Sanitize customer name
-    const safeName = (customerDetails.name || "").replace(/<[^>]*>/g, "").trim().slice(0, 100);
+    const safeName = (customerDetails.name || "")
+      .replace(/<[^>]*>/g, "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .trim()
+      .slice(0, 100);
 
     // Double-booking check — allow same-day turnovers with 60-minute gap
     const { data: conflicting } = await supabase
@@ -177,8 +190,7 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (promo) {
-        const now = new Date().toISOString().split("T")[0];
-        const isExpired = promo.expires_at && promo.expires_at < now;
+        const isExpired = promo.expires_at && new Date(promo.expires_at) < new Date();
         const isOverLimit = promo.max_uses && promo.used_count >= promo.max_uses;
 
         if (!isExpired && !isOverLimit) {

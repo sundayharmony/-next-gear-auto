@@ -42,6 +42,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Name and address are required" }, { status: 400 });
     }
 
+    // Validate latitude range
+    if (lat !== undefined && lat !== null) {
+      const latNum = parseFloat(lat);
+      if (isNaN(latNum) || latNum < -90 || latNum > 90) {
+        return NextResponse.json({ success: false, message: "Latitude must be between -90 and 90" }, { status: 400 });
+      }
+    }
+
+    // Validate longitude range
+    if (lng !== undefined && lng !== null) {
+      const lngNum = parseFloat(lng);
+      if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) {
+        return NextResponse.json({ success: false, message: "Longitude must be between -180 and 180" }, { status: 400 });
+      }
+    }
+
     const supabase = getServiceSupabase();
     const id = "loc_" + crypto.randomUUID().replace(/-/g, "").slice(0, 8);
 
@@ -112,6 +128,22 @@ export async function PATCH(request: NextRequest) {
       clean.is_default = Boolean(updates.is_default);
       if (clean.is_default) {
         await supabase.from("locations").update({ is_default: false }).eq("is_default", true);
+      }
+    }
+
+    // Validate latitude range if being updated
+    if (clean.lat !== undefined && clean.lat !== null) {
+      const latNum = parseFloat(String(clean.lat));
+      if (isNaN(latNum) || latNum < -90 || latNum > 90) {
+        return NextResponse.json({ success: false, message: "Latitude must be between -90 and 90" }, { status: 400 });
+      }
+    }
+
+    // Validate longitude range if being updated
+    if (clean.lng !== undefined && clean.lng !== null) {
+      const lngNum = parseFloat(String(clean.lng));
+      if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) {
+        return NextResponse.json({ success: false, message: "Longitude must be between -180 and 180" }, { status: 400 });
       }
     }
 

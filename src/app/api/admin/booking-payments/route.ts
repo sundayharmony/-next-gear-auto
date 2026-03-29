@@ -65,7 +65,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!amount || amount <= 0) {
+    const parsedAmount = parseFloat(amount);
+    if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
       return NextResponse.json(
         { success: false, error: "amount must be a positive number" },
         { status: 400 }
@@ -81,10 +82,24 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceSupabase();
 
+    // Verify booking_id exists in the bookings table
+    const { data: bookingExists } = await supabase
+      .from("bookings")
+      .select("id")
+      .eq("id", booking_id)
+      .single();
+
+    if (!bookingExists) {
+      return NextResponse.json(
+        { success: false, error: "Booking not found" },
+        { status: 404 }
+      );
+    }
+
     // Let the DB generate the UUID id and received_at timestamp via defaults
     const insertPayload: Record<string, unknown> = {
       booking_id,
-      amount: parseFloat(amount),
+      amount: parsedAmount,
       method,
       note: note || null,
     };
@@ -118,7 +133,7 @@ export async function POST(request: NextRequest) {
     }
 
     const newDeposit = (allPayments || []).reduce(
-      (sum: number, p: { amount: number }) => sum + (p.amount || 0),
+      (sum: number, p: { amount: number | null }) => sum + (p.amount ?? 0),
       0
     );
 
