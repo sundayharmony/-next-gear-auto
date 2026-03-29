@@ -79,18 +79,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     async function validateSession() {
       try {
         const res = await fetch("/api/auth", { credentials: "same-origin" });
-        if (!res.ok) {
-          // JWT expired or invalid — clear localStorage
-          if (!cancelled) {
-            localStorage.removeItem("nga_user");
-            dispatch({ type: "LOGOUT" });
-          }
-          return;
-        }
         const data = await res.json();
         if (data.success && data.data && !cancelled) {
           // Update localStorage with server-verified user data
           dispatch({ type: "LOGIN_SUCCESS", payload: data.data });
+        } else if (!data.success && !cancelled) {
+          // JWT expired, invalid, or no session — clear localStorage
+          localStorage.removeItem("nga_user");
+          dispatch({ type: "LOGOUT" });
         }
       } catch {
         // Network error — keep cached user (offline-friendly)

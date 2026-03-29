@@ -1,3 +1,5 @@
+const COMPANY_ADDRESS = "92 Forrest Street, Jersey City, NJ 07304";
+
 interface EmailData {
   bookingId: string;
   customerName: string;
@@ -55,7 +57,7 @@ function wrapEmail(content: string): string {
           <tr>
             <td style="padding: 24px 32px; background: #1f2937; text-align: center;">
               <p style="margin: 0 0 8px; color: #ffffff; font-size: 15px; font-weight: 700; letter-spacing: 0.5px;">Next<span style="color: #a78bfa;">Gear</span>Auto</p>
-              <p style="margin: 0 0 4px; color: #9ca3af; font-size: 12px;">92 Forrest Street, Jersey City, NJ 07304</p>
+              <p style="margin: 0 0 4px; color: #9ca3af; font-size: 12px;">${COMPANY_ADDRESS}</p>
               <p style="margin: 0 0 12px; color: #9ca3af; font-size: 12px;">(551) 429-3472 &bull; contact@rentnextgearauto.com</p>
               <p style="margin: 0; color: #6b7280; font-size: 11px;">Mon-Fri 8:00 AM - 6:00 PM</p>
             </td>
@@ -378,7 +380,7 @@ function reminderTemplate(
           <tr>
             <td style="background: #f9fafb; border-radius: 12px; padding: 16px 20px; border: 1px solid #e5e7eb;">
               <p style="margin: 0 0 4px; color: #111827; font-size: 14px; font-weight: 700;">${isPickup ? 'Pick-up Location' : 'Return Location'}</p>
-              <p style="margin: 0; color: #6b7280; font-size: 13px;">92 Forrest Street, Jersey City, NJ 07304</p>
+              <p style="margin: 0; color: #6b7280; font-size: 13px;">${COMPANY_ADDRESS}</p>
               ${isPickup ? '<p style="margin: 6px 0 0; color: #6b7280; font-size: 12px;">Mon-Fri 8AM-6PM &bull; Sat 9AM-5PM &bull; Sun 10AM-4PM</p>' : ''}
             </td>
           </tr>
@@ -447,7 +449,7 @@ export function bookingSignAgreementTemplate(data: EmailData): string {
             </td>
           </tr>
         </table>
-        <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">Pick-up at 92 Forrest Street, Jersey City, NJ 07304.<br>Please bring a valid driver's license and the credit card used for payment.</p>
+        <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">Pick-up at ${COMPANY_ADDRESS}.<br>Please bring a valid driver's license and the credit card used for payment.</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 8px;">
           <tr>
             <td align="center" style="padding: 0 0 8px;">

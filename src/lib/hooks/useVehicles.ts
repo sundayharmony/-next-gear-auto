@@ -15,6 +15,7 @@ export function useVehicles(enabled = true) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [refetchCount, setRefetchCount] = useState(0);
 
   useEffect(() => {
     if (!enabled) return;
@@ -41,7 +42,9 @@ export function useVehicles(enabled = true) {
 
     fetchVehicles();
     return () => { cancelled = true; };
-  }, [enabled]);
+  }, [enabled, refetchCount]);
 
-  return { vehicles, loading, error, setVehicles };
+  const retry = () => setRefetchCount(c => c + 1);
+
+  return { vehicles, loading, error, setVehicles, retry };
 }

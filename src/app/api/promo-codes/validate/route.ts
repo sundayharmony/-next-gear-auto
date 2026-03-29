@@ -96,6 +96,7 @@ export async function POST(req: NextRequest) {
           discountValue: jsonPromo.discountValue,
           discountAmount,
           description: jsonPromo.description,
+          warning: "This promo code is sourced from legacy data and usage limits will not be enforced.",
         },
       });
     }

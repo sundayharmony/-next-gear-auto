@@ -39,7 +39,7 @@ export const emailRule: ValidationRule = {
 
 export const phoneRule: ValidationRule = {
   required: true,
-  pattern: /^[+]?[\d\s().-]{7,20}$/,
+  pattern: /^[+]?[\d]{1}[\d\s().-]{6,19}$/,
   message: "Please enter a valid phone number",
 };
 

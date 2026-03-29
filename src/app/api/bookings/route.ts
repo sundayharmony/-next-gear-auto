@@ -295,20 +295,31 @@ export async function POST(request: Request) {
           .eq("id", existingCustomer.id);
         if (updateErr) logger.warn("Failed to update existing customer info:", updateErr);
       } else {
-        // Create new customer
+        // Create new customer (with race condition handling)
         const newCustId = "c_" + crypto.randomUUID();
-        const { data: newCustomer } = await supabase
-          .from("customers")
-          .insert({
-            id: newCustId,
-            name: customerName,
-            email: customerEmail,
-            phone: customerPhone,
-            role: "customer",
-          })
-          .select("id")
-          .single();
-        if (newCustomer) customerId = newCustomer.id;
+        try {
+          const { data: newCustomer } = await supabase
+            .from("customers")
+            .insert({
+              id: newCustId,
+              name: customerName,
+              email: customerEmail,
+              phone: customerPhone,
+              role: "customer",
+            })
+            .select("id")
+            .single();
+          if (newCustomer) customerId = newCustomer.id;
+        } catch {
+          // Race condition: customer created between our SELECT and INSERT
+          // Retry the SELECT to get the existing customer ID
+          const { data: retryCustomer } = await supabase
+            .from("customers")
+            .select("id")
+            .eq("email", customerEmail)
+            .single();
+          customerId = retryCustomer?.id || newCustId;
+        }
       }
     }
 
@@ -427,8 +438,23 @@ export async function POST(request: Request) {
 }
 
 // PATCH - Update booking (status change OR field edits)
-export async function PATCH(request: Request) {
+export async function PATCH(request: NextRequest) {
   const supabase = getServiceSupabase();
+
+  // Require admin authorization for field updates
+  let auth: TokenPayload | null = null;
+  try {
+    auth = await getAuthFromRequest(request);
+  } catch {
+    auth = null;
+  }
+
+  if (!auth || auth.role !== "admin") {
+    return NextResponse.json(
+      { success: false, message: "Admin authorization required" },
+      { status: 403 }
+    );
+  }
 
   // Separate JSON parsing from logic
   let body: any;

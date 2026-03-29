@@ -106,10 +106,15 @@ export async function POST(request: NextRequest) {
       logger.error("Storage upload error:", JSON.stringify(uploadError));
       // If bucket doesn't exist, try creating it
       if (uploadError.message?.includes("not found") || uploadError.message?.includes("Bucket")) {
-        await supabase.storage.createBucket("booking-documents", {
-          public: false,
-          fileSizeLimit: 10485760,
-        });
+        try {
+          await supabase.storage.createBucket("booking-documents", {
+            public: false,
+            fileSizeLimit: 10485760,
+          });
+        } catch (createError) {
+          // Bucket may already exist from concurrent request — ignore and proceed with retry
+          logger.warn("Bucket creation failed (may already exist):", createError);
+        }
         // Retry upload
         const { data: retryData, error: retryError } = await supabase.storage
           .from("booking-documents")
@@ -153,7 +158,7 @@ async function updateBookingAndRespond(supabase: ReturnType<typeof import("@/lib
     docType === "id_document" ? "id_document_url" : "insurance_proof_url";
   const updateData: Record<string, unknown> = { [columnName]: publicUrl };
   if (docType === "insurance_proof") {
-    updateData.insurance_opted_out = true;
+    updateData.insurance_opted_out = false;
   }
 
   const { error: updateError } = await supabase

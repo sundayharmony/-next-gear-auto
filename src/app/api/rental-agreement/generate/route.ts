@@ -106,7 +106,16 @@ export async function GET(req: NextRequest) {
 
     // Load the blank PDF template
     const templatePath = path.join(process.cwd(), "public", "templates", "rental-agreement.pdf");
-    const templateBytes = await fs.readFile(templatePath);
+    let templateBytes: Buffer;
+    try {
+      templateBytes = await fs.readFile(templatePath);
+    } catch (fileError) {
+      logger.error("PDF template file not found:", templatePath);
+      return NextResponse.json(
+        { success: false, error: "Rental agreement template not found. Please contact support." },
+        { status: 500 }
+      );
+    }
     const pdfDoc = await PDFDocument.load(templateBytes);
 
     // Get the form

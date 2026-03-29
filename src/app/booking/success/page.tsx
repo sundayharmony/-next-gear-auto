@@ -36,6 +36,8 @@ function SuccessContent() {
   // Submit agreement signatures that were saved to localStorage before Stripe redirect
   // Waits for booking to load so we have the customer_email
   useEffect(() => {
+    const controller = new AbortController();
+
     async function submitAgreementSignatures() {
       if (!bookingId || !booking) return;
 
@@ -89,6 +91,10 @@ function SuccessContent() {
     }
 
     submitAgreementSignatures();
+
+    return () => {
+      controller.abort();
+    };
   }, [bookingId, booking]);
 
   useEffect(() => {

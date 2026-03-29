@@ -27,6 +27,8 @@ export async function csrfFetch(url: string, options: RequestInit = {}): Promise
   const csrf = getCsrfToken();
   if (csrf) {
     headers.set("x-csrf-token", csrf);
+  } else {
+    console.warn("CSRF token not found in cookies");
   }
 
   return fetch(url, {

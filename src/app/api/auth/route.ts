@@ -12,7 +12,9 @@ export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthFromRequest(request);
     if (!auth) {
-      return NextResponse.json({ success: false, message: "Not authenticated" }, { status: 401 });
+      // Return 200 with success:false (not 401) so browsers don't log a red console error
+      // on every page load for unauthenticated visitors
+      return NextResponse.json({ success: false, message: "Not authenticated" });
     }
 
     const supabase = getServiceSupabase();

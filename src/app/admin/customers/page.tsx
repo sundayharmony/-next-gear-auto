@@ -1208,11 +1208,12 @@ export default function AdminCustomersPage() {
                               return (
                                 <div
                                   key={b.id}
-                                  className="rounded-lg border p-4 hover:border-purple-200 transition-colors"
+                                  onClick={() => router.push(`/admin/bookings?booking=${b.id}`)}
+                                  className="rounded-lg border p-4 hover:border-purple-400 hover:shadow-md transition-all cursor-pointer group"
                                 >
                                   <div className="flex items-start justify-between mb-2 min-w-0">
                                     <div className="min-w-0 flex-1 mr-2">
-                                      <p className="font-semibold text-gray-900 truncate">{vehicle}</p>
+                                      <p className="font-semibold text-gray-900 truncate group-hover:text-purple-700 transition-colors">{vehicle}</p>
                                       <p className="text-xs font-mono text-gray-400 truncate">{b.id}</p>
                                     </div>
                                     <Badge className={statusColors[b.status] || "bg-gray-100 text-gray-600"}>
@@ -1260,6 +1261,7 @@ export default function AdminCustomersPage() {
                                         href={b.rental_agreement_url}
                                         target="_blank"
                                         rel="noopener noreferrer"
+                                        onClick={(e) => e.stopPropagation()}
                                         className="text-xs text-purple-600 hover:text-purple-800 ml-auto flex items-center gap-1"
                                       >
                                         <FileText className="h-3 w-3" /> View Agreement

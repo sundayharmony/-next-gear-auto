@@ -33,6 +33,20 @@ export async function POST(request: Request) {
   }
 
   try {
+    // Check for idempotency: if this event has already been processed, return 200 early
+    if (event.id) {
+      const { data: existingPayment } = await supabase
+        .from("payment_records")
+        .select("id")
+        .eq("stripe_session_id", event.id)
+        .single();
+
+      if (existingPayment) {
+        logger.info("Webhook event already processed:", event.id);
+        return NextResponse.json({ received: true });
+      }
+    }
+
     switch (event.type) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;

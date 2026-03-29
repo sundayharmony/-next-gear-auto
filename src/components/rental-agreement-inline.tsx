@@ -21,6 +21,7 @@ interface RentalAgreementInlineProps {
   returnTime?: string;
   totalPrice?: number;
   totalDays?: number;
+  deposit?: number;
   /** Which page to display (1, 2, or 3). If omitted, shows all pages (scrollable). */
   currentPage?: number;
 }
@@ -60,8 +61,9 @@ const Field = ({ value, width = "auto" }: { value?: string | number | null; widt
 );
 
 /* ── PAGE 1 ── */
-function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays }: RentalAgreementInlineProps) {
-  const balanceDue = (totalPrice || 0) - 50;
+function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit }: RentalAgreementInlineProps) {
+  const depositAmount = deposit ?? (totalPrice || 0);
+  const balanceDue = (totalPrice || 0) - depositAmount;
 
   return (
     <div className="p-6 pb-4">
@@ -96,10 +98,10 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
         <div className="mt-2">
           <span className="font-semibold">Condition:</span>{" "}
           <span className="inline-flex gap-3 ml-2">
-            <label className="inline-flex items-center gap-1"><span className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Excellent</label>
-            <label className="inline-flex items-center gap-1"><span className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block bg-purple-600" /> Good</label>
-            <label className="inline-flex items-center gap-1"><span className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Fair</label>
-            <label className="inline-flex items-center gap-1"><span className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Poor</label>
+            <label className="inline-flex items-center gap-1"><span role="img" aria-label="unchecked" className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Excellent</label>
+            <label className="inline-flex items-center gap-1"><span role="img" aria-label="checked" className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block bg-purple-600" /> Good</label>
+            <label className="inline-flex items-center gap-1"><span role="img" aria-label="unchecked" className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Fair</label>
+            <label className="inline-flex items-center gap-1"><span role="img" aria-label="unchecked" className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Poor</label>
           </span>
         </div>
       </div>
@@ -152,15 +154,15 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-2">
           <div><span className="font-semibold">Total Rental Price: $</span>{" "}<Field value={totalPrice ? totalPrice.toFixed(2) : undefined} width="100px" /></div>
           <div><span className="font-semibold">Total Days:</span>{" "}<Field value={totalDays} width="60px" /></div>
-          <div><span className="font-semibold">Security Deposit:</span> $50.00</div>
+          <div><span className="font-semibold">Security Deposit:</span> ${depositAmount.toFixed(2)}</div>
           <div><span className="font-semibold">Balance Due at Pickup: $</span>{" "}<Field value={balanceDue > 0 ? balanceDue.toFixed(2) : "0.00"} width="100px" /></div>
         </div>
         <div className="mb-2">
           <span className="font-semibold">Payment Method:</span>{" "}
           <span className="inline-flex gap-3 ml-2">
-            <label className="inline-flex items-center gap-1"><span className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Cash</label>
-            <label className="inline-flex items-center gap-1"><span className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Zelle</label>
-            <label className="inline-flex items-center gap-1"><span className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block bg-purple-600" /> Credit/Debit</label>
+            <label className="inline-flex items-center gap-1"><span role="img" aria-label="unchecked" className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Cash</label>
+            <label className="inline-flex items-center gap-1"><span role="img" aria-label="unchecked" className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Zelle</label>
+            <label className="inline-flex items-center gap-1"><span role="img" aria-label="checked" className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block bg-purple-600" /> Credit/Debit</label>
           </span>
         </div>
         <p className="text-gray-700"><strong>Included:</strong> 200 miles per day</p>
@@ -350,9 +352,10 @@ export function RentalAgreementInline({
   returnTime,
   totalPrice,
   totalDays,
+  deposit,
   currentPage,
 }: RentalAgreementInlineProps) {
-  const pageProps = { vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays };
+  const pageProps = { vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit };
 
   // If no currentPage specified, show the page-based view with page 1 default
   const page = currentPage || 1;

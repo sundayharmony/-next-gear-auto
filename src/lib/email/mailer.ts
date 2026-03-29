@@ -18,6 +18,13 @@ const FROM_CUSTOMER = `"NextGearAuto" <${SMTP_USER}>`;
 const FROM_SYSTEM = `"NextGearAuto System" <${SMTP_USER}>`;
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com";
 
+// Warn if SMTP variables are missing in development
+if (process.env.NODE_ENV !== "production") {
+  if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
+    console.warn("SMTP environment variables not configured — emails may fail");
+  }
+}
+
 // Lazy-initialized singleton transporter
 let _transporter: nodemailer.Transporter | null = null;
 export function getTransporter() {
@@ -118,21 +125,15 @@ export async function sendAdminNewBooking(data: BookingEmailData) {
 export async function sendCancellationEmail(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
-    // Send to customer
+    // Send to customer with admin BCC
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
       subject: `Booking Cancelled - ${data.bookingId}`,
       html: cancellationTemplate(data),
     });
-    // Send to admin
-    await transporter.sendMail({
-      from: FROM_SYSTEM,
-      to: ADMIN_EMAIL,
-      subject: `Booking Cancelled: ${data.bookingId}`,
-      html: cancellationTemplate(data),
-    });
-    logger.info("Cancellation emails sent for booking:", data.bookingId);
+    logger.info("Cancellation email sent to:", data.customerEmail);
   } catch (error) {
     logger.error("Failed to send cancellation email:", error);
     throw error;
@@ -145,6 +146,7 @@ export async function sendPickupReminder(data: BookingEmailData) {
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
       subject: `Pickup Reminder - Your ${data.vehicleName} is Ready!`,
       html: pickupReminderTemplate(data),
     });
@@ -167,6 +169,7 @@ export async function sendAgreementEmail(data: BookingEmailData & { pdfBytes: Ui
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
       subject: `Your Signed Rental Agreement - ${data.bookingId}`,
       html: agreementEmailTemplate(data),
       attachments: [
@@ -237,6 +240,7 @@ export async function sendReturnReminder(data: BookingEmailData) {
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
       subject: `Return Reminder - ${data.vehicleName} due today`,
       html: returnReminderTemplate(data),
     });
@@ -274,6 +278,7 @@ export async function sendPasswordResetLink(data: { customerName: string; custom
     await transporter.sendMail({
       from: FROM_CUSTOMER,
       to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
       subject: "Set Your Password - NextGearAuto",
       html: passwordResetTemplate({ ...data, token }),
     });

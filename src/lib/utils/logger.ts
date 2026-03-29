@@ -7,6 +7,14 @@ interface LogEntry {
   context?: unknown;
 }
 
+/**
+ * SECURITY WARNING: Never pass sensitive data to logger functions.
+ * Avoid logging: passwords, API tokens, JWT tokens, email addresses,
+ * credit card numbers, SSNs, or other PII. Do not log entire request
+ * bodies that may contain sensitive information. When logging errors,
+ * sanitize the error message to exclude credentials or personal data.
+ */
+
 const isDev = process.env.NODE_ENV === "development";
 
 function createLogEntry(level: LogLevel, message: string, context?: unknown): LogEntry {

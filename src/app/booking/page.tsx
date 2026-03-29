@@ -60,9 +60,13 @@ function BookingPageInner() {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [vehiclesError, setVehiclesError] = useState<string | null>(null);
-  const [localExtras, setLocalExtras] = useState<BookingExtra[]>(
-    extras.map((e) => ({ ...e, selected: e.id === "e1" ? true : false, billingType: e.billingType as BookingExtra["billingType"] }))
-  );
+  const [localExtras, setLocalExtras] = useState<BookingExtra[]>(() => {
+    // Initialize from booking context if available, otherwise use fresh extras
+    if (booking.extras && booking.extras.length > 0) {
+      return booking.extras;
+    }
+    return extras.map((e) => ({ ...e, selected: e.id === "e1" ? true : false, billingType: e.billingType as BookingExtra["billingType"] }));
+  });
 
   // Insurance proof state
   const [insuranceProofFile, setInsuranceProofFile] = useState<File | null>(null);
@@ -152,13 +156,13 @@ function BookingPageInner() {
     };
   }, [booking.pickupDate, booking.returnDate, vehicles]);
 
-  // Check if a vehicle has a date conflict with selected dates (includes 12-hour buffer)
+  // Check if a vehicle has a date conflict with selected dates (includes 60-minute buffer matching server gap)
   const isVehicleBooked = (vehicleId: string): boolean => {
     const ranges = vehicleBookedDates[vehicleId];
     if (!ranges || ranges.length === 0) return false;
     if (!booking.pickupDate || !booking.returnDate) return false;
 
-    const BUFFER_MS = 12 * 60 * 60 * 1000; // 12 hours in milliseconds
+    const BUFFER_MS = 60 * 60 * 1000; // 60 minutes (matches server gap)
 
     // Convert selected dates + times to timestamps
     const selectedPickup = new Date(`${booking.pickupDate}T${booking.pickupTime || "10:00"}:00`).getTime();
@@ -169,7 +173,7 @@ function BookingPageInner() {
       const existingPickup = new Date(`${range.pickupDate}T${range.pickupTime || "10:00"}:00`).getTime();
       const existingReturn = new Date(`${range.returnDate}T${range.returnTime || "10:00"}:00`).getTime();
 
-      // Add 12-hour buffer: existing booking blocks from (pickup - 12h) to (return + 12h)
+      // Add 60-minute buffer: existing booking blocks from (pickup - 60m) to (return + 60m)
       const bufferedStart = existingPickup - BUFFER_MS;
       const bufferedEnd = existingReturn + BUFFER_MS;
 
@@ -181,12 +185,17 @@ function BookingPageInner() {
     return false;
   };
 
-  // Customer details local state
-  const [details, setDetails] = useState({
-    name: "",
-    email: "",
-    phone: "",
-    dob: "",
+  // Customer details local state - restore from booking context if available
+  const [details, setDetails] = useState(() => {
+    if (booking.customerDetails) {
+      return booking.customerDetails;
+    }
+    return {
+      name: "",
+      email: "",
+      phone: "",
+      dob: "",
+    };
   });
 
   // Auto-populate details from signed-in user
@@ -217,7 +226,18 @@ function BookingPageInner() {
   const agreementCompletedCount = AGREEMENT_SIGNATURE_FIELDS.filter((f) => agreementSignatures[f.id]).length;
   const allAgreementsSigned = agreementCompletedCount === AGREEMENT_SIGNATURE_FIELDS.length;
   const currentAgreementField = AGREEMENT_SIGNATURE_FIELDS[agreementStep];
-  const [searchDates, setSearchDates] = useState({ pickup: "", return: "", pickupTime: "10:00", returnTime: "10:00" });
+  const [searchDates, setSearchDates] = useState(() => {
+    // Restore from booking context if available
+    if (booking.pickupDate && booking.returnDate) {
+      return {
+        pickup: booking.pickupDate,
+        return: booking.returnDate,
+        pickupTime: booking.pickupTime || "10:00",
+        returnTime: booking.returnTime || "10:00",
+      };
+    }
+    return { pickup: "", return: "", pickupTime: "10:00", returnTime: "10:00" };
+  });
   const [showPickupCalendar, setShowPickupCalendar] = useState(false);
   const [showReturnCalendar, setShowReturnCalendar] = useState(false);
   const [showPickupTimePicker, setShowPickupTimePicker] = useState(false);
@@ -244,6 +264,23 @@ function BookingPageInner() {
       booking.recalculatePrice();
     }
   }, [localExtras, booking.selectedVehicle]);
+
+  // Warn user before leaving if they've progressed past step 1 but haven't completed checkout
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      // Only warn if user is past step 1 and hasn't completed checkout (step 7)
+      if (booking.currentStep > 1 && booking.currentStep < 7) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, [booking.currentStep]);
 
   const handleToggleExtra = (id: string) => {
     if (id === "e1") {
@@ -333,9 +370,11 @@ function BookingPageInner() {
         if (returnDate <= pickupDate) {
           return false;
         }
-        // If same day, validate return time > pickup time
+        // If same day, validate return time is at least 1 hour after pickup time
         if (searchDates.pickup === searchDates.return) {
-          return searchDates.returnTime > searchDates.pickupTime;
+          const [ph, pm] = searchDates.pickupTime.split(":").map(Number);
+          const [rh, rm] = searchDates.returnTime.split(":").map(Number);
+          return (rh * 60 + rm) > (ph * 60 + pm);
         }
         return true;
       }
@@ -390,7 +429,8 @@ function BookingPageInner() {
       booking.setExtras(localExtras);
       booking.recalculatePrice();
       // Store insurance proof in booking context
-      const insuranceOptedOut = insuranceProofUrl !== null;
+      const insuranceExtra = localExtras.find(e => e.id === "e1");
+      const insuranceOptedOut = !insuranceExtra?.selected && !insuranceProofUrl;
       booking.setInsuranceProof(insuranceProofUrl, insuranceOptedOut);
     }
     if (booking.currentStep === 5) {
@@ -861,6 +901,12 @@ function BookingPageInner() {
                   {vehiclesError}
                 </div>
               )}
+              {vehiclesLoading && (
+                <div className="rounded-lg bg-purple-50 p-3 text-sm text-purple-600 flex items-center gap-2">
+                  <span className="animate-spin inline-block h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full" />
+                  Loading vehicles...
+                </div>
+              )}
               {checkingAvailability && (
                 <div className="rounded-lg bg-purple-50 p-3 text-sm text-purple-600 flex items-center gap-2">
                   <span className="animate-spin inline-block h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full" />
@@ -885,7 +931,7 @@ function BookingPageInner() {
                       <CardContent className="flex items-center gap-4 p-4">
                         <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg bg-gray-100 overflow-hidden">
                           {vehicle.images && vehicle.images.length > 0 ? (
-                            <img src={vehicle.images[0]} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} loading="lazy" className="h-full w-full object-cover" />
+                            <img src={vehicle.images[0]} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} loading="lazy" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
                           ) : (
                             <Car className="h-10 w-10 text-gray-300" />
                           )}

@@ -111,7 +111,7 @@ export async function POST(request: Request) {
     // dates, selected extras, and validated promo code.
     const { data: vehicle } = await supabase
       .from("vehicles")
-      .select("daily_rate")
+      .select("daily_rate, status")
       .eq("id", vehicleId)
       .single();
 
@@ -119,6 +119,14 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, message: "Vehicle not found" },
         { status: 404 }
+      );
+    }
+
+    // Verify vehicle is available (not inactive or in maintenance)
+    if (vehicle.status && (vehicle.status === "inactive" || vehicle.status === "maintenance")) {
+      return NextResponse.json(
+        { success: false, message: "This vehicle is currently unavailable" },
+        { status: 400 }
       );
     }
 
@@ -203,31 +211,50 @@ export async function POST(request: Request) {
       );
     }
 
-    // 1. Find or create customer in Supabase
+    // Stripe requires minimum charge of $0.50
+    if (chargeAmount > 0 && chargeAmount < 0.50) {
+      return NextResponse.json(
+        { success: false, message: "Minimum booking amount is $0.50" },
+        { status: 400 }
+      );
+    }
+
+    // 1. Find or create customer in Supabase (with race condition handling)
     let customerId: string | null = null;
     const { data: existingCustomer } = await supabase
       .from("customers")
       .select("id")
-      .eq("email", customerDetails.email)
+      .eq("email", customerDetails.email.toLowerCase().trim())
       .single();
 
     if (existingCustomer) {
       customerId = existingCustomer.id;
     } else {
       const newId = "c_" + crypto.randomUUID();
-      const { data: newCustomer } = await supabase
-        .from("customers")
-        .insert({
-          id: newId,
-          name: safeName,
-          email: customerDetails.email.toLowerCase().trim(),
-          phone: (customerDetails.phone || "").slice(0, 20),
-          dob: customerDetails.dob || "",
-          role: "customer",
-        })
-        .select("id")
-        .single();
-      customerId = newCustomer?.id || newId;
+      try {
+        const { data: newCustomer } = await supabase
+          .from("customers")
+          .insert({
+            id: newId,
+            name: safeName,
+            email: customerDetails.email.toLowerCase().trim(),
+            phone: (customerDetails.phone || "").slice(0, 20),
+            dob: customerDetails.dob || "",
+            role: "customer",
+          })
+          .select("id")
+          .single();
+        customerId = newCustomer?.id || newId;
+      } catch {
+        // Race condition: customer created between our SELECT and INSERT
+        // Retry the SELECT to get the existing customer ID
+        const { data: retryCustomer } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("email", customerDetails.email)
+          .single();
+        customerId = retryCustomer?.id || newId;
+      }
     }
 
     // 2. Create booking in Supabase (status: pending)

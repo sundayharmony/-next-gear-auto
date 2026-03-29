@@ -16,11 +16,12 @@ export async function GET(req: NextRequest) {
     }
 
     // Fetch all non-cancelled bookings for this vehicle
+    // Only confirmed and active bookings block dates (pending are unpaid and may be abandoned)
     const { data: bookings, error } = await supabase
       .from("bookings")
       .select("id, pickup_date, return_date, pickup_time, return_time, status")
       .eq("vehicle_id", vehicleId)
-      .in("status", ["confirmed", "active", "pending"])
+      .in("status", ["confirmed", "active"])
       .order("pickup_date", { ascending: true });
 
     if (error) {

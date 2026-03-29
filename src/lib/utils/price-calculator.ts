@@ -12,8 +12,9 @@ function roundCents(n: number): number {
 }
 
 export function calculateRentalDays(pickupDate: string, returnDate: string): number {
-  const pickup = new Date(pickupDate);
-  const returnD = new Date(returnDate);
+  // Ensure consistent date parsing: append T00:00:00 if date string doesn't contain time component
+  const pickup = new Date(pickupDate.includes("T") ? pickupDate : pickupDate + "T00:00:00");
+  const returnD = new Date(returnDate.includes("T") ? returnDate : returnDate + "T00:00:00");
   const diffTime = Math.abs(returnD.getTime() - pickup.getTime());
   const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   return Math.max(diffDays, 1);
@@ -36,7 +37,7 @@ export function calculateBaseRate(days: number, dailyRate: number): { total: num
   let total = 0;
   for (let d = 0; d < days; d++) {
     const discountForDay = d * MULTI_DAY_DISCOUNT_RATE; // 0 for day 1, 0.075 for day 2, etc.
-    const cappedDiscount = Math.min(discountForDay, MAX_MULTI_DAY_DISCOUNT); // cap at 40%
+    const cappedDiscount = Math.min(discountForDay, MAX_MULTI_DAY_DISCOUNT); // cap at 25%
     total += dailyRate * (1 - cappedDiscount);
   }
 
