@@ -398,6 +398,31 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     }
   };
 
+  // Quick-toggle payment status (mark fully paid or unpaid)
+  const handleTogglePaymentStatus = async (markPaid: boolean) => {
+    setSaving(true);
+    try {
+      const newDeposit = markPaid ? (booking.total_price ?? 0) : 0;
+      const response = await adminFetch(`/api/bookings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id, deposit: newDeposit }),
+      });
+
+      if (!response.ok) throw new Error("Failed to update payment status");
+
+      const updated = { ...booking, deposit: newDeposit };
+      onUpdateBooking(updated);
+      setEditData(updated);
+      onSuccess(markPaid ? "Marked as fully paid" : "Marked as unpaid");
+    } catch (err) {
+      logger.error("Failed to toggle payment status", err);
+      onError("Failed to update payment status");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // Handle document upload (ID or insurance proof) via /api/bookings/upload
   const handleDocumentUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -1107,6 +1132,33 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     Method: <span className="font-medium">{methodLabel}</span>
                   </div>
                 )}
+
+                {/* Quick payment status toggles */}
+                <div className="pt-2 flex gap-2">
+                  {balanceDue > 0 ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleTogglePaymentStatus(true)}
+                      disabled={saving}
+                      className="flex-1 text-xs text-green-700 border-green-300 hover:bg-green-50"
+                    >
+                      <Check className="w-3 h-3 mr-1" />
+                      Mark Fully Paid
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => handleTogglePaymentStatus(false)}
+                      disabled={saving}
+                      className="flex-1 text-xs text-red-700 border-red-300 hover:bg-red-50"
+                    >
+                      <X className="w-3 h-3 mr-1" />
+                      Mark Unpaid
+                    </Button>
+                  )}
+                </div>
 
                 {/* Record payment button and form */}
                 <div className="pt-2 border-t border-gray-300">

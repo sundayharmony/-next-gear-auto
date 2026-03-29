@@ -35,10 +35,10 @@ const nextConfig: NextConfig = {
               // Removed unsafe-eval; kept unsafe-inline only because Stripe.js and Next.js require it
               "script-src 'self' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com https://www.googletagmanager.com https://www.instagram.com https://*.instagram.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: blob: https://images.unsplash.com https://via.placeholder.com https://maps.googleapis.com https://*.stripe.com https://*.supabase.co https://*.cdninstagram.com https://*.fbcdn.net https://*.instagram.com",
+              "img-src 'self' data: blob: https://images.unsplash.com https://via.placeholder.com https://maps.googleapis.com https://maps.gstatic.com https://*.gstatic.com https://*.stripe.com https://*.supabase.co https://*.cdninstagram.com https://*.fbcdn.net https://*.instagram.com",
               "font-src 'self' https://fonts.gstatic.com",
               // Restricted connect-src to only known API domains
-              "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://*.supabase.co https://maps.googleapis.com https://*.instagram.com",
+              "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://*.supabase.co https://maps.googleapis.com https://maps.gstatic.com https://*.instagram.com",
               "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.google.com https://maps.google.com https://www.instagram.com https://*.instagram.com",
               // Prevent form submissions to external origins
               "form-action 'self'",
