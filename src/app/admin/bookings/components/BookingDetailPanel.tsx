@@ -84,6 +84,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Email sending
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [resendingAgreement, setResendingAgreement] = useState(false);
 
   // UI toggles
   const [showNotes, setShowNotes] = useState(false);
@@ -279,6 +280,31 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       onError("Network error — could not send email");
     } finally {
       setSendingEmail(false);
+    }
+  };
+
+  // Reset existing agreement and resend a fresh signing link
+  const handleResendAgreement = async () => {
+    setResendingAgreement(true);
+    try {
+      const res = await adminFetch("/api/admin/send-booking-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id, resetAgreement: true }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        onSuccess("Old agreement cleared and new signing link sent to " + (booking.customer_email || "customer"));
+        // Update local booking state to reflect cleared agreement
+        onUpdateBooking({ ...booking, agreement_signed_at: undefined, rental_agreement_url: undefined, signed_name: undefined });
+      } else {
+        onError(data.message || data.error || "Failed to resend agreement");
+      }
+    } catch (err) {
+      logger.error("Failed to resend agreement:", err);
+      onError("Network error — could not resend agreement");
+    } finally {
+      setResendingAgreement(false);
     }
   };
 
@@ -1417,6 +1443,14 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     View Agreement
                   </a>
                 )}
+                <button
+                  onClick={handleResendAgreement}
+                  disabled={resendingAgreement}
+                  className="mt-1 text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1 disabled:opacity-50"
+                >
+                  <RefreshCw className={`w-3 h-3 ${resendingAgreement ? "animate-spin" : ""}`} />
+                  {resendingAgreement ? "Sending..." : "Reset & Resend Agreement"}
+                </button>
               </div>
             ) : (
               <p className="text-sm text-gray-500">Not yet signed</p>

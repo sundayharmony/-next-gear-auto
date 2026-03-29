@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { bookingId } = body;
+    const { bookingId, resetAgreement } = body;
 
     if (!bookingId) {
       return NextResponse.json(
@@ -20,6 +20,27 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getServiceSupabase();
+
+    // If resetAgreement is true, clear the existing agreement so the customer
+    // can sign a fresh one from the link we're about to send.
+    if (resetAgreement) {
+      const { error: resetError } = await supabase
+        .from("bookings")
+        .update({
+          agreement_signed_at: null,
+          rental_agreement_url: null,
+          signed_name: null,
+        })
+        .eq("id", bookingId);
+
+      if (resetError) {
+        logger.error("Failed to reset agreement:", resetError);
+        return NextResponse.json(
+          { success: false, message: "Failed to reset existing agreement" },
+          { status: 500 }
+        );
+      }
+    }
 
     // Fetch the booking with vehicle info
     const { data: booking, error: bookingError } = await supabase
@@ -72,7 +93,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: `Booking email sent to ${booking.customer_email}`,
+      message: `${resetAgreement ? "Agreement reset and email" : "Email"} sent to ${booking.customer_email}`,
     });
   } catch (error) {
     logger.error("Send booking email error:", error);
