@@ -21,6 +21,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { Location } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
+import { AddressAutocomplete } from "@/components/address-autocomplete";
 
 interface FormState extends Omit<Location, "id" | "created_at"> {
   id?: string;
@@ -410,13 +411,23 @@ export default function AdminLocationsPage() {
               <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Address <span className="text-red-500">*</span>
               </label>
-              <Input
+              <AddressAutocomplete
                 value={form.address || ""}
-                onChange={(e) =>
-                  setForm({ ...form, address: e.target.value })
-                }
-                placeholder="e.g. 123 Main St"
-                required
+                onChange={(val) => setForm({ ...form, address: val })}
+                onSelect={(result) => {
+                  setForm({
+                    ...form,
+                    address: result.address,
+                    city: result.city || form.city,
+                    state: result.state || form.state,
+                    zip: result.zip || form.zip,
+                    lat: result.lat || (form as any).lat,
+                    lng: result.lng || (form as any).lng,
+                    name: form.name || result.name || "",
+                  });
+                  setSuccess("Address auto-filled!");
+                }}
+                placeholder="Start typing an address..."
               />
             </div>
           </div>

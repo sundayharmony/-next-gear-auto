@@ -31,8 +31,20 @@ function loadGoogleMaps(): Promise<void> {
   if (!key) return Promise.reject(new Error("Google Maps API key not set"));
 
   mapsLoadPromise = new Promise((resolve, reject) => {
+    // Check if already loaded by AddressAutocomplete or other component
+    if (typeof google !== "undefined" && google.maps) {
+      mapsLoaded = true;
+      resolve();
+      return;
+    }
+    const existing = document.querySelector('script[src*="maps.googleapis.com"]');
+    if (existing) {
+      existing.addEventListener("load", () => { mapsLoaded = true; resolve(); });
+      if (typeof google !== "undefined" && google.maps) { mapsLoaded = true; resolve(); }
+      return;
+    }
     const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=marker`;
+    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=marker,places`;
     script.async = true;
     script.defer = true;
     script.onload = () => { mapsLoaded = true; resolve(); };
