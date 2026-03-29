@@ -186,68 +186,114 @@ export default function AdminDashboardPage() {
             </div>
 
             {/* Recent Bookings */}
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-semibold text-gray-900">Recent Bookings</h2>
+            <div className="flex items-center justify-between mb-5">
+              <div>
+                <h2 className="text-xl font-semibold text-gray-900">Recent Bookings</h2>
+                <p className="text-xs text-gray-400 mt-0.5">{data.recentBookings.length} most recent</p>
+              </div>
               <Link href="/admin/bookings">
-                <Button variant="outline" size="sm">
-                  View All <ArrowRight className="h-3.5 w-3.5 ml-1" />
+                <Button variant="outline" size="sm" className="gap-1.5 text-purple-700 border-purple-200 hover:bg-purple-50 hover:border-purple-300">
+                  View All <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               </Link>
             </div>
 
-            <Card>
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-gray-50/80">
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wider">Customer</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wider">Vehicle</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wider hidden md:table-cell">Pickup</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wider hidden md:table-cell">Return</th>
-                      <th className="px-4 py-3 text-right font-semibold text-gray-600 text-xs uppercase tracking-wider">Total</th>
-                      <th className="px-4 py-3 text-left font-semibold text-gray-600 text-xs uppercase tracking-wider">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.recentBookings.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                          No bookings yet. They&apos;ll show up here once customers start booking.
-                        </td>
-                      </tr>
-                    ) : (
-                      data.recentBookings.map((booking) => (
-                        <tr
-                          key={booking.id}
-                          onClick={() => router.push(`/admin/bookings?booking=${booking.id}`)}
-                          className="border-b last:border-0 hover:bg-purple-50/60 transition-colors cursor-pointer group"
-                        >
-                          <td className="px-4 py-3.5">
-                            <div className="text-gray-900 font-medium truncate max-w-[160px] group-hover:text-purple-700 transition-colors" title={booking.customer_name || "—"}>{booking.customer_name || "—"}</div>
-                            <div className="text-[11px] text-gray-400 font-mono mt-0.5" title={booking.id}>{booking.id}</div>
-                          </td>
-                          <td className="px-4 py-3.5 text-gray-700 max-w-[180px] truncate" title={booking.vehicleName || "—"}>{booking.vehicleName || "—"}</td>
-                          <td className="px-4 py-3.5 hidden md:table-cell">
-                            <div className="text-gray-900 font-medium">{formatDate(booking.pickup_date)}</div>
-                            <div className="text-xs text-purple-600 font-medium mt-0.5">{formatTime(booking.pickup_time)}</div>
-                          </td>
-                          <td className="px-4 py-3.5 hidden md:table-cell">
-                            <div className="text-gray-900 font-medium">{formatDate(booking.return_date)}</div>
-                            <div className="text-xs text-purple-600 font-medium mt-0.5">{formatTime(booking.return_time)}</div>
-                          </td>
-                          <td className="px-4 py-3.5 text-right font-semibold tabular-nums text-gray-900">${(booking.total_price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                          <td className="px-4 py-3.5">
-                            <Badge className={statusColors[booking.status] || "bg-gray-100 text-gray-600"}>
-                              {booking.status}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+            {data.recentBookings.length === 0 ? (
+              <Card>
+                <CardContent className="py-16 text-center">
+                  <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+                  <p className="text-gray-500 font-medium">No bookings yet</p>
+                  <p className="text-sm text-gray-400 mt-1">They&apos;ll show up here once customers start booking.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-2.5">
+                {data.recentBookings.map((booking) => {
+                  const statusAccent: Record<string, string> = {
+                    pending: "border-l-yellow-400",
+                    confirmed: "border-l-green-400",
+                    active: "border-l-blue-400",
+                    completed: "border-l-gray-300",
+                    cancelled: "border-l-red-400",
+                    "no-show": "border-l-orange-400",
+                  };
+                  const statusDot: Record<string, string> = {
+                    pending: "bg-yellow-400",
+                    confirmed: "bg-green-400",
+                    active: "bg-blue-400",
+                    completed: "bg-gray-300",
+                    cancelled: "bg-red-400",
+                    "no-show": "bg-orange-400",
+                  };
+                  const accent = statusAccent[booking.status] || "border-l-gray-300";
+                  const dot = statusDot[booking.status] || "bg-gray-300";
+                  const isActive = booking.status === "active";
+                  const isPending = booking.status === "pending";
+
+                  return (
+                    <div
+                      key={booking.id}
+                      onClick={() => router.push(`/admin/bookings?booking=${booking.id}`)}
+                      className={`group relative rounded-xl border border-gray-200 border-l-[3px] ${accent} bg-white hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer overflow-hidden ${isPending ? "ring-1 ring-yellow-100" : ""}`}
+                    >
+                      <div className="px-4 py-3.5 sm:px-5">
+                        {/* Top row: Customer + Status + Price */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0 flex-1">
+                            <div className="flex items-center gap-2">
+                              <h3 className="text-sm font-semibold text-gray-900 truncate group-hover:text-purple-700 transition-colors">
+                                {booking.customer_name || "Unknown Customer"}
+                              </h3>
+                              <div className="flex items-center gap-1.5 flex-shrink-0">
+                                <span className={`inline-block w-1.5 h-1.5 rounded-full ${dot} ${isActive ? "animate-pulse" : ""}`} />
+                                <span className={`text-[11px] font-semibold uppercase tracking-wide ${
+                                  booking.status === "pending" ? "text-yellow-600" :
+                                  booking.status === "confirmed" ? "text-green-600" :
+                                  booking.status === "active" ? "text-blue-600" :
+                                  "text-gray-400"
+                                }`}>{booking.status}</span>
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
+                              <Car className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                              <span className="truncate">{booking.vehicleName || "—"}</span>
+                            </p>
+                          </div>
+                          <div className="text-right flex-shrink-0">
+                            <p className="text-base font-bold text-gray-900 tabular-nums">
+                              ${(booking.total_price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Bottom row: Dates */}
+                        <div className="mt-2.5 flex items-center gap-2 text-xs">
+                          <div className="flex items-center gap-1 bg-gray-50 rounded-md px-2 py-1">
+                            <Calendar className="h-3 w-3 text-gray-400" />
+                            <span className="text-gray-700 font-medium">{formatDate(booking.pickup_date)}</span>
+                            {booking.pickup_time && (
+                              <span className="text-purple-600 font-medium">{formatTime(booking.pickup_time)}</span>
+                            )}
+                          </div>
+                          <ArrowRight className="h-3 w-3 text-gray-300 flex-shrink-0" />
+                          <div className="flex items-center gap-1 bg-gray-50 rounded-md px-2 py-1">
+                            <span className="text-gray-700 font-medium">{formatDate(booking.return_date)}</span>
+                            {booking.return_time && (
+                              <span className="text-purple-600 font-medium">{formatTime(booking.return_time)}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Hover arrow indicator */}
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <ArrowRight className="h-4 w-4 text-purple-400" />
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            </Card>
+            )}
           </>
         ) : null}
       </PageContainer>
