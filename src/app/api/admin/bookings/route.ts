@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
     // Single query with vehicle JOIN — eliminates the second DB round-trip
     let query = supabase
       .from("bookings")
-      .select("*, vehicles(year, make, model)")
+      .select("*, vehicles(year, make, model), pickup_location_id, pickup_location_name, return_location_id, return_location_name, location_surcharge")
       .order("created_at", { ascending: false });
 
     if (status && status !== "all") {

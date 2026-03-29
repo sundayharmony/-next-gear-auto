@@ -38,6 +38,11 @@ export async function POST(request: NextRequest) {
       insuranceProofUrl,
       insuranceOptedOut,
       idDocumentUrl,
+      pickupLocationId,
+      returnLocationId,
+      pickupLocationName,
+      returnLocationName,
+      locationSurcharge,
     } = body;
 
     if (!vehicleId || !pickupDate || !returnDate || !customerDetails?.email) {
@@ -213,6 +218,21 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Add location surcharge (validated against DB)
+    let validatedSurcharge = 0;
+    if (pickupLocationId || returnLocationId) {
+      const locationIds = [pickupLocationId, returnLocationId].filter(Boolean);
+      const { data: locations } = await supabase
+        .from("locations")
+        .select("id, surcharge")
+        .in("id", locationIds)
+        .eq("is_active", true);
+      if (locations) {
+        validatedSurcharge = locations.reduce((sum: number, loc: { surcharge: number }) => sum + (loc.surcharge || 0), 0);
+      }
+      serverPricing = { ...serverPricing, total: serverPricing.total + validatedSurcharge, subtotal: serverPricing.subtotal + validatedSurcharge };
+    }
+
     const serverTotal = Math.round(serverPricing.total * 100) / 100;
 
     // Allow small rounding tolerance ($0.02) between client and server
@@ -299,6 +319,9 @@ export async function POST(request: NextRequest) {
       insurance_proof_url: insuranceProofUrl || null,
       insurance_opted_out: insuranceOptedOut || false,
       id_document_url: idDocumentUrl || null,
+      pickup_location_id: pickupLocationId || null,
+      return_location_id: returnLocationId || null,
+      location_surcharge: validatedSurcharge || 0,
     });
 
     if (bookingError) {
@@ -342,6 +365,8 @@ export async function POST(request: NextRequest) {
         totalPrice: serverTotal,
         deposit: 0,
         needsPassword,
+        pickupLocationName: pickupLocationName || undefined,
+        returnLocationName: returnLocationName || undefined,
       };
 
       sendBookingConfirmation(emailData).catch(logger.error);
@@ -418,6 +443,8 @@ export async function POST(request: NextRequest) {
       totalPrice: serverTotal,
       deposit: chargeAmount,
       needsPassword: needsPasswordForPending,
+      pickupLocationName: pickupLocationName || undefined,
+      returnLocationName: returnLocationName || undefined,
     };
 
     // Fire and forget - don't block the response

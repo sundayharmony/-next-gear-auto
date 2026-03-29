@@ -12,6 +12,8 @@ interface EmailData {
   totalPrice: number;
   deposit: number;
   needsPassword?: boolean;
+  pickupLocationName?: string;
+  returnLocationName?: string;
 }
 
 /** Escape HTML special characters to prevent injection */
@@ -165,6 +167,8 @@ function bookingEmailTemplate(
     customerEmail?: string;
     needsPassword?: boolean;
     passwordToken?: string;
+    pickupLocationName?: string;
+    returnLocationName?: string;
   },
   opts: {
     subject: string;
@@ -198,6 +202,7 @@ function bookingEmailTemplate(
                 ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
                 ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
+                ${data.pickupLocationName ? `${detailRow('Pickup Location', escHtml(data.pickupLocationName) + (data.returnLocationName && data.returnLocationName !== data.pickupLocationName ? `<br/><span style="color:#6b7280;font-weight:400;">Return: ${escHtml(data.returnLocationName)}</span>` : ''))}` : ''}
                 ${detailRow('Total', '$' + (data.totalPrice ?? 0).toFixed(2), true)}
               </table>
             </td>
@@ -281,6 +286,11 @@ export function adminNewBookingTemplate(data: EmailData): string {
         </table>
         ${dateTimeBlock('Pick-up', data.pickupDate, data.pickupTime, '#059669', 'linear-gradient(135deg, #ecfdf5, #d1fae5)')}
         ${dateTimeBlock('Return', data.returnDate, data.returnTime, '#d97706', 'linear-gradient(135deg, #fffbeb, #fef3c7)')}
+        ${data.pickupLocationName ? `
+<tr>
+  <td style="padding:8px 12px;color:#6b7280;font-size:14px;">Pickup Location</td>
+  <td style="padding:8px 12px;font-weight:600;color:#111827;font-size:14px;">${escHtml(data.pickupLocationName)}${data.returnLocationName && data.returnLocationName !== data.pickupLocationName ? `<br/><span style="color:#6b7280;font-weight:400;">Return: ${escHtml(data.returnLocationName)}</span>` : ''}</td>
+</tr>` : ''}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr>
             <td style="padding: 16px 0; color: #6b7280; font-size: 14px;">Total Paid</td>

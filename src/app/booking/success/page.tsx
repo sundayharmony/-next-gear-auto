@@ -3,7 +3,7 @@
 import React, { Suspense, useEffect, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Check, Car, Calendar, CreditCard, ArrowRight, FileCheck, Loader2 } from "lucide-react";
+import { Check, Car, Calendar, CreditCard, ArrowRight, FileCheck, Loader2, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
@@ -22,6 +22,8 @@ interface BookingDetails {
   deposit: number;
   customer_name: string;
   customer_email?: string;
+  pickup_location_name?: string;
+  return_location_name?: string;
 }
 
 function SuccessContent() {
@@ -182,6 +184,19 @@ function SuccessContent() {
                           </div>
                         </div>
                       </div>
+                      {booking.pickup_location_name && (
+                        <div className="flex items-center justify-between py-3 border-b border-gray-100">
+                          <span className="flex items-center gap-2 text-sm text-gray-500">
+                            <MapPin className="h-4 w-4" /> Location
+                          </span>
+                          <div className="text-right">
+                            <span className="text-sm font-medium text-gray-900">{booking.pickup_location_name}</span>
+                            {booking.return_location_name && booking.return_location_name !== booking.pickup_location_name && (
+                              <span className="block text-xs text-gray-500">Return: {booking.return_location_name}</span>
+                            )}
+                          </div>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between py-3 border-b border-gray-100">
                         <span className="flex items-center gap-2 text-sm text-gray-500">
                           <CreditCard className="h-4 w-4" /> Amount Paid

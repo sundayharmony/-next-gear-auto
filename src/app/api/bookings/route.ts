@@ -364,6 +364,9 @@ export async function POST(request: Request) {
       agreement_signed_at: body.signedName ? new Date().toISOString() : null,
       insurance_proof_url: body.insuranceProofUrl || null,
       insurance_opted_out: body.insuranceOptedOut || false,
+      pickup_location_id: body.pickup_location_id || body.pickupLocationId || null,
+      return_location_id: body.return_location_id || body.returnLocationId || null,
+      location_surcharge: body.location_surcharge || body.locationSurcharge || 0,
     });
 
     if (error) {
@@ -521,6 +524,11 @@ export async function PATCH(request: NextRequest) {
     if (body.insurance_opted_out !== undefined) updateFields.insurance_opted_out = body.insurance_opted_out;
     if (body.admin_notes !== undefined) updateFields.admin_notes = body.admin_notes;
     if (body.payment_method !== undefined) updateFields.payment_method = body.payment_method;
+    if (body.pickup_location_id !== undefined) updateFields.pickup_location_id = body.pickup_location_id;
+    if (body.pickup_location_name !== undefined) updateFields.pickup_location_name = body.pickup_location_name;
+    if (body.return_location_id !== undefined) updateFields.return_location_id = body.return_location_id;
+    if (body.return_location_name !== undefined) updateFields.return_location_name = body.return_location_name;
+    if (body.location_surcharge !== undefined) updateFields.location_surcharge = body.location_surcharge;
 
     if (Object.keys(updateFields).length === 0) {
       return NextResponse.json(

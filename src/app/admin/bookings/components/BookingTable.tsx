@@ -162,6 +162,9 @@ export default function BookingTable({
                         {booking.pickup_time && booking.return_time && " – "}
                         {booking.return_time && `${booking.return_time}`}
                       </div>
+                      {booking.pickup_location_name && (
+                        <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[140px]">📍 {booking.pickup_location_name}</p>
+                      )}
                     </div>
                     <Badge variant="secondary" className="whitespace-nowrap text-xs">
                       {rentalDays}d

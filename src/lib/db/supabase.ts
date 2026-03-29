@@ -81,6 +81,9 @@ export interface DbBooking {
   signed_name: string | null;
   agreement_signed_at: string | null;
   created_at: string;
+  pickup_location_id: string | null;
+  return_location_id: string | null;
+  location_surcharge: number | null;
 }
 
 export interface DbPaymentRecord {

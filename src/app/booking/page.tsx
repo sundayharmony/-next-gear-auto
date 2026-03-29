@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Search, Car, Package, UserCheck, ShieldCheck, FileText, CreditCard,
   Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight, Tag, X, Upload,
-  Shield, CheckCircle, PenLine, CheckCircle2, Maximize2,
+  Shield, CheckCircle, PenLine, CheckCircle2, Maximize2, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -156,6 +156,42 @@ function BookingPageInner() {
     };
   }, [booking.pickupDate, booking.returnDate, vehicles]);
 
+  // Fetch locations on mount
+  useEffect(() => {
+    let cancelled = false;
+    async function fetchLocations() {
+      try {
+        const res = await fetch("/api/locations");
+        const data = await res.json();
+        if (data.success && !cancelled) {
+          setLocationsData(data.data);
+          // Auto-select default location
+          const defaultLoc = data.data.find((l: any) => l.is_default);
+          if (defaultLoc) {
+            setSelectedPickupLocation(defaultLoc.id);
+            setSelectedReturnLocation(defaultLoc.id);
+          }
+        }
+      } catch { /* silent */ }
+      if (!cancelled) setLocationsLoading(false);
+    }
+    fetchLocations();
+    return () => { cancelled = true; };
+  }, []);
+
+  // Restore locations from booking context if user navigates back
+  useEffect(() => {
+    if (booking.pickupLocationId) {
+      setSelectedPickupLocation(booking.pickupLocationId);
+    }
+    if (booking.returnLocationId) {
+      setSelectedReturnLocation(booking.returnLocationId);
+      if (booking.returnLocationId !== booking.pickupLocationId) {
+        setDifferentDropoff(true);
+      }
+    }
+  }, [booking.pickupLocationId, booking.returnLocationId]);
+
   // Check if a vehicle has a date conflict with selected dates (includes 60-minute buffer matching server gap)
   const isVehicleBooked = (vehicleId: string): boolean => {
     const ranges = vehicleBookedDates[vehicleId];
@@ -256,6 +292,13 @@ function BookingPageInner() {
   const [uploadingId, setUploadingId] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const insuranceSectionRef = useRef<HTMLDivElement>(null);
+
+  // Location selection state
+  const [locations, setLocationsData] = useState<Array<{ id: string; name: string; address: string; city: string; state: string; zip: string; surcharge: number; is_default: boolean }>>([]);
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [selectedPickupLocation, setSelectedPickupLocation] = useState<string>("");
+  const [selectedReturnLocation, setSelectedReturnLocation] = useState<string>("");
+  const [differentDropoff, setDifferentDropoff] = useState(false);
 
   // Recalculate pricing when vehicle or extras change
   useEffect(() => {
@@ -376,6 +419,8 @@ function BookingPageInner() {
           const [rh, rm] = searchDates.returnTime.split(":").map(Number);
           return (rh * 60 + rm) > (ph * 60 + pm);
         }
+        // Require location selection if locations are available
+        if (locations.length > 0 && !selectedPickupLocation) return false;
         return true;
       }
       case 2: return !!booking.selectedVehicle;
@@ -421,6 +466,19 @@ function BookingPageInner() {
   const handleNext = () => {
     if (booking.currentStep === 1) {
       booking.setDates(searchDates.pickup, searchDates.return, searchDates.pickupTime, searchDates.returnTime);
+      // Save selected locations to booking context
+      const pickupLoc = locations.find(l => l.id === selectedPickupLocation);
+      const returnLoc = differentDropoff
+        ? locations.find(l => l.id === selectedReturnLocation)
+        : pickupLoc;
+      const totalSurcharge = (pickupLoc?.surcharge || 0) + (differentDropoff && returnLoc ? (returnLoc.surcharge || 0) : 0);
+      booking.setLocations(
+        selectedPickupLocation || null,
+        differentDropoff ? selectedReturnLocation : selectedPickupLocation || null,
+        pickupLoc?.name || null,
+        (differentDropoff ? returnLoc?.name : pickupLoc?.name) || null,
+        totalSurcharge
+      );
     }
     if (booking.currentStep === 4) {
       booking.setCustomerDetails(details);
@@ -861,6 +919,137 @@ function BookingPageInner() {
               </CardContent>
             </Card>
 
+            {/* Location Selection */}
+            {!locationsLoading && locations.length > 0 && (
+              <div className="mt-6 space-y-4">
+                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <MapPin className="w-4 h-4 text-purple-600" />
+                  Pickup Location
+                </h3>
+                <div className="grid gap-2">
+                  {locations.map((loc) => (
+                    <label
+                      key={loc.id}
+                      className={cn(
+                        "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                        selectedPickupLocation === loc.id
+                          ? "border-purple-500 bg-purple-50 ring-1 ring-purple-500"
+                          : "border-gray-200 hover:border-purple-300"
+                      )}
+                    >
+                      <input
+                        type="radio"
+                        name="pickupLocation"
+                        value={loc.id}
+                        checked={selectedPickupLocation === loc.id}
+                        onChange={() => {
+                          setSelectedPickupLocation(loc.id);
+                          if (!differentDropoff) setSelectedReturnLocation(loc.id);
+                        }}
+                        className="sr-only"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium text-gray-900 text-sm">{loc.name}</span>
+                          {loc.is_default && (
+                            <Badge className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0">Main</Badge>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-500 truncate">{loc.address}{loc.city ? `, ${loc.city}` : ''}{loc.state ? ` ${loc.state}` : ''}</p>
+                      </div>
+                      {loc.surcharge > 0 && (
+                        <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                          +${loc.surcharge.toFixed(2)}
+                        </span>
+                      )}
+                      {selectedPickupLocation === loc.id && (
+                        <Check className="w-4 h-4 text-purple-600 shrink-0" />
+                      )}
+                    </label>
+                  ))}
+                </div>
+
+                {/* Different dropoff toggle */}
+                <label className="flex items-center gap-2 cursor-pointer mt-2">
+                  <input
+                    type="checkbox"
+                    checked={differentDropoff}
+                    onChange={(e) => {
+                      setDifferentDropoff(e.target.checked);
+                      if (!e.target.checked) setSelectedReturnLocation(selectedPickupLocation);
+                    }}
+                    className="rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  />
+                  <span className="text-sm text-gray-600">Different dropoff location</span>
+                </label>
+
+                {differentDropoff && (
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                      <MapPin className="w-4 h-4 text-orange-500" />
+                      Dropoff Location
+                    </h3>
+                    <div className="grid gap-2">
+                      {locations.map((loc) => (
+                        <label
+                          key={loc.id}
+                          className={cn(
+                            "flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all",
+                            selectedReturnLocation === loc.id
+                              ? "border-orange-500 bg-orange-50 ring-1 ring-orange-500"
+                              : "border-gray-200 hover:border-orange-300"
+                          )}
+                        >
+                          <input
+                            type="radio"
+                            name="returnLocation"
+                            value={loc.id}
+                            checked={selectedReturnLocation === loc.id}
+                            onChange={() => setSelectedReturnLocation(loc.id)}
+                            className="sr-only"
+                          />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="font-medium text-gray-900 text-sm">{loc.name}</span>
+                              {loc.is_default && (
+                                <Badge className="bg-purple-100 text-purple-700 text-[10px] px-1.5 py-0">Main</Badge>
+                              )}
+                            </div>
+                            <p className="text-xs text-gray-500 truncate">{loc.address}{loc.city ? `, ${loc.city}` : ''}{loc.state ? ` ${loc.state}` : ''}</p>
+                          </div>
+                          {loc.surcharge > 0 && (
+                            <span className="text-xs font-medium text-amber-600 bg-amber-50 px-2 py-0.5 rounded-full whitespace-nowrap">
+                              +${loc.surcharge.toFixed(2)}
+                            </span>
+                          )}
+                          {selectedReturnLocation === loc.id && (
+                            <Check className="w-4 h-4 text-orange-600 shrink-0" />
+                          )}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Surcharge summary */}
+                {(() => {
+                  const pickupLoc = locations.find(l => l.id === selectedPickupLocation);
+                  const returnLoc = differentDropoff ? locations.find(l => l.id === selectedReturnLocation) : pickupLoc;
+                  const totalSurcharge = (pickupLoc?.surcharge || 0) + (differentDropoff && returnLoc ? (returnLoc?.surcharge || 0) : 0);
+                  if (totalSurcharge > 0) {
+                    return (
+                      <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-sm">
+                        <span className="font-medium text-amber-800">Location surcharge: </span>
+                        <span className="text-amber-900 font-bold">${totalSurcharge.toFixed(2)}</span>
+                        <span className="text-amber-600 ml-1">(added to total)</span>
+                      </div>
+                    );
+                  }
+                  return null;
+                })()}
+              </div>
+            )}
+
             {/* Calendar Overlays */}
             <CalendarOverlay
               isOpen={showPickupCalendar}
@@ -1273,6 +1462,28 @@ function BookingPageInner() {
                           </div>
                         )}
                       </div>
+                      {(booking.pickupLocationName || booking.returnLocationName) && (
+                        <div className="border-t pt-3 space-y-2">
+                          {booking.pickupLocationName && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500 flex items-center gap-1">
+                                <MapPin className="h-3.5 w-3.5" />
+                                Pickup Location
+                              </span>
+                              <span className="font-medium text-gray-900">{booking.pickupLocationName}</span>
+                            </div>
+                          )}
+                          {booking.returnLocationName && booking.returnLocationName !== booking.pickupLocationName && (
+                            <div className="flex justify-between text-sm">
+                              <span className="text-gray-500 flex items-center gap-1">
+                                <MapPin className="h-3.5 w-3.5" />
+                                Dropoff Location
+                              </span>
+                              <span className="font-medium text-gray-900">{booking.returnLocationName}</span>
+                            </div>
+                          )}
+                        </div>
+                      )}
                       {booking.pricing && (
                         <>
                           <div className="border-t pt-3 space-y-1">
@@ -1305,6 +1516,12 @@ function BookingPageInner() {
                                   Promo: {booking.promoCode}
                                 </span>
                                 <span>-${booking.promoDiscount.discountAmount.toFixed(2)}</span>
+                              </div>
+                            )}
+                            {booking.locationSurcharge > 0 && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Location Surcharge</span>
+                                <span>${booking.locationSurcharge.toFixed(2)}</span>
                               </div>
                             )}
                             <div className="flex justify-between text-sm">

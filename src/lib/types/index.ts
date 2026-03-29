@@ -251,6 +251,21 @@ export interface Expense {
 
 // ─── Admin DB Row Types (snake_case — matches Supabase columns) ──────────
 
+/** Pickup/dropoff location managed by admin */
+export interface Location {
+  id: string;
+  name: string;
+  address: string;
+  city: string;
+  state: string;
+  zip: string;
+  surcharge: number;
+  is_default: boolean;
+  is_active: boolean;
+  notes?: string;
+  created_at: string;
+}
+
 /** Booking as returned by the API / Supabase (snake_case columns) */
 export interface BookingDbRow {
   id: string;
@@ -280,6 +295,11 @@ export interface BookingDbRow {
   promo_code?: string;
   discount_amount?: number;
   is_overdue?: boolean;
+  pickup_location_id?: string;
+  pickup_location_name?: string;
+  return_location_id?: string;
+  return_location_name?: string;
+  location_surcharge?: number;
 }
 
 /** Minimal vehicle info used in admin list views */

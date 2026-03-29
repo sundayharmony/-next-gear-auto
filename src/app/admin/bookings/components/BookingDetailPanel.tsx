@@ -25,6 +25,7 @@ import {
   DollarSign,
   Plus,
   Calculator,
+  MapPin,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { calculateRentalDays, calculatePricing } from "@/lib/utils/price-calculator";
 import { logger } from "@/lib/utils/logger";
+import { Location } from "@/lib/types";
 
 interface BookingDetailPanelProps {
   booking: BookingRow;
@@ -77,6 +79,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const [bookingTickets, setBookingTickets] = useState<TicketRecord[]>([]);
   const [activityLog, setActivityLog] = useState<ActivityRecord[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
+  const [locations, setLocationsState] = useState<Location[]>([]);
 
   // Email sending
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -151,6 +154,16 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
     fetchDetails();
   }, [booking.id]);
+
+  // Fetch locations
+  useEffect(() => {
+    adminFetch("/api/admin/locations?active=true")
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) setLocationsState(data.data);
+      })
+      .catch(() => {});
+  }, []);
 
   // Calculate current status index
   const currentStatusIndex = STATUS_STEPS.indexOf(
@@ -764,103 +777,155 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
               Rental Period
             </h3>
             {editMode ? (
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">
-                    Pickup Date
-                  </label>
-                  <Input
-                    type="date"
-                    value={editData.pickup_date || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setEditData({
-                        ...editData,
-                        pickup_date: e.target.value,
-                      })
-                    }
-                  />
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                      Pickup Date
+                    </label>
+                    <Input
+                      type="date"
+                      value={editData.pickup_date || ""}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setEditData({
+                          ...editData,
+                          pickup_date: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                      Pickup Time
+                    </label>
+                    <select
+                      value={editData.pickup_time || ""}
+                      onChange={(e) =>
+                        setEditData({
+                          ...editData,
+                          pickup_time: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    >
+                      <option value="">Select time</option>
+                      {TIME_SLOTS.map((slot) => (
+                        <option key={slot.value} value={slot.value}>
+                          {slot.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                      Return Date
+                    </label>
+                    <Input
+                      type="date"
+                      value={editData.return_date || ""}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setEditData({
+                          ...editData,
+                          return_date: e.target.value,
+                        })
+                      }
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                      Return Time
+                    </label>
+                    <select
+                      value={editData.return_time || ""}
+                      onChange={(e) =>
+                        setEditData({
+                          ...editData,
+                          return_time: e.target.value,
+                        })
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
+                    >
+                      <option value="">Select time</option>
+                      {TIME_SLOTS.map((slot) => (
+                        <option key={slot.value} value={slot.value}>
+                          {slot.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">
-                    Pickup Time
-                  </label>
-                  <select
-                    value={editData.pickup_time || ""}
-                    onChange={(e) =>
-                      setEditData({
-                        ...editData,
-                        pickup_time: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  >
-                    <option value="">Select time</option>
-                    {TIME_SLOTS.map((slot) => (
-                      <option key={slot.value} value={slot.value}>
-                        {slot.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">
-                    Return Date
-                  </label>
-                  <Input
-                    type="date"
-                    value={editData.return_date || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setEditData({
-                        ...editData,
-                        return_date: e.target.value,
-                      })
-                    }
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">
-                    Return Time
-                  </label>
-                  <select
-                    value={editData.return_time || ""}
-                    onChange={(e) =>
-                      setEditData({
-                        ...editData,
-                        return_time: e.target.value,
-                      })
-                    }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
-                  >
-                    <option value="">Select time</option>
-                    {TIME_SLOTS.map((slot) => (
-                      <option key={slot.value} value={slot.value}>
-                        {slot.label}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </div>
+                {/* Location */}
+                {locations.length > 0 && (
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> Pickup Location
+                      </label>
+                      <select
+                        value={editData.pickup_location_id || ""}
+                        onChange={(e) => setEditData({ ...editData, pickup_location_id: e.target.value || undefined })}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      >
+                        <option value="">None</option>
+                        {locations.map(l => (
+                          <option key={l.id} value={l.id}>{l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                        <MapPin className="w-3 h-3" /> Dropoff Location
+                      </label>
+                      <select
+                        value={editData.return_location_id || ""}
+                        onChange={(e) => setEditData({ ...editData, return_location_id: e.target.value || undefined })}
+                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                      >
+                        <option value="">Same as pickup</option>
+                        {locations.map(l => (
+                          <option key={l.id} value={l.id}>{l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div>
-                  <p className="text-gray-500 text-xs mb-1">Pickup</p>
-                  <p className="font-medium">{formatDate(booking.pickup_date)}</p>
-                  {booking.pickup_time && (
-                    <p className="text-gray-600 text-xs">
-                      {formatTime(booking.pickup_time)}
-                    </p>
-                  )}
+              <>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">Pickup</p>
+                    <p className="font-medium">{formatDate(booking.pickup_date)}</p>
+                    {booking.pickup_time && (
+                      <p className="text-gray-600 text-xs">
+                        {formatTime(booking.pickup_time)}
+                      </p>
+                    )}
+                  </div>
+                  <div>
+                    <p className="text-gray-500 text-xs mb-1">Return</p>
+                    <p className="font-medium">{formatDate(booking.return_date)}</p>
+                    {booking.return_time && (
+                      <p className="text-gray-600 text-xs">
+                        {formatTime(booking.return_time)}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="text-gray-500 text-xs mb-1">Return</p>
-                  <p className="font-medium">{formatDate(booking.return_date)}</p>
-                  {booking.return_time && (
-                    <p className="text-gray-600 text-xs">
-                      {formatTime(booking.return_time)}
-                    </p>
-                  )}
-                </div>
-              </div>
+                {(booking.pickup_location_name || booking.return_location_name) && (
+                  <div className="flex items-center justify-between py-2">
+                    <span className="flex items-center gap-1.5 text-sm text-gray-500">
+                      <MapPin className="w-3.5 h-3.5" /> Location
+                    </span>
+                    <div className="text-right">
+                      <span className="text-sm font-medium text-gray-900">{booking.pickup_location_name || "—"}</span>
+                      {booking.return_location_name && booking.return_location_name !== booking.pickup_location_name && (
+                        <span className="text-xs text-gray-500 block">Return: {booking.return_location_name}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 

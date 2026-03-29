@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Check, AlertTriangle, Calculator } from "lucide-react";
+import { X, Check, AlertTriangle, Calculator, MapPin } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +15,7 @@ import {
   PAYMENT_METHODS,
   TIME_SLOTS,
 } from "../types";
+import { Location } from "@/lib/types";
 
 interface CreateBookingFormProps {
   vehicles: Vehicle[];
@@ -61,6 +62,11 @@ export default function CreateBookingForm({
   const [hasOverlappingBookings, setHasOverlappingBookings] = useState(false);
   const [loading, setLoading] = useState(false);
   const [manualPriceOverride, setManualPriceOverride] = useState(false);
+  const [locations, setLocationsState] = useState<Location[]>([]);
+  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [pickupLocationId, setPickupLocationId] = useState("");
+  const [returnLocationId, setReturnLocationId] = useState("");
+  const [differentDropoff, setDifferentDropoff] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -85,6 +91,30 @@ export default function CreateBookingForm({
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Fetch locations
+  useEffect(() => {
+    let cancelled = false;
+    adminFetch("/api/admin/locations?active=true")
+      .then(r => r.json())
+      .then(data => {
+        if (data.success && !cancelled) {
+          setLocationsState(data.data);
+          const def = data.data.find((l: Location) => l.is_default);
+          if (def) {
+            setPickupLocationId(def.id);
+            setReturnLocationId(def.id);
+          }
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        if (!cancelled) setLocationsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Handle customer search with debounce
@@ -273,6 +303,11 @@ export default function CreateBookingForm({
         status: form.status,
         selectedExtras: form.selectedExtras,
         paymentMethod: form.paymentMethod,
+        pickup_location_id: pickupLocationId || null,
+        return_location_id: differentDropoff ? returnLocationId : pickupLocationId || null,
+        pickup_location_name: locations.find(l => l.id === pickupLocationId)?.name || null,
+        return_location_name: locations.find(l => l.id === (differentDropoff ? returnLocationId : pickupLocationId))?.name || null,
+        location_surcharge: (locations.find(l => l.id === pickupLocationId)?.surcharge || 0) + (differentDropoff ? (locations.find(l => l.id === returnLocationId)?.surcharge || 0) : 0),
       };
 
       const res = await adminFetch("/api/bookings", {
@@ -462,6 +497,55 @@ export default function CreateBookingForm({
             </select>
           </div>
         </div>
+
+        {/* Locations */}
+        {!locationsLoading && locations.length > 0 && (
+          <div className="space-y-3">
+            <div>
+              <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                <MapPin className="w-3 h-3" /> Pickup Location
+              </label>
+              <select
+                value={pickupLocationId}
+                onChange={(e) => {
+                  setPickupLocationId(e.target.value);
+                  if (!differentDropoff) setReturnLocationId(e.target.value);
+                }}
+                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="">Select location...</option>
+                {locations.map(l => (
+                  <option key={l.id} value={l.id}>
+                    {l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}{l.is_default ? ' (Default)' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input type="checkbox" checked={differentDropoff} onChange={(e) => { setDifferentDropoff(e.target.checked); if (!e.target.checked) setReturnLocationId(pickupLocationId); }} className="rounded border-gray-300 text-purple-600" />
+              <span className="text-xs text-gray-600">Different dropoff location</span>
+            </label>
+            {differentDropoff && (
+              <div>
+                <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                  <MapPin className="w-3 h-3" /> Dropoff Location
+                </label>
+                <select
+                  value={returnLocationId}
+                  onChange={(e) => setReturnLocationId(e.target.value)}
+                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                >
+                  <option value="">Select location...</option>
+                  {locations.map(l => (
+                    <option key={l.id} value={l.id}>
+                      {l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}{l.is_default ? ' (Default)' : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* EXTRAS / INSURANCE */}
         <div>
