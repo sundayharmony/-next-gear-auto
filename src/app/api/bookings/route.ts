@@ -143,8 +143,10 @@ export async function GET(request: NextRequest) {
     }
     // Server-side search: filter by customer_name, customer_email, or id (case-insensitive)
     if (search) {
+      // Limit search length to 100 characters (Bug 19)
+      const safeSearch = (search || "").slice(0, 100);
       // Sanitize search to prevent PostgREST filter injection
-      const sanitized = search.replace(/[%_,().*]/g, "");
+      const sanitized = safeSearch.replace(/[%_,().*]/g, "");
       if (sanitized) {
         query = query.or(`customer_name.ilike.%${sanitized}%,customer_email.ilike.%${sanitized}%,id.eq.${sanitized}`);
       }
@@ -437,6 +439,15 @@ export async function POST(request: Request) {
   }
 }
 
+// ─── Valid status transitions (Bug 17) ──────────────────────────────
+const VALID_TRANSITIONS: Record<string, string[]> = {
+  pending: ["confirmed", "cancelled"],
+  confirmed: ["active", "cancelled"],
+  active: ["completed", "cancelled"],
+  completed: [],
+  cancelled: [],
+};
+
 // PATCH - Update booking (status change OR field edits)
 export async function PATCH(request: NextRequest) {
   const supabase = getServiceSupabase();
@@ -516,6 +527,20 @@ export async function PATCH(request: NextRequest) {
         { success: false, message: "No fields to update" },
         { status: 400 }
       );
+    }
+
+    // Validate status transitions (Bug 17)
+    if (updateFields.status && updateFields.status !== booking.status) {
+      const currentStatus = booking.status;
+      const newStatus = updateFields.status;
+      const allowedTransitions = VALID_TRANSITIONS[currentStatus] || [];
+
+      if (!allowedTransitions.includes(newStatus)) {
+        return NextResponse.json(
+          { success: false, message: `Cannot transition from ${currentStatus} to ${newStatus}` },
+          { status: 400 }
+        );
+      }
     }
 
     // Block confirming a booking if the rental agreement hasn't been signed yet

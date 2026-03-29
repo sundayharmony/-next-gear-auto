@@ -21,13 +21,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Limit promo code length (Bug 25)
+    const safeCode = (code || "").trim().slice(0, 50);
+
     const supabase = getServiceSupabase();
 
     // Look up promo code from database first, fall back to JSON file
     const { data: promo, error } = await supabase
       .from("promo_codes")
       .select("*")
-      .ilike("code", code.trim())
+      .ilike("code", safeCode)
       .single();
 
     if (error || !promo) {
@@ -51,7 +54,7 @@ export async function POST(req: NextRequest) {
       }
 
       const jsonPromo = promoCodes.find(
-        (p) => p.code.toUpperCase() === code.toUpperCase()
+        (p) => p.code.toUpperCase() === safeCode.toUpperCase()
       );
 
       if (!jsonPromo) {

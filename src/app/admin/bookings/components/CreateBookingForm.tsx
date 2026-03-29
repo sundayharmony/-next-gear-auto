@@ -241,6 +241,11 @@ export default function CreateBookingForm({
       onError("Return date is required");
       return false;
     }
+    const today = new Date().toISOString().split("T")[0];
+    if (form.pickupDate < today) {
+      onError("Pickup date must be today or later");
+      return false;
+    }
     if (form.returnDate < form.pickupDate) {
       onError("Return date must be after pickup date");
       return false;
@@ -325,6 +330,11 @@ export default function CreateBookingForm({
                   <div className="text-xs text-gray-500">{customer.email}</div>
                 </button>
               ))}
+              {filteredCustomers.length >= 8 && (
+                <div className="px-4 py-2 text-xs text-gray-400 bg-gray-50 border-t">
+                  Type more to narrow results...
+                </div>
+              )}
             </div>
           )}
           <div className="my-3 text-xs text-gray-400 text-center">
@@ -405,6 +415,7 @@ export default function CreateBookingForm({
             <label className="block text-sm font-medium mb-1">Pickup Date <span className="text-red-500">*</span></label>
             <Input
               type="date"
+              min={new Date().toISOString().split("T")[0]}
               value={form.pickupDate}
               onChange={(e) => setForm({ ...form, pickupDate: e.target.value })}
               className="focus-visible:outline-2 focus-visible:outline-purple-600"
@@ -522,11 +533,12 @@ export default function CreateBookingForm({
               <Input
                 type="number"
                 step="0.01"
+                min="0"
                 value={form.totalPrice}
                 onChange={(e) => {
                   const amount = parseFloat(e.target.value);
                   setManualPriceOverride(true);
-                  setForm({ ...form, totalPrice: isNaN(amount) ? 0 : amount });
+                  setForm({ ...form, totalPrice: isNaN(amount) ? 0 : Math.max(0, amount) });
                 }}
                 placeholder="0.00"
                 className={manualPriceOverride ? "border-amber-400 bg-amber-50/50 pr-10" : ""}

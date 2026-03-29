@@ -58,6 +58,7 @@ export default function AccountPage() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [bookings, setBookings] = useState<BookingData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingError, setLoadingError] = useState<string | null>(null);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [reviewTarget, setReviewTarget] = useState<{ vehicleId: string; vehicleName: string; bookingId: string } | null>(null);
   const [cancelling, setCancelling] = useState<string | null>(null);
@@ -75,6 +76,7 @@ export default function AccountPage() {
   const fetchBookings = useCallback(async () => {
     if (!user?.email) return;
     setLoading(true);
+    setLoadingError(null);
     try {
       // Query by both customer_id and email to catch all bookings
       const params = new URLSearchParams({ customer_email: user.email.toLowerCase().trim() });
@@ -87,6 +89,7 @@ export default function AccountPage() {
       }
     } catch (err) {
       logger.error("Failed to fetch bookings:", err);
+      setLoadingError("Failed to load your bookings. Please try again.");
     }
     setLoading(false);
   }, [user?.email, user?.id]);
@@ -305,6 +308,16 @@ export default function AccountPage() {
                 <h2 className="text-xl font-semibold text-gray-900">Upcoming Rentals</h2>
                 {loading ? (
                   <LoadingSkeleton />
+                ) : loadingError ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <div className="text-red-500 mb-4">
+                        <XCircle className="mx-auto h-12 w-12" />
+                      </div>
+                      <p className="text-red-600 font-medium mb-4">{loadingError}</p>
+                      <Button onClick={fetchBookings}>Retry</Button>
+                    </CardContent>
+                  </Card>
                 ) : upcomingBookings.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
@@ -398,6 +411,16 @@ export default function AccountPage() {
                 <h2 className="text-xl font-semibold text-gray-900">Past Rentals</h2>
                 {loading ? (
                   <LoadingSkeleton />
+                ) : loadingError ? (
+                  <Card>
+                    <CardContent className="py-12 text-center">
+                      <div className="text-red-500 mb-4">
+                        <XCircle className="mx-auto h-12 w-12" />
+                      </div>
+                      <p className="text-red-600 font-medium mb-4">{loadingError}</p>
+                      <Button onClick={fetchBookings}>Retry</Button>
+                    </CardContent>
+                  </Card>
                 ) : pastBookings.length === 0 ? (
                   <Card>
                     <CardContent className="py-12 text-center">
@@ -498,6 +521,7 @@ export default function AccountPage() {
                         <Input
                           value={profileForm.name}
                           onChange={(e) => setProfileForm((p) => ({ ...p, name: e.target.value }))}
+                          disabled={profileSaving}
                         />
                       </div>
                       <div>
@@ -513,6 +537,7 @@ export default function AccountPage() {
                           type="tel"
                           value={profileForm.phone}
                           onChange={(e) => setProfileForm((p) => ({ ...p, phone: e.target.value }))}
+                          disabled={profileSaving}
                         />
                       </div>
                       <div>
@@ -521,6 +546,7 @@ export default function AccountPage() {
                           type="date"
                           value={profileForm.dob}
                           onChange={(e) => setProfileForm((p) => ({ ...p, dob: e.target.value }))}
+                          disabled={profileSaving}
                         />
                       </div>
                     </div>

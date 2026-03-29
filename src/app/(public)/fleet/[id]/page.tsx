@@ -379,6 +379,16 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                           alt={`${sv.year} ${sv.make} ${sv.model}`}
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            const target = e.currentTarget as HTMLImageElement;
+                            target.style.display = "none";
+                            const parent = target.parentElement;
+                            if (parent && !parent.querySelector(".fallback-icon")) {
+                              const fallback = document.createElement("div");
+                              fallback.className = "fallback-icon h-16 w-16 text-purple-200 group-hover:text-purple-400 transition-colors flex items-center justify-center";
+                              parent.appendChild(fallback);
+                            }
+                          }}
                         />
                       ) : (
                         <Car className="h-16 w-16 text-purple-200 group-hover:text-purple-400 transition-colors" />

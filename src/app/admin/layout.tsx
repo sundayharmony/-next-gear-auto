@@ -48,7 +48,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
     };
     window.addEventListener("keydown", handleEscapeKey);
-    return () => window.removeEventListener("keydown", handleEscapeKey);
+    // Cleanup: remove listener on unmount and when showNotifications changes
+    return () => {
+      window.removeEventListener("keydown", handleEscapeKey);
+    };
   }, [showNotifications]);
 
   const fetchPendingBookings = useCallback(async () => {
@@ -90,7 +93,9 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     fetchPendingBookings();
-    const interval = setInterval(fetchPendingBookings, 60000); // Poll every 60s
+    // Add jitter to polling interval (45-75 seconds) to prevent thundering herd
+    const jitter = 45000 + Math.random() * 30000;
+    const interval = setInterval(fetchPendingBookings, jitter);
     return () => {
       clearInterval(interval);
       // Abort fetch on unmount

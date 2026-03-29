@@ -209,20 +209,18 @@ export function useBookings(): UseBookingsReturn {
   }, [fetchBookings, setError, setSuccess]);
 
   // Computed: today's pickups, returns, overdue
-  const today = useMemo(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-  }, []);
+  // Note: Don't memoize 'today' as it causes stale values past midnight
+  const todayPickups = useMemo(() => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    return bookings.filter((b) => b.pickup_date === todayStr && ["confirmed"].includes(b.status));
+  }, [bookings]);
 
-  const todayPickups = useMemo(
-    () => bookings.filter((b) => b.pickup_date === today && ["confirmed"].includes(b.status)),
-    [bookings, today]
-  );
-
-  const todayReturns = useMemo(
-    () => bookings.filter((b) => b.return_date === today && ["active"].includes(b.status)),
-    [bookings, today]
-  );
+  const todayReturns = useMemo(() => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    return bookings.filter((b) => b.return_date === todayStr && ["active"].includes(b.status));
+  }, [bookings]);
 
   const overdueBookings = useMemo(
     () => bookings.filter((b) => b.is_overdue),

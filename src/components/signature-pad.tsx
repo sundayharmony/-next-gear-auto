@@ -61,6 +61,12 @@ export function SignaturePad({
     const canvas = canvasRef.current;
     if (!canvas) return { x: 0, y: 0 };
     const rect = canvas.getBoundingClientRect();
+
+    // Guard against zero-size rect (Bug 35)
+    if (rect.width === 0 || rect.height === 0) {
+      return { x: 0, y: 0 };
+    }
+
     const scaleX = padWidth / rect.width;
     const scaleY = padHeight / rect.height;
 
@@ -91,7 +97,9 @@ export function SignaturePad({
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
+    if ("touches" in e) {
+      e.preventDefault();
+    }
     if (!isDrawing) return;
     const ctx = getCtx();
     if (!ctx) return;
@@ -157,6 +165,7 @@ export function SignaturePad({
         <canvas
           ref={canvasRef}
           className="cursor-crosshair touch-none"
+          style={{ touchAction: "none" }}
           onMouseDown={startDrawing}
           onMouseMove={draw}
           onMouseUp={stopDrawing}

@@ -32,6 +32,7 @@ export default async function HomePage() {
   // Fetch featured vehicles from Supabase
   const supabase = getServiceSupabase();
   let featuredVehicles: Vehicle[] = [];
+  let vehiclesFetchError: string | null = null;
 
   try {
     // Try with is_published filter first
@@ -54,10 +55,13 @@ export default async function HomePage() {
 
       if (fallbackData) {
         featuredVehicles = fallbackData;
+      } else {
+        vehiclesFetchError = "Unable to load featured vehicles";
       }
     }
   } catch (error) {
     logger.error("Failed to fetch featured vehicles:", error);
+    vehiclesFetchError = "Unable to load featured vehicles";
   }
 
   return (
@@ -124,6 +128,11 @@ export default async function HomePage() {
           <h2 className="text-3xl font-bold text-gray-900">Our Fleet</h2>
           <p className="mt-2 text-gray-500">Choose from our well-maintained selection of vehicles</p>
         </div>
+        {vehiclesFetchError && (
+          <div className="mb-8 rounded-lg bg-red-50 border border-red-200 p-4">
+            <p className="text-red-700 font-medium">{vehiclesFetchError}</p>
+          </div>
+        )}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {featuredVehicles.length > 0 ? (
             featuredVehicles.map((vehicle) => {

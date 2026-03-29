@@ -297,7 +297,7 @@ function FleetContent() {
                       </button>
                     </span>
                   ) : null;
-                })}
+                }).filter(Boolean)}
               </div>
             </div>
             <div className="flex items-center gap-2">

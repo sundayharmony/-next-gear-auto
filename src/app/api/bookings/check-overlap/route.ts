@@ -10,15 +10,13 @@ import { logger } from "@/lib/utils/logger";
  * Used by the admin CreateBookingForm to warn before double-booking.
  */
 export async function GET(req: NextRequest) {
+  // Admin-only endpoint — enforce early return (Bug 18)
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) {
+    return auth.response;
+  }
+
   try {
-    // Admin-only endpoint
-    const auth = await verifyAdmin(req);
-    if (!auth.authorized) {
-      return NextResponse.json(
-        { success: false, message: "Unauthorized" },
-        { status: 401 }
-      );
-    }
 
     const { searchParams } = new URL(req.url);
     const vehicleId = searchParams.get("vehicleId");

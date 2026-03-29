@@ -31,6 +31,7 @@ const formatDate = (d: string | undefined) => {
   const parts = d.split("-").map(Number);
   if (parts.length < 3 || parts.some(isNaN)) return "___________";
   const [y, m, day] = parts;
+  // Use local time to avoid off-by-one day errors from UTC conversion (Bug 40)
   const date = new Date(y, m - 1, day);
   if (isNaN(date.getTime())) return "___________";
   return date.toLocaleDateString("en-US", {

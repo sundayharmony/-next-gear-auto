@@ -165,6 +165,10 @@ export async function sendAgreementEmail(data: BookingEmailData & { pdfBytes: Ui
     if (!data.customerEmail) {
       throw new Error("Cannot send agreement email: no customer email");
     }
+    // Validate PDF size before sending (Bug 21)
+    if (data.pdfBytes.length > 10 * 1024 * 1024) {
+      throw new Error("PDF too large to email");
+    }
     const transporter = getTransporter();
     await transporter.sendMail({
       from: FROM_CUSTOMER,

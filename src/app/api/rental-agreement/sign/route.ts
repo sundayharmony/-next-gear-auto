@@ -59,6 +59,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate signature data format — each value must be a valid base64 PNG
+    // PNG magic number: [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]
+    const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
     for (const [key, value] of Object.entries(signatures)) {
       if (value && typeof value === "string") {
         const cleaned = (value as string).replace(/^data:image\/png;base64,/, "");
@@ -70,7 +73,14 @@ export async function POST(req: NextRequest) {
           );
         }
         try {
-          Buffer.from(cleaned, "base64");
+          const imgBuffer = Buffer.from(cleaned, "base64");
+          // Verify PNG magic number (Bug 30)
+          if (imgBuffer.length < 8 || !imgBuffer.subarray(0, 8).equals(PNG_MAGIC)) {
+            return NextResponse.json(
+              { success: false, error: `Signature ${key} is not a valid PNG image` },
+              { status: 400 }
+            );
+          }
         } catch {
           return NextResponse.json(
             { success: false, error: `Invalid signature data for ${key}` },
@@ -101,7 +111,14 @@ export async function POST(req: NextRequest) {
         { status: 400 }
       );
     }
-    if (booking.customer_email && customerEmail.toLowerCase().trim() !== booking.customer_email.toLowerCase().trim()) {
+    // Check for null customer_email before comparison (Bug 20)
+    if (!booking.customer_email) {
+      return NextResponse.json(
+        { success: false, error: "Booking has no customer email" },
+        { status: 400 }
+      );
+    }
+    if (customerEmail.toLowerCase().trim() !== booking.customer_email.toLowerCase().trim()) {
       logger.warn(`Agreement sign attempt by non-owner: ${customerEmail} for booking ${bookingId}`);
       return NextResponse.json(
         { success: false, error: "You are not authorized to sign this agreement" },

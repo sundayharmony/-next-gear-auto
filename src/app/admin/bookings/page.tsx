@@ -52,6 +52,7 @@ function AdminBookingsContent() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
+  const detailDirtyRef = React.useRef(false);
 
   const { currentPage, pageSize, handlePageChange, handlePageSizeChange, resetPage, paginateArray } = usePagination(10);
 
@@ -125,10 +126,18 @@ function AdminBookingsContent() {
   const toggleSelectAll = useCallback(() => {
     const currentPageIds = paginatedBookings.map((b) => b.id);
     const allSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selectedIds.has(id));
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      currentPageIds.forEach((id) => allSelected ? next.delete(id) : next.add(id));
-      return next;
+    setSelectedIds(() => {
+      if (allSelected) {
+        // Deselect only current page
+        const next = new Set(selectedIds);
+        currentPageIds.forEach((id) => next.delete(id));
+        return next;
+      } else {
+        // Clear all selections, then select only current page
+        const next = new Set<string>();
+        currentPageIds.forEach((id) => next.add(id));
+        return next;
+      }
     });
   }, [paginatedBookings, selectedIds]);
 
@@ -148,23 +157,35 @@ function AdminBookingsContent() {
     if (selectedIds.size === 0) return;
     setBulkUpdating(true);
     try {
+      const ids = Array.from(selectedIds);
       let sentCount = 0;
       let failCount = 0;
-      for (const id of selectedIds) {
-        try {
-          const res = await adminFetch("/api/admin/send-booking-email", {
+      const batchSize = 5;
+
+      // Process in batches of 5
+      for (let i = 0; i < ids.length; i += batchSize) {
+        const batch = ids.slice(i, i + batchSize);
+        const promises = batch.map((id) =>
+          adminFetch("/api/admin/send-booking-email", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ bookingId: id }),
-          });
-          if (!res.ok) { failCount++; continue; }
-          const data = await res.json();
-          if (data?.success) sentCount++;
+          })
+            .then(async (res) => {
+              if (!res.ok) return false;
+              const data = await res.json();
+              return data?.success ?? false;
+            })
+            .catch(() => false)
+        );
+
+        const results = await Promise.allSettled(promises);
+        results.forEach((result) => {
+          if (result.status === "fulfilled" && result.value) sentCount++;
           else failCount++;
-        } catch {
-          failCount++;
-        }
+        });
       }
+
       if (sentCount > 0) {
         setSuccess(`Sent ${sentCount} booking email${sentCount > 1 ? "s" : ""}`);
       }
@@ -204,12 +225,17 @@ function AdminBookingsContent() {
 
   const handleUpdateBookingInList = useCallback((updated: BookingRow) => {
     setSelectedBooking(updated);
+    // Mark that the detail panel has unsaved/saved changes
+    detailDirtyRef.current = true;
   }, []);
 
   const handleCloseDetail = useCallback(() => {
     setShowDetail(false);
-    // Refresh the list to pick up any changes made in the detail panel
-    fetchBookings();
+    // Only refresh if there were changes in the detail panel
+    if (detailDirtyRef.current) {
+      detailDirtyRef.current = false;
+      fetchBookings();
+    }
   }, [fetchBookings]);
 
   return (

@@ -1,15 +1,23 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendBookingConfirmation, sendBookingPendingEmail, sendAdminNewBooking } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
 import { calculateRentalDays, calculatePricing, applyDiscount } from "@/lib/utils/price-calculator";
+import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
+  // ─── Rate limiting (Bug 16) ─────────────────────────────────────────
+  const ip = getClientIp(request);
+  const rateCheck = checkoutLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.resetAt);
+  }
+
   const supabase = getServiceSupabase();
   try {
     const body = await request.json();
@@ -62,6 +70,17 @@ export async function POST(request: Request) {
     if (returnDt <= pickup) {
       return NextResponse.json(
         { success: false, message: "Return date must be after pickup date" },
+        { status: 400 }
+      );
+    }
+
+    // Minimum booking duration: 4 hours for same-day bookings (Bug 22)
+    const durationMs = returnDt.getTime() - pickup.getTime();
+    const MIN_DURATION = 4 * 60 * 60 * 1000; // 4 hours
+    const isSameDay = pickup.toDateString() === returnDt.toDateString();
+    if (isSameDay && durationMs < MIN_DURATION) {
+      return NextResponse.json(
+        { success: false, message: "Minimum booking duration is 4 hours" },
         { status: 400 }
       );
     }

@@ -83,12 +83,30 @@ export async function GET(req: NextRequest) {
       }
 
       // Build a mock booking object from query params
+      const pickupDate = searchParams.get("pickupDate") || "";
+      const returnDate = searchParams.get("returnDate") || "";
+
+      // Validate date format (Bug 27)
+      const isoDateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (pickupDate && !isoDateRegex.test(pickupDate)) {
+        return NextResponse.json(
+          { success: false, error: "Invalid pickup_date format. Must be ISO date (YYYY-MM-DD)" },
+          { status: 400 }
+        );
+      }
+      if (returnDate && !isoDateRegex.test(returnDate)) {
+        return NextResponse.json(
+          { success: false, error: "Invalid return_date format. Must be ISO date (YYYY-MM-DD)" },
+          { status: 400 }
+        );
+      }
+
       booking = {
         customer_name: searchParams.get("customerName") || "",
         customer_email: searchParams.get("customerEmail") || "",
         customer_phone: searchParams.get("customerPhone") || "",
-        pickup_date: searchParams.get("pickupDate") || "",
-        return_date: searchParams.get("returnDate") || "",
+        pickup_date: pickupDate,
+        return_date: returnDate,
         pickup_time: searchParams.get("pickupTime") || null,
         return_time: searchParams.get("returnTime") || null,
         total_price: Number.isFinite(parseFloat(searchParams.get("totalPrice") || "0")) ? parseFloat(searchParams.get("totalPrice") || "0") : 0,

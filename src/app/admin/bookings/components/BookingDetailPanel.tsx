@@ -24,6 +24,7 @@ import {
   StickyNote,
   DollarSign,
   Plus,
+  Calculator,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -38,10 +39,12 @@ import {
   STATUS_STEPS,
   PAYMENT_METHODS,
   TIME_SLOTS,
+  AVAILABLE_EXTRAS,
 } from "../types";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
+import { calculateRentalDays, calculatePricing } from "@/lib/utils/price-calculator";
 import { logger } from "@/lib/utils/logger";
 
 interface BookingDetailPanelProps {
@@ -104,39 +107,40 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     document.addEventListener("keydown", handleEscapeKey);
     return () => {
       document.removeEventListener("keydown", handleEscapeKey);
-      if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
+      // Clear any pending notes auto-save timeout
+      if (notesTimeoutRef.current) {
+        clearTimeout(notesTimeoutRef.current);
+        notesTimeoutRef.current = null;
+      }
     };
   }, [onClose]);
 
-  // Fetch tickets, activity, and payments on mount
+  // Fetch tickets, activity, and payments on mount (in parallel)
   useEffect(() => {
     const fetchDetails = async () => {
       try {
-        // Fetch tickets
-        const ticketsRes = await adminFetch(
-          `/api/admin/tickets?booking_id=${booking.id}`
-        );
-        if (ticketsRes.ok) {
-          const ticketsData = await ticketsRes.json();
+        const results = await Promise.allSettled([
+          adminFetch(`/api/admin/tickets?booking_id=${booking.id}`),
+          adminFetch(`/api/admin/booking-activity?booking_id=${booking.id}`),
+          adminFetch(`/api/admin/booking-payments?booking_id=${booking.id}`),
+        ]);
+
+        // Handle tickets result
+        if (results[0].status === "fulfilled" && results[0].value.ok) {
+          const ticketsData = await results[0].value.json();
           setBookingTickets(Array.isArray(ticketsData) ? ticketsData : []);
         }
 
-        // Fetch activity log
-        const activityRes = await adminFetch(
-          `/api/admin/booking-activity?booking_id=${booking.id}`
-        );
-        if (activityRes.ok) {
-          const activityResult = await activityRes.json();
+        // Handle activity result
+        if (results[1].status === "fulfilled" && results[1].value.ok) {
+          const activityResult = await results[1].value.json();
           const activityItems = activityResult.data ?? activityResult;
           setActivityLog(Array.isArray(activityItems) ? activityItems : []);
         }
 
-        // Fetch payments
-        const paymentsRes = await adminFetch(
-          `/api/admin/booking-payments?booking_id=${booking.id}`
-        );
-        if (paymentsRes.ok) {
-          const paymentsResult = await paymentsRes.json();
+        // Handle payments result
+        if (results[2].status === "fulfilled" && results[2].value.ok) {
+          const paymentsResult = await results[2].value.json();
           const paymentItems = paymentsResult.data ?? paymentsResult;
           setPayments(Array.isArray(paymentItems) ? paymentItems : []);
         }
@@ -254,6 +258,24 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Save edited booking
   const handleSaveChanges = async () => {
+    // Validate required fields
+    if (!editData.pickup_date) {
+      onError("Pickup date is required");
+      return;
+    }
+    if (!editData.return_date) {
+      onError("Return date is required");
+      return;
+    }
+    if (!editData.vehicle_id) {
+      onError("Vehicle is required");
+      return;
+    }
+    if (editData.return_date < editData.pickup_date) {
+      onError("Return date must be after pickup date");
+      return;
+    }
+
     setSaving(true);
     try {
       const response = await adminFetch(`/api/bookings`, {
@@ -438,6 +460,36 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const paymentPercentage = (booking.total_price ?? 0) > 0
     ? Math.round(((booking.deposit ?? 0) / booking.total_price) * 100)
     : 0;
+
+  // Recalculate price from vehicle rate, dates, and extras
+  const handleRecalculatePrice = () => {
+    const vId = editData.vehicle_id || booking.vehicle_id;
+    const v = vehicles.find((ve) => ve.id === vId);
+    if (!v) {
+      onError("Select a vehicle to recalculate price");
+      return;
+    }
+    const pickup = editData.pickup_date || booking.pickup_date;
+    const returnD = editData.return_date || booking.return_date;
+    if (!pickup || !returnD) {
+      onError("Set pickup and return dates to recalculate");
+      return;
+    }
+    const days = calculateRentalDays(pickup, returnD);
+    // Map booking extras to full extras with pricing from AVAILABLE_EXTRAS
+    const bookingExtras = (editData.extras ?? booking.extras ?? []) as { id: string; selected?: boolean }[];
+    const mappedExtras = AVAILABLE_EXTRAS.map((ae) => {
+      const match = bookingExtras.find((be) => be.id === ae.id);
+      return { ...ae, selected: match?.selected ?? false };
+    });
+    const pricing = calculatePricing(days, v.dailyRate, mappedExtras);
+    setEditData((prev) => ({
+      ...prev,
+      total_price: pricing.total,
+      deposit: pricing.total,
+    }));
+    onSuccess(`Recalculated: ${days} day${days > 1 ? "s" : ""} × $${v.dailyRate}/day = $${pricing.total.toFixed(2)}`);
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex overflow-hidden">
@@ -889,20 +941,32 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             {editMode ? (
               <div className="space-y-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">
-                    Total Price
-                  </label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    value={editData.total_price || ""}
-                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                      setEditData({
-                        ...editData,
-                        total_price: parseFloat(e.target.value) || 0,
-                      })
-                    }
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-gray-700">
+                      Total Price
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleRecalculatePrice}
+                      title="Recalculate price from vehicle rate, dates & extras"
+                      className="p-1 rounded-md text-purple-600 hover:bg-purple-100 hover:text-purple-800 transition-colors"
+                    >
+                      <Calculator className="w-4 h-4" />
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={editData.total_price || ""}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                        setEditData({
+                          ...editData,
+                          total_price: parseFloat(e.target.value) || 0,
+                        })
+                      }
+                    />
+                  </div>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700 block mb-1">
