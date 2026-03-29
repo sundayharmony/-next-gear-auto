@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
     const body = await request.json();
-    const { name, address, city, state, zip, surcharge, is_default, notes } = body;
+    const { name, address, city, state, zip, surcharge, is_default, notes, lat, lng } = body;
 
     if (!name?.trim() || !address?.trim()) {
       return NextResponse.json({ success: false, message: "Name and address are required" }, { status: 400 });
@@ -61,6 +61,8 @@ export async function POST(request: NextRequest) {
       is_default: is_default || false,
       is_active: true,
       notes: (notes || "").trim().slice(0, 500),
+      lat: lat !== undefined && lat !== null ? parseFloat(lat) : null,
+      lng: lng !== undefined && lng !== null ? parseFloat(lng) : null,
     }).select("*").single();
 
     if (error) {
@@ -104,6 +106,8 @@ export async function PATCH(request: NextRequest) {
     if (updates.surcharge !== undefined) clean.surcharge = Math.max(0, parseFloat(updates.surcharge) || 0);
     if (updates.is_active !== undefined) clean.is_active = Boolean(updates.is_active);
     if (updates.notes !== undefined) clean.notes = String(updates.notes).trim().slice(0, 500);
+    if (updates.lat !== undefined) clean.lat = updates.lat !== null ? parseFloat(updates.lat) : null;
+    if (updates.lng !== undefined) clean.lng = updates.lng !== null ? parseFloat(updates.lng) : null;
     if (updates.is_default !== undefined) {
       clean.is_default = Boolean(updates.is_default);
       if (clean.is_default) {

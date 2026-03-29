@@ -7,7 +7,7 @@ export async function GET() {
     const supabase = getServiceSupabase();
     const { data, error } = await supabase
       .from("locations")
-      .select("id, name, address, city, state, zip, surcharge, is_default")
+      .select("id, name, address, city, state, zip, surcharge, is_default, lat, lng")
       .eq("is_active", true)
       .order("is_default", { ascending: false })
       .order("name");

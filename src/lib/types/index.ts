@@ -259,6 +259,8 @@ export interface Location {
   city: string;
   state: string;
   zip: string;
+  lat?: number;
+  lng?: number;
   surcharge: number;
   is_default: boolean;
   is_active: boolean;

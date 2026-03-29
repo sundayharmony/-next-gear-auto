@@ -17,6 +17,7 @@ import { useBooking } from "@/lib/context/booking-context";
 import { useVehicles } from "@/lib/hooks/useVehicles";
 import { SignaturePad } from "@/components/signature-pad";
 import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
+import { LocationMap } from "@/components/location-map";
 import { cn } from "@/lib/utils/cn";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { csrfFetch } from "@/lib/utils/csrf-fetch";
@@ -294,7 +295,7 @@ function BookingPageInner() {
   const insuranceSectionRef = useRef<HTMLDivElement>(null);
 
   // Location selection state
-  const [locations, setLocationsData] = useState<Array<{ id: string; name: string; address: string; city: string; state: string; zip: string; surcharge: number; is_default: boolean }>>([]);
+  const [locations, setLocationsData] = useState<Array<{ id: string; name: string; address: string; city: string; state: string; zip: string; lat?: number; lng?: number; surcharge: number; is_default: boolean }>>([]);
   const [locationsLoading, setLocationsLoading] = useState(true);
   const [selectedPickupLocation, setSelectedPickupLocation] = useState<string>("");
   const [selectedReturnLocation, setSelectedReturnLocation] = useState<string>("");
@@ -918,6 +919,19 @@ function BookingPageInner() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Location Map */}
+            {!locationsLoading && locations.length > 0 && locations.some(l => l.lat && l.lng) && (
+              <LocationMap
+                locations={locations}
+                selectedId={selectedPickupLocation}
+                onSelect={(id) => {
+                  setSelectedPickupLocation(id);
+                  if (!differentDropoff) setSelectedReturnLocation(id);
+                }}
+                className="h-[280px] mt-6 mb-4"
+              />
+            )}
 
             {/* Location Selection */}
             {!locationsLoading && locations.length > 0 && (

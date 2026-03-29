@@ -185,6 +185,8 @@ export default function AdminLocationsPage() {
       is_default: location.is_default,
       is_active: location.is_active,
       notes: location.notes || "",
+      lat: (location as any).lat || null,
+      lng: (location as any).lng || null,
     });
   };
 
@@ -214,6 +216,8 @@ export default function AdminLocationsPage() {
           is_default: editForm.is_default,
           is_active: editForm.is_active,
           notes: editForm.notes?.trim() || null,
+          lat: (editForm as any).lat,
+          lng: (editForm as any).lng,
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -258,6 +262,8 @@ export default function AdminLocationsPage() {
           is_default: newLocation.is_default,
           is_active: newLocation.is_active,
           notes: newLocation.notes?.trim() || null,
+          lat: (newLocation as any).lat,
+          lng: (newLocation as any).lng,
         }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -336,6 +342,39 @@ export default function AdminLocationsPage() {
       setError("Network error — could not set default location");
     } finally {
       setTogglingId(null);
+    }
+  };
+
+  const handleGeocode = async (
+    form: Omit<FormState, "id"> | FormState,
+    setForm: (form: any) => void
+  ) => {
+    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+    if (!key) {
+      setError("Google Maps API key not configured");
+      return;
+    }
+    const addr = [form.address, form.city, form.state, form.zip]
+      .filter(Boolean)
+      .join(", ");
+    if (!addr) {
+      setError("Enter an address first");
+      return;
+    }
+    try {
+      const res = await fetch(
+        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addr)}&key=${key}`
+      );
+      const data = await res.json();
+      if (data.results?.[0]?.geometry?.location) {
+        const { lat, lng } = data.results[0].geometry.location;
+        setForm({ ...form, lat, lng });
+        setSuccess("Coordinates auto-detected!");
+      } else {
+        setError("Could not find coordinates for this address");
+      }
+    } catch {
+      setError("Geocoding failed");
     }
   };
 
@@ -460,6 +499,56 @@ export default function AdminLocationsPage() {
                 <option value="inactive">Inactive</option>
               </select>
             </div>
+          </div>
+
+          {/* Coordinates Section */}
+          <div className="border border-gray-200 rounded-lg p-3">
+            <label className="text-xs font-medium text-gray-700 block mb-2">
+              Coordinates
+            </label>
+            <div className="grid grid-cols-2 gap-3 mb-2">
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">
+                  Latitude
+                </label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={(form as any).lat || ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      lat: e.target.value ? parseFloat(e.target.value) : null,
+                    })
+                  }
+                  placeholder="40.7128"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700 block mb-1">
+                  Longitude
+                </label>
+                <Input
+                  type="number"
+                  step="any"
+                  value={(form as any).lng || ""}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      lng: e.target.value ? parseFloat(e.target.value) : null,
+                    })
+                  }
+                  placeholder="-74.0060"
+                />
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => handleGeocode(form, setForm)}
+              className="text-xs text-purple-600 hover:text-purple-800"
+            >
+              Auto-detect from address
+            </button>
           </div>
 
           {/* Default Location Checkbox */}
@@ -675,7 +764,12 @@ export default function AdminLocationsPage() {
                       className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
                     >
                       <td className="px-4 py-3 font-medium text-gray-900">
-                        {location.name}
+                        <div className="flex items-center gap-2">
+                          {(location as any).lat && (location as any).lng && (
+                            <span title="Has coordinates">📍</span>
+                          )}
+                          {location.name}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-gray-600">
                         <div className="max-w-xs">
