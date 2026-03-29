@@ -23,6 +23,18 @@ interface LocationMapProps {
 let mapsLoaded = false;
 let mapsLoadPromise: Promise<void> | null = null;
 
+// Helper to escape HTML entities and prevent XSS
+function escapeHtml(text: string): string {
+  const map: { [key: string]: string } = {
+    "&": "&amp;",
+    "<": "&lt;",
+    ">": "&gt;",
+    '"': "&quot;",
+    "'": "&#039;",
+  };
+  return text.replace(/[&<>"']/g, (char) => map[char]);
+}
+
 function loadGoogleMaps(): Promise<void> {
   if (mapsLoaded) return Promise.resolve();
   if (mapsLoadPromise) return mapsLoadPromise;
@@ -48,7 +60,10 @@ function loadGoogleMaps(): Promise<void> {
     script.async = true;
     script.defer = true;
     script.onload = () => { mapsLoaded = true; resolve(); };
-    script.onerror = () => reject(new Error("Failed to load Google Maps"));
+    script.onerror = () => {
+      mapsLoadPromise = null;
+      reject(new Error("Failed to load Google Maps"));
+    };
     document.head.appendChild(script);
   });
 
@@ -102,8 +117,13 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
     const map = mapInstanceRef.current;
     if (!map || !mapReady) return;
 
-    // Clear existing markers
-    markersRef.current.forEach(m => { m.map = null; });
+    // Clear existing markers and close any open InfoWindow
+    if (infoWindowRef.current) {
+      infoWindowRef.current.close();
+    }
+    markersRef.current.forEach(m => {
+      if (m) m.map = null;
+    });
     markersRef.current = [];
 
     if (mappableLocations.length === 0) return;
@@ -130,10 +150,14 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
         onSelect(loc.id);
         const infoWindow = infoWindowRef.current;
         if (infoWindow) {
+          const escapedName = escapeHtml(loc.name);
+          const escapedAddress = escapeHtml(loc.address);
+          const escapedCity = escapeHtml(loc.city);
+          const escapedState = escapeHtml(loc.state);
           infoWindow.setContent(`
             <div style="padding:4px 2px;min-width:160px;">
-              <strong style="font-size:14px;color:#111827;">${loc.name}</strong>
-              <p style="font-size:12px;color:#6b7280;margin:4px 0 0;">${loc.address}, ${loc.city}, ${loc.state}</p>
+              <strong style="font-size:14px;color:#111827;">${escapedName}</strong>
+              <p style="font-size:12px;color:#6b7280;margin:4px 0 0;">${escapedAddress}, ${escapedCity}, ${escapedState}</p>
               ${loc.surcharge > 0 ? `<p style="font-size:12px;color:#7c3aed;font-weight:600;margin:4px 0 0;">+$${loc.surcharge.toFixed(2)} surcharge</p>` : '<p style="font-size:12px;color:#059669;margin:4px 0 0;">No surcharge</p>'}
               ${loc.is_default ? '<p style="font-size:11px;color:#9333ea;margin:2px 0 0;">★ Default location</p>' : ''}
             </div>

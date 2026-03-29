@@ -13,6 +13,16 @@ import { getCsrfToken } from "./csrf-fetch";
 export async function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const headers = new Headers(options.headers || {});
 
+  // Add timeout to fetch if not already provided
+  let signal = options.signal;
+  if (!signal) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    signal = controller.signal;
+    // Clean up timeout on completion
+    signal.addEventListener("abort", () => clearTimeout(timeoutId));
+  }
+
   // Add CSRF token for state-changing requests
   const csrf = getCsrfToken();
   if (csrf) {
@@ -24,13 +34,17 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
     try {
       const stored = localStorage.getItem("nga_user");
       if (stored) {
-        const parsed = JSON.parse(stored);
-        if (typeof parsed === "object" && parsed !== null && typeof parsed.id === "string" && parsed.id) {
-          headers.set("x-admin-id", parsed.id);
+        try {
+          const parsed = JSON.parse(stored);
+          if (typeof parsed === "object" && parsed !== null && typeof parsed.id === "string" && parsed.id) {
+            headers.set("x-admin-id", parsed.id);
+          }
+        } catch {
+          // ignore malformed JSON
         }
       }
     } catch {
-      // ignore parse errors
+      // ignore localStorage errors
     }
   }
 
@@ -39,6 +53,7 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
     ...options,
     headers,
     credentials: "same-origin",
+    signal,
   });
 
   // If 401, try refreshing the token
@@ -55,6 +70,7 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
           ...options,
           headers,
           credentials: "same-origin",
+          signal,
         });
       }
     } catch {

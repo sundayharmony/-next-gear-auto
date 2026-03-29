@@ -83,13 +83,13 @@ export async function POST(request: NextRequest) {
     const supabase = getServiceSupabase();
 
     // Verify booking_id exists in the bookings table
-    const { data: bookingExists } = await supabase
+    const { data: bookingExists, error: bookingError } = await supabase
       .from("bookings")
       .select("id")
       .eq("id", booking_id)
       .single();
 
-    if (!bookingExists) {
+    if (bookingError || !bookingExists) {
       return NextResponse.json(
         { success: false, error: "Booking not found" },
         { status: 404 }

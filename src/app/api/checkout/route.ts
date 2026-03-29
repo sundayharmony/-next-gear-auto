@@ -146,13 +146,13 @@ export async function POST(request: NextRequest) {
     // ── Server-side price recalculation ──────────────────────────────
     // Never trust client-supplied totalPrice. Recalculate from vehicle rate,
     // dates, selected extras, and validated promo code.
-    const { data: vehicle } = await supabase
+    const { data: vehicle, error: vehicleError } = await supabase
       .from("vehicles")
       .select("daily_rate, status")
       .eq("id", vehicleId)
       .single();
 
-    if (!vehicle) {
+    if (vehicleError || !vehicle) {
       return NextResponse.json(
         { success: false, message: "Vehicle not found" },
         { status: 404 }
@@ -182,14 +182,14 @@ export async function POST(request: NextRequest) {
     // Apply promo code discount if provided (re-validate server-side)
     if (promoCode && discountAmount && discountAmount > 0) {
       // Look up the promo code to get its actual discount value
-      const { data: promo } = await supabase
+      const { data: promo, error: promoError } = await supabase
         .from("promo_codes")
         .select("*")
         .ilike("code", promoCode)
         .eq("is_active", true)
         .single();
 
-      if (promo) {
+      if (!promoError && promo) {
         const isExpired = promo.expires_at && new Date(promo.expires_at) < new Date();
         const isOverLimit = promo.max_uses && promo.used_count >= promo.max_uses;
 
@@ -234,12 +234,12 @@ export async function POST(request: NextRequest) {
     let validatedSurcharge = 0;
     if (pickupLocationId || returnLocationId) {
       const locationIds = [pickupLocationId, returnLocationId].filter(Boolean);
-      const { data: locations } = await supabase
+      const { data: locations, error: locError } = await supabase
         .from("locations")
         .select("id, surcharge")
         .in("id", locationIds)
         .eq("is_active", true);
-      if (locations) {
+      if (!locError && locations) {
         validatedSurcharge = locations.reduce((sum: number, loc: { surcharge: number }) => sum + (loc.surcharge || 0), 0);
       }
       serverPricing = { ...serverPricing, total: serverPricing.total + validatedSurcharge, subtotal: serverPricing.subtotal + validatedSurcharge };
@@ -302,7 +302,7 @@ export async function POST(request: NextRequest) {
         const { data: retryCustomer } = await supabase
           .from("customers")
           .select("id")
-          .eq("email", customerDetails.email)
+          .eq("email", customerDetails.email.toLowerCase().trim())
           .single();
         customerId = retryCustomer?.id || newId;
       }

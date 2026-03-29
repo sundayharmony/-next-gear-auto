@@ -20,7 +20,11 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const key = process.env.GOOGLE_MAPS_SERVER_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+    let key = process.env.GOOGLE_MAPS_SERVER_KEY;
+    if (!key) {
+      logger.warn("GOOGLE_MAPS_SERVER_KEY not set, falling back to NEXT_PUBLIC key");
+      key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
+    }
     if (!key) {
       return NextResponse.json(
         { success: false, message: "Google Maps API key not configured" },
@@ -36,6 +40,13 @@ export async function GET(request: NextRequest) {
     let url: string;
 
     if (address) {
+      // Validate address length
+      if (address.length > 500) {
+        return NextResponse.json(
+          { success: false, message: "Address is too long (max 500 characters)" },
+          { status: 400 }
+        );
+      }
       // Forward geocode
       url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&components=country:US&key=${key}`;
     } else if (lat && lng) {
@@ -104,10 +115,10 @@ export async function GET(request: NextRequest) {
         city,
         state,
         zip,
-        lat: loc?.lat ?? 0,
-        lng: loc?.lng ?? 0,
+        lat: loc?.lat ?? null,
+        lng: loc?.lng ?? null,
       };
-    });
+    }).filter((r: any) => r.lat !== null && r.lng !== null);
 
     return NextResponse.json({ success: true, results });
   } catch (err) {

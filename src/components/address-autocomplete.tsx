@@ -40,14 +40,20 @@ function ensureGoogleMaps(): Promise<void> {
     if (existing) {
       if (typeof google !== "undefined" && google.maps) return resolve();
       existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => reject(new Error("Script failed")), { once: true });
+      existing.addEventListener("error", () => {
+        loadPromise = null;
+        reject(new Error("Script failed"));
+      }, { once: true });
       return;
     }
     const s = document.createElement("script");
     s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=marker&v=weekly`;
     s.async = true;
     s.onload = () => resolve();
-    s.onerror = () => reject(new Error("Script failed"));
+    s.onerror = () => {
+      loadPromise = null;
+      reject(new Error("Script failed"));
+    };
     document.head.appendChild(s);
   });
   return loadPromise;
@@ -95,6 +101,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder = "
   const markerObjRef = useRef<google.maps.marker.AdvancedMarkerElement | null>(null);
   const listenerRef = useRef<google.maps.MapsEventListener | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const searchCounterRef = useRef(0);
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
@@ -136,12 +143,29 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder = "
 
     return () => {
       dead = true;
-      if (listenerRef.current) { google.maps.event.removeListener(listenerRef.current); listenerRef.current = null; }
+      if (listenerRef.current && typeof google !== "undefined" && google.maps) {
+        google.maps.event.removeListener(listenerRef.current);
+        listenerRef.current = null;
+      }
       if (markerObjRef.current) { markerObjRef.current.map = null; markerObjRef.current = null; }
       mapObjRef.current = null;
       setMapReady(false);
     };
   }, [open, apiKey]);
+
+  /* ── Escape key handler ── */
+  useEffect(() => {
+    if (!open) return;
+
+    function handleKeyDown(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        close();
+      }
+    }
+
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
 
   /* ── Helpers ── */
 
@@ -170,7 +194,16 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder = "
     setBusy(true);
     setErr("");
     setPicked(null);
+
+    // Increment counter to track this search
+    searchCounterRef.current++;
+    const currentSearchId = searchCounterRef.current;
+
     const hits = await forwardGeocode(query);
+
+    // Discard results if a newer search has been started
+    if (currentSearchId !== searchCounterRef.current) return;
+
     if (hits.length === 0) { setErr("No addresses found. Try a more specific search."); setResults([]); }
     else { setResults(hits); flyTo(hits[0]); }
     setBusy(false);

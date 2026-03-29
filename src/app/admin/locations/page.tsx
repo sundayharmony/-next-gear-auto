@@ -35,6 +35,7 @@ export default function AdminLocationsPage() {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [geocoding, setGeocoding] = useState(false);
 
   // Forms
   const [showAdd, setShowAdd] = useState(false);
@@ -88,7 +89,7 @@ export default function AdminLocationsPage() {
       const res = await adminFetch("/api/admin/locations", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...addForm, state: addForm.state.toUpperCase() }),
+        body: JSON.stringify({ ...addForm, state: (addForm.state || "").toUpperCase() }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
@@ -107,7 +108,7 @@ export default function AdminLocationsPage() {
       const res = await adminFetch("/api/admin/locations", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: editId, ...editForm, state: editForm.state.toUpperCase() }),
+        body: JSON.stringify({ id: editId, ...editForm, state: (editForm.state || "").toUpperCase() }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
@@ -171,6 +172,7 @@ export default function AdminLocationsPage() {
   const geocodeFromAddress = async (form: LocationForm, setForm: (f: LocationForm) => void) => {
     const addr = [form.address, form.city, form.state, form.zip].filter(Boolean).join(", ");
     if (!addr) return fail("Enter an address first");
+    setGeocoding(true);
     try {
       const res = await adminFetch(`/api/admin/geocode?address=${encodeURIComponent(addr)}`);
       const json = await res.json();
@@ -179,6 +181,7 @@ export default function AdminLocationsPage() {
         ok("Coordinates detected!");
       } else fail("Could not find coordinates");
     } catch { fail("Geocoding failed"); }
+    finally { setGeocoding(false); }
   };
 
   /* ── Form renderer ── */
@@ -225,7 +228,7 @@ export default function AdminLocationsPage() {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
               <label className="text-xs font-medium text-gray-700 mb-0.5 block">Surcharge ($)</label>
-              <Input type="number" value={form.surcharge} onChange={(e) => setForm({ ...form, surcharge: e.target.value === "" ? 0 : Number(e.target.value) })} min="0" step="0.01" />
+              <Input type="number" value={form.surcharge} onChange={(e) => setForm({ ...form, surcharge: Math.max(0, e.target.value === "" ? 0 : Number(e.target.value)) })} min="0" step="0.01" />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-700 mb-0.5 block">Status</label>
@@ -250,7 +253,7 @@ export default function AdminLocationsPage() {
                 <Input type="number" step="any" value={form.lng ?? ""} onChange={(e) => setForm({ ...form, lng: e.target.value ? parseFloat(e.target.value) : null })} placeholder="-74.0060" />
               </div>
             </div>
-            <button type="button" onClick={() => geocodeFromAddress(form, setForm)} className="text-xs text-purple-600 hover:text-purple-800">Auto-detect from address</button>
+            <button type="button" onClick={() => geocodeFromAddress(form, setForm)} disabled={geocoding} className="text-xs text-purple-600 hover:text-purple-800 disabled:opacity-50 disabled:cursor-not-allowed">{geocoding ? "Detecting..." : "Auto-detect from address"}</button>
           </div>
 
           {/* Default checkbox */}
@@ -268,10 +271,10 @@ export default function AdminLocationsPage() {
 
           {/* Buttons */}
           <div className="flex gap-2 pt-2">
-            <Button onClick={onSave} disabled={saving} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white">
+            <Button onClick={onSave} disabled={saving || geocoding} className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white">
               {saving && <Loader2 className="h-4 w-4 animate-spin" />} {saving ? "Saving..." : "Save"}
             </Button>
-            <Button onClick={onCancel} disabled={saving} variant="outline" className="text-gray-700">Cancel</Button>
+            <Button onClick={onCancel} disabled={saving || geocoding} variant="outline" className="text-gray-700">Cancel</Button>
           </div>
         </div>
       </CardContent>
