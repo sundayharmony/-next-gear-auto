@@ -28,7 +28,11 @@ export async function GET(req: NextRequest) {
       query = query.eq("vehicle_id", vehicleId);
     }
 
-    const { data: bookings, error } = await query;
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = Math.min(parseInt(searchParams.get("limit") || "200", 10), 500);
+    const offset = (Math.max(1, page) - 1) * limit;
+
+    const { data: bookings, error } = await query.range(offset, offset + limit - 1);
 
     if (error) {
       logger.error("Admin bookings fetch error:", error);

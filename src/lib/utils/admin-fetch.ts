@@ -15,12 +15,11 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
 
   // Add timeout to fetch if not already provided
   let signal = options.signal;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
   if (!signal) {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
     signal = controller.signal;
-    // Clean up timeout on completion
-    signal.addEventListener("abort", () => clearTimeout(timeoutId));
   }
 
   // Add CSRF token for state-changing requests
@@ -55,23 +54,30 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
     credentials: "same-origin",
     signal,
   });
+  if (timeoutId) clearTimeout(timeoutId);
 
   // If 401, try refreshing the token
   if (res.status === 401 && typeof window !== "undefined") {
     try {
+      const refreshController = new AbortController();
+      const refreshTimeout = setTimeout(() => refreshController.abort(), 5000);
       const refreshRes = await fetch("/api/auth/refresh", {
         method: "POST",
         credentials: "same-origin",
+        signal: refreshController.signal,
       });
+      clearTimeout(refreshTimeout);
 
       if (refreshRes.ok) {
         // Retry the original request with fresh tokens
-        return fetch(url, {
+        const retryRes = await fetch(url, {
           ...options,
           headers,
           credentials: "same-origin",
           signal,
         });
+        if (timeoutId) clearTimeout(timeoutId);
+        return retryRes;
       }
     } catch {
       // Refresh failed — fall through to redirect

@@ -50,6 +50,14 @@ import { calculateRentalDays, calculatePricing } from "@/lib/utils/price-calcula
 import { logger } from "@/lib/utils/logger";
 import { Location } from "@/lib/types";
 
+/** Ensure URL is safe (no javascript: protocol) */
+function safeHref(url: string | undefined | null): string | undefined {
+  if (!url) return undefined;
+  const trimmed = url.trim().toLowerCase();
+  if (trimmed.startsWith("javascript:") || trimmed.startsWith("data:")) return undefined;
+  return url;
+}
+
 interface BookingDetailPanelProps {
   booking: BookingRow;
   vehicles: Vehicle[];
@@ -120,21 +128,33 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     };
   }, [onClose]);
 
+  // Cleanup pending timeouts on component unmount
+  useEffect(() => {
+    return () => {
+      if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
+    };
+  }, []);
+
   // Fetch tickets, activity, and payments on mount (in parallel)
   useEffect(() => {
+    let cancelled = false;
+    const abortController = new AbortController();
+
     const fetchDetails = async () => {
       try {
         const results = await Promise.allSettled([
-          adminFetch(`/api/admin/tickets?booking_id=${booking.id}`),
-          adminFetch(`/api/admin/booking-activity?booking_id=${booking.id}`),
-          adminFetch(`/api/admin/booking-payments?booking_id=${booking.id}`),
+          adminFetch(`/api/admin/tickets?booking_id=${booking.id}`, { signal: abortController.signal }),
+          adminFetch(`/api/admin/booking-activity?booking_id=${booking.id}`, { signal: abortController.signal }),
+          adminFetch(`/api/admin/booking-payments?booking_id=${booking.id}`, { signal: abortController.signal }),
         ]);
+
+        if (cancelled) return;
 
         // Handle tickets result
         if (results[0]?.status === "fulfilled") {
           try {
             const ticketsData = await results[0].value.json();
-            setBookingTickets(Array.isArray(ticketsData) ? ticketsData : []);
+            if (!cancelled) setBookingTickets(Array.isArray(ticketsData) ? ticketsData : []);
           } catch {
             // Ignore JSON parse errors
           }
@@ -145,7 +165,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           try {
             const activityResult = await results[1].value.json();
             const activityItems = activityResult.data ?? activityResult;
-            setActivityLog(Array.isArray(activityItems) ? activityItems : []);
+            if (!cancelled) setActivityLog(Array.isArray(activityItems) ? activityItems : []);
           } catch {
             // Ignore JSON parse errors
           }
@@ -156,17 +176,22 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           try {
             const paymentsResult = await results[2].value.json();
             const paymentItems = paymentsResult.data ?? paymentsResult;
-            setPayments(Array.isArray(paymentItems) ? paymentItems : []);
+            if (!cancelled) setPayments(Array.isArray(paymentItems) ? paymentItems : []);
           } catch {
             // Ignore JSON parse errors
           }
         }
       } catch (err) {
-        logger.error("Failed to fetch booking details", err);
+        if (!cancelled) logger.error("Failed to fetch booking details", err);
       }
     };
 
     fetchDetails();
+
+    return () => {
+      cancelled = true;
+      abortController.abort();
+    };
   }, [booking.id]);
 
   // Fetch locations
@@ -311,25 +336,28 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   // Save edited booking
   const handleSaveChanges = async () => {
     if (saving) return;
+    setSaving(true);
     // Validate required fields
     if (!editData.pickup_date) {
       onError("Pickup date is required");
+      setSaving(false);
       return;
     }
     if (!editData.return_date) {
       onError("Return date is required");
+      setSaving(false);
       return;
     }
     if (!editData.vehicle_id) {
       onError("Vehicle is required");
+      setSaving(false);
       return;
     }
-    if (editData.return_date < editData.pickup_date) {
+    if (new Date(editData.return_date + "T00:00:00") < new Date(editData.pickup_date + "T00:00:00")) {
       onError("Return date must be after pickup date");
+      setSaving(false);
       return;
     }
-
-    setSaving(true);
     try {
       const response = await adminFetch(`/api/bookings`, {
         method: "PATCH",
@@ -359,7 +387,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Auto-save notes on blur
   const saveNotes = async () => {
-    if (!editData.admin_notes || editData.admin_notes === booking.admin_notes) {
+    if (editData.admin_notes === booking.admin_notes) {
       return;
     }
 
@@ -827,7 +855,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             {booking.id_document_url ? (
               <div className="space-y-2">
                 <a
-                  href={booking.id_document_url}
+                  href={safeHref(booking.id_document_url) || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
@@ -1434,7 +1462,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 )}
                 {booking.rental_agreement_url && (
                   <a
-                    href={booking.rental_agreement_url}
+                    href={safeHref(booking.rental_agreement_url) || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-700 text-xs flex items-center gap-1"

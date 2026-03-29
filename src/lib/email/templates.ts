@@ -22,6 +22,13 @@ function escHtml(s: string): string {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
+/** Sanitize CSS color values to prevent injection */
+function safeCssColor(value: string): string {
+  // Allow hex colors, named colors, rgb/rgba/hsl, and linear-gradient
+  const safe = value.replace(/[^a-zA-Z0-9#(),.\s%-]/g, "");
+  return safe;
+}
+
 /** Format "2026-03-06" → "Fri, Mar 6, 2026" */
 export function fmtDate(dateStr: string): string {
   const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
@@ -79,7 +86,7 @@ function wrapEmail(content: string): string {
 function headerBlock(title: string, subtitle: string, bgColor = '#7C3AED', bgEnd = '#5B21B6'): string {
   return `
   <tr>
-    <td style="background: linear-gradient(135deg, ${bgColor}, ${bgEnd}); padding: 40px 32px; text-align: center;">
+    <td style="background: linear-gradient(135deg, ${safeCssColor(bgColor)}, ${safeCssColor(bgEnd)}); padding: 40px 32px; text-align: center;">
       <p style="margin: 0 0 12px; color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
       <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 26px; font-weight: 800; line-height: 1.2;">${escHtml(title)}</h1>
       <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 14px;">${escHtml(subtitle)}</p>
@@ -93,9 +100,9 @@ function bookingIdBlock(id: string, color = '#7C3AED', bg = '#F5F3FF'): string {
     <td style="padding: 0 32px;">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 24px 0;">
         <tr>
-          <td style="background: ${bg}; border-radius: 12px; padding: 16px 20px; border: 1px solid ${color}20;">
+          <td style="background: ${safeCssColor(bg)}; border-radius: 12px; padding: 16px 20px; border: 1px solid ${safeCssColor(color)}20;">
             <p style="margin: 0 0 2px; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 600;">Booking ID</p>
-            <p style="margin: 0; color: ${color}; font-size: 18px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; letter-spacing: 0.5px;">${id}</p>
+            <p style="margin: 0; color: ${safeCssColor(color)}; font-size: 18px; font-weight: 700; font-family: 'SF Mono', 'Fira Code', monospace; letter-spacing: 0.5px;">${id}</p>
           </td>
         </tr>
       </table>
@@ -116,10 +123,10 @@ function dateTimeBlock(label: string, date: string, time: string | undefined, ac
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 12px 0;">
     <tr>
-      <td style="background: ${bgGradient}; border-radius: 12px; padding: 20px; border-left: 4px solid ${accentColor};">
+      <td style="background: ${safeCssColor(bgGradient)}; border-radius: 12px; padding: 20px; border-left: 4px solid ${safeCssColor(accentColor)};">
         <p style="margin: 0 0 10px; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; font-weight: 700;">${label}</p>
         <p style="margin: 0; color: #111827; font-size: 20px; font-weight: 700; line-height: 1.3;">${formattedDate}</p>
-        ${formattedTime ? `<p style="margin: 6px 0 0; color: ${accentColor}; font-size: 22px; font-weight: 800;">${formattedTime}</p>` : ''}
+        ${formattedTime ? `<p style="margin: 6px 0 0; color: ${safeCssColor(accentColor)}; font-size: 22px; font-weight: 800;">${formattedTime}</p>` : ''}
       </td>
     </tr>
   </table>`;
@@ -130,22 +137,22 @@ function ctaButton(text: string, url: string, color = '#7C3AED'): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0 8px;">
     <tr>
       <td align="center">
-        <a href="${escHtml(url)}" style="display: inline-block; background: ${color}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; letter-spacing: 0.3px;">${text}</a>
+        <a href="${escHtml(url)}" style="display: inline-block; background: ${safeCssColor(color)}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; letter-spacing: 0.3px;">${text}</a>
       </td>
     </tr>
   </table>`;
 }
 
 function outlineButton(text: string, url: string, color = '#7C3AED'): string {
-  return `<a href="${escHtml(url)}" style="display: inline-block; background: #ffffff; color: ${color}; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; border: 2px solid ${color}; margin-left: 8px;">${text}</a>`;
+  return `<a href="${escHtml(url)}" style="display: inline-block; background: #ffffff; color: ${safeCssColor(color)}; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; border: 2px solid ${safeCssColor(color)}; margin-left: 8px;">${text}</a>`;
 }
 
 function infoBox(title: string, text: string, color: string, bg: string): string {
   return `
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 20px 0;">
     <tr>
-      <td style="background: ${bg}; border-radius: 12px; padding: 20px; border-left: 4px solid ${color};">
-        <p style="margin: 0 0 6px; color: ${color}; font-size: 14px; font-weight: 700;">${title}</p>
+      <td style="background: ${safeCssColor(bg)}; border-radius: 12px; padding: 20px; border-left: 4px solid ${safeCssColor(color)};">
+        <p style="margin: 0 0 6px; color: ${safeCssColor(color)}; font-size: 14px; font-weight: 700;">${title}</p>
         <p style="margin: 0; color: #4b5563; font-size: 13px; line-height: 1.6;">${text}</p>
       </td>
     </tr>

@@ -25,6 +25,13 @@ export async function GET(req: NextRequest) {
   const supabase = getServiceSupabase();
 
   try {
+    // For preview mode, require admin auth
+    if (!bookingId && vehicleId) {
+      const { verifyAdmin } = await import("@/lib/auth/admin-check");
+      const auth = await verifyAdmin(req);
+      if (!auth.authorized) return auth.response;
+    }
+
     let booking: {
       customer_name?: string;
       customer_email?: string;
@@ -62,6 +69,19 @@ export async function GET(req: NextRequest) {
         );
       }
       booking = b;
+
+      // Verify requester: check email param or admin auth
+      const requesterEmail = searchParams.get("email");
+      if (requesterEmail) {
+        if (b.customer_email && requesterEmail.toLowerCase().trim() !== b.customer_email.toLowerCase().trim()) {
+          return NextResponse.json({ success: false, error: "Not authorized to view this agreement" }, { status: 403 });
+        }
+      } else {
+        // No email provided - require admin auth
+        const { verifyAdmin } = await import("@/lib/auth/admin-check");
+        const auth = await verifyAdmin(req);
+        if (!auth.authorized) return auth.response;
+      }
 
       if (booking && booking.vehicle_id) {
         const { data: v } = await supabase

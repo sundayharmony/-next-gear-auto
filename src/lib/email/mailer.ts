@@ -33,13 +33,17 @@ export function getTransporter() {
     if (isNaN(port) || port < 1 || port > 65535) {
       throw new Error(`Invalid SMTP_PORT: ${process.env.SMTP_PORT}`);
     }
+    const smtpPass = process.env.SMTP_PASS;
+    if (!smtpPass && process.env.NODE_ENV === "production") {
+      throw new Error("SMTP_PASS environment variable is required in production");
+    }
     _transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || "smtp.hostinger.com",
       port,
       secure: port === 465, // port 465 = SSL
       auth: {
         user: SMTP_USER,
-        pass: process.env.SMTP_PASS || "",
+        pass: smtpPass || "",
       },
       connectionTimeout: 10000,
       greetingTimeout: 10000,

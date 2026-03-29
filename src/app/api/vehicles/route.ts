@@ -12,7 +12,8 @@ export async function GET(request: Request) {
       .from("vehicles")
       .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, maintenance_status, color, vin, description")
       .eq("is_published", true)
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(100);
 
     if (category && category !== "all") {
       query = query.eq("category", category);
@@ -25,7 +26,8 @@ export async function GET(request: Request) {
       let fallbackQuery = supabase
         .from("vehicles")
         .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, maintenance_status, color, vin, description")
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .limit(100);
 
       if (category && category !== "all") {
         fallbackQuery = fallbackQuery.eq("category", category);

@@ -11,6 +11,7 @@ import {
   Loader2,
   AlertCircle,
   PenLine,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -50,6 +51,9 @@ export default function AgreementSigningPage() {
   const params = useParams();
   const router = useRouter();
   const bookingId = params.bookingId as string;
+
+  // Validate bookingId format
+  const isValidId = /^[a-zA-Z0-9_-]{1,50}$/.test(bookingId || "");
 
   const [booking, setBooking] = useState<BookingInfo | null>(null);
   const [loading, setLoading] = useState(true);
@@ -97,8 +101,13 @@ export default function AgreementSigningPage() {
       }
       setLoading(false);
     }
-    if (bookingId) fetchBooking();
-  }, [bookingId]);
+    if (bookingId && isValidId) {
+      fetchBooking();
+    } else if (bookingId && !isValidId) {
+      setError("Invalid booking ID format.");
+      setLoading(false);
+    }
+  }, [bookingId, isValidId]);
 
   const handleSignatureChange = useCallback(
     (fieldId: string, dataUrl: string | null) => {
@@ -237,8 +246,11 @@ export default function AgreementSigningPage() {
       <PageContainer className="py-8">
         <div className="mx-auto max-w-3xl">
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
-              {error}
+            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={() => setError(null)} className="ml-3 text-red-400 hover:text-red-600 shrink-0" aria-label="Dismiss error">
+                <X className="h-4 w-4" />
+              </button>
             </div>
           )}
 

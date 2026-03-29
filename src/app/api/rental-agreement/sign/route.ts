@@ -352,16 +352,26 @@ export async function POST(req: NextRequest) {
       .from("booking-documents")
       .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
 
-    // Update booking with agreement URL and signed status
+    // Update booking with agreement URL and signed status using atomic conditional update
     const agreementUrl = signedUrl?.signedUrl || fileName;
-    await supabase
+    const { data: updateResult, error: updateError } = await supabase
       .from("bookings")
       .update({
         rental_agreement_url: agreementUrl,
         agreement_signed_at: now.toISOString(),
         signed_name: booking.customer_name,
       })
-      .eq("id", bookingId);
+      .eq("id", bookingId)
+      .is("agreement_signed_at", null)
+      .select("id")
+      .single();
+
+    if (updateError || !updateResult) {
+      return NextResponse.json(
+        { success: false, error: "This agreement was already signed by another request" },
+        { status: 409 }
+      );
+    }
 
     // Email the signed agreement to the customer
     if (booking.customer_email) {

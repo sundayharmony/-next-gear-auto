@@ -95,6 +95,9 @@ export async function POST(req: NextRequest) {
     // Sanitize customer name
     const safeName = customerName.replace(/<[^>]*>/g, "").trim();
 
+    // Prevent CSV injection - strip leading formula characters
+    const safeText = (text || "").replace(/^[=+\-@\t\r]/g, "");
+
     // Insert into Supabase
     const reviewId = `rev_${crypto.randomUUID()}`;
 
@@ -105,7 +108,7 @@ export async function POST(req: NextRequest) {
       vehicle_id: vehicleId,
       booking_id: bookingId || null,
       rating,
-      text: text.trim(),
+      text: safeText.trim(),
       status: "pending", // Reviews need admin approval
     }).select().single();
 

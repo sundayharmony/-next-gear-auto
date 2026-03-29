@@ -196,8 +196,13 @@ export default function CreateBookingForm({
         setHasOverlappingBookings(false);
       }
     };
-    checkOverlap();
+
+    const timer = setTimeout(() => {
+      checkOverlap();
+    }, 400);
+
     return () => {
+      clearTimeout(timer);
       // Abort fetch on unmount
       if (overlapAbortControllerRef.current) {
         overlapAbortControllerRef.current.abort();
@@ -292,6 +297,8 @@ export default function CreateBookingForm({
     try {
       const pickupLoc = locations.find(l => l.id === pickupLocationId);
       const returnLoc = locations.find(l => l.id === (differentDropoff ? returnLocationId : pickupLocationId));
+      const pickupSurcharge = pickupLoc?.surcharge ?? 0;
+      const returnSurcharge = differentDropoff ? (returnLoc?.surcharge ?? 0) : 0;
       const payload = {
         customerName: form.customerName,
         customerEmail: form.customerEmail,
@@ -309,7 +316,7 @@ export default function CreateBookingForm({
         return_location_id: differentDropoff ? returnLocationId : pickupLocationId || null,
         pickup_location_name: pickupLoc?.name || null,
         return_location_name: returnLoc?.name || null,
-        location_surcharge: (pickupLoc?.surcharge ?? 0) + (differentDropoff ? (returnLoc?.surcharge ?? 0) : 0),
+        location_surcharge: pickupSurcharge + returnSurcharge,
       };
 
       const res = await adminFetch("/api/bookings", {

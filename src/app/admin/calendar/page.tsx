@@ -372,7 +372,7 @@ export default function AdminCalendarPage() {
               {/* Vehicle */}
               <div>
                 <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Vehicle</h3>
-                <p className="font-medium">{selectedBooking.vehicleName || selectedBooking.vehicle_id}</p>
+                <p className="font-medium">{selectedBooking.vehicleName || "Unknown Vehicle"}</p>
               </div>
 
               {/* Dates and Times */}
@@ -948,9 +948,9 @@ function CalendarView({
                           <div
                             key={booking.id}
                             className={`text-xs p-1 rounded truncate ${statusColors[booking.status]}`}
-                            title={booking.vehicleName}
+                            title={booking.vehicleName || "Unknown Vehicle"}
                           >
-                            {(booking.vehicleName || "Vehicle").split(" ").slice(1).join(" ") || booking.vehicleName || "Vehicle"}
+                            {(booking.vehicleName || "Vehicle").split(" ").slice(1).join(" ") || booking.vehicleName || "Unknown Vehicle"}
                           </div>
                         ))}
                         {dayBookings.length > 2 && (
@@ -1013,7 +1013,7 @@ function CalendarView({
                     <div>
                       <span className="text-gray-600">Vehicle:</span>
                       <div className="font-medium text-gray-900">
-                        {booking.vehicleName}
+                        {booking.vehicleName || "Unknown Vehicle"}
                       </div>
                     </div>
                     <div>

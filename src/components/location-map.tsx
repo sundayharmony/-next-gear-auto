@@ -78,8 +78,8 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
   const [mapReady, setMapReady] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Filter to locations with coordinates
-  const mappableLocations = locations.filter(l => l.lat != null && l.lng != null);
+  // Filter to locations with coordinates and valid ranges
+  const mappableLocations = locations.filter(l => l.lat != null && l.lng != null && l.lat >= -90 && l.lat <= 90 && l.lng >= -180 && l.lng <= 180);
 
   // Initialize map
   useEffect(() => {
@@ -187,6 +187,14 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
     return (
       <div className={`rounded-lg bg-gray-100 flex items-center justify-center text-sm text-gray-500 ${className || "h-[250px]"}`}>
         Map unavailable
+      </div>
+    );
+  }
+
+  if (mappableLocations.length === 0 && !error) {
+    return (
+      <div className={`rounded-lg bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center text-sm text-gray-400 ${className || "h-[250px]"}`}>
+        No locations with coordinates to display
       </div>
     );
   }

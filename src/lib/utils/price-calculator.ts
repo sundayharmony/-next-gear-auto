@@ -17,9 +17,9 @@ export function calculateRentalDays(pickupDate: string, returnDate: string): num
   const returnD = new Date(returnDate.includes("T") ? returnDate : returnDate + "T00:00:00");
   // Time stripping is intentional: we strip time components to calculate days at midnight boundaries
   const diffTime = returnD.getTime() - pickup.getTime();
-  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  // Guard against negative dates and return 1 for same-day or invalid date ranges
-  return diffDays < 0 ? 1 : Math.max(diffDays, 1);
+  const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  // Guard against NaN and negative dates
+  return Number.isFinite(days) && days > 0 ? days : 1;
 }
 
 /**

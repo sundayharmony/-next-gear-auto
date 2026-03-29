@@ -42,6 +42,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Name and address are required" }, { status: 400 });
     }
 
+    // Validate surcharge
+    const surchargeNum = parseFloat(surcharge);
+    if (!Number.isFinite(surchargeNum) || surchargeNum < 0) {
+      return NextResponse.json({ success: false, message: "Surcharge must be a valid non-negative number" }, { status: 400 });
+    }
+
     // Validate latitude range
     if (lat !== undefined && lat !== null) {
       const latNum = parseFloat(lat);
@@ -73,7 +79,7 @@ export async function POST(request: NextRequest) {
       city: (city || "").trim().slice(0, 50),
       state: (state || "").trim().slice(0, 2),
       zip: (zip || "").trim().slice(0, 10),
-      surcharge: Math.max(0, parseFloat(surcharge) || 0),
+      surcharge: surchargeNum,
       is_default: is_default || false,
       is_active: true,
       notes: (notes || "").trim().slice(0, 500),
@@ -119,7 +125,13 @@ export async function PATCH(request: NextRequest) {
     if (updates.city !== undefined) clean.city = String(updates.city).trim().slice(0, 50);
     if (updates.state !== undefined) clean.state = String(updates.state).trim().slice(0, 2);
     if (updates.zip !== undefined) clean.zip = String(updates.zip).trim().slice(0, 10);
-    if (updates.surcharge !== undefined) clean.surcharge = Math.max(0, parseFloat(updates.surcharge) || 0);
+    if (updates.surcharge !== undefined) {
+      const surchargeNum = parseFloat(updates.surcharge);
+      if (!Number.isFinite(surchargeNum) || surchargeNum < 0) {
+        return NextResponse.json({ success: false, message: "Surcharge must be a valid non-negative number" }, { status: 400 });
+      }
+      clean.surcharge = surchargeNum;
+    }
     if (updates.is_active !== undefined) clean.is_active = Boolean(updates.is_active);
     if (updates.notes !== undefined) clean.notes = String(updates.notes).trim().slice(0, 500);
     if (updates.lat !== undefined) clean.lat = updates.lat !== null ? parseFloat(updates.lat) : null;

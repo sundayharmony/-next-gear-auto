@@ -228,7 +228,7 @@ export default function AdminLocationsPage() {
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
               <label className="text-xs font-medium text-gray-700 mb-0.5 block">Surcharge ($)</label>
-              <Input type="number" value={form.surcharge} onChange={(e) => setForm({ ...form, surcharge: Math.max(0, e.target.value === "" ? 0 : Number(e.target.value)) })} min="0" step="0.01" />
+              <Input type="number" value={form.surcharge} onChange={(e) => { const v = Math.max(0, parseFloat(e.target.value) || 0); setForm({ ...form, surcharge: v }); }} min="0" step="0.01" />
             </div>
             <div>
               <label className="text-xs font-medium text-gray-700 mb-0.5 block">Status</label>

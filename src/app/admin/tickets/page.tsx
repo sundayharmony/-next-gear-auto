@@ -108,21 +108,41 @@ export default function AdminTicketsPage() {
     setLoading(true);
     setError(null);
     try {
-      const [ticketsRes, vehiclesRes, bookingsRes] = await Promise.all([
+      const [ticketsResult, vehiclesResult, bookingsResult] = await Promise.allSettled([
         adminFetch("/api/admin/tickets"),
         adminFetch("/api/admin/vehicles"),
         adminFetch("/api/admin/bookings"),
       ]);
 
-      if (!ticketsRes.ok) throw new Error("Failed to fetch tickets");
+      let allFailed = true;
 
-      const ticketsData = await ticketsRes.json();
-      const vehiclesData = vehiclesRes.ok ? await vehiclesRes.json() : { data: [] };
-      const bookingsData = bookingsRes.ok ? await bookingsRes.json() : { data: [] };
+      if (ticketsResult.status === "fulfilled" && ticketsResult.value.ok) {
+        const ticketsData = await ticketsResult.value.json();
+        setTickets(ticketsData.data || []);
+        allFailed = false;
+      } else if (ticketsResult.status === "rejected") {
+        logger.error("Tickets fetch rejected:", ticketsResult.reason);
+      }
 
-      setTickets(ticketsData.data || []);
-      setVehicles(vehiclesData.data || []);
-      setBookings(bookingsData.data || []);
+      if (vehiclesResult.status === "fulfilled" && vehiclesResult.value.ok) {
+        const vehiclesData = await vehiclesResult.value.json();
+        setVehicles(vehiclesData.data || []);
+        allFailed = false;
+      } else if (vehiclesResult.status === "rejected") {
+        logger.error("Vehicles fetch rejected:", vehiclesResult.reason);
+      }
+
+      if (bookingsResult.status === "fulfilled" && bookingsResult.value.ok) {
+        const bookingsData = await bookingsResult.value.json();
+        setBookings(bookingsData.data || []);
+        allFailed = false;
+      } else if (bookingsResult.status === "rejected") {
+        logger.error("Bookings fetch rejected:", bookingsResult.reason);
+      }
+
+      if (allFailed) {
+        setError("Failed to load tickets and related data");
+      }
     } catch (err) {
       logger.error("Error fetching tickets:", err);
       setError(err instanceof Error ? err.message : "Failed to load tickets");
@@ -198,8 +218,8 @@ export default function AdminTicketsPage() {
       setError("Amount due must be a non-negative number");
       return;
     }
-    setIsSubmitting(true);
     try {
+      setIsSubmitting(true);
       // Resolve customerId from booking
       let customerId = "";
       if (form.bookingId) {

@@ -147,7 +147,7 @@ export default function BookingTable({
 
                 {/* Vehicle */}
                 <td className="px-4 py-3">
-                  <div className="truncate text-gray-700">{booking.vehicleName}</div>
+                  <div className="truncate text-gray-700">{booking.vehicleName || "Unknown Vehicle"}</div>
                 </td>
 
                 {/* Dates */}
@@ -174,7 +174,7 @@ export default function BookingTable({
 
                 {/* Total */}
                 <td className="px-4 py-3">
-                  <div className="font-semibold text-gray-900">${(booking.total_price ?? 0).toFixed(2)}</div>
+                  <div className="font-semibold text-gray-900">${((booking.total_price ?? 0)).toFixed(2)}</div>
                 </td>
 
                 {/* Balance */}

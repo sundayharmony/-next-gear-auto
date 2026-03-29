@@ -70,10 +70,12 @@ function AdminBookingsContent() {
     if (highlightApplied || loading) return;
     const highlightId = searchParams.get("booking") || searchParams.get("highlight");
     if (highlightId && bookings.length > 0) {
-      const found = bookings.find((b: BookingRow) => b.id === highlightId);
-      if (found) {
-        setSelectedBooking(found);
-        setShowDetail(true);
+      if (bookings.find(b => b.id === highlightId)) {
+        const found = bookings.find(b => b.id === highlightId);
+        if (found) {
+          setSelectedBooking(found);
+          setShowDetail(true);
+        }
       }
       setHighlightApplied(true);
     }

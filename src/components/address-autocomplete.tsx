@@ -71,7 +71,7 @@ async function forwardGeocode(query: string): Promise<Array<{ formatted: string;
       formatted: r.formatted_address || [r.address, r.city, r.state, r.zip].filter(Boolean).join(", "),
       result: { address: r.address || "", city: r.city || "", state: r.state || "", zip: r.zip || "", lat: r.lat ?? 0, lng: r.lng ?? 0 } as AddressResult,
     }));
-  } catch { return []; }
+  } catch (e) { console.warn("Forward geocode failed:", e); return []; }
 }
 
 async function reverseGeocode(lat: number, lng: number): Promise<{ formatted: string; result: AddressResult } | null> {
@@ -82,7 +82,7 @@ async function reverseGeocode(lat: number, lng: number): Promise<{ formatted: st
     const r = json.results[0];
     const result: AddressResult = { address: r.address || "", city: r.city || "", state: r.state || "", zip: r.zip || "", lat: r.lat ?? lat, lng: r.lng ?? lng };
     return { formatted: r.formatted_address || [result.address, result.city, result.state, result.zip].filter(Boolean).join(", "), result };
-  } catch { return null; }
+  } catch (e) { console.warn("Reverse geocode failed:", e); return null; }
 }
 
 /* ── Component ────────────────────────────────────── */

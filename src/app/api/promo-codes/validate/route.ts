@@ -21,8 +21,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Limit promo code length (Bug 25)
+    // Limit promo code length and validate format (Bug 25, Bug 19)
     const safeCode = (code || "").trim().slice(0, 50);
+
+    // Add alphanumeric validation to prevent injection
+    if (!/^[a-zA-Z0-9_-]{1,50}$/.test(safeCode)) {
+      return NextResponse.json({ success: false, message: "Invalid promo code format" }, { status: 400 });
+    }
 
     const supabase = getServiceSupabase();
 

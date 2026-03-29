@@ -15,42 +15,52 @@ async function fetchThumbnail(postUrl: string): Promise<{
     let cleanUrl = postUrl.split("?")[0];
     if (!cleanUrl.endsWith("/")) cleanUrl += "/";
 
-    const res = await fetch(cleanUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-        Accept: "text/html",
-      },
-      redirect: "follow",
-    });
+    const abortController = new AbortController();
+    const timeoutId = setTimeout(() => abortController.abort(), 10000);
 
-    if (!res.ok) return { thumbnail_url: null, title: null, media_type };
+    try {
+      const res = await fetch(cleanUrl, {
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+          Accept: "text/html",
+        },
+        redirect: "follow",
+        signal: abortController.signal,
+      });
 
-    const html = await res.text();
+      clearTimeout(timeoutId);
+      if (!res.ok) return { thumbnail_url: null, title: null, media_type };
 
-    // Extract og:image
-    const ogImageMatch = html.match(
-      /property="og:image"\s+content="([^"]+)"/
-    );
-    let thumbnail_url: string | null = null;
-    if (ogImageMatch?.[1]) {
-      // Decode HTML entities (&amp; -> &)
-      thumbnail_url = ogImageMatch[1]
-        .replace(/&amp;/g, "&")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&quot;/g, '"');
+      const html = await res.text();
+
+      // Extract og:image
+      const ogImageMatch = html.match(
+        /property="og:image"\s+content="([^"]+)"/
+      );
+      let thumbnail_url: string | null = null;
+      if (ogImageMatch?.[1]) {
+        // Decode HTML entities (&amp; -> &)
+        thumbnail_url = ogImageMatch[1]
+          .replace(/&amp;/g, "&")
+          .replace(/&lt;/g, "<")
+          .replace(/&gt;/g, ">")
+          .replace(/&quot;/g, '"');
+      }
+
+      // Extract og:title or description for caption
+      const ogTitleMatch = html.match(
+        /property="og:title"\s+content="([^"]+)"/
+      );
+      const title = ogTitleMatch?.[1]
+        ? ogTitleMatch[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"')
+        : null;
+
+      return { thumbnail_url, title, media_type };
+    } catch (fetchErr) {
+      clearTimeout(timeoutId);
+      throw fetchErr;
     }
-
-    // Extract og:title or description for caption
-    const ogTitleMatch = html.match(
-      /property="og:title"\s+content="([^"]+)"/
-    );
-    const title = ogTitleMatch?.[1]
-      ? ogTitleMatch[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"')
-      : null;
-
-    return { thumbnail_url, title, media_type };
   } catch (err) {
     logger.error("Instagram thumbnail fetch failed:", err);
     return { thumbnail_url: null, title: null, media_type };

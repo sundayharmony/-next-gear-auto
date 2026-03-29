@@ -79,8 +79,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     // Then validate the JWT cookie against the server
     async function validateSession() {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
       try {
-        const res = await fetch("/api/auth", { credentials: "same-origin" });
+        const res = await fetch("/api/auth", { credentials: "same-origin", signal: controller.signal });
+        clearTimeout(timeoutId);
         const data = await res.json();
         if (data.success && data.data && !cancelled) {
           // Update localStorage with server-verified user data
@@ -91,6 +94,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           dispatch({ type: "LOGOUT" });
         }
       } catch {
+        clearTimeout(timeoutId);
         // Network error — keep cached user (offline-friendly)
       }
     }

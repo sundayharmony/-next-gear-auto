@@ -20,11 +20,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    let key = process.env.GOOGLE_MAPS_SERVER_KEY;
-    if (!key) {
-      logger.warn("GOOGLE_MAPS_SERVER_KEY not set, falling back to NEXT_PUBLIC key");
-      key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-    }
+    const key = process.env.GOOGLE_MAPS_SERVER_KEY || process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
     if (!key) {
       return NextResponse.json(
         { success: false, message: "Google Maps API key not configured" },
@@ -80,7 +76,16 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const data = await res.json();
+    let data;
+    try {
+      data = await res.json();
+    } catch {
+      logger.error("Geocoding API returned invalid JSON");
+      return NextResponse.json(
+        { success: false, message: "Geocoding API returned invalid response" },
+        { status: 502 }
+      );
+    }
 
     if (data.status === "REQUEST_DENIED") {
       logger.error("Geocoding API denied:", data.error_message);

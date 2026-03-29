@@ -77,17 +77,21 @@ export default function AccountPage() {
     if (!user?.email) return;
     setLoading(true);
     setLoadingError(null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 15000);
     try {
       // Query by both customer_id and email to catch all bookings
       const params = new URLSearchParams({ customer_email: user.email.toLowerCase().trim() });
       if (user.id) params.set("customer_id", user.id);
-      const res = await fetch(`/api/bookings?${params.toString()}`);
+      const res = await fetch(`/api/bookings?${params.toString()}`, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success && Array.isArray(data.data)) {
         setBookings(data.data);
       }
     } catch (err) {
+      clearTimeout(timeoutId);
       logger.error("Failed to fetch bookings:", err);
       setLoadingError("Failed to load your bookings. Please try again.");
     }
@@ -139,7 +143,7 @@ export default function AccountPage() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
-      if (data.success) {
+      if (res.ok && data.success) {
         setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, status: "cancelled" } : b));
       } else {
         setProfileMsg(data.message || "Failed to cancel booking.");
@@ -147,8 +151,9 @@ export default function AccountPage() {
     } catch (err) {
       logger.error("Cancel error:", err);
       setProfileMsg("Failed to cancel booking. Please try again.");
+    } finally {
+      setCancelling(null);
     }
-    setCancelling(null);
   }, []);
 
   // Auto-clear profile messages after 5 seconds (with proper cleanup)
