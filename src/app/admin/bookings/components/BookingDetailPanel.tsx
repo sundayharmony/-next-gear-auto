@@ -26,6 +26,7 @@ import {
   Plus,
   Calculator,
   MapPin,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -393,11 +394,18 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       if (!response.ok) throw new Error("Failed to record payment");
 
       const newPaymentResult = await response.json();
-      const newPaymentRecord = newPaymentResult.data ?? newPaymentResult;
-      setPayments([...payments, newPaymentRecord]);
+      const newDeposit = newPaymentResult.data?.new_deposit ?? (booking.deposit ?? 0) + parsedAmount;
+
+      // Refetch full payment list so the new record has all fields (received_at, etc.)
+      try {
+        const listRes = await adminFetch(`/api/admin/booking-payments?booking_id=${booking.id}`);
+        if (listRes.ok) {
+          const listData = await listRes.json();
+          setPayments(Array.isArray(listData.data) ? listData.data : []);
+        }
+      } catch { /* keep existing list */ }
 
       // Update deposit locally
-      const newDeposit = (booking.deposit ?? 0) + parsedAmount;
       const updated = { ...booking, deposit: newDeposit };
       onUpdateBooking(updated);
 
@@ -433,6 +441,37 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     } catch (err) {
       logger.error("Failed to toggle payment status", err);
       onError("Failed to update payment status");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  // Delete a payment record
+  const handleDeletePayment = async (paymentId: string) => {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const response = await adminFetch(
+        `/api/admin/booking-payments?id=${paymentId}`,
+        { method: "DELETE" }
+      );
+
+      if (!response.ok) throw new Error("Failed to delete payment");
+
+      const result = await response.json();
+      const newDeposit = result.data?.new_deposit ?? 0;
+
+      // Remove from local state
+      setPayments(payments.filter((p) => p.id !== paymentId));
+
+      // Update booking deposit
+      const updated = { ...booking, deposit: newDeposit };
+      onUpdateBooking(updated);
+      setEditData(updated);
+      onSuccess("Payment removed");
+    } catch (err) {
+      logger.error("Failed to delete payment", err);
+      onError("Failed to remove payment");
     } finally {
       setSaving(false);
     }
@@ -511,8 +550,22 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     "Not specified";
 
   const paymentPercentage = (booking.total_price ?? 0) > 0
-    ? Math.round(((booking.deposit ?? 0) / booking.total_price) * 100)
+    ? Math.min(100, Math.round(((booking.deposit ?? 0) / booking.total_price) * 100))
     : 0;
+
+  // Computed payment status
+  const paymentStatus: "paid" | "partial" | "unpaid" =
+    (booking.deposit ?? 0) >= (booking.total_price ?? 0) && (booking.total_price ?? 0) > 0
+      ? "paid"
+      : (booking.deposit ?? 0) > 0
+        ? "partial"
+        : "unpaid";
+
+  const paymentStatusConfig = {
+    paid: { label: "Paid", color: "bg-green-100 text-green-800" },
+    partial: { label: "Partial", color: "bg-yellow-100 text-yellow-800" },
+    unpaid: { label: "Unpaid", color: "bg-red-100 text-red-800" },
+  };
 
   // Recalculate price from vehicle rate, dates, and extras
   const handleRecalculatePrice = () => {
@@ -1038,10 +1091,15 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
           {/* Payment Summary Card */}
           <div className="bg-gray-50 rounded-lg p-4 space-y-3 border border-gray-200">
-            <h3 className="text-sm font-semibold flex items-center gap-2">
-              <CreditCard className="w-4 h-4" />
-              Payment Summary
-            </h3>
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <CreditCard className="w-4 h-4" />
+                Payment Summary
+              </h3>
+              <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${paymentStatusConfig[paymentStatus].color}`}>
+                {paymentStatusConfig[paymentStatus].label}
+              </span>
+            </div>
 
             {editMode ? (
               <div className="space-y-3">
@@ -1145,6 +1203,45 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 {booking.payment_method && (
                   <div className="text-xs text-gray-600 pt-2">
                     Method: <span className="font-medium">{methodLabel}</span>
+                  </div>
+                )}
+
+                {/* Payment History */}
+                {payments.length > 0 && (
+                  <div className="pt-2 border-t border-gray-300 space-y-1">
+                    <p className="text-xs font-semibold text-gray-700 mb-1">Payment History</p>
+                    {payments.map((p) => {
+                      const pMethod = PAYMENT_METHODS.find((m) => m.value === p.method)?.label || p.method;
+                      const pDate = p.received_at
+                        ? new Date(p.received_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+                        : "";
+                      return (
+                        <div
+                          key={p.id}
+                          className="flex items-center justify-between bg-white border border-gray-200 rounded px-2 py-1.5 group"
+                        >
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2 text-xs">
+                              <span className="font-semibold text-gray-900">${(p.amount ?? 0).toFixed(2)}</span>
+                              <span className="text-gray-500">{pMethod}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-[10px] text-gray-400">
+                              {pDate && <span>{pDate}</span>}
+                              {p.note && <span className="truncate">• {p.note}</span>}
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleDeletePayment(p.id)}
+                            disabled={saving}
+                            className="ml-2 p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                            title="Remove payment"
+                          >
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
 

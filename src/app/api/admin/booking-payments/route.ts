@@ -169,3 +169,97 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+// DELETE: Remove a booking payment and recalculate deposit
+export async function DELETE(request: NextRequest) {
+  const auth = await verifyAdmin(request);
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const paymentId = searchParams.get("id");
+
+    if (!paymentId) {
+      return NextResponse.json(
+        { success: false, error: "id query parameter is required" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = getServiceSupabase();
+
+    // Get the payment first to know the booking_id
+    const { data: payment, error: fetchError } = await supabase
+      .from("booking_payments")
+      .select("id, booking_id")
+      .eq("id", paymentId)
+      .single();
+
+    if (fetchError || !payment) {
+      return NextResponse.json(
+        { success: false, error: "Payment not found" },
+        { status: 404 }
+      );
+    }
+
+    const bookingId = payment.booking_id;
+
+    // Delete the payment
+    const { error: deleteError } = await supabase
+      .from("booking_payments")
+      .delete()
+      .eq("id", paymentId);
+
+    if (deleteError) {
+      logger.error("Error deleting booking payment: " + deleteError.message);
+      return NextResponse.json(
+        { success: false, error: deleteError.message },
+        { status: 500 }
+      );
+    }
+
+    // Recalculate total payments for the booking
+    const { data: remainingPayments, error: sumError } = await supabase
+      .from("booking_payments")
+      .select("amount")
+      .eq("booking_id", bookingId);
+
+    if (sumError) {
+      logger.error("Error recalculating payments after delete:", sumError);
+      return NextResponse.json(
+        { success: false, error: sumError.message },
+        { status: 500 }
+      );
+    }
+
+    const newDeposit = (remainingPayments || []).reduce(
+      (sum: number, p: { amount: number | null }) => sum + (p.amount ?? 0),
+      0
+    );
+
+    // Update booking deposit
+    const { error: updateError } = await supabase
+      .from("bookings")
+      .update({ deposit: newDeposit })
+      .eq("id", bookingId);
+
+    if (updateError) {
+      logger.error("Error updating booking deposit after payment delete:", updateError);
+      return NextResponse.json(
+        { success: false, error: updateError.message },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { new_deposit: newDeposit },
+    });
+  } catch (error) {
+    logger.error("Unexpected error in DELETE /api/admin/booking-payments:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
