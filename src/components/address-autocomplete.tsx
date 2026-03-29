@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { MapPin, Search, X, Check } from "lucide-react";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 
 export interface AddressResult {
   address: string;
@@ -22,14 +23,14 @@ interface AddressAutocompleteProps {
 }
 
 /* ────────────────────────────────────────
-   Google Maps script loader
+   Google Maps script loader (for the map only)
    ──────────────────────────────────────── */
 let mapsLoadPromise: Promise<void> | null = null;
 
 function loadGoogleMaps(): Promise<void> {
   if (mapsLoadPromise) return mapsLoadPromise;
   const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  if (!key) return Promise.reject(new Error("No key"));
+  if (!key) return Promise.reject(new Error("No Google Maps key"));
 
   if (typeof google !== "undefined" && google.maps) return Promise.resolve();
 
@@ -53,37 +54,58 @@ function loadGoogleMaps(): Promise<void> {
 }
 
 /* ────────────────────────────────────────
-   Parse geocoding result
+   Server-side geocoding helpers
+   Uses /api/admin/geocode to avoid browser
+   referrer restrictions on the API key
    ──────────────────────────────────────── */
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function parseGeocodingResult(r: any): AddressResult {
-  const comps: any[] = r.address_components || [];
-  let streetNumber = "", route = "", city = "", state = "", zip = "";
-  for (const c of comps) {
-    const types: string[] = c.types || [];
-    if (types.includes("street_number")) streetNumber = c.long_name;
-    else if (types.includes("route")) route = c.long_name;
-    else if (types.includes("locality")) city = c.long_name;
-    else if (types.includes("sublocality_level_1") && !city) city = c.long_name;
-    else if (types.includes("administrative_area_level_1")) state = c.short_name;
-    else if (types.includes("postal_code")) zip = c.long_name;
+async function geocodeAddress(query: string): Promise<AddressResult[]> {
+  try {
+    const res = await adminFetch(`/api/admin/geocode?address=${encodeURIComponent(query)}`);
+    const data = await res.json();
+    if (data.success && data.results?.length) {
+      return data.results.map((r: any) => ({
+        address: r.address || r.formatted_address || "",
+        city: r.city || "",
+        state: r.state || "",
+        zip: r.zip || "",
+        lat: r.lat || 0,
+        lng: r.lng || 0,
+        formatted_address: r.formatted_address || "",
+      }));
+    }
+    return [];
+  } catch {
+    return [];
   }
-  const address = [streetNumber, route].filter(Boolean).join(" ");
-  const loc = r.geometry?.location;
-  return {
-    address: address || r.formatted_address || "",
-    city, state, zip,
-    lat: loc?.lat ?? 0,
-    lng: loc?.lng ?? 0,
-  };
+}
+
+async function reverseGeocode(lat: number, lng: number): Promise<AddressResult | null> {
+  try {
+    const res = await adminFetch(`/api/admin/geocode?lat=${lat}&lng=${lng}`);
+    const data = await res.json();
+    if (data.success && data.results?.[0]) {
+      const r = data.results[0];
+      return {
+        address: r.address || r.formatted_address || "",
+        city: r.city || "",
+        state: r.state || "",
+        zip: r.zip || "",
+        lat: r.lat || lat,
+        lng: r.lng || lng,
+      };
+    }
+    return null;
+  } catch {
+    return null;
+  }
 }
 
 /* ═══════════════════════════════════════════════════
-   Map Location Picker
+   Map Location Picker Component
 
-   Shows a button that opens an interactive Google Map
-   with a search bar. User searches an address, sees
-   it on the map, and confirms to fill in the form.
+   Opens an interactive Google Map modal with a search
+   bar. Geocoding runs server-side via /api/admin/geocode.
+   User can search or click on map to pick a location.
    ═══════════════════════════════════════════════════ */
 export function AddressAutocomplete({
   value,
@@ -103,7 +125,9 @@ export function AddressAutocomplete({
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<google.maps.Map | null>(null);
   const markerRef = useRef<google.maps.Marker | null>(null);
+  const clickListenerRef = useRef<google.maps.MapsEventListener | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
@@ -114,9 +138,15 @@ export function AddressAutocomplete({
 
     loadGoogleMaps()
       .then(() => {
-        if (cancelled || !mapContainerRef.current) return;
+        if (cancelled || !mapContainerRef.current || typeof google === "undefined" || !google.maps) return;
 
-        const map = new google.maps.Map(mapContainerRef.current, {
+        // Force the container to have a measurable size before init
+        const container = mapContainerRef.current;
+        if (container.offsetHeight < 10) {
+          container.style.height = "400px";
+        }
+
+        const map = new google.maps.Map(container, {
           center: { lat: 40.7128, lng: -74.006 },
           zoom: 12,
           mapTypeControl: false,
@@ -128,13 +158,18 @@ export function AddressAutocomplete({
           ],
         });
 
-        // Click on map to drop pin + reverse geocode
-        map.addListener("click", async (e: google.maps.MapMouseEvent) => {
+        // Clean up previous listener if any
+        if (clickListenerRef.current) {
+          google.maps.event.removeListener(clickListenerRef.current);
+        }
+
+        // Click on map to drop pin + reverse geocode via server
+        clickListenerRef.current = map.addListener("click", async (e: google.maps.MapMouseEvent) => {
           if (!e.latLng) return;
           const lat = e.latLng.lat();
           const lng = e.latLng.lng();
 
-          // Place marker
+          // Place marker immediately
           if (markerRef.current) markerRef.current.setMap(null);
           markerRef.current = new google.maps.Marker({
             position: { lat, lng },
@@ -149,22 +184,14 @@ export function AddressAutocomplete({
             },
           });
 
-          // Reverse geocode
-          try {
-            const res = await fetch(
-              `https://maps.googleapis.com/maps/api/geocode/json?latlng=${lat},${lng}&key=${apiKey}`
-            );
-            const data = await res.json();
-            if (data.results?.[0]) {
-              const parsed = parseGeocodingResult(data.results[0]);
-              setSelectedResult({
-                formatted: data.results[0].formatted_address,
-                result: parsed,
-              });
-              setSearchResults([]);
-            }
-          } catch {
-            // Silently fail reverse geocode
+          // Reverse geocode via server-side API
+          const result = await reverseGeocode(lat, lng);
+          if (result) {
+            setSelectedResult({
+              formatted: [result.address, result.city, result.state, result.zip].filter(Boolean).join(", "),
+              result,
+            });
+            setSearchResults([]);
           }
         });
 
@@ -178,46 +205,45 @@ export function AddressAutocomplete({
         if (!cancelled) setError("Could not load Google Maps");
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      if (clickListenerRef.current) {
+        google.maps.event.removeListener(clickListenerRef.current);
+        clickListenerRef.current = null;
+      }
+    };
   }, [showMap, apiKey]);
 
-  // Search using Geocoding API
+  // Search using server-side geocoding
   const handleSearch = useCallback(async () => {
-    if (!apiKey || !searchQuery.trim()) return;
+    if (!searchQuery.trim()) return;
     setSearching(true);
     setError("");
     setSelectedResult(null);
 
-    try {
-      const res = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(searchQuery)}&components=country:US&key=${apiKey}`
-      );
-      const data = await res.json();
+    const results = await geocodeAddress(searchQuery);
 
-      if (data.status === "ZERO_RESULTS" || !data.results?.length) {
-        setError("No addresses found. Try a more specific search.");
-        setSearchResults([]);
-        return;
-      }
-
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const results = data.results.slice(0, 5).map((r: any) => ({
-        formatted: r.formatted_address,
-        result: parseGeocodingResult(r),
-      }));
-
-      setSearchResults(results);
-
-      // Auto-select first result and move map
-      if (results[0]) {
-        selectOnMap(results[0]);
-      }
-    } catch {
-      setError("Search failed. Check your internet connection.");
-    } finally {
+    if (results.length === 0) {
+      setError("No addresses found. Try a more specific search.");
+      setSearchResults([]);
       setSearching(false);
+      return;
     }
-  }, [apiKey, searchQuery]);
+
+    const mapped = results.map((r: any) => ({
+      formatted: r.formatted_address || [r.address, r.city, r.state, r.zip].filter(Boolean).join(", "),
+      result: r as AddressResult,
+    }));
+
+    setSearchResults(mapped);
+
+    // Auto-select first result and move map
+    if (mapped[0]) {
+      selectOnMap(mapped[0]);
+    }
+
+    setSearching(false);
+  }, [searchQuery]);
 
   // Place a result on the map
   const selectOnMap = (item: { formatted: string; result: AddressResult }) => {
@@ -256,14 +282,21 @@ export function AddressAutocomplete({
     setSelectedResult(null);
   };
 
-  // Close modal
+  // Close modal — clean up map resources
   const handleClose = () => {
+    if (searchAbortRef.current) searchAbortRef.current.abort();
+    if (markerRef.current) { markerRef.current.setMap(null); markerRef.current = null; }
+    if (clickListenerRef.current) {
+      google.maps.event.removeListener(clickListenerRef.current);
+      clickListenerRef.current = null;
+    }
+    mapRef.current = null;
     setShowMap(false);
+    setMapReady(false);
     setSearchQuery("");
     setSearchResults([]);
     setSelectedResult(null);
     setError("");
-    if (markerRef.current) markerRef.current.setMap(null);
   };
 
   // No API key — plain input
@@ -281,7 +314,7 @@ export function AddressAutocomplete({
 
   return (
     <>
-      {/* Address input with search button */}
+      {/* Address input with map button */}
       <div className="flex gap-2">
         <input
           type="text"
@@ -374,9 +407,12 @@ export function AddressAutocomplete({
               )}
             </div>
 
-            {/* Map */}
-            <div className="flex-1 relative" style={{ minHeight: "300px" }}>
-              <div ref={mapContainerRef} className="w-full h-full" />
+            {/* Map — explicit height so Google Maps renders properly */}
+            <div style={{ height: "400px", position: "relative" }}>
+              <div
+                ref={mapContainerRef}
+                style={{ width: "100%", height: "100%" }}
+              />
               {!mapReady && (
                 <div className="absolute inset-0 flex items-center justify-center bg-gray-100">
                   <div className="flex items-center gap-2 text-gray-500 text-sm">

@@ -354,11 +354,6 @@ export default function AdminLocationsPage() {
     form: Omit<FormState, "id"> | FormState,
     setForm: (form: any) => void
   ) => {
-    const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-    if (!key) {
-      setError("Google Maps API key not configured");
-      return;
-    }
     const addr = [form.address, form.city, form.state, form.zip]
       .filter(Boolean)
       .join(", ");
@@ -367,16 +362,17 @@ export default function AdminLocationsPage() {
       return;
     }
     try {
-      const res = await fetch(
-        `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(addr)}&key=${key}`
+      const res = await adminFetch(
+        `/api/admin/geocode?address=${encodeURIComponent(addr)}`
       );
       if (!res.ok) {
-        setError("Geocoding request failed. Check your API key.");
+        const errData = await res.json().catch(() => ({}));
+        setError(errData.message || "Geocoding request failed");
         return;
       }
       const data = await res.json();
-      if (data.results?.[0]?.geometry?.location) {
-        const { lat, lng } = data.results[0].geometry.location;
+      if (data.success && data.results?.[0]) {
+        const { lat, lng } = data.results[0];
         setForm({ ...form, lat, lng });
         setSuccess("Coordinates auto-detected!");
       } else {
