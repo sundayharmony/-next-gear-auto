@@ -77,6 +77,8 @@ export async function GET(request: NextRequest) {
         (callerEmail && booking.customer_email?.toLowerCase().trim() === callerEmail);
 
       // Strip sensitive fields for non-owners (unauthenticated success/agreement page callers)
+      // customer_email is included so the agreement signing page can send it back
+      // for server-side ownership verification
       const safeData = isOwner ? rest : {
         id: rest.id,
         vehicle_id: rest.vehicle_id,
@@ -88,9 +90,12 @@ export async function GET(request: NextRequest) {
         deposit: rest.deposit,
         status: rest.status,
         customer_name: rest.customer_name,
+        customer_email: rest.customer_email,
+        customer_phone: rest.customer_phone,
         extras: rest.extras,
         agreement_signed_at: rest.agreement_signed_at,
         signed_name: rest.signed_name,
+        rental_agreement_url: rest.rental_agreement_url,
       };
 
       return NextResponse.json({
