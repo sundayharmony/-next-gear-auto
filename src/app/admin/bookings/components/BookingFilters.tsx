@@ -170,8 +170,8 @@ export default function BookingFilters({
 
       {/* Bulk action bar */}
       {selectedCount > 0 && (
-        <div className="flex items-center gap-1 px-4 py-2 bg-purple-50 border border-purple-200 rounded-full">
-          <span className="text-sm font-medium text-purple-900 mr-2">
+        <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg">
+          <span className="text-sm font-medium text-purple-900">
             {selectedCount} selected
           </span>
           <div className="flex-1" />

@@ -87,7 +87,7 @@ function FleetContent() {
         </div>
       </section>
 
-      <PageContainer className="py-8">
+      <PageContainer className={`py-8 ${comparison.compareCount >= 2 ? "pb-24" : "pb-8"}`}>
         {/* Error state */}
         {vehicleError && (
           <div className="mb-8 rounded-lg bg-red-50 border border-red-200 p-4">
@@ -208,13 +208,18 @@ function FleetContent() {
                 <Link href={`/fleet/${vehicle.id}`}>
                   <Card className={`group h-full card-hover transition-shadow ${comparison.isComparing(vehicle.id) ? "ring-2 ring-purple-500" : ""}`}>
                     {/* Vehicle Image */}
-                    <div className="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100">
+                    <div className="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100 animate-pulse">
                       {vehicle.images && vehicle.images.length > 0 ? (
                         <img
                           src={vehicle.images[0]}
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          onLoad={(e) => {
+                            const imgElement = e.target as HTMLImageElement;
+                            const parent = imgElement.parentElement;
+                            if (parent) parent.classList.remove("animate-pulse");
+                          }}
                           onError={(e) => {
                             const imgElement = e.target as HTMLImageElement;
                             imgElement.style.display = "none";
@@ -267,7 +272,7 @@ function FleetContent() {
                       {/* Pricing */}
                       <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
                         <div>
-                          <span className="text-2xl font-bold text-purple-600">${vehicle.dailyRate}</span>
+                          <span className="text-2xl font-bold text-purple-600">${vehicle.dailyRate.toFixed(2)}</span>
                           <span className="text-sm text-gray-400">/day</span>
                         </div>
                         <Button size="sm">View Details</Button>

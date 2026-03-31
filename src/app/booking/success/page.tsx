@@ -43,6 +43,12 @@ function SuccessContent() {
     }
   }, [bookingId]);
 
+  const handleRetryFetch = () => {
+    setFetchError(false);
+    setLoading(true);
+    setBooking(null);
+  };
+
   // Submit agreement signatures that were saved to localStorage before Stripe redirect
   // Waits for booking to load so we have the customer_email
   useEffect(() => {
@@ -133,7 +139,7 @@ function SuccessContent() {
     <>
       <section className="bg-gradient-to-br from-green-700 to-green-900 py-16 text-white">
         <div className="mx-auto max-w-5xl px-4 text-center">
-          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20">
+          <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20 animate-bounce">
             <Check className="h-10 w-10 text-white" />
           </div>
           <h1 className="text-3xl font-bold sm:text-4xl">Booking Confirmed!</h1>
@@ -156,6 +162,9 @@ function SuccessContent() {
                 <p className="text-gray-500 mb-2">We couldn&apos;t load your booking details, but your payment was processed successfully.</p>
                 <p className="text-sm text-gray-400">Your booking ID: <span className="font-mono font-bold text-purple-600">{bookingId || "—"}</span></p>
                 <p className="text-sm text-gray-400 mt-1">Please save this ID for your records. You can also check your email for a confirmation.</p>
+                <Button className="mt-4" onClick={handleRetryFetch} variant="outline">
+                  Try Again
+                </Button>
               </CardContent>
             </Card>
           ) : (

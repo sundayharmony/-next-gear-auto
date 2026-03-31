@@ -267,13 +267,20 @@ export default function AdminPromoCodesPage() {
                             <span className="text-gray-400"> / {c.maxUses}</span>
                           </td>
                           <td className="px-4 py-3 text-xs">
-                            {c.expiresAt ? (
-                              <span className={new Date(c.expiresAt + "T12:00:00") < new Date() ? "text-red-600 line-through font-medium" : "text-gray-600"}>
-                                {new Date(c.expiresAt + "T12:00:00").toLocaleDateString()}
-                              </span>
-                            ) : (
-                              <span className="text-gray-500">No expiry</span>
-                            )}
+                            <div className="flex items-center gap-2">
+                              {c.expiresAt ? (
+                                <>
+                                  <span className={new Date(c.expiresAt + "T12:00:00") < new Date() ? "text-red-600 line-through font-medium" : "text-gray-600"}>
+                                    {new Date(c.expiresAt + "T12:00:00").toLocaleDateString()}
+                                  </span>
+                                  {new Date(c.expiresAt + "T12:00:00") < new Date() && (
+                                    <Badge className="bg-red-100 text-red-700 text-[10px]">Expired</Badge>
+                                  )}
+                                </>
+                              ) : (
+                                <span className="text-gray-500">No expiry</span>
+                              )}
+                            </div>
                           </td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1">

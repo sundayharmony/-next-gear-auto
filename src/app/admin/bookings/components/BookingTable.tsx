@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
-import { ArrowUp, ArrowDown, FileText, Shield, Check, AlertTriangle, StickyNote } from "lucide-react";
+import { ArrowUp, ArrowDown, FileText, Shield, Check, AlertTriangle, StickyNote, Calendar, MapPin } from "lucide-react";
 import { BookingRow, SortField, SortOrder } from "../types";
 import { formatDate, formatTime, formatDateShort } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
@@ -165,7 +165,7 @@ export default function BookingTable({
                         {booking.return_time && `${booking.return_time}`}
                       </div>
                       {booking.pickup_location_name && (
-                        <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[140px]">📍 {booking.pickup_location_name}</p>
+                        <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[140px] flex items-center gap-1"><MapPin className="h-3 w-3 flex-shrink-0" /> {booking.pickup_location_name}</p>
                       )}
                     </div>
                     <Badge variant="secondary" className="whitespace-nowrap text-xs">
@@ -186,7 +186,7 @@ export default function BookingTable({
 
                 {/* Status */}
                 <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[booking.status || "pending"] || "bg-gray-100 text-gray-600"}`} aria-label={`Status: ${booking.status || "pending"}`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[booking.status || "pending"] || "bg-gray-200 text-gray-800"}`} aria-label={`Status: ${booking.status || "pending"}`}>
                     {booking.status || "pending"}
                   </span>
                 </td>
@@ -229,7 +229,7 @@ export default function BookingTable({
                         {action === "completed" && "Complete"}
                       </Button>
                     ))}
-                    {statusActions.length === 0 && <span className="text-xs text-gray-400">—</span>}
+                    {statusActions.length === 0 && <span className="text-xs text-gray-400 opacity-50 cursor-not-allowed">—</span>}
                   </div>
                 </td>
               </tr>
@@ -239,8 +239,10 @@ export default function BookingTable({
       </table>
 
       {bookings.length === 0 && (
-        <div className="px-4 py-8 text-center text-gray-500">
-          <p>No bookings found</p>
+        <div className="px-4 py-12 text-center">
+          <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+          <p className="text-gray-500 font-medium">No bookings found</p>
+          <p className="text-sm text-gray-400 mt-1">Create a new booking or adjust your filters</p>
         </div>
       )}
     </Card>

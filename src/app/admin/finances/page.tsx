@@ -170,8 +170,11 @@ function StatCard({
 
   return (
     <div
-      className={`bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow ${onClick ? "cursor-pointer hover:border-purple-200" : ""}`}
+      className={`bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow ${onClick ? "cursor-pointer hover:border-purple-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500" : ""}`}
       onClick={onClick}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+      role={onClick ? "button" : undefined}
     >
       <div className="flex items-start justify-between mb-3">
         <div
@@ -1100,7 +1103,13 @@ export default function AdminFinancesPage() {
                 <input
                   type="date"
                   value={dateRange.from}
-                  onChange={(e) => setDateRange((p) => ({ ...p, from: e.target.value }))}
+                  onChange={(e) => {
+                    const newFrom = e.target.value;
+                    setDateRange((p) => {
+                      const newTo = newFrom > p.to ? newFrom : p.to;
+                      return { from: newFrom, to: newTo };
+                    });
+                  }}
                   aria-label="Start date"
                   className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1"
                 />
@@ -1108,7 +1117,13 @@ export default function AdminFinancesPage() {
                 <input
                   type="date"
                   value={dateRange.to}
-                  onChange={(e) => setDateRange((p) => ({ ...p, to: e.target.value }))}
+                  onChange={(e) => {
+                    const newTo = e.target.value;
+                    setDateRange((p) => {
+                      const newFrom = newTo < p.from ? newTo : p.from;
+                      return { from: newFrom, to: newTo };
+                    });
+                  }}
                   aria-label="End date"
                   className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1"
                 />

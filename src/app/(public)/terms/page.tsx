@@ -291,8 +291,9 @@ export default function TermsPage() {
 
             <Card className="border-purple-200 bg-white">
               <CardContent className="p-6">
-                <div className="space-y-3">
-                  <div className="flex justify-between pb-3 border-b border-purple-100">
+                <div className="overflow-x-auto">
+                  <div className="space-y-3">
+                    <div className="flex justify-between pb-3 border-b border-purple-100">
                     <span className="font-semibold text-gray-900">Time Period</span>
                     <span className="font-semibold text-gray-900">Charge</span>
                   </div>
@@ -307,6 +308,7 @@ export default function TermsPage() {
                   <div className="flex justify-between py-2">
                     <span className="text-gray-600">Over 2 hours late</span>
                     <span className="text-gray-600">Full additional day rental charge</span>
+                  </div>
                   </div>
                 </div>
               </CardContent>

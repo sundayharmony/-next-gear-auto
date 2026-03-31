@@ -187,7 +187,7 @@ export default async function HomePage() {
                       </div>
                       <div className="mt-3 flex items-center justify-between">
                         <div>
-                          <span className="text-lg font-bold text-purple-600">${vehicle.daily_rate}</span>
+                          <span className="text-lg font-bold text-purple-600">${vehicle.daily_rate.toFixed(2)}</span>
                           <span className="text-sm text-gray-400">/day</span>
                         </div>
                         <Button size="sm" variant="outline" aria-label={`View details for ${vehicle.year} ${vehicle.make} ${vehicle.model}`}>Details</Button>
@@ -200,7 +200,8 @@ export default async function HomePage() {
           ) : (
             <div className="col-span-full py-12 text-center">
               <Car className="mx-auto h-12 w-12 text-gray-300 mb-3" />
-              <p className="text-gray-500">No vehicles available</p>
+              <p className="text-gray-600 font-medium">No vehicles available at the moment</p>
+              <p className="text-sm text-gray-500 mt-1">Check back soon or visit our full fleet listing</p>
             </div>
           )}
         </div>

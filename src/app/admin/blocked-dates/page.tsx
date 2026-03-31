@@ -337,7 +337,7 @@ export default function BlockedDatesPage() {
                       {parseResult.confidence} confidence
                     </Badge>
                     {parseResult.rawMatches.length > 0 && (
-                      <span className="text-[10px] text-gray-400">
+                      <span className="text-xs text-gray-400">
                         Found: {parseResult.rawMatches.join(" · ")}
                       </span>
                     )}

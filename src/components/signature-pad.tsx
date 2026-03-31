@@ -166,6 +166,9 @@ export function SignaturePad({
 
   return (
     <div className="flex flex-col gap-1.5">
+      <div className="sr-only" role="status" aria-live="polite">
+        {label}. {isInitials ? "Draw initials" : "Draw signature"}. Use mouse or touch.
+      </div>
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-gray-600">{label}</span>
         {hasContent && (

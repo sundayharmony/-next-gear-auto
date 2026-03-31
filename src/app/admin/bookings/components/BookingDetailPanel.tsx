@@ -1367,6 +1367,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       <Input
                         type="number"
                         step="0.01"
+                        min="0"
                         placeholder="Amount"
                         value={paymentForm.amount}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>

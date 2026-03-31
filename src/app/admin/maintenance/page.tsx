@@ -63,7 +63,7 @@ export default function AdminMaintenancePage() {
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
-  const { error, setError } = useAutoToast();
+  const { error, setError, success, setSuccess } = useAutoToast();
   const [statusFilter, setStatusFilter] = useState<"all" | "pending" | "in-progress" | "completed">("all");
   const [showAddForm, setShowAddForm] = useState(false);
   const [newRecord, setNewRecord] = useState<FormState>(emptyRecord);
@@ -251,6 +251,7 @@ export default function AdminMaintenancePage() {
         );
         setSelectedRecord(updatedRecord);
         setDetailEditMode(false);
+        setSuccess("Maintenance record updated successfully");
       } else {
         setError(data.message || "Failed to save changes");
       }
@@ -323,6 +324,8 @@ export default function AdminMaintenancePage() {
 
         if (failedUploads > 0) {
           setError(`Record saved, but ${failedUploads} photo${failedUploads > 1 ? "s" : ""} failed to upload`);
+        } else {
+          setSuccess("Maintenance record created successfully");
         }
       } else {
         setError(data.message || "Failed to add record");
@@ -349,6 +352,7 @@ export default function AdminMaintenancePage() {
         if (selectedRecord?.id === id) {
           closeDetail();
         }
+        setSuccess("Maintenance record deleted successfully");
       } else {
         setError(data.message || "Failed to delete record");
       }

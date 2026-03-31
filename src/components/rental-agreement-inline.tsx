@@ -197,7 +197,7 @@ function Page2() {
       {/* Section 6 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">6. LIABILITY & DAMAGE RESPONSIBILITY</h3>
-        <p className="text-gray-700">
+        <p className="text-gray-700 max-w-prose">
           Renter is fully and completely responsible for ALL vehicle damage regardless of cause or fault.
           This includes but is not limited to: collision damage, theft, vandalism, weather damage,
           tire/rim/undercarriage damage, windshield damage, lost or damaged keys ($350 replacement cost),
@@ -209,7 +209,7 @@ function Page2() {
       {/* Section 7 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">7. INDEMNIFICATION & HOLD HARMLESS</h3>
-        <p className="text-gray-700">
+        <p className="text-gray-700 max-w-prose">
           Renter agrees to indemnify, defend, and hold harmless Next Gear Auto LLC, its owners, employees,
           and agents from and against any and all claims, demands, losses, liabilities, damages, costs, and
           expenses (including reasonable attorney fees) arising out of or related to Renter&apos;s use,
@@ -222,8 +222,8 @@ function Page2() {
       {/* Section 8 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">8. PROHIBITED USES</h3>
-        <p className="mb-2 text-gray-700">The following are strictly prohibited ($1,500 penalty + full liability):</p>
-        <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2">
+        <p className="mb-2 text-gray-700 max-w-prose">The following are strictly prohibited ($1,500 penalty + full liability):</p>
+        <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2 max-w-prose">
           <li>Operating by unauthorized drivers</li>
           <li>Commercial use (Uber, Lyft, DoorDash, etc.)</li>
           <li>Off-road driving, racing, drifting, or aggressive driving</li>
@@ -236,13 +236,13 @@ function Page2() {
       {/* Section 9 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">9. GPS / VEHICLE TRACKING DISCLOSURE</h3>
-        <p className="text-gray-700 mb-2">
+        <p className="text-gray-700 mb-2 max-w-prose">
           Renter acknowledges and agrees that the vehicle may be equipped with a GPS tracking device or
           similar telematics system. This technology may record and transmit vehicle location, speed,
           mileage, and other operational data for vehicle recovery, mileage verification, safety
           monitoring, and fleet management.
         </p>
-        <p className="font-semibold text-gray-900">I acknowledge and consent to GPS/vehicle tracking during the rental period.</p>
+        <p className="font-semibold text-gray-900 max-w-prose">I acknowledge and consent to GPS/vehicle tracking during the rental period.</p>
       </div>
 
       <div className="border-t border-dashed border-gray-300 my-4" />
@@ -258,7 +258,7 @@ function Page3({ customerName }: { customerName?: string }) {
       {/* Section 10 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">10. PETS & CLEANLINESS</h3>
-        <p className="text-gray-700">
+        <p className="text-gray-700 max-w-prose">
           Pets are allowed ONLY if the vehicle is returned in completely clean condition with no pet hair,
           odors, or damage. Pet-related cleaning charges: $150-$350 depending on condition.
         </p>
@@ -267,7 +267,7 @@ function Page3({ customerName }: { customerName?: string }) {
       {/* Section 11 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">11. VEHICLE RETURN CONDITIONS</h3>
-        <p className="text-gray-700">
+        <p className="text-gray-700 max-w-prose">
           Vehicle must be returned: (1) Clean inside and out (2) Full fuel tank (3) Without any new damage
           (4) With all original accessories and documentation (5) At or before scheduled return time
         </p>
@@ -276,7 +276,7 @@ function Page3({ customerName }: { customerName?: string }) {
       {/* Section 12 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">12. ACCIDENT & THEFT PROCEDURES</h3>
-        <p className="text-gray-700">
+        <p className="text-gray-700 max-w-prose">
           In the event of any accident or theft, Renter MUST immediately: (1) Call 911 (2) Contact Next
           Gear Auto at (551) 429-3472 (3) File a police report the same day. Failure to follow these steps
           immediately may void all insurance coverage and result in renter liability for full replacement
@@ -287,7 +287,7 @@ function Page3({ customerName }: { customerName?: string }) {
       {/* Section 13 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">13. FRAUD & MISREPRESENTATION</h3>
-        <p className="text-gray-700">
+        <p className="text-gray-700 max-w-prose">
           Providing false identification, fraudulent insurance information, or invalid payment methods will
           result in immediate contract termination, full liability for vehicle value, and potential criminal
           prosecution.
@@ -297,7 +297,7 @@ function Page3({ customerName }: { customerName?: string }) {
       {/* Section 14 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">14. GOVERNING LAW</h3>
-        <p className="text-gray-700">
+        <p className="text-gray-700 max-w-prose">
           This Agreement is governed by the laws of the State of New Jersey, Hudson County. Venue is Hudson
           County Superior Court. Both parties waive jury trial and class action rights. The prevailing party
           is entitled to reasonable attorney fees.

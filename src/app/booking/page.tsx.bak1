@@ -790,7 +790,7 @@ function BookingPageInner() {
                 <button
                   onClick={() => step.num < booking.currentStep && booking.setStep(step.num as 1|2|3|4|5|6|7)}
                   className={cn(
-                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-all duration-300",
+                    "flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
                     booking.currentStep === step.num
                       ? "bg-purple-600 text-white"
                       : step.num < booking.currentStep
@@ -1883,7 +1883,7 @@ function BookingPageInner() {
                   <Button
                     className="w-full"
                     size="lg"
-                    onClick={() => { if (!booking.isSubmitting) booking.submitBooking(); }}
+                    onClick={() => booking.submitBooking()}
                     disabled={booking.isSubmitting}
                   >
                     {booking.isSubmitting ? (

@@ -406,7 +406,7 @@ export default function CreateBookingForm({
         </div>
 
         {/* CUSTOMER FIELDS */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Customer Name <span className="text-red-500">*</span></label>
             <Input
@@ -474,7 +474,7 @@ export default function CreateBookingForm({
         )}
 
         {/* DATE/TIME FIELDS */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Pickup Date <span className="text-red-500">*</span></label>
             <Input
@@ -501,7 +501,7 @@ export default function CreateBookingForm({
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Return Date <span className="text-red-500">*</span></label>
             <Input
@@ -579,7 +579,7 @@ export default function CreateBookingForm({
         {/* EXTRAS / INSURANCE */}
         <div>
           <label className="block text-sm font-medium mb-3">Extras & Insurance</label>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {AVAILABLE_EXTRAS.map((extra) => (
               <button
                 key={extra.id}
@@ -639,7 +639,7 @@ export default function CreateBookingForm({
         </div>
 
         {/* PRICE + STATUS */}
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Total Price ($)</label>
             <div className="relative">

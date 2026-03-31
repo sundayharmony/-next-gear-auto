@@ -70,17 +70,17 @@ export function ContactForm() {
       <div>
         <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Full Name *</label>
         <Input {...form.register("name")} id="name" placeholder="John Doe" aria-label="Full Name" aria-required="true" />
-        {form.errors.name && <p className="mt-1 text-xs text-red-500" role="alert">{form.errors.name}</p>}
+        {form.errors.name && <p className="mt-1 text-xs text-red-600" role="alert">{form.errors.name}</p>}
       </div>
       <div>
         <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
         <Input {...form.register("email")} id="email" type="email" placeholder="john@example.com" aria-label="Email" aria-required="true" />
-        {form.errors.email && <p className="mt-1 text-xs text-red-500" role="alert">{form.errors.email}</p>}
+        {form.errors.email && <p className="mt-1 text-xs text-red-600" role="alert">{form.errors.email}</p>}
       </div>
       <div>
         <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
         <Input {...form.register("phone")} id="phone" type="tel" placeholder="(555) 123-4567" aria-label="Phone" />
-        {form.errors.phone && <p className="mt-1 text-xs text-red-500" role="alert">{form.errors.phone}</p>}
+        {form.errors.phone && <p className="mt-1 text-xs text-red-600" role="alert">{form.errors.phone}</p>}
       </div>
       <div>
         <label htmlFor="message" className="block text-sm font-medium text-gray-700 mb-1">Message *</label>
@@ -96,14 +96,14 @@ export function ContactForm() {
           aria-label="Message"
           aria-required="true"
         />
-        {form.errors.message && <p className="mt-1 text-xs text-red-500" role="alert">{form.errors.message}</p>}
+        {form.errors.message && <p className="mt-1 text-xs text-red-600" role="alert">{form.errors.message}</p>}
       </div>
       <Button type="submit" className="w-full" disabled={form.isSubmitting || isSubmitting}>
         {form.isSubmitting || isSubmitting ? "Sending..." : "Send Message"}
         {!form.isSubmitting && !isSubmitting && <Send className="h-4 w-4 ml-1" />}
       </Button>
       {submitError && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-600 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <AlertCircle className="h-4 w-4 flex-shrink-0" />
             <span>{submitError}</span>

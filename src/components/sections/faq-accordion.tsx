@@ -56,7 +56,7 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
             }}
             onClick={() => setOpenIndex(openIndex === index ? null : index)}
             onKeyDown={(e) => handleKeyDown(e, index)}
-            className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-gray-50"
+            className="flex w-full items-center justify-between px-5 py-4 text-left transition-colors hover:bg-gray-50 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:outline-none"
             aria-expanded={openIndex === index}
             aria-controls={`faq-answer-${index}`}
           >
@@ -72,7 +72,7 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
           <div
             id={`faq-answer-${index}`}
             className={cn(
-              "grid transition-all duration-200 ease-in-out",
+              "grid transition-all duration-300 ease-in-out overflow-hidden",
               openIndex === index ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
             )}
           >
