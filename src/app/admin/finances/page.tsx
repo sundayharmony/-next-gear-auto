@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { calculateFinancing } from "@/lib/utils/financing";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -240,10 +240,28 @@ export default function AdminFinancesPage() {
   const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const { error, setError, success, setSuccess } = useAutoToast();
-  const [dateRange, setDateRange] = useState({
+  const defaultDateRange = useMemo(() => ({
     from: new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     to: new Date().toISOString().split("T")[0],
-  });
+  }), []);
+  const [dateRange, setDateRange] = useState(defaultDateRange);
+  // Draft state for date inputs — only commits to dateRange after debounce
+  const [draftDateRange, setDraftDateRange] = useState(defaultDateRange);
+  const dateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const commitDateRange = useCallback((draft: { from: string; to: string }) => {
+    if (dateDebounceRef.current) clearTimeout(dateDebounceRef.current);
+    dateDebounceRef.current = setTimeout(() => {
+      setDateRange(draft);
+    }, 600);
+  }, []);
+
+  // Cleanup debounce timer on unmount
+  useEffect(() => {
+    return () => {
+      if (dateDebounceRef.current) clearTimeout(dateDebounceRef.current);
+    };
+  }, []);
   const [addingExpense, setAddingExpense] = useState(false);
   const [newExpense, setNewExpense] = useState({
     vehicleId: "",
@@ -1103,13 +1121,14 @@ export default function AdminFinancesPage() {
                 <Calendar className="h-4 w-4 text-gray-300" />
                 <input
                   type="date"
-                  value={dateRange.from}
+                  value={draftDateRange.from}
                   onChange={(e) => {
                     const newFrom = e.target.value;
-                    setDateRange((p) => {
-                      // If from date is after to date, swap them automatically
+                    setDraftDateRange((p) => {
                       const newTo = newFrom > p.to ? newFrom : p.to;
-                      return { from: newFrom, to: newTo };
+                      const draft = { from: newFrom, to: newTo };
+                      commitDateRange(draft);
+                      return draft;
                     });
                   }}
                   aria-label="Start date"
@@ -1118,13 +1137,14 @@ export default function AdminFinancesPage() {
                 <span className="text-gray-400">—</span>
                 <input
                   type="date"
-                  value={dateRange.to}
+                  value={draftDateRange.to}
                   onChange={(e) => {
                     const newTo = e.target.value;
-                    setDateRange((p) => {
-                      // If to date is before from date, swap them automatically
+                    setDraftDateRange((p) => {
                       const newFrom = newTo < p.from ? newTo : p.from;
-                      return { from: newFrom, to: newTo };
+                      const draft = { from: newFrom, to: newTo };
+                      commitDateRange(draft);
+                      return draft;
                     });
                   }}
                   aria-label="End date"
@@ -1132,12 +1152,11 @@ export default function AdminFinancesPage() {
                 />
               </div>
               <button
-                onClick={() =>
-                  setDateRange({
-                    from: new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
-                    to: new Date().toISOString().split("T")[0],
-                  })
-                }
+                onClick={() => {
+                  if (dateDebounceRef.current) clearTimeout(dateDebounceRef.current);
+                  setDraftDateRange(defaultDateRange);
+                  setDateRange(defaultDateRange);
+                }}
                 className="text-xs text-purple-300 hover:text-white transition-colors"
               >
                 Reset YTD
