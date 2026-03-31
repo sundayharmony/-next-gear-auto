@@ -84,7 +84,7 @@ export default async function AboutPage() {
       {/* Stats */}
       <div className="relative -mt-8">
         <div className="mx-auto max-w-4xl px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-4">
             {stats.map((stat) => (
               <Card key={stat.label} className="text-center p-5 shadow-lg">
                 <stat.icon className="mx-auto h-6 w-6 text-purple-600 mb-2" />

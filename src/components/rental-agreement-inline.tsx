@@ -89,7 +89,7 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-3">
           VEHICLE INFORMATION
         </h3>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-6 gap-y-2">
           <div><span className="font-semibold">Make & Model:</span>{" "}<Field value={vehicle && vehicle.make && vehicle.model ? `${vehicle.make} ${vehicle.model}`.trim() : undefined} width="180px" /></div>
           <div><span className="font-semibold">Year:</span>{" "}<Field value={vehicle?.year ? String(vehicle.year) : undefined} width="80px" /></div>
           <div><span className="font-semibold">License Plate:</span>{" "}<Field value={vehicle?.licensePlate || undefined} width="120px" /></div>
@@ -127,7 +127,7 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
       {/* Section 2 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">2. RENTAL PERIOD & LATE FEES</h3>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-6 gap-y-2 mb-2">
           <div>
             <span className="font-semibold">Rental Pickup:</span>{" "}<Field value={formatDate(pickupDate)} width="120px" />
             <span className="ml-2 font-semibold">at:</span>{" "}<Field value={formatTime(pickupTime)} width="120px" />
@@ -153,7 +153,7 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
       {/* Section 4 */}
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">4. RENTAL RATES & PAYMENT TERMS</h3>
-        <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-6 gap-y-2 mb-2">
           <div><span className="font-semibold">Total Rental Price: $</span>{" "}<Field value={totalPrice && Number.isFinite(totalPrice) ? totalPrice.toFixed(2) : "0.00"} width="100px" /></div>
           <div><span className="font-semibold">Total Days:</span>{" "}<Field value={totalDays} width="60px" /></div>
           <div><span className="font-semibold">Security Deposit:</span> ${Number.isFinite(depositAmount) ? depositAmount.toFixed(2) : "0.00"}</div>
@@ -185,7 +185,7 @@ function Page2() {
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">5. INSURANCE REQUIREMENTS</h3>
         <p className="mb-2 text-gray-700">Renter MUST provide proof of active auto insurance meeting New Jersey minimum requirements.</p>
-        <div className="grid grid-cols-3 gap-x-4 gap-y-2 mb-2">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-2 mb-2">
           <div><span className="font-semibold">Insurance Provider:</span> <Field width="120px" /></div>
           <div><span className="font-semibold">Policy #:</span> <Field width="120px" /></div>
           <div><span className="font-semibold">Phone:</span> <Field width="120px" /></div>
@@ -312,15 +312,15 @@ function Page3({ customerName }: { customerName?: string }) {
           GPS tracking and indemnification.
         </p>
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-x-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-6">
             <div><span className="font-semibold">Renter Name (Print):</span>{" "}<Field value={customerName} width="200px" /></div>
             <div><span className="font-semibold">Date:</span> <Field width="120px" /></div>
           </div>
-          <div className="grid grid-cols-2 gap-x-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-6">
             <div><span className="font-semibold">Renter Signature:</span>{" "}<Field width="250px" /></div>
             <div><span className="font-semibold">Time:</span> <Field width="120px" /></div>
           </div>
-          <div className="grid grid-cols-2 gap-x-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-6">
             <div><span className="font-semibold">NGA Representative:</span>{" "}<Field value="NextGear Auto" width="200px" /></div>
             <div><span className="font-semibold">Date:</span> <Field width="120px" /></div>
           </div>

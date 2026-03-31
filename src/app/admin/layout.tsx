@@ -129,7 +129,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         onClick={() => setSidebarOpen(!sidebarOpen)}
         aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
         aria-expanded={sidebarOpen}
-        className="fixed bottom-4 right-4 z-[60] lg:hidden rounded-full bg-purple-600 p-3 text-white shadow-lg"
+        className="fixed bottom-6 right-6 z-[60] lg:hidden rounded-full bg-purple-600 p-3 text-white shadow-lg"
       >
         {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
       </button>
@@ -181,7 +181,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 <>
                   {/* Click-outside overlay */}
                   <div className="fixed inset-0 z-[45]" onClick={() => setShowNotifications(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                  <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
                     <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-gray-900">
                         Pending Bookings

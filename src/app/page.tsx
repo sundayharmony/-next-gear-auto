@@ -117,7 +117,7 @@ export default async function HomePage() {
           </div>
 
           {/* Quick stats */}
-          <div className="mt-16 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="mt-16 grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-4">
             {[
               { label: "Vehicles", value: "6+", icon: Car },
               { label: "Happy Customers", value: "100+", icon: Users },
@@ -171,7 +171,7 @@ export default async function HomePage() {
                     </div>
                     <CardContent className="p-4">
                       <h3 className="font-semibold text-gray-900">{vehicle.year} {vehicle.make} {vehicle.model}</h3>
-                      <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
+                      <div className="mt-2 grid grid-cols-2 gap-x-1 sm:gap-x-3 gap-y-1 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
                           <Users className="h-3 w-3 text-purple-400" /> {specs?.passengers ?? "—"} seats
                         </span>
@@ -252,7 +252,7 @@ export default async function HomePage() {
       {/* Trust Badges */}
       <section className="border-y border-gray-100 bg-gray-50 py-8">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-wrap items-center justify-center gap-8 text-sm text-gray-500">
+          <div className="flex flex-wrap items-center justify-center gap-3 sm:gap-4 lg:gap-8 text-sm text-gray-500">
             <div className="flex items-center gap-2">
               <Lock className="h-5 w-5 text-green-600" />
               <span>Secure Payments via Stripe</span>

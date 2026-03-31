@@ -133,7 +133,7 @@ export default function AdminDashboardPage() {
         ) : data ? (
           <>
             {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6 mb-8">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-6 mb-8">
               {[
                 { label: "Total Bookings", value: data.totalBookings, icon: Calendar, color: "text-purple-600", bg: "bg-purple-50" },
                 { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600", bg: "bg-blue-50" },

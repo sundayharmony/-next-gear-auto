@@ -107,7 +107,7 @@ export function Header() {
               </Link>
             )}
             <button
-              className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 md:hidden"
+              className="rounded-lg p-3 text-gray-600 hover:bg-gray-100 md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle menu"
               aria-expanded={isMobileMenuOpen}
@@ -130,13 +130,13 @@ export function Header() {
       {/* Mobile menu */}
       {isMobileMenuOpen && (
         <div className="relative z-40 border-t border-gray-200 bg-white md:hidden mobile-menu-enter">
-          <div className="space-y-1 px-4 py-3">
+          <div className="space-y-2 px-4 py-3">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "block rounded-lg px-3 py-2.5 text-sm font-medium transition-colors focus-visible:text-purple-600 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none",
+                  "block rounded-lg px-3 py-3 text-sm font-medium transition-colors focus-visible:text-purple-600 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none",
                   pathname === item.href
                     ? "bg-purple-50 text-purple-700"
                     : "text-gray-600 hover:bg-gray-50"

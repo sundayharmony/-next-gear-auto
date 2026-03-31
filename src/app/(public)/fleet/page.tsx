@@ -191,7 +191,7 @@ function FleetContent() {
               <div key={vehicle.id} className="relative">
                 {/* Compare checkbox */}
                 <label
-                  className="absolute top-3 right-14 z-10 flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-sm px-2.5 py-1 text-xs font-medium cursor-pointer shadow-sm border border-gray-200 hover:border-purple-300 transition-all duration-200"
+                  className="absolute top-3 right-2 sm:right-14 z-10 flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-sm px-2.5 py-1 text-xs font-medium cursor-pointer shadow-sm border border-gray-200 hover:border-purple-300 transition-all duration-200"
                   onClick={(e) => e.stopPropagation()}
                 >
                   <input
