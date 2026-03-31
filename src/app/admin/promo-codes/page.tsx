@@ -269,7 +269,7 @@ export default function AdminPromoCodesPage() {
                           <td className="px-4 py-3 text-xs">
                             {c.expiresAt ? (
                               <span className={new Date(c.expiresAt) < new Date() ? "text-red-600 line-through font-medium" : "text-gray-600"}>
-                                {new Date(c.expiresAt).toLocaleDateString()}
+                                {new Date(c.expiresAt + "T12:00:00").toLocaleDateString()}
                               </span>
                             ) : (
                               <span className="text-gray-500">No expiry</span>

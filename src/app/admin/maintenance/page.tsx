@@ -892,10 +892,10 @@ export default function AdminMaintenancePage() {
                         {record.cost !== null ? `$${record.cost.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : <span className="text-gray-400 font-normal">—</span>}
                       </td>
                       <td className="px-6 py-3 text-gray-600 text-xs">
-                        {record.startedDate ? new Date(record.startedDate).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : <span className="text-gray-400">—</span>}
+                        {record.startedDate ? new Date(record.startedDate + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : <span className="text-gray-400">—</span>}
                       </td>
                       <td className="px-6 py-3 text-gray-600 text-xs">
-                        {record.completedDate ? new Date(record.completedDate).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : <span className="text-gray-400">—</span>}
+                        {record.completedDate ? new Date(record.completedDate + "T12:00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) : <span className="text-gray-400">—</span>}
                       </td>
                       <td className="px-6 py-3">
                         {record.photoUrls.length > 0 ? (
@@ -1155,7 +1155,7 @@ export default function AdminMaintenancePage() {
                       <h3 className="font-semibold text-sm text-gray-500 uppercase mb-1">Start Date</h3>
                       <p className="text-gray-900">
                         {selectedRecord.startedDate
-                          ? new Date(selectedRecord.startedDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+                          ? new Date(selectedRecord.startedDate + "T12:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
                           : <span className="text-gray-400">Not set</span>}
                       </p>
                     </div>
@@ -1163,7 +1163,7 @@ export default function AdminMaintenancePage() {
                       <h3 className="font-semibold text-sm text-gray-500 uppercase mb-1">Completed</h3>
                       <p className="text-gray-900">
                         {selectedRecord.completedDate
-                          ? new Date(selectedRecord.completedDate).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+                          ? new Date(selectedRecord.completedDate + "T12:00:00").toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
                           : <span className="text-gray-400">Not set</span>}
                       </p>
                     </div>
