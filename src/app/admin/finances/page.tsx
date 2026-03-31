@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { calculateFinancing } from "@/lib/utils/financing";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -244,24 +244,11 @@ export default function AdminFinancesPage() {
     from: new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
     to: new Date().toISOString().split("T")[0],
   }), []);
+  // Applied date range — this is what drives data fetching
   const [dateRange, setDateRange] = useState(defaultDateRange);
-  // Draft state for date inputs — only commits to dateRange after debounce
+  // Draft state for date inputs — user edits these freely, then clicks Apply
   const [draftDateRange, setDraftDateRange] = useState(defaultDateRange);
-  const dateDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const commitDateRange = useCallback((draft: { from: string; to: string }) => {
-    if (dateDebounceRef.current) clearTimeout(dateDebounceRef.current);
-    dateDebounceRef.current = setTimeout(() => {
-      setDateRange(draft);
-    }, 600);
-  }, []);
-
-  // Cleanup debounce timer on unmount
-  useEffect(() => {
-    return () => {
-      if (dateDebounceRef.current) clearTimeout(dateDebounceRef.current);
-    };
-  }, []);
+  const draftDirty = draftDateRange.from !== dateRange.from || draftDateRange.to !== dateRange.to;
   const [addingExpense, setAddingExpense] = useState(false);
   const [newExpense, setNewExpense] = useState({
     vehicleId: "",
@@ -1126,9 +1113,7 @@ export default function AdminFinancesPage() {
                     const newFrom = e.target.value;
                     setDraftDateRange((p) => {
                       const newTo = newFrom > p.to ? newFrom : p.to;
-                      const draft = { from: newFrom, to: newTo };
-                      commitDateRange(draft);
-                      return draft;
+                      return { from: newFrom, to: newTo };
                     });
                   }}
                   aria-label="Start date"
@@ -1142,18 +1127,23 @@ export default function AdminFinancesPage() {
                     const newTo = e.target.value;
                     setDraftDateRange((p) => {
                       const newFrom = newTo < p.from ? newTo : p.from;
-                      const draft = { from: newFrom, to: newTo };
-                      commitDateRange(draft);
-                      return draft;
+                      return { from: newFrom, to: newTo };
                     });
                   }}
                   aria-label="End date"
                   className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1"
                 />
+                {draftDirty && (
+                  <button
+                    onClick={() => setDateRange({ ...draftDateRange })}
+                    className="ml-1 px-2.5 py-0.5 text-xs font-medium bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors"
+                  >
+                    Apply
+                  </button>
+                )}
               </div>
               <button
                 onClick={() => {
-                  if (dateDebounceRef.current) clearTimeout(dateDebounceRef.current);
                   setDraftDateRange(defaultDateRange);
                   setDateRange(defaultDateRange);
                 }}
