@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
         .from("maintenance_records")
         .select("photo_urls")
         .eq("id", maintenanceId)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
         logger.error("Error fetching maintenance record:", fetchError);

@@ -47,6 +47,7 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { calculateRentalDays, calculatePricing } from "@/lib/utils/price-calculator";
+import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { Location } from "@/lib/types";
 
@@ -604,7 +605,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   // Get vehicle name
   const vehicleObj = vehicles.find((v) => v.id === booking.vehicle_id);
   const vehicleLabel = vehicleObj
-    ? `${vehicleObj.year} ${vehicleObj.make} ${vehicleObj.model}`
+    ? getVehicleDisplayName(vehicleObj)
     : booking.vehicleName;
 
   // Get payment method label

@@ -36,9 +36,16 @@ export interface Vehicle {
   createdAt?: string;
 }
 
-/** Helper to get display name like "2024 Toyota Camry" */
-export function getVehicleDisplayName(v: { year: number; make: string; model: string }): string {
-  return `${v.year} ${v.make} ${v.model}`;
+/** Helper to get display name like "2024 Toyota Camry"
+ * Handles missing fields gracefully to avoid undefined in output.
+ */
+export function getVehicleDisplayName(v: { year?: number | string; make?: string; model?: string } | null | undefined): string {
+  if (!v) return "Unknown Vehicle";
+  const year = v.year ? String(v.year).trim() : "";
+  const make = v.make ? String(v.make).trim() : "";
+  const model = v.model ? String(v.model).trim() : "";
+  const parts = [year, make, model].filter(Boolean);
+  return parts.length > 0 ? parts.join(" ") : "Unknown Vehicle";
 }
 
 // Booking Types

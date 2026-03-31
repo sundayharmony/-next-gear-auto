@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendPickupReminder, sendReturnReminder } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
+import { getVehicleDisplayName } from "@/lib/types";
 
 // This endpoint runs daily via Vercel Cron
 // Sends pickup reminders (24h before) and return reminders (day of return)
@@ -41,17 +42,21 @@ export async function GET(request: Request) {
       for (const booking of pickupBookings) {
         if (!booking.customer_email) continue; // Skip if no email
         try {
-          const { data: vehicle } = await supabase
+          const { data: vehicle, error: vehicleError } = await supabase
             .from("vehicles")
             .select("year, make, model")
             .eq("id", booking.vehicle_id)
-            .single();
+            .maybeSingle();
+
+          if (vehicleError) {
+            logger.error(`Failed to fetch vehicle for booking ${booking.id}:`, vehicleError);
+          }
 
           await sendPickupReminder({
             bookingId: booking.id,
             customerName: booking.customer_name || "Customer",
             customerEmail: booking.customer_email,
-            vehicleName: vehicle ? `${vehicle.year ?? ""} ${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim() || "Vehicle" : "Vehicle",
+            vehicleName: vehicle ? getVehicleDisplayName(vehicle) : "Vehicle",
             pickupDate: booking.pickup_date,
             returnDate: booking.return_date,
             totalPrice: booking.total_price ?? 0,
@@ -75,17 +80,21 @@ export async function GET(request: Request) {
       for (const booking of returnBookings) {
         if (!booking.customer_email) continue; // Skip if no email
         try {
-          const { data: vehicle } = await supabase
+          const { data: vehicle, error: vehicleError } = await supabase
             .from("vehicles")
             .select("year, make, model")
             .eq("id", booking.vehicle_id)
-            .single();
+            .maybeSingle();
+
+          if (vehicleError) {
+            logger.error(`Failed to fetch vehicle for booking ${booking.id}:`, vehicleError);
+          }
 
           await sendReturnReminder({
             bookingId: booking.id,
             customerName: booking.customer_name || "Customer",
             customerEmail: booking.customer_email,
-            vehicleName: vehicle ? `${vehicle.year ?? ""} ${vehicle.make ?? ""} ${vehicle.model ?? ""}`.trim() || "Vehicle" : "Vehicle",
+            vehicleName: vehicle ? getVehicleDisplayName(vehicle) : "Vehicle",
             pickupDate: booking.pickup_date,
             returnDate: booking.return_date,
             totalPrice: booking.total_price ?? 0,

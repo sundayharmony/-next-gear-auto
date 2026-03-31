@@ -6,6 +6,7 @@ import { fmtTime } from "@/lib/email/templates";
 import path from "path";
 import fs from "fs/promises";
 import { logger } from "@/lib/utils/logger";
+import { getVehicleDisplayName } from "@/lib/types";
 
 interface SignatureData {
   t35?: string; // Renter Initials (Page 1)
@@ -103,7 +104,7 @@ export async function POST(req: NextRequest) {
       .from("bookings")
       .select("*")
       .eq("id", bookingId)
-      .single();
+      .maybeSingle();
 
     if (bookingErr || !booking) {
       return NextResponse.json(
@@ -166,7 +167,7 @@ export async function POST(req: NextRequest) {
         .from("vehicles")
         .select("*")
         .eq("id", booking.vehicle_id)
-        .single();
+        .maybeSingle();
       vehicle = v;
     }
 
@@ -366,7 +367,7 @@ export async function POST(req: NextRequest) {
       .eq("id", bookingId)
       .is("agreement_signed_at", null)
       .select("id")
-      .single();
+      .maybeSingle();
 
     if (updateError || !updateResult) {
       return NextResponse.json(
@@ -378,7 +379,7 @@ export async function POST(req: NextRequest) {
     // Email the signed agreement to the customer
     if (booking.customer_email) {
       let vehicleName = "Vehicle";
-      if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+      if (vehicle) vehicleName = getVehicleDisplayName(vehicle);
 
       sendAgreementEmail({
         bookingId: booking.id,

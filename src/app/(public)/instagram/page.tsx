@@ -1,6 +1,12 @@
 "use client";
 
+import type { Metadata } from "next";
 import React, { useEffect, useState, useCallback, useRef } from "react";
+
+export const metadata: Metadata = {
+  title: "Instagram | NextGearAuto",
+  description: "Check out our latest Instagram posts and behind-the-scenes content. Follow us for rental tips, vehicle showcases, and customer stories.",
+};
 import Link from "next/link";
 import Image from "next/image";
 import {

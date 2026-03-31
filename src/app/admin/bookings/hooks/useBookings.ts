@@ -123,6 +123,12 @@ export function useBookings(): UseBookingsReturn {
   // Fetch bookings when filters change
   useEffect(() => {
     fetchBookings();
+    return () => {
+      // Cleanup: abort any pending fetch on unmount or dependency change
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
   }, [fetchBookings]);
 
   // Fetch vehicles and customers once on mount

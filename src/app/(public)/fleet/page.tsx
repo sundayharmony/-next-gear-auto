@@ -1,6 +1,12 @@
 "use client";
 
+import type { Metadata } from "next";
 import React, { useState, useMemo, useEffect, Suspense } from "react";
+
+export const metadata: Metadata = {
+  title: "Fleet | NextGearAuto",
+  description: "Browse our fleet of well-maintained vehicles including compact cars, sedans, SUVs, and trucks. Filter by category or price to find the perfect rental.",
+};
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Car, Users, Briefcase, Fuel, ArrowUpDown, Search, GitCompareArrows, X, Settings2 } from "lucide-react";
@@ -12,6 +18,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { useComparison } from "@/lib/hooks/use-comparison";
 import { useVehicles } from "@/lib/hooks/useVehicles";
 import { VEHICLE_CATEGORIES } from "@/lib/constants";
+import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import type { Vehicle } from "@/lib/types";
 
@@ -50,7 +57,7 @@ function FleetContent() {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (v) => {
-          const displayName = `${v.year} ${v.make} ${v.model}`.toLowerCase();
+          const displayName = getVehicleDisplayName(v).toLowerCase();
           return displayName.includes(query) ||
             v.make.toLowerCase().includes(query) ||
             v.model.toLowerCase().includes(query) ||
@@ -68,7 +75,7 @@ function FleetContent() {
         result = [...result].sort((a, b) => b.dailyRate - a.dailyRate);
         break;
       case "name":
-        result = [...result].sort((a, b) => `${a.year} ${a.make} ${a.model}`.localeCompare(`${b.year} ${b.make} ${b.model}`));
+        result = [...result].sort((a, b) => getVehicleDisplayName(a).localeCompare(getVehicleDisplayName(b)));
         break;
     }
 
@@ -179,7 +186,7 @@ function FleetContent() {
         {filteredVehicles.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-16 text-center">
             <Car className="h-16 w-16 text-gray-300 mb-4" />
-            <h3 className="text-lg font-semibold text-gray-700">No vehicles found</h3>
+            <h2 className="text-lg font-semibold text-gray-700">No vehicles found</h2>
             <p className="text-sm text-gray-500 mt-1">Try adjusting your filters or search query.</p>
             <Button variant="outline" className="mt-4" onClick={() => { setActiveCategory("all"); setSearchQuery(""); }}>
               Clear Filters
@@ -275,7 +282,7 @@ function FleetContent() {
                       <div className="mt-4 flex items-center justify-between border-t border-gray-100 pt-4">
                         <div>
                           <span className="text-2xl font-bold text-purple-600">${vehicle.dailyRate.toFixed(2)}</span>
-                          <span className="text-sm text-gray-400">/day</span>
+                          <span className="text-sm text-gray-500">/day</span>
                         </div>
                         <Button size="sm">View Details</Button>
                       </div>

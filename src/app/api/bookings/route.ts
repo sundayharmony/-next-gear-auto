@@ -8,6 +8,7 @@ import {
 } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
 import { getAuthFromRequest, type TokenPayload } from "@/lib/auth/jwt";
+import { getVehicleDisplayName } from "@/lib/types";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -61,7 +62,7 @@ export async function GET(request: NextRequest) {
         .from("bookings")
         .select("*, vehicles(year, make, model)")
         .eq("id", bookingId)
-        .single();
+        .maybeSingle();
 
       if (error || !booking) {
         return NextResponse.json(
@@ -102,7 +103,11 @@ export async function GET(request: NextRequest) {
         success: true,
         data: {
           ...safeData,
-          vehicle_name: v ? `${v.year} ${v.make} ${v.model}` : "Vehicle",
+          vehicle_name: v ? getVehicleDisplayName(v) : "Vehicle",
+        },
+      }, {
+        headers: {
+          "Cache-Control": "no-store",
         },
       });
     }
@@ -191,7 +196,7 @@ export async function GET(request: NextRequest) {
       const isOverdue = b.return_date < today && b.status === "active";
       return {
         ...rest,
-        vehicleName: v ? `${v.year} ${v.make} ${v.model}` : "Unknown",
+        vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
         customerName: b.customer_name || "Guest",
         is_overdue: isOverdue,
       };
@@ -206,10 +211,18 @@ export async function GET(request: NextRequest) {
         total: count || 0,
         page,
         totalPages,
+      }, {
+        headers: {
+          "Cache-Control": "no-store",
+        },
       });
     }
 
-    return NextResponse.json({ data: enriched, success: true });
+    return NextResponse.json({ data: enriched, success: true }, {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    });
   } catch {
     return NextResponse.json(
       { success: false, message: "Invalid request" },
@@ -289,7 +302,7 @@ export async function POST(request: Request) {
         .from("customers")
         .select("id")
         .eq("email", customerEmail)
-        .single();
+        .maybeSingle();
 
       if (existingCustomer) {
         customerId = existingCustomer.id;
@@ -318,7 +331,7 @@ export async function POST(request: Request) {
             { onConflict: "email", ignoreDuplicates: false }
           )
           .select("id")
-          .single();
+          .maybeSingle();
 
         if (insertErr && insertErr.code === "23505") {
           // Unique constraint violation on email — fetch the existing customer
@@ -326,7 +339,7 @@ export async function POST(request: Request) {
             .from("customers")
             .select("id")
             .eq("email", customerEmail)
-            .single();
+            .maybeSingle();
           customerId = existingCust?.id || newCustId;
         } else if (newCustomer) {
           customerId = newCustomer.id;
@@ -343,7 +356,7 @@ export async function POST(request: Request) {
         .from("customers")
         .select("email, name, phone")
         .eq("id", customerId)
-        .single();
+        .maybeSingle();
       if (custLookup) {
         bookingEmail = custLookup.email?.toLowerCase().trim() || null;
         if (!bookingName) bookingName = custLookup.name;
@@ -430,20 +443,20 @@ export async function POST(request: Request) {
       // Vehicle fetch
       const vehiclePromise = body.vehicleId
         ? Promise.resolve(
-            supabase.from("vehicles").select("year, make, model").eq("id", body.vehicleId).single()
+            supabase.from("vehicles").select("year, make, model").eq("id", body.vehicleId).maybeSingle()
           ).then((res) => res.data as { year: string; make: string; model: string } | null)
         : Promise.resolve(null as { year: string; make: string; model: string } | null);
 
       // Customer password check
       const custPromise = emailRecipient
         ? Promise.resolve(
-            supabase.from("customers").select("password_hash").eq("email", emailRecipient.toLowerCase().trim()).single()
+            supabase.from("customers").select("password_hash").eq("email", emailRecipient.toLowerCase().trim()).maybeSingle()
           ).then((res) => res.data as { password_hash: string } | null)
         : Promise.resolve(null as { password_hash: string } | null);
 
       const [vehicle, cust] = await Promise.all([vehiclePromise, custPromise]);
 
-      if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+      if (vehicle) vehicleName = getVehicleDisplayName(vehicle);
       needsPassword = !cust?.password_hash;
     }
 
@@ -538,7 +551,7 @@ export async function PATCH(request: NextRequest) {
       .from("bookings")
       .select("*")
       .eq("id", bookingId)
-      .single();
+      .maybeSingle();
 
     if (!booking) {
       return NextResponse.json(
@@ -657,8 +670,8 @@ export async function PATCH(request: NextRequest) {
           .from("vehicles")
           .select("year, make, model")
           .eq("id", vId)
-          .single();
-        if (vehicle) vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+          .maybeSingle();
+        if (vehicle) vehicleName = getVehicleDisplayName(vehicle);
       }
 
       // Check if the (new) customer needs a password
@@ -668,7 +681,7 @@ export async function PATCH(request: NextRequest) {
         .from("customers")
         .select("password_hash")
         .eq("email", lookupEmail)
-        .single();
+        .maybeSingle();
       needsPassword = !cust?.password_hash;
 
       const emailData = {
@@ -706,7 +719,7 @@ export async function PATCH(request: NextRequest) {
         .from("customers")
         .select("id")
         .eq("email", newEmail)
-        .single();
+        .maybeSingle();
 
       if (existingCust) {
         // Link booking to existing customer
@@ -724,7 +737,7 @@ export async function PATCH(request: NextRequest) {
             role: "customer",
           })
           .select("id")
-          .single();
+          .maybeSingle();
         if (newCust) {
           await supabase.from("bookings").update({ customer_id: newCust.id }).eq("id", bookingId);
         }
@@ -736,7 +749,7 @@ export async function PATCH(request: NextRequest) {
       .from("bookings")
       .select("*")
       .eq("id", bookingId)
-      .single();
+      .maybeSingle();
 
     return NextResponse.json({ success: true, message: "Booking updated", data: updatedBooking });
   } catch {

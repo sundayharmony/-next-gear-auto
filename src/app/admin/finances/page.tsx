@@ -41,6 +41,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate } from "@/lib/utils/date-helpers";
+import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { exportToCSV } from "@/lib/utils/csv-export";
 import {
@@ -360,7 +361,7 @@ export default function AdminFinancesPage() {
             vehicle_id: vehicle.id,
             category: "financing",
             amount: financing.monthlyPayment,
-            description: `Monthly payment — ${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+            description: `Monthly payment — ${getVehicleDisplayName(vehicle)}`,
             date: dateStr,
             created_at: dateStr,
             fromFinancing: true,
@@ -552,7 +553,7 @@ export default function AdminFinancesPage() {
 
         return {
           id: vehicle.id,
-          name: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+          name: getVehicleDisplayName(vehicle),
           bookings: vBookings.length,
           revenue,
           expenses: expenseTotal + vehicleCost,
@@ -1871,7 +1872,7 @@ export default function AdminFinancesPage() {
                                 </div>
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium">
-                                    {vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Unknown Vehicle"}
+                                    {vehicle ? getVehicleDisplayName(vehicle) : "Unknown Vehicle"}
                                   </p>
                                   <p className="text-xs text-gray-500">{formatDate(booking.created_at)}</p>
                                 </div>

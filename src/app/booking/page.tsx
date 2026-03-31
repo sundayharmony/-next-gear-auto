@@ -308,7 +308,7 @@ function BookingPageInner() {
       booking.setExtras(localExtras);
       booking.recalculatePrice();
     }
-  }, [localExtras, booking.selectedVehicle]);
+  }, [localExtras, booking.selectedVehicle, booking.pickupDate, booking.returnDate]);
 
   // Warn user before leaving if they've progressed past step 1 but haven't completed checkout
   useEffect(() => {

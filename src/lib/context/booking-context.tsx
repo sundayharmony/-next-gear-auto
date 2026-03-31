@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from "react";
 import type { Vehicle, BookingExtra, BookingStep, PricingBreakdown } from "@/lib/types";
 import { calculatePricing, calculateRentalDays, applyDiscount, type PromoDiscount } from "@/lib/utils/price-calculator";
 import { logger } from "@/lib/utils/logger";
@@ -379,30 +379,54 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
+  // Memoize context value to prevent unnecessary re-renders of consumers
+  const contextValue = useMemo(
+    () => ({
+      ...state,
+      setDates,
+      selectVehicle,
+      setExtras,
+      toggleExtra,
+      setCustomerDetails,
+      setSignedName,
+      setAgreementSignatures,
+      setStep,
+      nextStep,
+      prevStep,
+      recalculatePrice,
+      applyPromoCode,
+      clearPromoCode,
+      setInsuranceProof,
+      setIdDocumentUrl,
+      setLocations,
+      submitBooking,
+      resetBooking,
+    }),
+    [
+      state,
+      setDates,
+      selectVehicle,
+      setExtras,
+      toggleExtra,
+      setCustomerDetails,
+      setSignedName,
+      setAgreementSignatures,
+      setStep,
+      nextStep,
+      prevStep,
+      recalculatePrice,
+      applyPromoCode,
+      clearPromoCode,
+      setInsuranceProof,
+      setIdDocumentUrl,
+      setLocations,
+      submitBooking,
+      resetBooking,
+    ]
+  );
+
   return (
-    <BookingContext.Provider
-      value={{
-        ...state,
-        setDates,
-        selectVehicle,
-        setExtras,
-        toggleExtra,
-        setCustomerDetails,
-        setSignedName,
-        setAgreementSignatures,
-        setStep,
-        nextStep,
-        prevStep,
-        recalculatePrice,
-        applyPromoCode,
-        clearPromoCode,
-        setInsuranceProof,
-        setIdDocumentUrl,
-        setLocations,
-        submitBooking,
-        resetBooking,
-      }}
-    >
+    <BookingContext.Provider value={contextValue}>
       {children}
     </BookingContext.Provider>
   );

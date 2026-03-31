@@ -260,7 +260,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                         <spec.icon className="h-5 w-5 text-purple-600" aria-hidden="true" />
                       </div>
                       <div>
-                        <div className="text-xs text-gray-400">{spec.label}</div>
+                        <div className="text-xs text-gray-500">{spec.label}</div>
                         <div className="text-sm font-medium text-gray-900">{spec.value}</div>
                       </div>
                     </div>
@@ -309,7 +309,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                 ) : (
                   <div className="text-center py-8">
                     <p className="text-gray-500 mb-2">No reviews yet</p>
-                    <p className="text-sm text-gray-400">Be the first to review this vehicle and help other travelers make informed decisions.</p>
+                    <p className="text-sm text-gray-500">Be the first to review this vehicle and help other travelers make informed decisions.</p>
                   </div>
                 )}
               </CardContent>
@@ -340,7 +340,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                   </Button>
                 </Link>
 
-                <p className="mt-3 text-center text-xs text-gray-400">Free cancellation up to 24hrs before pickup</p>
+                <p className="mt-3 text-center text-xs text-gray-500">Free cancellation up to 24hrs before pickup</p>
               </CardContent>
             </Card>
 
@@ -387,6 +387,8 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                           <img
                             src={sv.images[0]}
                             alt={`${sv.year} ${sv.make} ${sv.model}`}
+                            width={600}
+                            height={375}
                             loading="lazy"
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
@@ -401,7 +403,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                           <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {sv.specs?.mpg ?? "N/A"} mpg</span>
                         </div>
                         <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                          <span className="text-xl font-bold text-purple-600">${sv.daily_rate}<span className="text-sm text-gray-400 font-normal">/day</span></span>
+                          <span className="text-xl font-bold text-purple-600">${sv.daily_rate}<span className="text-sm text-gray-500 font-normal">/day</span></span>
                           <Button size="sm" variant="outline">View</Button>
                         </div>
                       </CardContent>

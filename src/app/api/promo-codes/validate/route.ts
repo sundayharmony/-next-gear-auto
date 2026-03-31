@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       .from("promo_codes")
       .select("*")
       .ilike("code", safeCode)
-      .single();
+      .maybeSingle();
 
     if (error || !promo) {
       // Fall back to JSON file for legacy codes

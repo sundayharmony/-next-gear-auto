@@ -32,7 +32,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: data || [] });
+    return NextResponse.json({ success: true, data: data || [] }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache",
+      },
+    });
   } catch (err) {
     logger.error("Blocked dates GET error:", err);
     return NextResponse.json({ success: false, error: "Failed to fetch blocked dates" }, { status: 500 });
@@ -75,7 +79,7 @@ export async function POST(req: NextRequest) {
       .from("vehicles")
       .select("id")
       .eq("id", vehicleId)
-      .single();
+      .maybeSingle();
 
     if (!vehicle) {
       return NextResponse.json({ success: false, error: "Vehicle not found" }, { status: 404 });
@@ -106,7 +110,7 @@ export async function POST(req: NextRequest) {
         reason: reason || null,
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       logger.error("Blocked dates POST error:", error);

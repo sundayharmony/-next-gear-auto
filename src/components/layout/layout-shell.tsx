@@ -15,7 +15,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   return (
     <>
       <Header />
-      <div className="flex-1">{children}</div>
+      <main id="main-content" className="flex-1">{children}</main>
       <Footer />
     </>
   );

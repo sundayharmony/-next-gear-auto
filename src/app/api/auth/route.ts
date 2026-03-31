@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     // Look up the user in the appropriate table based on role
     if (auth.role === "admin") {
-      const { data: admin } = await supabase.from("admins").select("*").eq("id", auth.sub).single();
+      const { data: admin } = await supabase.from("admins").select("*").eq("id", auth.sub).maybeSingle();
       if (!admin) {
         return NextResponse.json({ success: false, message: "Admin not found" }, { status: 404 });
       }
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { data: customer } = await supabase.from("customers").select("*").eq("id", auth.sub).single();
+    const { data: customer } = await supabase.from("customers").select("*").eq("id", auth.sub).maybeSingle();
     if (!customer) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
     }
@@ -97,7 +97,7 @@ export async function POST(request: Request) {
         .from("admins")
         .select("*")
         .eq("email", normalizedEmail)
-        .single();
+        .maybeSingle();
 
       if (admin) {
         const passwordMatch = await bcrypt.compare(password, admin.password_hash);
@@ -144,7 +144,7 @@ export async function POST(request: Request) {
         .from("customers")
         .select("*")
         .eq("email", normalizedEmail)
-        .single();
+        .maybeSingle();
 
       if (error || !customer) {
         auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Account not found" } });
@@ -232,7 +232,7 @@ export async function POST(request: Request) {
         .from("customers")
         .select("id, password_hash")
         .eq("email", body.email.toLowerCase().trim())
-        .single();
+        .maybeSingle();
 
       if (existing) {
         if (!existing.password_hash) {
@@ -251,7 +251,7 @@ export async function POST(request: Request) {
             .from("customers")
             .select("*")
             .eq("id", existing.id)
-            .single();
+            .maybeSingle();
 
           if (updated) {
             const updatedRole = (updated.role || "customer") as "admin" | "customer";
@@ -299,7 +299,7 @@ export async function POST(request: Request) {
           role: "customer",
         })
         .select("*")
-        .single();
+        .maybeSingle();
 
       if (error) {
         logger.error("Signup error:", error);
@@ -375,7 +375,7 @@ export async function PATCH(request: NextRequest) {
     const adminDb = getServiceSupabase();
 
     // Check if it's an admin — table name is strictly whitelisted
-    const { data: admin } = await adminDb.from("admins").select("id").eq("id", id).single();
+    const { data: admin } = await adminDb.from("admins").select("id").eq("id", id).maybeSingle();
     const table: "admins" | "customers" = admin ? "admins" : "customers";
 
     const updates: Record<string, string> = {};

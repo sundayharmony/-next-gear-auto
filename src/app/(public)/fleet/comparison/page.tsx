@@ -1,6 +1,12 @@
 "use client";
 
+import type { Metadata } from "next";
 import React, { Suspense, useMemo, useState, useEffect } from "react";
+
+export const metadata: Metadata = {
+  title: "Compare Vehicles | NextGearAuto",
+  description: "Compare our vehicles side by side to find the perfect rental for your needs. View specifications, pricing, and features.",
+};
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -187,7 +193,7 @@ function ComparisonContent() {
               {specRows.map((row) => (
                 <tr key={row.label} className="border-b border-gray-100">
                   <td className="p-3 text-sm text-gray-500 flex items-center gap-2">
-                    <row.icon className="h-4 w-4 text-gray-400" />
+                    <row.icon className="h-4 w-4 text-gray-500" />
                     {row.label}
                   </td>
                   {selectedVehicles.map((v) => (
@@ -238,7 +244,7 @@ function ComparisonContent() {
               <CardContent className="p-4 text-center">
                 <p className="font-semibold text-gray-900">{v.year} {v.make} {v.model}</p>
                 <p className="text-2xl font-bold text-purple-600 mt-1">
-                  ${v.dailyRate}<span className="text-sm text-gray-400">/day</span>
+                  ${v.dailyRate}<span className="text-sm text-gray-500">/day</span>
                 </p>
                 <Link href={`/booking?vehicleId=${v.id}`} className="block mt-3">
                   <Button className="w-full gap-2" size="sm">

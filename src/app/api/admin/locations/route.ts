@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
       notes: (notes || "").trim().slice(0, 500),
       lat: lat !== undefined && lat !== null ? parseFloat(lat) : null,
       lng: lng !== undefined && lng !== null ? parseFloat(lng) : null,
-    }).select("*").single();
+    }).select("*").maybeSingle();
 
     if (error) {
       logger.error("Location create error:", error);
@@ -163,7 +163,7 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ success: false, message: "No fields to update" }, { status: 400 });
     }
 
-    const { data, error } = await supabase.from("locations").update(clean).eq("id", id).select("*").single();
+    const { data, error } = await supabase.from("locations").update(clean).eq("id", id).select("*").maybeSingle();
     if (error) {
       logger.error("Location update error:", error);
       return NextResponse.json({ success: false, message: "Failed to update location" }, { status: 500 });

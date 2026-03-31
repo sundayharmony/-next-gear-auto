@@ -8,6 +8,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { exportToCSV } from "@/lib/utils/csv-export";
 import { formatDate } from "@/lib/utils/date-helpers";
+import { getVehicleDisplayName } from "@/lib/types";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 
 import { useBookings } from "./hooks/useBookings";
@@ -120,7 +121,7 @@ function AdminBookingsContent() {
   const vehicleOptions = React.useMemo(() => {
     const uniqueNames = new Map<string, string>();
     vehicles.forEach((v) => {
-      const name = `${v.year} ${v.make} ${v.model}`;
+      const name = getVehicleDisplayName(v);
       if (!uniqueNames.has(name)) uniqueNames.set(name, v.id);
     });
     return Array.from(uniqueNames.entries())

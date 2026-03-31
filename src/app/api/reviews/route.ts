@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       logger.error("Reviews fetch error:", error);
-      return NextResponse.json({ data: [], success: true });
+      return NextResponse.json({ data: [], success: false, error: "Failed to fetch reviews" }, { status: 500 });
     }
 
     // Map Supabase reviews to frontend format
@@ -57,10 +57,14 @@ export async function GET(req: NextRequest) {
       isVerified: true,
     }));
 
-    return NextResponse.json({ data: reviews, success: true });
+    return NextResponse.json({ data: reviews, success: true }, {
+      headers: {
+        "Cache-Control": isAdmin ? "no-store, no-cache" : "public, s-maxage=300, stale-while-revalidate=600",
+      },
+    });
   } catch (err) {
     logger.error("Reviews GET error:", err);
-    return NextResponse.json({ data: [], success: true });
+    return NextResponse.json({ data: [], success: false, error: "Failed to fetch reviews" }, { status: 500 });
   }
 }
 
@@ -120,7 +124,7 @@ export async function POST(req: NextRequest) {
       rating,
       text: safeText.trim(),
       status: "pending", // Reviews need admin approval
-    }).select().single();
+    }).select().maybeSingle();
 
     if (error) {
       logger.error("Review insert error:", error);

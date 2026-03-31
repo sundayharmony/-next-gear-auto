@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendBookingConfirmation, sendAdminNewBooking } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
+import { getVehicleDisplayName } from "@/lib/types";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
@@ -42,7 +43,7 @@ export async function POST(request: Request) {
         .from("payment_records")
         .select("id")
         .eq("stripe_session_id", event.id)
-        .single();
+        .maybeSingle();
 
       if (existingPayment) {
         logger.info("Webhook event already processed:", event.id);
@@ -95,7 +96,7 @@ export async function POST(request: Request) {
             .from("bookings")
             .select("*")
             .eq("id", bookingId)
-            .single();
+            .maybeSingle();
 
           if (booking) {
             // Only send confirmation emails if customer email exists
@@ -107,7 +108,7 @@ export async function POST(request: Request) {
                 .from("vehicles")
                 .select("year, make, model")
                 .eq("id", booking.vehicle_id)
-                .single();
+                .maybeSingle();
 
               // Check if customer needs a password
               let needsPassword = false;
@@ -116,7 +117,7 @@ export async function POST(request: Request) {
                   .from("customers")
                   .select("password_hash")
                   .eq("id", booking.customer_id)
-                  .single();
+                  .maybeSingle();
                 needsPassword = !cust?.password_hash;
               }
 
@@ -124,7 +125,7 @@ export async function POST(request: Request) {
                 bookingId: booking.id,
                 customerName: booking.customer_name || "Customer",
                 customerEmail: booking.customer_email,
-                vehicleName: vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Vehicle",
+                vehicleName: vehicle ? getVehicleDisplayName(vehicle) : "Vehicle",
                 pickupDate: booking.pickup_date,
                 returnDate: booking.return_date,
                 pickupTime: booking.pickup_time || undefined,

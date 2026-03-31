@@ -75,7 +75,8 @@ export async function GET() {
       .from("instagram_posts")
       .select("*")
       .eq("is_visible", true)
-      .order("sort_order", { ascending: true });
+      .order("sort_order", { ascending: true })
+      .limit(500);
 
     if (error) {
       logger.error("Instagram posts fetch error:", error);
@@ -170,7 +171,7 @@ export async function PATCH(req: NextRequest) {
       .from("instagram_posts")
       .select("url")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     if (!post) {
       return NextResponse.json(

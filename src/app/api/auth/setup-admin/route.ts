@@ -40,7 +40,7 @@ export async function POST(request: Request) {
       .from("admins")
       .select("id")
       .eq("email", adminEmail)
-      .single();
+      .maybeSingle();
 
     if (existing) {
       // Update existing admin with hashed password

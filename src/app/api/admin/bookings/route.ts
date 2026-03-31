@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import { getVehicleDisplayName } from "@/lib/types";
 
 // GET: List all bookings for admin (with vehicle names)
 export async function GET(req: NextRequest) {
@@ -47,12 +48,16 @@ export async function GET(req: NextRequest) {
       const { vehicles: _v, ...rest } = b;
       return {
         ...rest,
-        vehicleName: v ? `${v.year} ${v.make} ${v.model}` : "Unknown",
+        vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
         customerName: b.customer_name || "Guest",
       };
     });
 
-    return NextResponse.json({ data: enriched, success: true });
+    return NextResponse.json({ data: enriched, success: true }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache",
+      },
+    });
   } catch {
     return NextResponse.json(
       { success: false, message: "Invalid request" },

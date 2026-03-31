@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import { getVehicleDisplayName } from "@/lib/types";
 
 // GET: List tickets with optional filters
 export async function GET(req: NextRequest) {
@@ -48,6 +49,9 @@ export async function GET(req: NextRequest) {
     if (vehicleId) query = query.eq("vehicle_id", vehicleId);
     if (status && status !== "all") query = query.eq("status", status);
 
+    // Add limit to prevent fetching unlimited rows
+    query = query.limit(1000);
+
     const { data, error } = await query;
 
     if (error) {
@@ -87,7 +91,7 @@ export async function GET(req: NextRequest) {
         status: t.status || "unpaid",
         notes: t.notes || "",
         createdAt: t.created_at || "",
-        vehicleName: v ? `${v.year} ${v.make} ${v.model}` : "",
+        vehicleName: v ? getVehicleDisplayName(v) : "",
         customerName: b?.customer_name || "",
         bookingDates: b
           ? `${b.pickup_date} → ${b.return_date}`
@@ -95,7 +99,11 @@ export async function GET(req: NextRequest) {
       };
     });
 
-    return NextResponse.json({ success: true, data: records });
+    return NextResponse.json({ success: true, data: records }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache",
+      },
+    });
   } catch (error) {
     logger.error("Tickets GET error:", error);
     return NextResponse.json(
@@ -144,7 +152,7 @@ export async function POST(req: NextRequest) {
         .from("bookings")
         .select("id")
         .eq("id", bookingId)
-        .single();
+        .maybeSingle();
 
       if (bookingErr || !booking) {
         return NextResponse.json(
@@ -176,7 +184,7 @@ export async function POST(req: NextRequest) {
         notes: notes || null,
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       logger.error("Ticket create error:", error);

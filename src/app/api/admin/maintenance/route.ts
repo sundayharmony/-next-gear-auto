@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import { getVehicleDisplayName } from "@/lib/types";
 
 // GET: List all maintenance records with optional filters
 export async function GET(req: NextRequest) {
@@ -62,7 +63,7 @@ export async function GET(req: NextRequest) {
         return {
         id: record.id,
         vehicleId: record.vehicle_id,
-        vehicleName: v ? `${v.year} ${v.make} ${v.model}` : "Unknown",
+        vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
         title: record.title || "",
         description: record.description || "",
         status: record.status || "pending",
@@ -76,10 +77,18 @@ export async function GET(req: NextRequest) {
       };
       });
 
-      return NextResponse.json({ success: true, data: records });
+      return NextResponse.json({ success: true, data: records }, {
+        headers: {
+          "Cache-Control": "no-store, no-cache",
+        },
+      });
     }
 
-    return NextResponse.json({ success: true, data: [] });
+    return NextResponse.json({ success: true, data: [] }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache",
+      },
+    });
   } catch (error) {
     logger.error("Admin maintenance GET error:", error);
     return NextResponse.json(
@@ -158,7 +167,7 @@ export async function POST(req: NextRequest) {
         notes: notes || "",
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       logger.error("Maintenance create error:", error);
@@ -285,7 +294,7 @@ export async function PUT(req: NextRequest) {
       .from("maintenance_records")
       .select("vehicle_id")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     const { error } = await supabase
       .from("maintenance_records")
@@ -352,7 +361,7 @@ export async function DELETE(req: NextRequest) {
       .from("maintenance_records")
       .select("photo_urls")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     const { error } = await supabase
       .from("maintenance_records")

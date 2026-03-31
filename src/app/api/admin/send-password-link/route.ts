@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       .from("customers")
       .select("id, name, email, password_hash")
       .eq("id", customerId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !customer) {
       return NextResponse.json(

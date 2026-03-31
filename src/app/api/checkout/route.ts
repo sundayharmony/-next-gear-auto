@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
       .from("vehicles")
       .select("daily_rate, status")
       .eq("id", vehicleId)
-      .single();
+      .maybeSingle();
 
     if (vehicleError || !vehicle) {
       return NextResponse.json(
@@ -195,7 +195,7 @@ export async function POST(request: NextRequest) {
         .select("*")
         .ilike("code", promoCode)
         .eq("is_active", true)
-        .single();
+        .maybeSingle();
 
       if (!promoError && promo) {
         const isExpired = promo.expires_at && new Date(promo.expires_at) < new Date();
@@ -289,7 +289,7 @@ export async function POST(request: NextRequest) {
       .from("customers")
       .select("id")
       .eq("email", customerDetails.email.toLowerCase().trim())
-      .single();
+      .maybeSingle();
 
     if (existingCustomer) {
       customerId = existingCustomer.id;
@@ -307,7 +307,7 @@ export async function POST(request: NextRequest) {
             role: "customer",
           })
           .select("id")
-          .single();
+          .maybeSingle();
         customerId = newCustomer?.id || newId;
       } catch {
         // Race condition: customer created between our SELECT and INSERT
@@ -316,7 +316,7 @@ export async function POST(request: NextRequest) {
           .from("customers")
           .select("id")
           .eq("email", customerDetails.email.toLowerCase().trim())
-          .single();
+          .maybeSingle();
         customerId = retryCustomer?.id || newId;
       }
     }
@@ -402,7 +402,7 @@ export async function POST(request: NextRequest) {
           .from("customers")
           .select("password_hash")
           .eq("id", customerId)
-          .single();
+          .maybeSingle();
         needsPassword = !cust?.password_hash;
       }
 
@@ -489,7 +489,7 @@ export async function POST(request: NextRequest) {
         .from("customers")
         .select("password_hash")
         .eq("id", customerId)
-        .single();
+        .maybeSingle();
       needsPasswordForPending = !custCheck?.password_hash;
     }
 

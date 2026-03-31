@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { sendBookingSignAgreement } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
+import { getVehicleDisplayName } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
   const auth = await verifyAdmin(req);
@@ -47,7 +48,7 @@ export async function POST(req: NextRequest) {
       .from("bookings")
       .select("*")
       .eq("id", bookingId)
-      .single();
+      .maybeSingle();
 
     if (bookingError || !booking) {
       return NextResponse.json(
@@ -66,14 +67,16 @@ export async function POST(req: NextRequest) {
     // Fetch vehicle name
     let vehicleName = "Vehicle";
     if (booking.vehicle_id) {
-      const { data: vehicle } = await supabase
+      const { data: vehicle, error: vehicleError } = await supabase
         .from("vehicles")
         .select("year, make, model")
         .eq("id", booking.vehicle_id)
-        .single();
+        .maybeSingle();
 
-      if (vehicle) {
-        vehicleName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
+      if (vehicleError) {
+        logger.error("Failed to fetch vehicle:", vehicleError);
+      } else if (vehicle) {
+        vehicleName = getVehicleDisplayName(vehicle);
       }
     }
 

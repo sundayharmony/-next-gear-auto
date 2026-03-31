@@ -53,7 +53,7 @@ export async function POST(request: Request) {
       .from("customers")
       .select("id, password_hash, name, email, phone, dob, role, created_at")
       .eq("email", normalizedEmail)
-      .single();
+      .maybeSingle();
 
     // Timing attack mitigation: always perform a bcrypt hash to ensure
     // consistent response time whether the account exists or not.

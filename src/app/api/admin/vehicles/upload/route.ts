@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
         .from("vehicles")
         .select("images")
         .eq("id", vehicleId)
-        .single();
+        .maybeSingle();
 
       if (fetchError) {
         logger.error("Error fetching vehicle:", fetchError);

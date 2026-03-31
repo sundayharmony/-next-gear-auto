@@ -96,6 +96,10 @@ export async function GET(request: NextRequest) {
         offset,
         total: count || 0,
       },
+    }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache",
+      },
     });
   } catch (error) {
     logger.error("Unexpected error in GET /api/admin/booking-activity:", error);
@@ -146,7 +150,7 @@ export async function POST(request: NextRequest) {
         },
       ])
       .select("id")
-      .single();
+      .maybeSingle();
 
     if (error) {
       logger.error("Error creating booking activity:", error);

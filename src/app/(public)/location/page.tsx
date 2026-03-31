@@ -76,7 +76,7 @@ export default function LocationPage() {
                     <div>
                       <h3 className="font-semibold text-gray-900">Phone</h3>
                       <p className="mt-1 text-sm text-gray-500">{CONTACT_INFO.phone}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">Call or text anytime during business hours</p>
+                      <p className="text-xs text-gray-500 mt-0.5">Call or text anytime during business hours</p>
                     </div>
                   </div>
                 </CardContent>
@@ -91,7 +91,7 @@ export default function LocationPage() {
                     <div>
                       <h3 className="font-semibold text-gray-900">Email</h3>
                       <p className="mt-1 text-sm text-gray-500">{CONTACT_INFO.email}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">We respond within 24 hours</p>
+                      <p className="text-xs text-gray-500 mt-0.5">We respond within 24 hours</p>
                     </div>
                   </div>
                 </CardContent>

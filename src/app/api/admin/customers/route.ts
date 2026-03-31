@@ -54,7 +54,11 @@ export async function GET(req: NextRequest) {
       createdAt: c.created_at,
     }));
 
-    return NextResponse.json({ success: true, data: customers, total: count || 0, limit, offset });
+    return NextResponse.json({ success: true, data: customers, total: count || 0, limit, offset }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache",
+      },
+    });
   } catch (err) {
     logger.error("Customers GET error:", err);
     return NextResponse.json({ success: false, error: "Failed to fetch customers" }, { status: 500 });

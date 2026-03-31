@@ -18,6 +18,7 @@ import { useVehicles } from "@/lib/hooks/useVehicles";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/context/auth-context";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
+import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { csrfFetch } from "@/lib/utils/csrf-fetch";
 import type { Vehicle } from "@/lib/types";
@@ -125,7 +126,7 @@ export default function AccountPage() {
   const getVehicleName = useCallback((vehicleId: string, vehicleName?: string) => {
     if (vehicleName) return vehicleName;
     const found = vehicles.find((veh) => veh.id === vehicleId);
-    return found ? `${found.year} ${found.make} ${found.model}` : `Vehicle ${vehicleId}`;
+    return found ? getVehicleDisplayName(found) : `Vehicle ${vehicleId}`;
   }, [vehicles]);
 
   const handleLogout = useCallback(() => {

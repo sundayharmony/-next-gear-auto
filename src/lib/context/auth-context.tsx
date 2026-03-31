@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from "react";
 import type { Customer } from "@/lib/types";
 
 interface AuthState {
@@ -188,8 +188,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     [state.user]
   );
 
+  // Memoize context value to prevent unnecessary re-renders of consumers
+  const contextValue = useMemo(
+    () => ({ ...state, login, logout, signup, updateProfile, checkRole }),
+    [state, login, logout, signup, updateProfile, checkRole]
+  );
+
   return (
-    <AuthContext.Provider value={{ ...state, login, logout, signup, updateProfile, checkRole }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

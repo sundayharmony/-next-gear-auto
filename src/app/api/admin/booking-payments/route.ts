@@ -38,6 +38,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       success: true,
       data: data || [],
+    }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache",
+      },
     });
   } catch (error) {
     logger.error("Unexpected error in GET /api/admin/booking-payments:", error);
@@ -87,7 +91,7 @@ export async function POST(request: NextRequest) {
       .from("bookings")
       .select("id")
       .eq("id", booking_id)
-      .single();
+      .maybeSingle();
 
     if (bookingError || !bookingExists) {
       return NextResponse.json(
@@ -108,7 +112,7 @@ export async function POST(request: NextRequest) {
       .from("booking_payments")
       .insert([insertPayload])
       .select("id")
-      .single();
+      .maybeSingle();
 
     if (paymentError) {
       logger.error("Error creating booking payment: " + paymentError.message + " | code: " + paymentError.code + " | details: " + paymentError.details);
@@ -193,7 +197,7 @@ export async function DELETE(request: NextRequest) {
       .from("booking_payments")
       .select("id, booking_id")
       .eq("id", paymentId)
-      .single();
+      .maybeSingle();
 
     if (fetchError || !payment) {
       return NextResponse.json(

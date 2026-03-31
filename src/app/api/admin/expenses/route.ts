@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
         },
       ])
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       logger.error("Error creating expense:", error);
@@ -230,7 +230,7 @@ export async function PUT(request: NextRequest) {
       .update(updates)
       .eq("id", id)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       logger.error("Error updating expense:", error);

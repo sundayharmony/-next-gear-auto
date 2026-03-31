@@ -44,7 +44,11 @@ export async function GET(req: NextRequest) {
       isPublished: v.is_published !== false,
       createdAt: v.created_at || null,
     }));
-    return NextResponse.json({ success: true, data: vehicles });
+    return NextResponse.json({ success: true, data: vehicles }, {
+      headers: {
+        "Cache-Control": "no-store, no-cache",
+      },
+    });
   } catch (error) {
     logger.error("Admin vehicles GET error:", error);
     return NextResponse.json({ success: false, message: "Failed to load vehicles" }, { status: 500 });
@@ -99,7 +103,7 @@ export async function POST(request: NextRequest) {
         financing_start_date: body.financingStartDate || null,
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       logger.error("Vehicle create error:", error);
@@ -196,7 +200,7 @@ export async function DELETE(request: NextRequest) {
       .from("vehicles")
       .select("images")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     const { error } = await supabase.from("vehicles").delete().eq("id", id);
 

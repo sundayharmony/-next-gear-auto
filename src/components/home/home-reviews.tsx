@@ -67,10 +67,10 @@ export function HomeReviews() {
     return (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
         {[1, 2, 3].map((i) => (
-          <Card key={i} className="p-6 animate-pulse">
+          <Card key={`skeleton-${i}`} className="p-6 animate-pulse">
             <div className="flex gap-1 mb-3">
               {Array.from({ length: 5 }).map((_, j) => (
-                <div key={j} className="h-4 w-4 rounded bg-gray-200" />
+                <div key={`skeleton-star-${i}-${j}`} className="h-4 w-4 rounded bg-gray-200" />
               ))}
             </div>
             <div className="space-y-2">
@@ -102,10 +102,10 @@ export function HomeReviews() {
         <Card key={review.id} className="p-6 card-hover">
           <div className="flex gap-1 mb-3">
             {Array.from({ length: review.rating }).map((_, i) => (
-              <Star key={i} className="h-4 w-4 fill-amber-400 text-amber-400" />
+              <Star key={`filled-${review.id}-${i}`} className="h-4 w-4 fill-amber-400 text-amber-400" />
             ))}
             {Array.from({ length: 5 - review.rating }).map((_, i) => (
-              <Star key={`empty-${i}`} className="h-4 w-4 text-gray-200" />
+              <Star key={`empty-${review.id}-${i}`} className="h-4 w-4 text-gray-200" />
             ))}
           </div>
           <p className="text-sm text-gray-600 leading-relaxed">

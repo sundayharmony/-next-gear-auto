@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
         .from("bookings")
         .select("*")
         .eq("id", bookingId)
-        .single();
+        .maybeSingle();
 
       if (bookingErr || !b) {
         return NextResponse.json(
@@ -88,7 +88,7 @@ export async function GET(req: NextRequest) {
           .from("vehicles")
           .select("*")
           .eq("id", booking.vehicle_id)
-          .single();
+          .maybeSingle();
         vehicle = v;
       }
     } else {
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
           .from("vehicles")
           .select("*")
           .eq("id", vehicleId)
-          .single();
+          .maybeSingle();
         vehicle = v;
       }
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useMemo } from "react";
 import type { Toast, ToastType } from "@/lib/types";
 
 interface NotificationState {
@@ -56,8 +56,14 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
     dispatch({ type: "CLEAR_ALL" });
   }, []);
 
+  // Memoize context value to prevent unnecessary re-renders of consumers
+  const contextValue = useMemo(
+    () => ({ toasts: state.toasts, showToast, dismissToast, clearAll }),
+    [state.toasts, showToast, dismissToast, clearAll]
+  );
+
   return (
-    <NotificationContext.Provider value={{ toasts: state.toasts, showToast, dismissToast, clearAll }}>
+    <NotificationContext.Provider value={contextValue}>
       {children}
     </NotificationContext.Provider>
   );

@@ -157,6 +157,8 @@ export default async function HomePage() {
                         <img
                           src={vehicle.images[0]}
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                          width={600}
+                          height={450}
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
@@ -188,7 +190,7 @@ export default async function HomePage() {
                       <div className="mt-3 flex items-center justify-between">
                         <div>
                           <span className="text-lg font-bold text-purple-600">${vehicle.daily_rate.toFixed(2)}</span>
-                          <span className="text-sm text-gray-400">/day</span>
+                          <span className="text-sm text-gray-500">/day</span>
                         </div>
                         <Button size="sm" variant="outline" aria-label={`View details for ${vehicle.year} ${vehicle.make} ${vehicle.model}`}>Details</Button>
                       </div>

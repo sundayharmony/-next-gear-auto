@@ -12,7 +12,8 @@ export async function GET(req: NextRequest) {
     const { data, error } = await supabase
       .from("promo_codes")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .limit(1000);
 
     if (!error && data && data.length > 0) {
       const codes = data.map((c) => ({
@@ -79,7 +80,7 @@ export async function POST(request: NextRequest) {
       .from("promo_codes")
       .select("code")
       .eq("code", body.code.toUpperCase())
-      .single();
+      .maybeSingle();
 
     if (existing) {
       return NextResponse.json({ success: false, message: "Promo code already exists" }, { status: 409 });
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
         is_active: true,
       })
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) {
       logger.error("Promo code create error:", error);

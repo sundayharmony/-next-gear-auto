@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
         .from("bookings")
         .select("customer_email")
         .eq("id", bookingId)
-        .single();
+        .maybeSingle();
 
       if (!bookingOwner || bookingOwner.customer_email?.toLowerCase() !== auth.email?.toLowerCase()) {
         return NextResponse.json(
