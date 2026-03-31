@@ -15,6 +15,11 @@ function escapeCSVValue(value: unknown): string {
 
   const stringValue = String(value);
 
+  // Prevent formula injection: prefix with single quote if value starts with =, +, -, or @
+  if (stringValue.startsWith("=") || stringValue.startsWith("+") || stringValue.startsWith("-") || stringValue.startsWith("@")) {
+    return `'${stringValue}`;
+  }
+
   // Check if value contains special characters
   if (stringValue.includes(",") || stringValue.includes('"') || stringValue.includes("\n")) {
     // Escape quotes by doubling them, then wrap in quotes

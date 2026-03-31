@@ -212,7 +212,7 @@ export default function AdminPromoCodesPage() {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Expires At</label>
-                  <Input type="date" value={newCode.expiresAt || ""} onChange={(e) => setNewCode({ ...newCode, expiresAt: e.target.value })} className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+                  <Input type="date" min={new Date().toISOString().split('T')[0]} value={newCode.expiresAt || ""} onChange={(e) => setNewCode({ ...newCode, expiresAt: e.target.value })} className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
                 </div>
                 <div className="sm:col-span-2">
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Description</label>
@@ -274,7 +274,7 @@ export default function AdminPromoCodesPage() {
                           </td>
                           <td className="px-4 py-3"><Input type="number" value={editForm.minBookingAmount ?? c.minBookingAmount} onChange={(e) => setEditForm({ ...editForm, minBookingAmount: Number(e.target.value) })} className="h-8 text-sm w-20 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" /></td>
                           <td className="px-4 py-3"><Input type="number" value={editForm.maxUses ?? c.maxUses} onChange={(e) => setEditForm({ ...editForm, maxUses: Number(e.target.value) })} className="h-8 text-sm w-16 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" /></td>
-                          <td className="px-4 py-3"><Input type="date" value={editForm.expiresAt ?? c.expiresAt ?? ""} onChange={(e) => setEditForm({ ...editForm, expiresAt: e.target.value })} className="h-8 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" /></td>
+                          <td className="px-4 py-3"><Input type="date" min={new Date().toISOString().split('T')[0]} value={editForm.expiresAt ?? c.expiresAt ?? ""} onChange={(e) => setEditForm({ ...editForm, expiresAt: e.target.value })} className="h-8 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" /></td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1">
                               <Button size="sm" variant="outline" className="h-7 text-xs" onClick={saveEdit} disabled={saving}>{saving ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Check className="h-3 w-3 mr-1" />} Save</Button>

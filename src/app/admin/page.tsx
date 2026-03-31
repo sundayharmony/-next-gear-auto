@@ -40,7 +40,7 @@ interface DashboardData {
 }
 
 function formatCurrency(amount: number): string {
-  return amount.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 0, maximumFractionDigits: 0 });
+  return amount.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
 export default function AdminDashboardPage() {
@@ -261,7 +261,7 @@ export default function AdminDashboardPage() {
                           </div>
                           <div className="text-right flex-shrink-0">
                             <p className="text-base font-bold text-gray-900 tabular-nums">
-                              ${(booking.total_price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+                              ${(booking.total_price ?? 0).toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </p>
                           </div>
                         </div>

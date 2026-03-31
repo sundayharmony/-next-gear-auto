@@ -102,7 +102,7 @@ export default function AdminInstagramPage() {
   const handleDelete = async (id: string) => {
     const post = posts.find(p => p.id === id);
     const confirmMsg = post ? `Remove this Instagram post from the feed?\n\nURL: ${post.url}${post.caption ? `\nCaption: ${post.caption}` : ""}` : "Remove this Instagram post from the feed?";
-    if (!confirm(confirmMsg)) return;
+    if (!window.confirm(confirmMsg)) return;
     try {
       const res = await adminFetch(`/api/instagram?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);

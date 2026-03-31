@@ -291,6 +291,7 @@ function BookingPageInner() {
   const [uploadError, setUploadError] = useState("");
   const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState(false);
+  const [dateValidationError, setDateValidationError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const insuranceSectionRef = useRef<HTMLDivElement>(null);
 
@@ -407,13 +408,37 @@ function BookingPageInner() {
     switch (booking.currentStep) {
       case 1: {
         if (!searchDates.pickup || !searchDates.return || !searchDates.pickupTime || !searchDates.returnTime) {
+          setDateValidationError("");
           return false;
         }
+
+        // Fix 1: Check if pickup date is in the past
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
         const pickupDate = new Date(searchDates.pickup);
-        const returnDate = new Date(searchDates.return);
-        if (returnDate <= pickupDate) {
+        pickupDate.setHours(0, 0, 0, 0);
+
+        if (pickupDate < today) {
+          setDateValidationError("Pick-up date cannot be in the past");
           return false;
         }
+
+        const returnDate = new Date(searchDates.return);
+        returnDate.setHours(0, 0, 0, 0);
+
+        // Fix 2: Minimum rental duration - at least 1 day after pickup
+        if (returnDate <= pickupDate) {
+          setDateValidationError("Minimum 1 day rental required");
+          return false;
+        }
+
+        // Fix 3: Maximum booking duration - 90 days
+        const daysDifference = Math.floor((returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24));
+        if (daysDifference > 90) {
+          setDateValidationError("Maximum rental duration is 90 days");
+          return false;
+        }
+
         // If same day, validate return time is at least 1 hour after pickup time
         if (searchDates.pickup === searchDates.return) {
           const [ph, pm] = (searchDates.pickupTime || "00:00").split(":").map(Number);
@@ -422,8 +447,13 @@ function BookingPageInner() {
           const pmVal = parseInt(String(pm)) || 0;
           const rhVal = parseInt(String(rh)) || 0;
           const rmVal = parseInt(String(rm)) || 0;
-          return (rhVal * 60 + rmVal) > (phVal * 60 + pmVal);
+          if ((rhVal * 60 + rmVal) <= (phVal * 60 + pmVal)) {
+            setDateValidationError("Minimum 1 day rental required");
+            return false;
+          }
         }
+
+        setDateValidationError("");
         // Require location selection if locations are available
         if (locations.length > 0 && !selectedPickupLocation) return false;
         return true;
@@ -920,7 +950,12 @@ function BookingPageInner() {
                     </button>
                   </div>
                 </div>
-                {searchDates.pickup && searchDates.return && (
+                {dateValidationError && (
+                  <div className="mt-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">
+                    {dateValidationError}
+                  </div>
+                )}
+                {searchDates.pickup && searchDates.return && !dateValidationError && (
                   <div className="mt-4 rounded-lg bg-purple-50 p-3 text-sm text-purple-700">
                     <Calendar className="inline h-4 w-4 mr-1" />
                     {Math.ceil((new Date(searchDates.return).getTime() - new Date(searchDates.pickup).getTime()) / (1000 * 60 * 60 * 24))} day rental
@@ -1270,8 +1305,8 @@ function BookingPageInner() {
                                   setInsuranceUploadError("Please upload a JPG, PNG, WebP, or PDF file.");
                                   return;
                                 }
-                                if (file.size > 5 * 1024 * 1024) {
-                                  setInsuranceUploadError("File must be under 5MB.");
+                                if (file.size > 10 * 1024 * 1024) {
+                                  setInsuranceUploadError("File must be under 10MB.");
                                   return;
                                 }
                                 setInsuranceUploadError("");

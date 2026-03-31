@@ -37,7 +37,15 @@ export async function POST(req: NextRequest) {
   const supabase = getServiceSupabase();
 
   try {
-    const body = await req.json();
+    let body: any;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, error: "Invalid JSON" },
+        { status: 400 }
+      );
+    }
     const { bookingId, signatures, customerEmail } = body as {
       bookingId: string;
       signatures: SignatureData;

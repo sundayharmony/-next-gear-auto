@@ -242,7 +242,7 @@ export default function BookingTable({
         <div className="px-4 py-12 text-center">
           <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
           <p className="text-gray-500 font-medium">No bookings found</p>
-          <p className="text-sm text-gray-400 mt-1">Create a new booking or adjust your filters</p>
+          <p className="text-sm text-gray-400 mt-1">Try adjusting your filters</p>
         </div>
       )}
     </Card>

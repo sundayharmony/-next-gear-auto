@@ -59,6 +59,7 @@ function SuccessContent() {
 
       const storageKey = `nga_agreement_sigs_${bookingId}`;
       try {
+        if (typeof window === "undefined") return;
         const savedSigs = localStorage.getItem(storageKey);
         if (!savedSigs) return;
 

@@ -117,6 +117,8 @@ function ComparisonContent() {
                           <img
                             src={v.images[0]}
                             alt={`${v.year} ${v.make} ${v.model}`}
+                            width={80}
+                            height={80}
                             loading="lazy"
                             className="h-full w-full object-cover"
                           />

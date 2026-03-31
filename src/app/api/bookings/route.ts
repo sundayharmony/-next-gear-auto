@@ -157,16 +157,14 @@ export async function GET(request: NextRequest) {
       }
     }
     if (limitParam) {
-      const limit = parseInt(limitParam, 10);
-      if (!isNaN(limit) && limit > 0) {
-        query = query.limit(limit);
-      }
+      const limit = Math.min(Math.max(1, parseInt(limitParam, 10) || 50), 200);
+      query = query.limit(limit);
     } else if (offset === null) {
-      // Default limit of 100 when no pagination params provided
-      query = query.limit(100);
+      // Default limit of 50 when no pagination params provided, max limit 200
+      query = query.limit(50);
     }
 
-    // Apply sorting
+    // Apply sorting (default: created_at DESC)
     query = query.order(sortColumn, { ascending: isAscending });
 
     // Apply pagination if page is provided
@@ -633,6 +631,16 @@ export async function PATCH(request: NextRequest) {
         { success: false, message: "Failed to update booking" },
         { status: 500 }
       );
+    }
+
+    // If status changed to cancelled, delete blocked dates for this vehicle in the booking's date range
+    if (updateFields.status === "cancelled" && booking.vehicle_id && booking.pickup_date && booking.return_date) {
+      await supabase
+        .from("blocked_dates")
+        .delete()
+        .eq("vehicle_id", booking.vehicle_id)
+        .gte("end_date", booking.pickup_date)
+        .lte("start_date", booking.return_date);
     }
 
     // Detect if customer email was changed

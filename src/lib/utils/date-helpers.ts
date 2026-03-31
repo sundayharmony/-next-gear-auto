@@ -85,6 +85,8 @@ export function daysBetween(date1: string | null | undefined, date2: string | nu
   const d1 = parseLocalDate(date1);
   const d2 = parseLocalDate(date2);
   if (isNaN(d1.getTime()) || isNaN(d2.getTime())) return 0;
-  const diffTime = Math.abs(d2.getTime() - d1.getTime());
+  const diffTime = d2.getTime() - d1.getTime();
+  // Return 0 if date2 is before date1 (negative days), do not mask with Math.abs
+  if (diffTime < 0) return 0;
   return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 }

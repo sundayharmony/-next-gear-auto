@@ -8,6 +8,11 @@
  * processed monthly payments for financed vehicles.
  */
 
+/** Helper to round to 2 decimal places (cents) */
+function roundCents(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
 export interface FinancingInfo {
   /** Number of monthly payments that have been processed */
   paymentsProcessed: number;
@@ -86,7 +91,7 @@ export function calculateFinancing(
     // Only count if the payment date has passed and is on or after the financing start
     if (paymentDate >= startDate && paymentDate <= today) {
       paymentsProcessed++;
-      totalPaid += monthlyPayment;
+      totalPaid = roundCents(totalPaid + monthlyPayment);
 
       // Stop if vehicle is paid off
       if (purchasePrice > 0 && totalPaid >= purchasePrice) {

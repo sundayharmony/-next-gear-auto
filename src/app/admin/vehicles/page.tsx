@@ -80,7 +80,7 @@ const emptyVehicle: Omit<Vehicle, "id"> = {
     mpg: 30,
     doors: 4,
   },
-  dailyRate: 50,
+  dailyRate: 0,
   purchasePrice: 0,
   features: [],
   isAvailable: true,

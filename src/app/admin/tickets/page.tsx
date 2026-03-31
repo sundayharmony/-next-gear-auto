@@ -405,7 +405,7 @@ export default function AdminTicketsPage() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               <div>
                 <p className="text-gray-300 text-xs font-medium uppercase tracking-wider">Amount Due</p>
-                <p className="text-3xl font-bold mt-1">${selectedTicket.amountDue.toLocaleString()}</p>
+                <p className="text-3xl font-bold mt-1">${selectedTicket.amountDue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
               </div>
               <div>
                 <p className="text-gray-300 text-xs font-medium uppercase tracking-wider">Status</p>
@@ -895,7 +895,7 @@ export default function AdminTicketsPage() {
                     {/* Amount */}
                     <div className="text-right shrink-0">
                       <p className={`text-lg font-bold ${t.status === "unpaid" ? "text-red-600" : t.status === "paid" ? "text-green-600" : "text-gray-600"}`}>
-                        ${t.amountDue.toLocaleString()}
+                        ${t.amountDue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
                       </p>
                     </div>
                   </div>

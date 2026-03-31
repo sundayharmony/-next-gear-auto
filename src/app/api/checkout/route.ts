@@ -20,7 +20,15 @@ export async function POST(request: NextRequest) {
 
   const supabase = getServiceSupabase();
   try {
-    const body = await request.json();
+    let body: any;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json(
+        { success: false, message: "Invalid JSON" },
+        { status: 400 }
+      );
+    }
     const {
       vehicleId,
       vehicleName,

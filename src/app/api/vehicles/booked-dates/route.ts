@@ -22,7 +22,8 @@ export async function GET(req: NextRequest) {
       .select("id, pickup_date, return_date, pickup_time, return_time, status")
       .eq("vehicle_id", vehicleId)
       .in("status", ["confirmed", "active"])
-      .order("pickup_date", { ascending: true });
+      .order("pickup_date", { ascending: true })
+      .limit(500);
 
     if (error) {
       logger.error("Booked dates fetch error:", error);

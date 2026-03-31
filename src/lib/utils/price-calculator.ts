@@ -18,12 +18,11 @@ export function calculateRentalDays(pickupDate: string, returnDate: string): num
   // Time stripping is intentional: we strip time components to calculate days at midnight boundaries
   const diffTime = returnD.getTime() - pickup.getTime();
   const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-  // Guard against NaN and negative dates
+  // Guard against NaN and negative dates — throw error instead of silently defaulting
   if (!Number.isFinite(days) || days < 1) {
-    console.warn(
-      `Invalid rental days calculated: pickup=${pickupDate}, return=${returnDate}, days=${days}. Defaulting to 1.`
+    throw new Error(
+      `Invalid rental days calculated: pickup=${pickupDate}, return=${returnDate}, days=${days}. Return date must be after pickup date.`
     );
-    return 1;
   }
   return days;
 }

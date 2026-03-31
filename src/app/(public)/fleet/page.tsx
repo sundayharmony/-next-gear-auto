@@ -213,7 +213,9 @@ function FleetContent() {
                         <img
                           src={vehicle.images[0]}
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                          loading="lazy"
+                          width={600}
+                          height={400}
+                          loading="eager"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           onLoad={(e) => {
                             const imgElement = e.target as HTMLImageElement;

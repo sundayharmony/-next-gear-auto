@@ -84,6 +84,8 @@ export default function AdminLocationsPage() {
   const addLocation = async () => {
     if (!addForm.name.trim()) return fail("Name is required");
     if (!addForm.address.trim()) return fail("Address is required");
+    if (addForm.lat !== null && (addForm.lat < -90 || addForm.lat > 90)) return fail("Latitude must be between -90 and 90");
+    if (addForm.lng !== null && (addForm.lng < -180 || addForm.lng > 180)) return fail("Longitude must be between -180 and 180");
     setSaving(true);
     try {
       const res = await adminFetch("/api/admin/locations", {
@@ -103,6 +105,8 @@ export default function AdminLocationsPage() {
     if (!editId) return;
     if (!editForm.name.trim()) return fail("Name is required");
     if (!editForm.address.trim()) return fail("Address is required");
+    if (editForm.lat !== null && (editForm.lat < -90 || editForm.lat > 90)) return fail("Latitude must be between -90 and 90");
+    if (editForm.lng !== null && (editForm.lng < -180 || editForm.lng > 180)) return fail("Longitude must be between -180 and 180");
     setSaving(true);
     try {
       const res = await adminFetch("/api/admin/locations", {

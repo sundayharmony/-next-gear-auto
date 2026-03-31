@@ -26,11 +26,13 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
         setOpenIndex(openIndex === index ? null : index);
         break;
       case "ArrowDown":
+        // Fix 9: Prevent page scrolling when navigating with arrow keys
         e.preventDefault();
         const nextIndex = (index + 1) % items.length;
         buttonRefs.current[nextIndex]?.focus();
         break;
       case "ArrowUp":
+        // Fix 9: Prevent page scrolling when navigating with arrow keys
         e.preventDefault();
         const prevIndex = (index - 1 + items.length) % items.length;
         buttonRefs.current[prevIndex]?.focus();

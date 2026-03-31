@@ -85,6 +85,8 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
           <img
             src={images[0]}
             alt={alt}
+            width={800}
+            height={600}
             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
@@ -108,6 +110,8 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
             <img
               src={img}
               alt={`${alt} - ${i + 2}`}
+              width={400}
+              height={300}
               loading="lazy"
               className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
               onError={(e) => {
@@ -187,6 +191,8 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
             <img
               src={images[activeIndex]}
               alt={`${alt} - ${activeIndex + 1}`}
+              width={1200}
+              height={900}
               className="max-h-[85vh] max-w-[90vw] object-contain rounded-lg"
               onError={(e) => {
                 const target = e.target as HTMLImageElement;
@@ -225,7 +231,7 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
                     i === activeIndex ? "border-purple-500 opacity-100" : "border-transparent opacity-60 hover:opacity-80"
                   }`}
                 >
-                  <img src={img} alt={`${alt} thumbnail ${i + 1}`} loading="lazy" className="h-full w-full object-cover" />
+                  <img src={img} alt={`${alt} thumbnail ${i + 1}`} width={64} height={48} loading="lazy" className="h-full w-full object-cover" />
                 </button>
               ))}
             </div>

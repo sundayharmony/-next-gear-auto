@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await supabase
       .from("promo_codes")
       .select("*")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: false });
 
     if (!error && data && data.length > 0) {
       const codes = data.map((c) => ({

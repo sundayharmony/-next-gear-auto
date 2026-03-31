@@ -120,6 +120,7 @@ export function SignaturePad({
   };
 
   const draw = (e: React.MouseEvent | React.TouchEvent) => {
+    // Fix 6: Prevent page scrolling during touch drawing
     if ("touches" in e) {
       e.preventDefault();
     }

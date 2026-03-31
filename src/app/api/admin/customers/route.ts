@@ -17,9 +17,15 @@ export async function GET(req: NextRequest) {
   }
 
   try {
+    const limitParam = searchParams.get("limit");
+    const offsetParam = searchParams.get("offset");
+
+    const limit = limitParam ? Math.min(Math.max(1, parseInt(limitParam, 10) || 50), 200) : 50;
+    const offset = offsetParam ? Math.max(0, parseInt(offsetParam, 10) || 0) : 0;
+
     let query = supabase
       .from("customers")
-      .select("id, name, email, phone, role, profile_picture_url, created_at")
+      .select("id, name, email, phone, role, profile_picture_url, created_at", { count: "exact" })
       .order("created_at", { ascending: false });
 
     if (search) {
@@ -29,7 +35,9 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    const { data, error } = await query;
+    query = query.range(offset, offset + limit - 1);
+
+    const { data, error, count } = await query;
 
     if (error) {
       logger.error("Customers fetch error:", error);
@@ -46,7 +54,7 @@ export async function GET(req: NextRequest) {
       createdAt: c.created_at,
     }));
 
-    return NextResponse.json({ success: true, data: customers });
+    return NextResponse.json({ success: true, data: customers, total: count || 0, limit, offset });
   } catch (err) {
     logger.error("Customers GET error:", err);
     return NextResponse.json({ success: false, error: "Failed to fetch customers" }, { status: 500 });

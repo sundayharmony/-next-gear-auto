@@ -42,7 +42,7 @@ const emptyForm = {
   returnTime: "10:00",
   totalPrice: 0,
   status: "pending",
-  selectedExtras: ["e1"],
+  selectedExtras: [] as string[],
   paymentMethod: "stripe",
 };
 

@@ -314,7 +314,7 @@ export interface VehicleListItem {
   isAvailable: boolean;
 }
 
-/** Pre-generated time slot options (8 AM – midnight, 30-min intervals) */
+/** Pre-generated time slot options (8 AM – 11:30 PM, 30-min intervals) */
 export const TIME_SLOTS = (() => {
   const slots = [];
   for (let i = 0; i < 32; i++) {
@@ -322,8 +322,8 @@ export const TIME_SLOTS = (() => {
     if (hour >= 24) break;
     const minute = i % 2 === 0 ? 0 : 30;
     const value = `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
-    const h12 = hour > 12 ? hour - 12 : hour === 0 ? 12 : hour;
-    const ampm = hour >= 12 && hour < 24 ? "PM" : "AM";
+    const h12 = hour === 12 ? 12 : hour > 12 ? hour - 12 : hour;
+    const ampm = hour >= 12 ? "PM" : "AM";
     const label = `${h12}:${String(minute).padStart(2, "0")} ${ampm}`;
     slots.push({ value, label });
   }

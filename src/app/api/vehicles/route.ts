@@ -26,7 +26,9 @@ export async function GET(request: Request) {
       let fallbackQuery = supabase
         .from("vehicles")
         .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, maintenance_status, color, vin, description")
-        .order("created_at", { ascending: true })
+        .eq("is_available", true)
+        .order("make", { ascending: true })
+        .order("model", { ascending: true })
         .limit(100);
 
       if (category && category !== "all") {
