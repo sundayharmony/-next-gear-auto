@@ -33,13 +33,13 @@ export function validate(value: string, rules: ValidationRule): string | null {
 
 export const emailRule: ValidationRule = {
   required: true,
-  pattern: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+  pattern: /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/,
   message: "Please enter a valid email address",
 };
 
 export const phoneRule: ValidationRule = {
   required: true,
-  pattern: /^[+]?[\d]{1}[\d\s().-]{6,19}$/,
+  pattern: /^[+]?[\d\s().-]*\d{10,}[\d\s().-]*$/,
   message: "Please enter a valid phone number",
 };
 

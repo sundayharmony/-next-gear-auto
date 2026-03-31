@@ -32,6 +32,32 @@ interface AuditLogEntry {
 }
 
 /**
+ * Recursively redact sensitive keys in objects.
+ */
+function redactSensitiveData(obj: Record<string, unknown>): Record<string, unknown> {
+  const sensitiveKeys = ["password", "password_hash", "token", "secret", "card", "ssn"];
+
+  for (const key in obj) {
+    if (sensitiveKeys.includes(key)) {
+      obj[key] = "[REDACTED]";
+    } else if (obj[key] !== null && typeof obj[key] === "object") {
+      // Recursively redact nested objects and arrays
+      if (Array.isArray(obj[key])) {
+        (obj[key] as unknown[]).forEach((item) => {
+          if (item !== null && typeof item === "object") {
+            redactSensitiveData(item as Record<string, unknown>);
+          }
+        });
+      } else {
+        redactSensitiveData(obj[key] as Record<string, unknown>);
+      }
+    }
+  }
+
+  return obj;
+}
+
+/**
  * Write a structured security audit log entry.
  * These are output as JSON to stdout (captured by Vercel runtime logs).
  * Never logs passwords, tokens, or full credit card numbers.
@@ -46,14 +72,9 @@ export function auditLog(
     ...data,
   };
 
-  // Sanitize — never log sensitive fields
+  // Sanitize — recursively redact sensitive fields including nested objects
   if (entry.details) {
-    const sensitiveKeys = ["password", "password_hash", "token", "secret", "card", "ssn"];
-    for (const key of sensitiveKeys) {
-      if (key in entry.details) {
-        entry.details[key] = "[REDACTED]";
-      }
-    }
+    redactSensitiveData(entry.details);
   }
 
   // Output as structured JSON for Vercel log ingestion

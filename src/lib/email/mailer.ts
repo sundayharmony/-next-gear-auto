@@ -52,6 +52,48 @@ export function getTransporter() {
   return _transporter;
 }
 
+// Strip HTML tags for plain text fallback
+function stripHtmlTags(html: string): string {
+  return html
+    .replace(/<[^>]*>/g, "")
+    .replace(/&quot;/g, '"')
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+// Retry logic for transient email errors
+async function sendMailWithRetry(
+  transporter: nodemailer.Transporter,
+  mailOptions: nodemailer.SendMailOptions,
+  maxRetries: number = 1
+): Promise<void> {
+  let lastError: Error | null = null;
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      await transporter.sendMail(mailOptions);
+      return;
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error(String(error));
+      const isTransient =
+        lastError.message.includes("ECONNREFUSED") ||
+        lastError.message.includes("ETIMEDOUT") ||
+        lastError.message.includes("EHOSTUNREACH") ||
+        lastError.message.includes("421") ||
+        lastError.message.includes("450") ||
+        lastError.message.includes("451");
+      if (!isTransient || attempt === maxRetries) {
+        throw lastError;
+      }
+      // Wait before retry
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (attempt + 1)));
+    }
+  }
+  throw lastError || new Error("Failed to send email after retries");
+}
+
 interface BookingEmailData {
   bookingId: string;
   customerName: string;
@@ -78,12 +120,14 @@ export async function sendBookingConfirmation(data: BookingEmailData) {
   try {
     const enriched = await enrichWithPasswordToken(data);
     const transporter = getTransporter();
-    await transporter.sendMail({
+    const html = bookingConfirmationTemplate(enriched);
+    await sendMailWithRetry(transporter, {
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       bcc: ADMIN_EMAIL,
       subject: `Booking Confirmed - ${data.bookingId}`,
-      html: bookingConfirmationTemplate(enriched),
+      html,
+      text: stripHtmlTags(html),
     });
     logger.info("Confirmation email sent successfully");
   } catch (error) {
@@ -97,12 +141,14 @@ export async function sendBookingPendingEmail(data: BookingEmailData) {
   try {
     const enriched = await enrichWithPasswordToken(data);
     const transporter = getTransporter();
-    await transporter.sendMail({
+    const html = bookingPendingTemplate(enriched);
+    await sendMailWithRetry(transporter, {
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       bcc: ADMIN_EMAIL,
       subject: `Booking Received - ${data.bookingId}`,
-      html: bookingPendingTemplate(enriched),
+      html,
+      text: stripHtmlTags(html),
     });
     logger.info("Pending booking email sent successfully");
   } catch (error) {
@@ -115,11 +161,13 @@ export async function sendBookingPendingEmail(data: BookingEmailData) {
 export async function sendAdminNewBooking(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
-    await transporter.sendMail({
+    const html = adminNewBookingTemplate(data);
+    await sendMailWithRetry(transporter, {
       from: FROM_SYSTEM,
       to: ADMIN_EMAIL,
       subject: `New Booking: ${data.bookingId} - ${data.vehicleName}`,
-      html: adminNewBookingTemplate(data),
+      html,
+      text: stripHtmlTags(html),
     });
     logger.info("Admin notification sent for booking:", data.bookingId);
   } catch (error) {
@@ -131,13 +179,15 @@ export async function sendAdminNewBooking(data: BookingEmailData) {
 export async function sendCancellationEmail(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
+    const html = cancellationTemplate(data);
     // Send to customer with admin BCC
-    await transporter.sendMail({
+    await sendMailWithRetry(transporter, {
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       bcc: ADMIN_EMAIL,
       subject: `Booking Cancelled - ${data.bookingId}`,
-      html: cancellationTemplate(data),
+      html,
+      text: stripHtmlTags(html),
     });
     logger.info("Cancellation email sent successfully");
   } catch (error) {
@@ -150,12 +200,14 @@ export async function sendCancellationEmail(data: BookingEmailData) {
 export async function sendPickupReminder(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
-    await transporter.sendMail({
+    const html = pickupReminderTemplate(data);
+    await sendMailWithRetry(transporter, {
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       bcc: ADMIN_EMAIL,
       subject: `Pickup Reminder - Your ${data.vehicleName} is Ready!`,
-      html: pickupReminderTemplate(data),
+      html,
+      text: stripHtmlTags(html),
     });
     logger.info("Pickup reminder email sent successfully");
   } catch (error) {
@@ -178,12 +230,14 @@ export async function sendAgreementEmail(data: BookingEmailData & { pdfBytes: Ui
       throw new Error("PDF too large to email");
     }
     const transporter = getTransporter();
-    await transporter.sendMail({
+    const html = agreementEmailTemplate(data);
+    await sendMailWithRetry(transporter, {
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       bcc: ADMIN_EMAIL,
       subject: `Your Signed Rental Agreement - ${data.bookingId}`,
-      html: agreementEmailTemplate(data),
+      html,
+      text: stripHtmlTags(html),
       attachments: [
         {
           filename: `Rental-Agreement-${data.bookingId}.pdf`,
@@ -250,12 +304,14 @@ function agreementEmailTemplate(data: BookingEmailData): string {
 export async function sendReturnReminder(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
-    await transporter.sendMail({
+    const html = returnReminderTemplate(data);
+    await sendMailWithRetry(transporter, {
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       bcc: ADMIN_EMAIL,
       subject: `Return Reminder - ${data.vehicleName} due today`,
-      html: returnReminderTemplate(data),
+      html,
+      text: stripHtmlTags(html),
     });
     logger.info("Return reminder email sent successfully");
   } catch (error) {
@@ -268,12 +324,14 @@ export async function sendReturnReminder(data: BookingEmailData) {
 export async function sendBookingSignAgreement(data: BookingEmailData) {
   try {
     const transporter = getTransporter();
-    await transporter.sendMail({
+    const html = bookingSignAgreementTemplate(data);
+    await sendMailWithRetry(transporter, {
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       bcc: ADMIN_EMAIL,
       subject: `Your Booking Details - Please Sign Agreement | ${data.bookingId}`,
-      html: bookingSignAgreementTemplate(data),
+      html,
+      text: stripHtmlTags(html),
     });
     logger.info("Booking sign-agreement email sent successfully");
   } catch (error) {
@@ -290,12 +348,14 @@ export async function sendPasswordResetLink(data: { customerName: string; custom
     const token = generatePasswordToken(data.customerEmail);
 
     const transporter = getTransporter();
-    await transporter.sendMail({
+    const html = passwordResetTemplate({ ...data, token });
+    await sendMailWithRetry(transporter, {
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       bcc: ADMIN_EMAIL,
       subject: "Set Your Password - NextGearAuto",
-      html: passwordResetTemplate({ ...data, token }),
+      html,
+      text: stripHtmlTags(html),
     });
     logger.info("Password reset link email sent successfully");
   } catch (error) {

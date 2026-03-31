@@ -134,17 +134,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Verify booking is in a valid state for signing (not cancelled)
-    const validStatuses = ["confirmed", "active", "pending"];
-    if (booking.status && !validStatuses.includes(booking.status)) {
+    // Verify booking is in a valid state for signing (not cancelled or completed)
+    const validStatuses = ["pending", "confirmed", "active"];
+    if (!booking.status || !validStatuses.includes(booking.status)) {
       return NextResponse.json(
         { success: false, error: "This booking is not in a valid state for signing" },
-        { status: 400 }
-      );
-    }
-    if (booking.status === "cancelled") {
-      return NextResponse.json(
-        { success: false, error: "Cannot sign agreement for a cancelled booking" },
         { status: 400 }
       );
     }

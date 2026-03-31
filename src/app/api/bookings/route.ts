@@ -305,30 +305,33 @@ export async function POST(request: Request) {
           .eq("id", existingCustomer.id);
         if (updateErr) logger.warn("Failed to update existing customer info:", updateErr);
       } else {
-        // Create new customer (with race condition handling)
+        // Create new customer (with ON CONFLICT handling for race conditions)
         const newCustId = "c_" + crypto.randomUUID();
-        try {
-          const { data: newCustomer } = await supabase
-            .from("customers")
-            .insert({
+        const { data: newCustomer, error: insertErr } = await supabase
+          .from("customers")
+          .upsert(
+            {
               id: newCustId,
               name: customerName,
               email: customerEmail,
               phone: customerPhone,
               role: "customer",
-            })
-            .select("id")
-            .single();
-          if (newCustomer) customerId = newCustomer.id;
-        } catch {
-          // Race condition: customer created between our SELECT and INSERT
-          // Retry the SELECT to get the existing customer ID
-          const { data: retryCustomer } = await supabase
+            },
+            { onConflict: "email", ignoreDuplicates: false }
+          )
+          .select("id")
+          .single();
+
+        if (insertErr && insertErr.code === "23505") {
+          // Unique constraint violation on email — fetch the existing customer
+          const { data: existingCust } = await supabase
             .from("customers")
             .select("id")
             .eq("email", customerEmail)
             .single();
-          customerId = retryCustomer?.id || newCustId;
+          customerId = existingCust?.id || newCustId;
+        } else if (newCustomer) {
+          customerId = newCustomer.id;
         }
       }
     }

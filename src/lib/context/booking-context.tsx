@@ -331,6 +331,15 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (data.success && data.data?.sessionUrl) {
+        // Validate Stripe URL before redirecting
+        const stripeUrl = data.data.sessionUrl;
+        if (!stripeUrl.startsWith("https://checkout.stripe.com")) {
+          dispatch({
+            type: "SUBMIT_ERROR",
+            payload: "Invalid checkout URL. Please try again.",
+          });
+          return;
+        }
         // Save agreement signatures to localStorage before redirecting to Stripe
         // (React state is lost during redirect, so we persist signatures here)
         if (state.agreementSignatures && Object.keys(state.agreementSignatures).length > 0) {
@@ -345,7 +354,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         }
         // Redirect to Stripe Checkout hosted page
         dispatch({ type: "SUBMIT_SUCCESS", payload: data.data.bookingId });
-        window.location.href = data.data.sessionUrl;
+        window.location.href = stripeUrl;
       } else {
         dispatch({
           type: "SUBMIT_ERROR",

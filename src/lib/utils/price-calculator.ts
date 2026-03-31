@@ -19,7 +19,13 @@ export function calculateRentalDays(pickupDate: string, returnDate: string): num
   const diffTime = returnD.getTime() - pickup.getTime();
   const days = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
   // Guard against NaN and negative dates
-  return Number.isFinite(days) && days > 0 ? days : 1;
+  if (!Number.isFinite(days) || days < 1) {
+    console.warn(
+      `Invalid rental days calculated: pickup=${pickupDate}, return=${returnDate}, days=${days}. Defaulting to 1.`
+    );
+    return 1;
+  }
+  return days;
 }
 
 /**

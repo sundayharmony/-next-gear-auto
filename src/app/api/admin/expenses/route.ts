@@ -13,6 +13,8 @@ const VALID_CATEGORIES = [
   "other",
 ];
 
+const MAX_EXPENSE_AMOUNT = 1000000;
+
 function validateExpenseInput(
   category: unknown,
   amount: unknown
@@ -29,6 +31,13 @@ function validateExpenseInput(
     return {
       valid: false,
       error: "Amount must be a valid positive number",
+    };
+  }
+
+  if (parsedAmount > MAX_EXPENSE_AMOUNT) {
+    return {
+      valid: false,
+      error: `Amount cannot exceed $${MAX_EXPENSE_AMOUNT.toLocaleString()}`,
     };
   }
 
@@ -189,6 +198,12 @@ export async function PUT(request: NextRequest) {
         if (!Number.isFinite(parsedCheck) || parsedCheck <= 0) {
           return NextResponse.json(
             { success: false, error: "Invalid amount" },
+            { status: 400 }
+          );
+        }
+        if (parsedCheck > MAX_EXPENSE_AMOUNT) {
+          return NextResponse.json(
+            { success: false, error: `Amount cannot exceed $${MAX_EXPENSE_AMOUNT.toLocaleString()}` },
             { status: 400 }
           );
         }

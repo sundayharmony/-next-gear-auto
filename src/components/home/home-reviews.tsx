@@ -36,7 +36,6 @@ const FALLBACK_REVIEWS: Review[] = [
 export function HomeReviews() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isHovering, setIsHovering] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -98,8 +97,6 @@ export function HomeReviews() {
     <div
       className="grid grid-cols-1 gap-6 md:grid-cols-3"
       ref={containerRef}
-      onMouseEnter={() => setIsHovering(true)}
-      onMouseLeave={() => setIsHovering(false)}
     >
       {reviews.map((review) => (
         <Card key={review.id} className="p-6 card-hover">

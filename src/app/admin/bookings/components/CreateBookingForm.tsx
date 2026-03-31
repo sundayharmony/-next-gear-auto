@@ -300,6 +300,13 @@ export default function CreateBookingForm({
       onError("Return date must be after pickup date");
       return false;
     }
+    // If pickup and return date are the same, return time must be after pickup time
+    if (form.returnDate === form.pickupDate) {
+      if (form.returnTime <= form.pickupTime) {
+        onError("Return time must be after pickup time when on the same day");
+        return false;
+      }
+    }
     if (form.totalPrice <= 0) {
       onError("Total price must be greater than zero");
       return false;

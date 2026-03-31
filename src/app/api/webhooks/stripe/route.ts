@@ -16,24 +16,20 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
 
   try {
-    // Bug 28: Explicit production-only signature enforcement
-    if (process.env.NODE_ENV === "production") {
-      if (!webhookSecret || webhookSecret.includes("REPLACE")) {
-        logger.error("SECURITY: Webhook secret not configured in production - rejecting request");
+    // Always verify webhooks. Log warning in development if key is missing.
+    if (!webhookSecret || webhookSecret.includes("REPLACE")) {
+      if (process.env.NODE_ENV === "development") {
+        logger.warn("DEV WARNING: Webhook secret not configured - verification will fail");
+      } else {
+        logger.error("SECURITY: Webhook secret not configured - rejecting request");
         return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
       }
-      if (!sig) {
-        logger.error("SECURITY: Missing webhook signature in production - rejecting request");
-        return NextResponse.json({ error: "Webhook signature missing" }, { status: 400 });
-      }
-      event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-    } else if (webhookSecret && !webhookSecret.startsWith("whsec_REPLACE") && sig) {
-      event = stripe.webhooks.constructEvent(body, sig, webhookSecret);
-    } else {
-      // Allow unverified events in development only
-      logger.warn("DEV WARNING: Webhook secret not configured - parsing unverified event");
-      event = JSON.parse(body) as Stripe.Event;
     }
+    if (!sig) {
+      logger.error("SECURITY: Missing webhook signature - rejecting request");
+      return NextResponse.json({ error: "Webhook signature missing" }, { status: 400 });
+    }
+    event = stripe.webhooks.constructEvent(body, sig, webhookSecret!);
   } catch (err) {
     logger.error("Webhook signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });

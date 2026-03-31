@@ -23,8 +23,14 @@ export function useVehicles(enabled = true) {
     let cancelled = false;
     const fetchVehicles = async () => {
       setLoading(true);
+      setError(null); // Clear previous error state
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15-second timeout
+
       try {
-        const response = await fetch("/api/vehicles");
+        const response = await fetch("/api/vehicles", { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         if (!response.ok) {
           throw new Error(`API error: ${response.status} ${response.statusText}`);
         }
@@ -33,6 +39,7 @@ export function useVehicles(enabled = true) {
           setVehicles(result.data);
         }
       } catch (err) {
+        clearTimeout(timeoutId);
         logger.error("Failed to fetch vehicles:", err);
         if (!cancelled) setError("Failed to load vehicles");
       } finally {

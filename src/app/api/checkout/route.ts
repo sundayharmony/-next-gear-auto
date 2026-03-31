@@ -241,8 +241,13 @@ export async function POST(request: NextRequest) {
         .eq("is_active", true);
       if (!locError && locations) {
         validatedSurcharge = locations.reduce((sum: number, loc: { surcharge: number }) => sum + (loc.surcharge || 0), 0);
+        validatedSurcharge = Math.round(validatedSurcharge * 100) / 100;
       }
-      serverPricing = { ...serverPricing, total: serverPricing.total + validatedSurcharge, subtotal: serverPricing.subtotal + validatedSurcharge };
+      serverPricing = {
+        ...serverPricing,
+        total: Math.round((serverPricing.total + validatedSurcharge) * 100) / 100,
+        subtotal: Math.round((serverPricing.subtotal + validatedSurcharge) * 100) / 100
+      };
     }
 
     const serverTotal = Math.round(serverPricing.total * 100) / 100;
@@ -425,34 +430,42 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Create Stripe Checkout Session for paid bookings
-    const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card", "cashapp", "link"],
-      mode: "payment",
-      customer_email: customerDetails.email,
-      line_items: [
-        {
-          price_data: {
-            currency: "usd",
-            product_data: {
-              name: `NextGearAuto - Vehicle Rental`,
-              description: `${vehicleName || "Vehicle"} rental: ${pickupDate}${pickupTime ? " at " + pickupTime : ""} to ${returnDate}${returnTime ? " at " + returnTime : ""}`,
+    let session: Stripe.Checkout.Session;
+    try {
+      session = await stripe.checkout.sessions.create({
+        payment_method_types: ["card", "cashapp", "link"],
+        mode: "payment",
+        customer_email: customerDetails.email,
+        line_items: [
+          {
+            price_data: {
+              currency: "usd",
+              product_data: {
+                name: `NextGearAuto - Vehicle Rental`,
+                description: `${vehicleName || "Vehicle"} rental: ${pickupDate}${pickupTime ? " at " + pickupTime : ""} to ${returnDate}${returnTime ? " at " + returnTime : ""}`,
+              },
+              unit_amount: Math.max(1, Math.round((Number.isFinite(chargeAmount) ? chargeAmount : 0) * 100)), // Stripe uses cents, min 1 cent
             },
-            unit_amount: Math.max(1, Math.round((Number.isFinite(chargeAmount) ? chargeAmount : 0) * 100)), // Stripe uses cents, min 1 cent
+            quantity: 1,
           },
-          quantity: 1,
+        ],
+        metadata: {
+          booking_id: bookingId,
+          customer_id: customerId || "",
+          vehicle_id: vehicleId,
+          total_price: serverTotal.toString(),
+          promo_code: promoCode || "",
+          discount_amount: (discountAmount ?? 0).toString(),
         },
-      ],
-      metadata: {
-        booking_id: bookingId,
-        customer_id: customerId || "",
-        vehicle_id: vehicleId,
-        total_price: serverTotal.toString(),
-        promo_code: promoCode || "",
-        discount_amount: (discountAmount ?? 0).toString(),
-      },
-      success_url: `${siteUrl}/booking/success?session_id={CHECKOUT_SESSION_ID}&booking_id=${bookingId}`,
-      cancel_url: `${siteUrl}/booking/cancel?booking_id=${bookingId}`,
-    });
+        success_url: `${siteUrl}/booking/success?session_id={CHECKOUT_SESSION_ID}&booking_id=${bookingId}`,
+        cancel_url: `${siteUrl}/booking/cancel?booking_id=${bookingId}`,
+      });
+    } catch (stripeError) {
+      logger.error("Stripe session creation failed, deleting orphaned booking:", stripeError);
+      // Delete the orphaned booking
+      await supabase.from("bookings").delete().eq("id", bookingId);
+      throw stripeError;
+    }
 
     // 5. Update booking with Stripe session ID
     await supabase

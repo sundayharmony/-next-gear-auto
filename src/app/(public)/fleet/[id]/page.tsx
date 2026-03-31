@@ -183,6 +183,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
     category: vehicle.category,
     dailyRate: vehicle.daily_rate,
     isAvailable: vehicle.is_available,
+    image: vehicle.images && vehicle.images.length > 0 ? vehicle.images[0] : undefined,
     avgRating,
     reviewCount: vehicleReviews.length,
   });

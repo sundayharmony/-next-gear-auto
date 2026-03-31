@@ -22,6 +22,14 @@ export const metadata: Metadata = {
     locale: "en_US",
     url: "https://rentnextgearauto.com",
     siteName: "NextGearAuto",
+    images: [
+      {
+        url: "https://rentnextgearauto.com/images/logo.png",
+        width: 1200,
+        height: 630,
+        alt: "NextGearAuto - Premium Car Rentals",
+      },
+    ],
   },
   twitter: {
     card: "summary_large_image",

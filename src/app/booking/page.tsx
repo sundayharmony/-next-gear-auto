@@ -1328,16 +1328,16 @@ function BookingPageInner() {
                 <div className="space-y-4">
                   <div>
                     <label className="mb-1.5 block text-sm font-medium text-gray-700">Full Name</label>
-                    <Input placeholder="John Doe" value={details.name} onChange={(e) => setDetails((p) => ({ ...p, name: e.target.value }))} />
+                    <Input placeholder="John Doe" maxLength={100} value={details.name} onChange={(e) => setDetails((p) => ({ ...p, name: e.target.value }))} />
                   </div>
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-gray-700">Email</label>
-                      <Input type="email" placeholder="you@example.com" value={details.email} onChange={(e) => setDetails((p) => ({ ...p, email: e.target.value }))} />
+                      <Input type="email" placeholder="you@example.com" maxLength={254} value={details.email} onChange={(e) => setDetails((p) => ({ ...p, email: e.target.value }))} />
                     </div>
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-gray-700">Phone</label>
-                      <Input type="tel" placeholder="(555) 123-4567" value={details.phone} onChange={(e) => setDetails((p) => ({ ...p, phone: e.target.value }))} />
+                      <Input type="tel" placeholder="(555) 123-4567" maxLength={20} value={details.phone} onChange={(e) => setDetails((p) => ({ ...p, phone: e.target.value }))} />
                     </div>
                   </div>
                   <div>

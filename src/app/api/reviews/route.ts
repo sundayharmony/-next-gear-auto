@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import { reviewLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 
 // GET: Return reviews — verified admins see all statuses, public only sees approved
 export async function GET(req: NextRequest) {
@@ -65,6 +66,13 @@ export async function GET(req: NextRequest) {
 
 // POST: Submit a new review
 export async function POST(req: NextRequest) {
+  // Rate limiting
+  const ip = getClientIp(req);
+  const rateCheck = reviewLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.resetAt);
+  }
+
   const supabase = getServiceSupabase();
   try {
     const body = await req.json();

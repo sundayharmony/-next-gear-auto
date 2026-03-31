@@ -59,7 +59,24 @@ export default function AdminPromoCodesPage() {
   useEffect(() => { fetchCodes(); }, []);
 
   const addCode = async () => {
-    if (!newCode.code) return;
+    // Validation
+    if (!newCode.code || !newCode.code.trim()) {
+      setError("Code is required");
+      return;
+    }
+    if (!newCode.discountValue || newCode.discountValue <= 0) {
+      setError("Discount value must be greater than 0");
+      return;
+    }
+    if (newCode.discountType === "percentage" && newCode.discountValue > 100) {
+      setError("Percentage discount cannot exceed 100%");
+      return;
+    }
+    if (newCode.maxUses && newCode.maxUses <= 0) {
+      setError("Max uses must be greater than 0 if set");
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await adminFetch("/api/admin/promo-codes", {
@@ -85,6 +102,21 @@ export default function AdminPromoCodesPage() {
 
   const saveEdit = async () => {
     if (!editingCode) return;
+
+    // Validation
+    if (!editForm.discountValue || editForm.discountValue <= 0) {
+      setError("Discount value must be greater than 0");
+      return;
+    }
+    if (editForm.discountType === "percentage" && editForm.discountValue > 100) {
+      setError("Percentage discount cannot exceed 100%");
+      return;
+    }
+    if (editForm.maxUses && editForm.maxUses <= 0) {
+      setError("Max uses must be greater than 0 if set");
+      return;
+    }
+
     setSaving(true);
     try {
       const res = await adminFetch("/api/admin/promo-codes", {

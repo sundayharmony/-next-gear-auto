@@ -138,6 +138,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate booking_id exists if provided
+    if (bookingId) {
+      const { data: booking, error: bookingErr } = await supabase
+        .from("bookings")
+        .select("id")
+        .eq("id", bookingId)
+        .single();
+
+      if (bookingErr || !booking) {
+        return NextResponse.json(
+          { success: false, message: "Booking not found" },
+          { status: 404 }
+        );
+      }
+    }
+
     const id = "tkt_" + crypto.randomUUID();
 
     const { data, error } = await supabase

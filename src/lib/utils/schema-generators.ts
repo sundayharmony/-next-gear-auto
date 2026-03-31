@@ -104,6 +104,7 @@ export function generateProductSchema(vehicle: {
   isAvailable: boolean;
   avgRating?: string | null;
   reviewCount?: number;
+  image?: string;
 }) {
   const displayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
   const schema: Record<string, unknown> = {
@@ -112,6 +113,7 @@ export function generateProductSchema(vehicle: {
     name: `${displayName} Rental`,
     description: vehicle.description,
     url: `${SITE_URL}/fleet/${vehicle.id}`,
+    image: vehicle.image || `${SITE_URL}/images/placeholder-car.png`,
     category: `${vehicle.category} car rental`,
     brand: {
       "@type": "Brand",

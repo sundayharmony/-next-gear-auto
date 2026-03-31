@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Menu, X, Phone, Car, User, LogOut, Shield } from "lucide-react";
@@ -14,6 +14,7 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Close mobile menu when pathname changes (Bug 37)
   useEffect(() => {
@@ -30,6 +31,13 @@ export function Header() {
     return () => {
       document.body.style.overflow = "";
     };
+  }, [isMobileMenuOpen]);
+
+  // Restore focus to hamburger button when menu closes
+  useEffect(() => {
+    if (!isMobileMenuOpen && menuButtonRef.current) {
+      menuButtonRef.current.focus();
+    }
   }, [isMobileMenuOpen]);
 
   return (
@@ -107,6 +115,7 @@ export function Header() {
               </Link>
             )}
             <button
+              ref={menuButtonRef}
               className="rounded-lg p-3 text-gray-600 hover:bg-gray-100 md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle menu"

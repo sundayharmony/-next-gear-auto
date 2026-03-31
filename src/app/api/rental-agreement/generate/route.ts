@@ -71,9 +71,9 @@ export async function GET(req: NextRequest) {
       booking = b;
 
       // Verify requester: check email param or admin auth
-      const requesterEmail = searchParams.get("email");
+      const requesterEmail = searchParams.get("email")?.toLowerCase().trim();
       if (requesterEmail) {
-        if (b.customer_email && requesterEmail.toLowerCase().trim() !== b.customer_email.toLowerCase().trim()) {
+        if (b.customer_email && requesterEmail !== b.customer_email.toLowerCase().trim()) {
           return NextResponse.json({ success: false, error: "Not authorized to view this agreement" }, { status: 403 });
         }
       } else {

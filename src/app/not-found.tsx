@@ -1,8 +1,14 @@
 import React from "react";
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Car, Search, Instagram, MapPin, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { SITE_NAME } from "@/lib/constants";
+
+export const metadata: Metadata = {
+  title: "Page Not Found - NextGearAuto",
+  description: "The page you're looking for doesn't exist. Browse our fleet or book a car instead.",
+};
 
 export default function NotFound() {
   return (

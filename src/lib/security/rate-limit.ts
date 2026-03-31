@@ -138,20 +138,53 @@ export const promoLimiter = createRateLimiter({
   max: 10,
 });
 
+/** Review submission: 5 reviews per hour per IP */
+export const reviewLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+});
+
 /** General API: 100 requests per minute per IP */
 export const generalLimiter = createRateLimiter({
   windowMs: 60 * 1000,
   max: 100,
 });
 
-/** Extract client IP from request */
+/**
+ * Simple hash function for IP addresses.
+ * Used as fallback when x-forwarded-for header is untrusted.
+ */
+function hashIp(ip: string): string {
+  let hash = 0;
+  for (let i = 0; i < ip.length; i++) {
+    const char = ip.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash = hash & hash; // Convert to 32-bit integer
+  }
+  return "hash_" + Math.abs(hash).toString(36);
+}
+
+/** Extract client IP from request with validation */
 export function getClientIp(req: Request): string {
   const headers = req.headers;
-  // Vercel sets x-forwarded-for
-  const forwarded = headers.get("x-forwarded-for");
-  if (forwarded) return forwarded.split(",")[0].trim();
-  // Fallback
-  return headers.get("x-real-ip") || "unknown";
+  // Check if running behind Vercel (production environment)
+  const isVercelEnv = process.env.VERCEL === "1" || process.env.VERCEL_ENV === "production";
+
+  // Only trust x-forwarded-for if running behind a known proxy (Vercel)
+  if (isVercelEnv) {
+    const forwarded = headers.get("x-forwarded-for");
+    if (forwarded) {
+      const ip = forwarded.split(",")[0].trim();
+      // Basic validation: should look like an IP address
+      if (/^[\d.]+$/.test(ip) || /^[a-f0-9:]+$/.test(ip)) {
+        return ip;
+      }
+    }
+  }
+
+  // Fallback: use hash of x-real-ip or unknown
+  const realIp = headers.get("x-real-ip") || "unknown";
+  return hashIp(realIp);
 }
 
 /** Standard 429 response with rate limit headers */

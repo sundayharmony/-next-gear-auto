@@ -1106,6 +1106,7 @@ export default function AdminFinancesPage() {
                   onChange={(e) => {
                     const newFrom = e.target.value;
                     setDateRange((p) => {
+                      // If from date is after to date, swap them automatically
                       const newTo = newFrom > p.to ? newFrom : p.to;
                       return { from: newFrom, to: newTo };
                     });
@@ -1120,6 +1121,7 @@ export default function AdminFinancesPage() {
                   onChange={(e) => {
                     const newTo = e.target.value;
                     setDateRange((p) => {
+                      // If to date is before from date, swap them automatically
                       const newFrom = newTo < p.from ? newTo : p.from;
                       return { from: newFrom, to: newTo };
                     });

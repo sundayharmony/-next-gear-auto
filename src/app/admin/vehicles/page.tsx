@@ -397,6 +397,11 @@ export default function AdminVehiclesPage() {
       setError("Daily rate must be a positive number");
       return;
     }
+    const currentYear = new Date().getFullYear();
+    if (!editForm.year || editForm.year < 1990 || editForm.year > currentYear + 1) {
+      setError(`Year must be between 1990 and ${currentYear + 1}`);
+      return;
+    }
     setSaving(true);
     try {
       const res = await adminFetch("/api/admin/vehicles", {
@@ -455,8 +460,9 @@ export default function AdminVehiclesPage() {
       setError("Make and Model are required");
       return;
     }
-    if (!newVehicle.year || newVehicle.year < 1990 || newVehicle.year > 2030) {
-      setError("Year must be between 1990 and 2030");
+    const currentYear = new Date().getFullYear();
+    if (!newVehicle.year || newVehicle.year < 1990 || newVehicle.year > currentYear + 1) {
+      setError(`Year must be between 1990 and ${currentYear + 1}`);
       return;
     }
     if (newVehicle.mileage !== undefined && newVehicle.mileage !== null && newVehicle.mileage < 0) {

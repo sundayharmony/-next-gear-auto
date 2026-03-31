@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Car, X, ChevronLeft, ChevronRight } from "lucide-react";
 
 interface VehicleImageGalleryProps {
@@ -11,6 +11,7 @@ interface VehicleImageGalleryProps {
 export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
 
   const openLightbox = (index: number) => {
     setActiveIndex(index);
@@ -18,6 +19,23 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
   };
 
   const closeLightbox = () => setLightboxOpen(false);
+
+  // Focus trap: focus close button when lightbox opens
+  useEffect(() => {
+    if (lightboxOpen && closeButtonRef.current) {
+      closeButtonRef.current.focus();
+    }
+  }, [lightboxOpen]);
+
+  // Prevent background scroll when lightbox is open
+  useEffect(() => {
+    if (!lightboxOpen) return;
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = originalOverflow;
+    };
+  }, [lightboxOpen]);
 
   const goNext = () => {
     setActiveIndex((prev) => (prev + 1) % images.length);
@@ -137,6 +155,7 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
         >
           {/* Close button */}
           <button
+            ref={closeButtonRef}
             onClick={closeLightbox}
             aria-label="Close gallery"
             className="absolute top-4 right-4 z-10 rounded-full bg-white/10 p-2 text-white hover:bg-white/20 transition-colors"
