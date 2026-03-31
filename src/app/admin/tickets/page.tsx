@@ -640,7 +640,7 @@ export default function AdminTicketsPage() {
                 <option value="">No booking</option>
                 {bookings
                   .filter((b) => ["confirmed", "active", "completed"].includes(b.status))
-                  .sort((a, b) => new Date(b.pickup_date).getTime() - new Date(a.pickup_date).getTime())
+                  .sort((a, b) => new Date(b.pickup_date + "T00:00:00").getTime() - new Date(a.pickup_date + "T00:00:00").getTime())
                   .map((b) => (
                     <option key={b.id} value={b.id}>
                       {b.customer_name} — {b.vehicleName || "Vehicle"} ({b.pickup_date})

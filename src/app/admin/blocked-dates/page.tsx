@@ -512,7 +512,7 @@ export default function BlockedDatesPage() {
             {filteredBlocks.map((block) => {
               const dayCount =
                 Math.ceil(
-                  (new Date(block.end_date).getTime() - new Date(block.start_date).getTime()) / 86400000
+                  (new Date(block.end_date + "T00:00:00").getTime() - new Date(block.start_date + "T00:00:00").getTime()) / 86400000
                 ) + 1;
               // Note: API currently only returns future blocks; isPast check retained for when history view is added
               const isPast = block.end_date < today;

@@ -10,15 +10,18 @@
  */
 import { getCsrfToken } from "./csrf-fetch";
 
+const MAX_RETRIES = 1; // Maximum retry attempts to prevent infinite loops
+
 export async function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const headers = new Headers(options.headers || {});
 
   // Add timeout to fetch if not already provided
   let signal = options.signal;
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
+  let controller: AbortController | undefined;
   if (!signal) {
-    const controller = new AbortController();
-    timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
+    controller = new AbortController();
+    timeoutId = setTimeout(() => controller!.abort(), 15000); // 15 second timeout
     signal = controller.signal;
   }
 
@@ -47,46 +50,66 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
     }
   }
 
-  // Ensure cookies are sent with the request
-  const res = await fetch(url, {
-    ...options,
-    headers,
-    credentials: "same-origin",
-    signal,
-  });
-  if (timeoutId) clearTimeout(timeoutId);
+  let retryCount = 0;
 
-  // If 401, try refreshing the token
-  if (res.status === 401 && typeof window !== "undefined") {
-    try {
-      const refreshController = new AbortController();
-      const refreshTimeout = setTimeout(() => refreshController.abort(), 5000);
-      const refreshRes = await fetch("/api/auth/refresh", {
-        method: "POST",
-        credentials: "same-origin",
-        signal: refreshController.signal,
-      });
-      clearTimeout(refreshTimeout);
+  const executeRequest = async (): Promise<Response> => {
+    // Ensure cookies are sent with the request
+    const res = await fetch(url, {
+      ...options,
+      headers,
+      credentials: "same-origin",
+      signal,
+    });
 
-      if (refreshRes.ok) {
-        // Retry the original request with fresh tokens
-        const retryRes = await fetch(url, {
-          ...options,
-          headers,
+    // If 401 or 403 (CSRF), try refreshing the token (but only once)
+    if ((res.status === 401 || res.status === 403) && retryCount < MAX_RETRIES && typeof window !== "undefined") {
+      retryCount++;
+      try {
+        const refreshController = new AbortController();
+        const refreshTimeout = setTimeout(() => refreshController.abort(), 5000);
+        const refreshRes = await fetch("/api/auth/refresh", {
+          method: "POST",
           credentials: "same-origin",
-          signal,
+          signal: refreshController.signal,
         });
-        if (timeoutId) clearTimeout(timeoutId);
-        return retryRes;
+        clearTimeout(refreshTimeout);
+
+        if (refreshRes.ok) {
+          // Get updated CSRF token and retry the original request with fresh tokens
+          const newCsrf = getCsrfToken();
+          const retryHeaders = new Headers(options.headers || {});
+          if (newCsrf) {
+            retryHeaders.set("x-csrf-token", newCsrf);
+          }
+          const retryRes = await fetch(url, {
+            ...options,
+            headers: retryHeaders,
+            credentials: "same-origin",
+            signal,
+          });
+          return retryRes;
+        }
+      } catch {
+        // Refresh failed — fall through to redirect
       }
-    } catch {
-      // Refresh failed — fall through to redirect
+
+      // Refresh failed — clear state and redirect to login
+      if (res.status === 401) {
+        localStorage.removeItem("nga_user");
+        window.location.href = "/admin";
+      }
     }
 
-    // Refresh failed — clear state and redirect to login
-    localStorage.removeItem("nga_user");
-    window.location.href = "/admin";
-  }
+    return res;
+  };
 
-  return res;
+  try {
+    return await executeRequest();
+  } finally {
+    // Always clean up timeout and controller
+    if (timeoutId) clearTimeout(timeoutId);
+    if (controller) {
+      controller.abort();
+    }
+  }
 }

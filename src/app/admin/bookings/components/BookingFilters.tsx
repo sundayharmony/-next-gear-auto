@@ -89,12 +89,13 @@ export default function BookingFilters({
   return (
     <div className="space-y-4">
       {/* Status filter pills */}
-      <div className="flex gap-2 flex-wrap">
+      <div className="flex gap-2 flex-wrap" role="group" aria-label="Filter bookings by status">
         {statuses.map((status) => (
           <button
             key={status}
             onClick={() => onStatusChange(status)}
             aria-pressed={statusFilter === status}
+            aria-label={`Filter by ${status} status${statusFilter === status ? " (current)" : ""}`}
             className={`px-4 py-2 rounded-full font-medium text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 outline-none ${
               statusFilter === status
                 ? "bg-purple-600 text-white focus-visible:outline-purple-700"
@@ -109,18 +110,23 @@ export default function BookingFilters({
       {/* Search bar + vehicle filter + actions row */}
       <div className="flex gap-3 items-center">
         <div className="flex-1 relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+          <label htmlFor="search-input" className="sr-only">Search bookings</label>
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" aria-hidden="true" />
           <Input
+            id="search-input"
             type="text"
             placeholder="Search by customer name, email, phone..."
             value={localSearch}
             onChange={(e) => setLocalSearch(e.target.value)}
             className="pl-10 focus-visible:outline-2 focus-visible:outline-purple-600 focus-visible:outline-offset-0"
+            aria-label="Search bookings by customer name, email, or phone"
           />
         </div>
         <div className="relative">
-          <Car className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+          <Car className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" aria-hidden="true" />
+          <label htmlFor="vehicle-filter" className="sr-only">Filter by vehicle</label>
           <select
+            id="vehicle-filter"
             value={vehicleFilter}
             onChange={(e) => onVehicleChange(e.target.value)}
             className="pl-8 pr-3 py-2 border rounded text-sm bg-white text-gray-700 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none min-w-[180px] appearance-none cursor-pointer"
@@ -173,45 +179,50 @@ export default function BookingFilters({
             onClick={onBulkConfirm}
             disabled={bulkUpdating}
             title="Confirm selected bookings"
+            aria-label={`Confirm ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
             className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Check className="w-4 h-4" />
+            <Check className="w-4 h-4" aria-hidden="true" />
             Confirm
           </button>
           <button
             onClick={onBulkStart}
             disabled={bulkUpdating}
             title="Start selected bookings"
+            aria-label={`Start ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
             className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Check className="w-4 h-4" />
+            <Check className="w-4 h-4" aria-hidden="true" />
             Start
           </button>
           <button
             onClick={onBulkComplete}
             disabled={bulkUpdating}
             title="Complete selected bookings"
+            aria-label={`Complete ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
             className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Check className="w-4 h-4" />
+            <Check className="w-4 h-4" aria-hidden="true" />
             Complete
           </button>
           <button
             onClick={onBulkCancel}
             disabled={bulkUpdating}
             title="Cancel selected bookings"
+            aria-label={`Cancel ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
             className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 rounded-full hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <X className="w-4 h-4" />
+            <X className="w-4 h-4" aria-hidden="true" />
             Cancel
           </button>
           <button
             onClick={onBulkEmail}
             disabled={bulkUpdating}
             title="Send email to selected"
+            aria-label={`Send email to ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
             className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Mail className="w-4 h-4" />
+            <Mail className="w-4 h-4" aria-hidden="true" />
             Email
           </button>
           <button

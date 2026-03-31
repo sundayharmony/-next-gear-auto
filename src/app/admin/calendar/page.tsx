@@ -773,11 +773,11 @@ function TimelineView({
                             // Dynamic rounding: flat edge if booking extends beyond view
                             const roundLeft = extendsLeft ? "rounded-l-none" : "rounded-l-lg";
                             const roundRight = extendsRight ? "rounded-r-none" : "rounded-r-lg";
-                            const pickupDate = booking.pickup_date.split("T")[0];
-                            const returnDate = booking.return_date.split("T")[0];
-                            const daysTotal = Math.ceil(
+                            const pickupDate = booking.pickup_date ? booking.pickup_date.split("T")[0] : "";
+                            const returnDate = booking.return_date ? booking.return_date.split("T")[0] : "";
+                            const daysTotal = pickupDate && returnDate ? Math.ceil(
                               (new Date(returnDate).getTime() - new Date(pickupDate).getTime()) / 86400000
-                            ) + 1;
+                            ) + 1 : 1;
 
                             return (
                               <div
@@ -788,7 +788,7 @@ function TimelineView({
                                   left: `calc(${trimStart * 100}%)`,
                                   width: `calc(${preciseSpan * 100}% - 2px)`,
                                 }}
-                                title={`${booking.customer_name}\n${pickupDate} → ${returnDate} (${daysTotal} days)\n$${(booking.total_price ?? 0).toFixed(2)} — ${booking.status}`}
+                                title={`${booking.customer_name || "Unknown"}\n${pickupDate} → ${returnDate} (${daysTotal} days)\n$${(booking.total_price ?? 0).toFixed(2)} — ${booking.status || "pending"}`}
                               >
                                 {/* Left arrow if extends beyond view */}
                                 {extendsLeft && (
@@ -930,8 +930,8 @@ function CalendarView({
   // Get bookings for each day
   const bookingsByDay: Record<string, BookingRow[]> = {};
   bookings.forEach((booking) => {
-    const pickupDate = new Date(booking.pickup_date);
-    const returnDate = new Date(booking.return_date);
+    const pickupDate = new Date(booking.pickup_date + "T00:00:00");
+    const returnDate = new Date(booking.return_date + "T00:00:00");
     const pickupDateOnly = new Date(
       pickupDate.getFullYear(),
       pickupDate.getMonth(),
@@ -1044,7 +1044,7 @@ function CalendarView({
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
                 Bookings for{" "}
-                {new Date(selectedDay).toLocaleDateString("en-US", {
+                {new Date(selectedDay + "T00:00:00").toLocaleDateString("en-US", {
                   weekday: "long",
                   month: "short",
                   day: "numeric",
@@ -1070,14 +1070,14 @@ function CalendarView({
                   <div className="flex items-start justify-between mb-2">
                     <div>
                       <div className="font-semibold text-gray-900">
-                        {booking.customer_name}
+                        {booking.customer_name || "Unknown"}
                       </div>
                       <div className="text-sm text-gray-600">
-                        {booking.customer_email}
+                        {booking.customer_email || "No email"}
                       </div>
                     </div>
-                    <Badge className={statusColors[booking.status]}>
-                      {booking.status}
+                    <Badge className={statusColors[booking.status || "pending"]}>
+                      {booking.status || "pending"}
                     </Badge>
                   </div>
                   <div className="grid grid-cols-2 gap-4 text-sm mt-3">
@@ -1116,7 +1116,7 @@ function CalendarView({
           <div className="border-t border-gray-200 pt-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
-                {new Date(selectedDay).toLocaleDateString("en-US", {
+                {new Date(selectedDay + "T00:00:00").toLocaleDateString("en-US", {
                   weekday: "long",
                   month: "short",
                   day: "numeric",

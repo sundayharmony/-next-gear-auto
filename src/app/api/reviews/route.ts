@@ -92,11 +92,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Sanitize customer name
-    const safeName = customerName.replace(/<[^>]*>/g, "").trim();
+    // Sanitize customer name - escape HTML entities
+    const escapeHtml = (s: string) =>
+      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    const safeName = escapeHtml(customerName.trim());
 
-    // Prevent CSV injection - strip leading formula characters
-    const safeText = (text || "").replace(/^[=+\-@\t\r]/g, "");
+    // Sanitize review text - escape HTML entities and prevent CSV/formula injection
+    const safeText = escapeHtml((text || "").trim()).replace(/^[=+\-@\t\r]/g, "");
 
     // Insert into Supabase
     const reviewId = `rev_${crypto.randomUUID()}`;

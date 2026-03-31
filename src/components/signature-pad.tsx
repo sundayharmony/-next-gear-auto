@@ -55,6 +55,29 @@ export function SignaturePad({
       ctx.strokeStyle = "#1a1a2e";
       ctx.lineWidth = isInitials ? 2 : 2.5;
     }
+
+    // Handle window resize for responsive canvas
+    const handleResize = () => {
+      if (!canvas) return;
+      canvas.style.width = `${padWidth}px`;
+      canvas.style.height = `${padHeight}px`;
+      canvas.width = padWidth * dpr;
+      canvas.height = padHeight * dpr;
+      const resizeCtx = canvas.getContext("2d");
+      if (resizeCtx) {
+        resizeCtx.scale(dpr, dpr);
+        resizeCtx.lineCap = "round";
+        resizeCtx.lineJoin = "round";
+        resizeCtx.strokeStyle = "#1a1a2e";
+        resizeCtx.lineWidth = isInitials ? 2 : 2.5;
+      }
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, [padWidth, padHeight, isInitials]);
 
   const getPosition = (e: React.MouseEvent | React.TouchEvent) => {

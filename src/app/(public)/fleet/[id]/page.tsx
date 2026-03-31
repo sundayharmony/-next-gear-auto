@@ -231,12 +231,14 @@ export default async function VehicleDetailPage({ params }: PageProps) {
           {/* Main content */}
           <div className="lg:col-span-2 space-y-8">
             {/* Image gallery */}
-            <Card>
-              <VehicleImageGallery
-                images={vehicle.images || []}
-                alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-              />
-            </Card>
+            {vehicle.images && vehicle.images.length > 0 && (
+              <Card>
+                <VehicleImageGallery
+                  images={vehicle.images || []}
+                  alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                />
+              </Card>
+            )}
 
             {/* Description */}
             <Card>
@@ -267,19 +269,21 @@ export default async function VehicleDetailPage({ params }: PageProps) {
             </Card>
 
             {/* Features */}
-            <Card>
-              <CardContent className="p-6">
-                <h2 className="text-xl font-semibold text-gray-900 mb-4">Features</h2>
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                  {vehicle.features.map((feature) => (
-                    <div key={feature} className="flex items-center gap-2 text-sm text-gray-600">
-                      <Check className="h-4 w-4 shrink-0 text-green-500" aria-hidden="true" />
-                      {feature}
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
+            {vehicle.features && vehicle.features.length > 0 && (
+              <Card>
+                <CardContent className="p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 mb-4">Features</h2>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                    {vehicle.features.map((feature) => (
+                      <div key={feature} className="flex items-center gap-2 text-sm text-gray-600">
+                        <Check className="h-4 w-4 shrink-0 text-green-500" aria-hidden="true" />
+                        {feature}
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             {/* Reviews */}
             <Card>
@@ -369,35 +373,41 @@ export default async function VehicleDetailPage({ params }: PageProps) {
           <PageContainer className="py-12">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Similar Vehicles</h2>
             <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              {similarVehicles.map((sv) => (
-                <Link key={sv.id} href={`/fleet/${sv.id}`}>
-                  <Card className="group h-full transition-shadow hover:shadow-md">
-                    <div className="aspect-[16/10] rounded-t-xl overflow-hidden bg-gradient-to-br from-purple-50 to-gray-100 flex items-center justify-center">
-                      {sv.images && sv.images.length > 0 ? (
-                        <img
-                          src={sv.images[0]}
-                          alt={`${sv.year} ${sv.make} ${sv.model}`}
-                          loading="lazy"
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                        />
-                      ) : (
-                        <Car className="h-16 w-16 text-purple-200 group-hover:text-purple-400 transition-colors" />
-                      )}
-                    </div>
-                    <CardContent className="p-5">
-                      <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{sv.year} {sv.make} {sv.model}</h3>
-                      <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
-                        <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {sv.specs?.passengers}</span>
-                        <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {sv.specs?.mpg} mpg</span>
+              {similarVehicles.map((sv) => {
+                // Ensure sv has all required properties
+                if (!sv?.id || !sv?.year || !sv?.make || !sv?.model || typeof sv?.daily_rate !== 'number') {
+                  return null;
+                }
+                return (
+                  <Link key={sv.id} href={`/fleet/${sv.id}`}>
+                    <Card className="group h-full transition-shadow hover:shadow-md">
+                      <div className="aspect-[16/10] rounded-t-xl overflow-hidden bg-gradient-to-br from-purple-50 to-gray-100 flex items-center justify-center">
+                        {sv.images && sv.images.length > 0 ? (
+                          <img
+                            src={sv.images[0]}
+                            alt={`${sv.year} ${sv.make} ${sv.model}`}
+                            loading="lazy"
+                            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          />
+                        ) : (
+                          <Car className="h-16 w-16 text-purple-200 group-hover:text-purple-400 transition-colors" />
+                        )}
                       </div>
-                      <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-                        <span className="text-xl font-bold text-purple-600">${sv.daily_rate}<span className="text-sm text-gray-400 font-normal">/day</span></span>
-                        <Button size="sm" variant="outline">View</Button>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+                      <CardContent className="p-5">
+                        <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{sv.year} {sv.make} {sv.model}</h3>
+                        <div className="mt-2 flex items-center gap-3 text-xs text-gray-500">
+                          <span className="flex items-center gap-1"><Users className="h-3.5 w-3.5" /> {sv.specs?.passengers ?? "N/A"}</span>
+                          <span className="flex items-center gap-1"><Fuel className="h-3.5 w-3.5" /> {sv.specs?.mpg ?? "N/A"} mpg</span>
+                        </div>
+                        <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
+                          <span className="text-xl font-bold text-purple-600">${sv.daily_rate}<span className="text-sm text-gray-400 font-normal">/day</span></span>
+                          <Button size="sm" variant="outline">View</Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                );
+              })}
             </div>
           </PageContainer>
         </section>

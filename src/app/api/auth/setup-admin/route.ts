@@ -22,7 +22,17 @@ export async function POST(request: Request) {
 
     const adminDb = getServiceSupabase();
     const adminEmail = "admin@nextgearauto.com";
-    const adminPassword = "N1c3trides1!";
+
+    // Get password from environment variable or request body
+    let adminPassword = process.env.ADMIN_PASSWORD || body.password;
+
+    if (!adminPassword) {
+      return NextResponse.json(
+        { success: false, message: "Admin password must be provided via ADMIN_PASSWORD env var or password in request body" },
+        { status: 400 }
+      );
+    }
+
     const passwordHash = await bcrypt.hash(adminPassword, 12);
 
     // Check if admin exists in admins table

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import { Car, Shield, Clock, DollarSign, Star, ArrowRight, Users, Luggage, Fuel, Settings2, Lock, BadgeCheck, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,6 +9,17 @@ import { HomeReviews } from "@/components/home/home-reviews";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { generateLocalBusinessSchema } from "@/lib/utils/schema-generators";
 import { logger } from "@/lib/utils/logger";
+
+export const metadata: Metadata = {
+  title: "NextGearAuto - Premium Car Rental in Jersey City",
+  description: "Affordable car rentals in Jersey City, NJ. Book premium vehicles at competitive prices. From compact cars to SUVs, find your perfect ride today.",
+  openGraph: {
+    title: "NextGearAuto - Premium Car Rental",
+    description: "Book premium vehicles at competitive prices in Jersey City",
+    url: "https://rentnextgearauto.com",
+    type: "website",
+  },
+};
 
 interface Vehicle {
   id: string;
@@ -147,6 +159,10 @@ export default async function HomePage() {
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            const imgElement = e.target as HTMLImageElement;
+                            imgElement.style.display = "none";
+                          }}
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center">
@@ -161,16 +177,16 @@ export default async function HomePage() {
                       <h3 className="font-semibold text-gray-900">{vehicle.year} {vehicle.make} {vehicle.model}</h3>
                       <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-gray-500">
                         <span className="flex items-center gap-1">
-                          <Users className="h-3 w-3 text-purple-400" /> {specs.passengers} seats
+                          <Users className="h-3 w-3 text-purple-400" /> {specs?.passengers ?? "—"} seats
                         </span>
                         <span className="flex items-center gap-1">
-                          <Luggage className="h-3 w-3 text-purple-400" /> {specs.luggage} bags
+                          <Luggage className="h-3 w-3 text-purple-400" /> {specs?.luggage ?? "—"} bags
                         </span>
                         <span className="flex items-center gap-1">
-                          <Fuel className="h-3 w-3 text-purple-400" /> {specs.fuelType || "Gas"}
+                          <Fuel className="h-3 w-3 text-purple-400" /> {specs?.fuelType || "Gas"}
                         </span>
                         <span className="flex items-center gap-1">
-                          <Settings2 className="h-3 w-3 text-purple-400" /> {specs.transmission || "Auto"}
+                          <Settings2 className="h-3 w-3 text-purple-400" /> {specs?.transmission || "Auto"}
                         </span>
                       </div>
                       <div className="mt-3 flex items-center justify-between">

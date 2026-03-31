@@ -158,8 +158,8 @@ export default function CreateBookingForm({
   // Calculate days
   const calculateDays = () => {
     if (!form.pickupDate || !form.returnDate) return 0;
-    const pickup = new Date(form.pickupDate).getTime();
-    const returnDate = new Date(form.returnDate).getTime();
+    const pickup = new Date(form.pickupDate + "T00:00:00").getTime();
+    const returnDate = new Date(form.returnDate + "T00:00:00").getTime();
     return Math.max(1, Math.ceil((returnDate - pickup) / 86400000));
   };
 
@@ -269,6 +269,16 @@ export default function CreateBookingForm({
       onError("Please enter a valid email address");
       return false;
     }
+    if (!form.customerPhone.trim()) {
+      onError("Customer phone is required");
+      return false;
+    }
+    // Basic phone validation (10+ digits)
+    const phoneDigits = form.customerPhone.replace(/\D/g, "");
+    if (phoneDigits.length < 10) {
+      onError("Please enter a valid phone number (at least 10 digits)");
+      return false;
+    }
     if (!form.vehicleId) {
       onError("Vehicle is required");
       return false;
@@ -286,8 +296,12 @@ export default function CreateBookingForm({
       onError("Pickup date must be today or later");
       return false;
     }
-    if (form.returnDate < form.pickupDate) {
+    if (form.returnDate <= form.pickupDate) {
       onError("Return date must be after pickup date");
+      return false;
+    }
+    if (form.totalPrice <= 0) {
+      onError("Total price must be greater than zero");
       return false;
     }
     return true;
@@ -416,12 +430,13 @@ export default function CreateBookingForm({
         </div>
 
         <div>
-          <label className="block text-sm font-medium mb-1">Phone (Optional)</label>
+          <label className="block text-sm font-medium mb-1">Phone <span className="text-red-500">*</span></label>
           <Input
             type="tel"
             value={form.customerPhone}
             onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
             placeholder="+1 (555) 123-4567"
+            className="focus-visible:outline-2 focus-visible:outline-purple-600"
           />
         </div>
 

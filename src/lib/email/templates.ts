@@ -247,6 +247,9 @@ function bookingEmailTemplate(
 }
 
 export function bookingPendingTemplate(data: EmailData): string {
+  if (!data || !data.customerName || !data.bookingId) {
+    throw new Error("Invalid email data: missing required fields");
+  }
   const result = bookingEmailTemplate(
     data,
     {
@@ -263,6 +266,9 @@ export function bookingPendingTemplate(data: EmailData): string {
 }
 
 export function bookingConfirmationTemplate(data: EmailData): string {
+  if (!data || !data.customerName || !data.bookingId) {
+    throw new Error("Invalid email data: missing required fields");
+  }
   const paymentText = data.totalPrice > 0 ? ` and your payment of <strong>$${(data.totalPrice ?? 0).toFixed(2)}</strong> has been received` : '';
   const bottomNote = data.totalPrice > 0 ? "Please bring a valid driver's license at pickup." : "Your complimentary rental is confirmed. Please bring a valid driver's license at pickup.";
 
@@ -283,6 +289,9 @@ export function bookingConfirmationTemplate(data: EmailData): string {
 }
 
 export function adminNewBookingTemplate(data: EmailData): string {
+  if (!data || !data.customerName || !data.bookingId) {
+    throw new Error("Invalid email data: missing required fields");
+  }
   return wrapEmail(`
     ${headerBlock('New Booking Received', 'A customer just booked a vehicle', '#059669', '#047857')}
     ${bookingIdBlock(data.bookingId, '#059669', '#ecfdf5')}
@@ -313,6 +322,9 @@ export function adminNewBookingTemplate(data: EmailData): string {
 }
 
 export function cancellationTemplate(data: EmailData): string {
+  if (!data || !data.customerName || !data.bookingId) {
+    throw new Error("Invalid email data: missing required fields");
+  }
   return wrapEmail(`
     ${headerBlock('Booking Cancelled', 'Your reservation has been cancelled', '#DC2626', '#B91C1C')}
     <tr>
@@ -411,6 +423,9 @@ function reminderTemplate(
 }
 
 export function pickupReminderTemplate(data: EmailData): string {
+  if (!data || !data.customerName || !data.vehicleName || !data.bookingId) {
+    throw new Error("Invalid email data: missing required fields");
+  }
   const result = reminderTemplate(
     {
       customerName: data.customerName,
@@ -427,6 +442,9 @@ export function pickupReminderTemplate(data: EmailData): string {
 }
 
 export function returnReminderTemplate(data: EmailData): string {
+  if (!data || !data.customerName || !data.vehicleName || !data.bookingId) {
+    throw new Error("Invalid email data: missing required fields");
+  }
   const result = reminderTemplate(
     {
       customerName: data.customerName,
@@ -443,6 +461,9 @@ export function returnReminderTemplate(data: EmailData): string {
 }
 
 export function bookingSignAgreementTemplate(data: EmailData): string {
+  if (!data || !data.customerName || !data.bookingId) {
+    throw new Error("Invalid email data: missing required fields");
+  }
   return wrapEmail(`
     <tr>
       <td style="padding: 40px 32px 24px; text-align: center;">
@@ -487,6 +508,9 @@ export function bookingSignAgreementTemplate(data: EmailData): string {
 }
 
 export function passwordResetTemplate(data: { customerName: string; customerEmail: string; token?: string }): string {
+  if (!data || !data.customerName || !data.customerEmail) {
+    throw new Error("Invalid email data: missing required fields");
+  }
   const encodedEmail = encodeURIComponent(data.customerEmail);
   const tokenParam = data.token ? `&token=${encodeURIComponent(data.token)}` : "";
   return wrapEmail(`

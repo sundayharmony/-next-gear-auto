@@ -35,6 +35,14 @@ function SuccessContent() {
   const [fetchError, setFetchError] = useState(false);
   const [agreementStatus, setAgreementStatus] = useState<"idle" | "signing" | "signed" | "error">("idle");
 
+  // If booking_id is missing, show error immediately
+  useEffect(() => {
+    if (!bookingId) {
+      setLoading(false);
+      setFetchError(true);
+    }
+  }, [bookingId]);
+
   // Submit agreement signatures that were saved to localStorage before Stripe redirect
   // Waits for booking to load so we have the customer_email
   useEffect(() => {
@@ -253,7 +261,7 @@ function SuccessContent() {
                         </p>
                       </>
                     )}
-                    {agreementStatus === "error" && (
+                    {agreementStatus === "error" && bookingId && (
                       <>
                         <FileCheck className="mx-auto h-8 w-8 text-red-500 mb-2" />
                         <h3 className="text-lg font-semibold text-gray-900 mb-1">

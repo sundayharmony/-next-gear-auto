@@ -26,20 +26,38 @@ function createLogEntry(level: LogLevel, message: string, context?: unknown): Lo
   };
 }
 
+function serializeContext(context: unknown): string {
+  if (context === null || context === undefined) {
+    return "";
+  }
+  if (context instanceof Error) {
+    return `${context.name}: ${context.message}${context.stack ? "\n" + context.stack : ""}`;
+  }
+  if (typeof context === "string") {
+    return context;
+  }
+  try {
+    return JSON.stringify(context);
+  } catch {
+    return String(context);
+  }
+}
+
 function log(entry: LogEntry): void {
   const prefix = `[${entry.level.toUpperCase()}] ${entry.timestamp}`;
+  const contextStr = serializeContext(entry.context);
   switch (entry.level) {
     case "debug":
-      if (isDev) console.debug(prefix, entry.message, entry.context || "");
+      if (isDev) console.debug(prefix, entry.message, contextStr);
       break;
     case "info":
-      console.info(prefix, entry.message, entry.context || "");
+      console.info(prefix, entry.message, contextStr);
       break;
     case "warn":
-      console.warn(prefix, entry.message, entry.context || "");
+      console.warn(prefix, entry.message, contextStr);
       break;
     case "error":
-      console.error(prefix, entry.message, entry.context || "");
+      console.error(prefix, entry.message, contextStr);
       break;
   }
 }

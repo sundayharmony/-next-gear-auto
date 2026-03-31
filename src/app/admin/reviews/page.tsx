@@ -176,16 +176,18 @@ export default function AdminReviewsPage() {
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-medium text-gray-900">{r.customerName}</span>
-                      {renderStars(r.rating)}
-                      {statusBadge(r.status)}
+                      <span className="font-medium text-gray-900">{r.customerName || "Unknown"}</span>
+                      {renderStars(r.rating || 0)}
+                      {statusBadge(r.status || "pending")}
                     </div>
-                    <p className="text-sm text-gray-600 mt-1">{r.text}</p>
+                    <p className="text-sm text-gray-600 mt-1">{r.text ? String(r.text).replace(/[<>]/g, (char) => char === "<" ? "&lt;" : "&gt;") : "No text"}</p>
                     <div className="flex items-center gap-3 mt-2 text-xs text-gray-400">
-                      <span>Vehicle: {r.vehicleId}</span>
-                      <span title={new Date(r.createdAt).toLocaleString()}>
-                        {new Date(r.createdAt).toLocaleDateString()} {new Date(r.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
-                      </span>
+                      <span>Vehicle: {r.vehicleId || "N/A"}</span>
+                      {r.createdAt && (
+                        <span title={new Date(r.createdAt).toLocaleString()}>
+                          {new Date(r.createdAt).toLocaleDateString()} {new Date(r.createdAt).toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}
+                        </span>
+                      )}
                     </div>
                   </div>
                   <div className="flex items-center gap-1 shrink-0">

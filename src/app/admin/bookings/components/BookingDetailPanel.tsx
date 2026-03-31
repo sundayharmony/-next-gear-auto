@@ -228,11 +228,21 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Handle status step click
   const handleStatusStepClick = (stepIndex: number) => {
+    // Validate current status index is valid
+    if (currentStatusIndex === -1) {
+      onError("Invalid booking status");
+      return;
+    }
+
     if (stepIndex <= currentStatusIndex || booking.status === "cancelled") {
       return; // Can't go backward or change cancelled
     }
 
     const newStatus = STATUS_STEPS[stepIndex];
+    if (!newStatus) {
+      onError("Invalid status");
+      return;
+    }
 
     // Block confirming if the rental agreement hasn't been signed
     if (newStatus === "confirmed" && !booking.agreement_signed_at) {
@@ -1052,7 +1062,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Pickup</p>
-                    <p className="font-medium">{formatDate(booking.pickup_date)}</p>
+                    <p className="font-medium">{booking.pickup_date ? formatDate(booking.pickup_date) : "—"}</p>
                     {booking.pickup_time && (
                       <p className="text-gray-600 text-xs">
                         {formatTime(booking.pickup_time)}
@@ -1061,7 +1071,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Return</p>
-                    <p className="font-medium">{formatDate(booking.return_date)}</p>
+                    <p className="font-medium">{booking.return_date ? formatDate(booking.return_date) : "—"}</p>
                     {booking.return_time && (
                       <p className="text-gray-600 text-xs">
                         {formatTime(booking.return_time)}
@@ -1094,17 +1104,21 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 Extras
               </h3>
               <div className="space-y-2">
-                {booking.extras.map((extra) => (
-                  <div
-                    key={extra.id}
-                    className="flex justify-between text-sm border-l-2 border-blue-200 pl-3 py-1"
-                  >
-                    <span className="text-gray-700">{extra.name}</span>
-                    <span className="font-medium">
-                      ${extra.pricePerDay}/day
-                    </span>
-                  </div>
-                ))}
+                {booking.extras.map((extra) => {
+                  // Ensure extra has required fields
+                  if (!extra?.id || !extra?.name) return null;
+                  return (
+                    <div
+                      key={extra.id}
+                      className="flex justify-between text-sm border-l-2 border-blue-200 pl-3 py-1"
+                    >
+                      <span className="text-gray-700">{extra.name}</span>
+                      <span className="font-medium">
+                        ${typeof extra.pricePerDay === 'number' ? extra.pricePerDay : '0'}/day
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}

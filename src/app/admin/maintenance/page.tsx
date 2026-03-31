@@ -207,6 +207,10 @@ export default function AdminMaintenancePage() {
 
   const saveDetailEdit = async () => {
     if (!selectedRecord) return;
+    if (detailEditData.cost !== null && detailEditData.cost !== undefined && detailEditData.cost < 0) {
+      setError("Cost cannot be negative");
+      return;
+    }
     setSaving(true);
     try {
       const res = await adminFetch("/api/admin/maintenance", {
@@ -259,6 +263,10 @@ export default function AdminMaintenancePage() {
   const addRecord = async () => {
     if (!newRecord.vehicleId || !newRecord.title) {
       setError("Vehicle and Title are required");
+      return;
+    }
+    if (newRecord.cost !== null && newRecord.cost !== undefined && newRecord.cost < 0) {
+      setError("Cost cannot be negative");
       return;
     }
     setSaving(true);

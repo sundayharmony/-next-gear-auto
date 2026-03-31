@@ -90,11 +90,11 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
           VEHICLE INFORMATION
         </h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2">
-          <div><span className="font-semibold">Make & Model:</span>{" "}<Field value={vehicle ? `${vehicle.make || ""} ${vehicle.model || ""}`.trim() || undefined : undefined} width="180px" /></div>
-          <div><span className="font-semibold">Year:</span>{" "}<Field value={vehicle?.year} width="80px" /></div>
-          <div><span className="font-semibold">License Plate:</span>{" "}<Field value={vehicle?.licensePlate} width="120px" /></div>
-          <div><span className="font-semibold">VIN:</span>{" "}<Field value={vehicle?.vin} width="180px" /></div>
-          <div><span className="font-semibold">Color:</span>{" "}<Field value={vehicle?.color} width="100px" /></div>
+          <div><span className="font-semibold">Make & Model:</span>{" "}<Field value={vehicle && vehicle.make && vehicle.model ? `${vehicle.make} ${vehicle.model}`.trim() : undefined} width="180px" /></div>
+          <div><span className="font-semibold">Year:</span>{" "}<Field value={vehicle?.year ? String(vehicle.year) : undefined} width="80px" /></div>
+          <div><span className="font-semibold">License Plate:</span>{" "}<Field value={vehicle?.licensePlate || undefined} width="120px" /></div>
+          <div><span className="font-semibold">VIN:</span>{" "}<Field value={vehicle?.vin || undefined} width="180px" /></div>
+          <div><span className="font-semibold">Color:</span>{" "}<Field value={vehicle?.color || undefined} width="100px" /></div>
           <div><span className="font-semibold">Mileage:</span>{" "}<Field value={vehicle?.mileage && Number.isFinite(Number(vehicle.mileage)) ? `${Number(vehicle.mileage).toLocaleString()} mi` : undefined} width="120px" /></div>
         </div>
         <div className="mt-2">
@@ -154,10 +154,10 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">4. RENTAL RATES & PAYMENT TERMS</h3>
         <div className="grid grid-cols-2 gap-x-6 gap-y-2 mb-2">
-          <div><span className="font-semibold">Total Rental Price: $</span>{" "}<Field value={totalPrice ? totalPrice.toFixed(2) : undefined} width="100px" /></div>
+          <div><span className="font-semibold">Total Rental Price: $</span>{" "}<Field value={totalPrice && Number.isFinite(totalPrice) ? totalPrice.toFixed(2) : "0.00"} width="100px" /></div>
           <div><span className="font-semibold">Total Days:</span>{" "}<Field value={totalDays} width="60px" /></div>
-          <div><span className="font-semibold">Security Deposit:</span> ${depositAmount.toFixed(2)}</div>
-          <div><span className="font-semibold">Balance Due at Pickup: $</span>{" "}<Field value={balanceDue > 0 ? balanceDue.toFixed(2) : "0.00"} width="100px" /></div>
+          <div><span className="font-semibold">Security Deposit:</span> ${Number.isFinite(depositAmount) ? depositAmount.toFixed(2) : "0.00"}</div>
+          <div><span className="font-semibold">Balance Due at Pickup: $</span>{" "}<Field value={balanceDue && Number.isFinite(balanceDue) && balanceDue > 0 ? balanceDue.toFixed(2) : "0.00"} width="100px" /></div>
         </div>
         <div className="mb-2">
           <span className="font-semibold">Payment Method:</span>{" "}

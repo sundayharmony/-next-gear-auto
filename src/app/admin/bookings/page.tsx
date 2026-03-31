@@ -205,10 +205,10 @@ function AdminBookingsContent() {
       }
 
       if (sentCount > 0) {
-        setSuccess(`Sent ${sentCount} booking email${sentCount > 1 ? "s" : ""}`);
+        setSuccess(`Sent ${sentCount} booking email${sentCount !== 1 ? "s" : ""}`);
       }
       if (failCount > 0) {
-        setError(`Failed to send ${failCount} email${failCount > 1 ? "s" : ""}`);
+        setError(`Failed to send ${failCount} email${failCount !== 1 ? "s" : ""}`);
       }
       setSelectedIds(new Set());
     } finally {

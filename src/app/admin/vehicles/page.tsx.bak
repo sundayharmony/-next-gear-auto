@@ -455,28 +455,8 @@ export default function AdminVehiclesPage() {
       setError("Make and Model are required");
       return;
     }
-    if (!newVehicle.year || newVehicle.year < 1990 || newVehicle.year > 2030) {
-      setError("Year must be between 1990 and 2030");
-      return;
-    }
-    if (newVehicle.mileage !== undefined && newVehicle.mileage !== null && newVehicle.mileage < 0) {
-      setError("Mileage cannot be negative");
-      return;
-    }
     if (!newVehicle.dailyRate || newVehicle.dailyRate <= 0 || !Number.isFinite(newVehicle.dailyRate)) {
       setError("Daily rate must be a positive number");
-      return;
-    }
-    if (newVehicle.make.trim().length > 50) {
-      setError("Make must be 50 characters or less");
-      return;
-    }
-    if (newVehicle.model.trim().length > 100) {
-      setError("Model must be 100 characters or less");
-      return;
-    }
-    if (newVehicle.description && newVehicle.description.length > 500) {
-      setError("Description must be 500 characters or less");
       return;
     }
     setSaving(true);

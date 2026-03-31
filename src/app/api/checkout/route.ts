@@ -60,8 +60,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate dates
-    const pickup = new Date(pickupDate);
-    const returnDt = new Date(returnDate);
+    const pickup = new Date(pickupDate.includes("T") ? pickupDate : pickupDate + "T00:00:00");
+    const returnDt = new Date(returnDate.includes("T") ? returnDate : returnDate + "T00:00:00");
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -305,6 +305,35 @@ export async function POST(request: NextRequest) {
           .eq("email", customerDetails.email.toLowerCase().trim())
           .single();
         customerId = retryCustomer?.id || newId;
+      }
+    }
+
+    // Re-check vehicle availability immediately before insert to prevent race condition
+    const { data: finalConflictCheck } = await supabase
+      .from("bookings")
+      .select("id, pickup_date, return_date, pickup_time, return_time")
+      .eq("vehicle_id", vehicleId)
+      .in("status", ["confirmed", "active", "pending"])
+      .lte("pickup_date", returnDate)
+      .gte("return_date", pickupDate);
+
+    if (finalConflictCheck && finalConflictCheck.length > 0) {
+      const newPickupDt = new Date(`${pickupDate}T${pickupTime || "00:00"}`);
+      const newReturnDt = new Date(`${returnDate}T${returnTime || "23:59"}`);
+
+      const hasRealConflict = finalConflictCheck.some((existing) => {
+        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time || "00:00"}`);
+        const existReturn = new Date(`${existing.return_date}T${existing.return_time || "23:59"}`);
+        const gapAfterExisting = (newPickupDt.getTime() - existReturn.getTime()) / 60000;
+        const gapAfterNew = (existPickup.getTime() - newReturnDt.getTime()) / 60000;
+        return gapAfterExisting < 60 && gapAfterNew < 60;
+      });
+
+      if (hasRealConflict) {
+        return NextResponse.json(
+          { success: false, message: "This vehicle is already booked for the selected dates. Bookings on the same day must be at least 60 minutes apart." },
+          { status: 409 }
+        );
       }
     }
 

@@ -18,8 +18,8 @@ export async function GET(req: NextRequest) {
     }
 
     // Validate date format
-    const startParsed = new Date(startDate);
-    const endParsed = new Date(endDate);
+    const startParsed = new Date(startDate.includes("T") ? startDate : startDate + "T00:00:00");
+    const endParsed = new Date(endDate.includes("T") ? endDate : endDate + "T00:00:00");
     if (isNaN(startParsed.getTime()) || isNaN(endParsed.getTime())) {
       return NextResponse.json(
         { success: false, error: "Invalid date format - use ISO 8601 format (YYYY-MM-DD)" },

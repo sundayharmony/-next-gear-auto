@@ -129,7 +129,11 @@ export default function AdminCustomersPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightId, customers, selectedCustomer]);
 
-  const handleSearch = () => { fetchCustomers(searchInput); resetPage(); };
+  const handleSearch = () => {
+    const trimmedQuery = searchInput.trim();
+    fetchCustomers(trimmedQuery);
+    resetPage();
+  };
 
   const router = useRouter();
 
@@ -705,13 +709,13 @@ export default function AdminCustomersPage() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold flex items-center gap-2">
-                    {selectedCustomer.name}
+                    {selectedCustomer.name || "Unknown"}
                     {selectedCustomer.role === "admin" && (
                       <Badge className="bg-purple-500 text-white text-xs"><Shield className="h-3 w-3 mr-0.5" /> Admin</Badge>
                     )}
                   </h1>
                   <div className="flex items-center gap-4 text-sm text-purple-200 mt-0.5">
-                    <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {selectedCustomer.email}</span>
+                    <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {selectedCustomer.email || "No email"}</span>
                     {selectedCustomer.phone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> {selectedCustomer.phone}</span>}
                   </div>
                 </div>

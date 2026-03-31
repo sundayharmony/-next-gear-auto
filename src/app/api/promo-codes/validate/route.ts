@@ -70,7 +70,7 @@ export async function POST(req: NextRequest) {
       }
 
       // Validate JSON promo code
-      if (new Date(jsonPromo.expiryDate) < new Date()) {
+      if (new Date(jsonPromo.expiryDate.includes("T") ? jsonPromo.expiryDate : jsonPromo.expiryDate + "T00:00:00") < new Date()) {
         return NextResponse.json(
           { success: false, error: "This promo code has expired" },
           { status: 400 }
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (promo.expires_at && new Date(promo.expires_at) < new Date()) {
+    if (promo.expires_at && new Date(promo.expires_at.includes("T") ? promo.expires_at : promo.expires_at + "T00:00:00") < new Date()) {
       return NextResponse.json(
         { success: false, error: "This promo code has expired" },
         { status: 400 }

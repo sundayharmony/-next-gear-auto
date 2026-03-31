@@ -120,20 +120,42 @@ export default function AgreementSigningPage() {
   const allSigned = completedCount === SIGNATURE_FIELDS.length;
   const currentField = SIGNATURE_FIELDS[currentStep];
 
+  // Calculate total rental days safely
+  const calculateTotalDays = (): number => {
+    if (!booking?.pickup_date || !booking?.return_date) return 1;
+    try {
+      const pickupDate = new Date(`${booking.pickup_date}T00:00:00`);
+      const returnDate = new Date(`${booking.return_date}T00:00:00`);
+      if (isNaN(pickupDate.getTime()) || isNaN(returnDate.getTime())) return 1;
+      const diff = (returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24);
+      return Math.max(1, Math.ceil(diff));
+    } catch {
+      return 1;
+    }
+  };
+
   const handleSubmit = async () => {
-    if (!allSigned) return;
+    if (!allSigned || !booking) return;
+
+    // Validate all signature fields are properly filled
+    const hasNullSignatures = SIGNATURE_FIELDS.some((f) => !signatures[f.id]);
+    if (hasNullSignatures) {
+      setError("All signature fields are required. Please sign all sections.");
+      return;
+    }
+
     setSubmitting(true);
 
     try {
       const res = await csrfFetch("/api/rental-agreement/sign", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, signatures, customerEmail: booking?.customer_email }),
+        body: JSON.stringify({ bookingId, signatures, customerEmail: booking.customer_email }),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
 
-      if (data.success) {
+      if (data.success && data.data?.url) {
         setSubmitted(true);
         setSignedUrl(data.data.url);
       } else {
@@ -274,7 +296,7 @@ export default function AgreementSigningPage() {
                   pickupTime={booking.pickup_time}
                   returnTime={booking.return_time}
                   totalPrice={booking.total_price}
-                  totalDays={(() => { const diff = (new Date((booking.return_date || "") + "T00:00:00").getTime() - new Date((booking.pickup_date || "") + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24); return Math.max(1, Math.ceil(Number.isFinite(diff) ? diff : 1)); })()}
+                  totalDays={calculateTotalDays()}
                   currentPage={getPageForStep(currentStep)}
                 />
                 <p className="text-xs text-gray-400 mt-2">

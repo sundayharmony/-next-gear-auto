@@ -68,10 +68,23 @@ export async function GET(request: Request) {
         }
       );
     }
+
+    // If there was an error, return it (but don't expose internal details)
+    if (error) {
+      logger.error("Vehicles fetch error:", error);
+      return NextResponse.json(
+        { data: [], success: false, message: "Failed to fetch vehicles" },
+        { status: 500 }
+      );
+    }
+
+    // No vehicles found
+    return NextResponse.json({ data: [], success: true });
   } catch (error) {
     logger.error("Vehicles API error:", error);
+    return NextResponse.json(
+      { data: [], success: false, message: "Failed to fetch vehicles" },
+      { status: 500 }
+    );
   }
-
-  // Return empty array if no vehicles found or error
-  return NextResponse.json({ data: [], success: true });
 }

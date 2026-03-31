@@ -95,7 +95,7 @@ export function setAuthCookies(
   // Access token: short-lived, HTTP-only
   response.cookies.set(COOKIE_NAME, accessToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: true, // Always secure, even in dev (localhost works with Secure cookies)
     sameSite: "strict",
     path: "/",
     maxAge: 60 * 60, // 1 hour in seconds
@@ -104,7 +104,7 @@ export function setAuthCookies(
   // Refresh token: longer-lived, HTTP-only
   response.cookies.set(REFRESH_COOKIE, refreshToken, {
     httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
+    secure: true, // Always secure, even in dev (localhost works with Secure cookies)
     sameSite: "strict",
     path: "/",
     maxAge: 60 * 60 * 24 * 7, // 7 days in seconds

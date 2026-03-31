@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useEffect } from "react";
 import type { Vehicle, BookingExtra, BookingStep, PricingBreakdown } from "@/lib/types";
 import { calculatePricing, calculateRentalDays, applyDiscount, type PromoDiscount } from "@/lib/utils/price-calculator";
 import { logger } from "@/lib/utils/logger";
@@ -267,6 +267,28 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const submitBooking = useCallback(async () => {
+    // Validate required data before submission
+    if (!state.selectedVehicle?.id) {
+      dispatch({ type: "SUBMIT_ERROR", payload: "Please select a vehicle." });
+      return;
+    }
+    if (!state.pickupDate || !state.returnDate) {
+      dispatch({ type: "SUBMIT_ERROR", payload: "Please select pickup and return dates." });
+      return;
+    }
+    if (!state.customerDetails.name || !state.customerDetails.email || !state.customerDetails.phone || !state.customerDetails.dob) {
+      dispatch({ type: "SUBMIT_ERROR", payload: "Please complete all customer details." });
+      return;
+    }
+    if (!state.signedName) {
+      dispatch({ type: "SUBMIT_ERROR", payload: "Please sign the rental agreement." });
+      return;
+    }
+    if (!state.pricing) {
+      dispatch({ type: "SUBMIT_ERROR", payload: "Unable to calculate pricing. Please try again." });
+      return;
+    }
+
     dispatch({ type: "SUBMIT_START" });
     try {
       // Call our checkout API which creates booking in Supabase + Stripe Checkout session
@@ -274,16 +296,16 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          vehicleId: state.selectedVehicle?.id,
-          vehicleName: state.selectedVehicle ? `${state.selectedVehicle.year} ${state.selectedVehicle.make} ${state.selectedVehicle.model}` : "",
+          vehicleId: state.selectedVehicle.id,
+          vehicleName: `${state.selectedVehicle.year} ${state.selectedVehicle.make} ${state.selectedVehicle.model}`,
           pickupDate: state.pickupDate,
           returnDate: state.returnDate,
           pickupTime: state.pickupTime,
           returnTime: state.returnTime,
           extras: state.extras.filter((e) => e.selected),
           customerDetails: state.customerDetails,
-          totalPrice: state.pricing?.total ?? 0,
-          deposit: state.pricing?.deposit ?? 0,
+          totalPrice: state.pricing.total,
+          deposit: state.pricing.deposit,
           signedName: state.signedName,
           promoCode: state.promoCode || undefined,
           discountAmount: state.promoDiscount?.discountAmount ?? 0,
@@ -339,6 +361,14 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   }, [state]);
 
   const resetBooking = useCallback(() => dispatch({ type: "RESET" }), []);
+
+  // Cleanup on unmount: clear any stored booking state to prevent memory leaks
+  useEffect(() => {
+    return () => {
+      // Reset booking state when provider unmounts
+      dispatch({ type: "RESET" });
+    };
+  }, []);
 
   return (
     <BookingContext.Provider

@@ -469,6 +469,11 @@ function BookingPageInner() {
   };
 
   const handleNext = () => {
+    // Validate we can proceed before updating state
+    if (!canProceed()) {
+      return;
+    }
+
     if (booking.currentStep === 1) {
       booking.setDates(searchDates.pickup, searchDates.return, searchDates.pickupTime, searchDates.returnTime);
       // Save selected locations to booking context
@@ -822,7 +827,7 @@ function BookingPageInner() {
                   {(() => {
                     const days = Math.max(
                       Math.ceil(
-                        Math.abs(new Date(booking.returnDate).getTime() - new Date(booking.pickupDate).getTime()) /
+                        Math.abs(new Date(booking.returnDate + "T00:00:00").getTime() - new Date(booking.pickupDate + "T00:00:00").getTime()) /
                           (1000 * 60 * 60 * 24)
                       ),
                       1
@@ -848,7 +853,7 @@ function BookingPageInner() {
                     ${(() => {
                       const days = Math.max(
                         Math.ceil(
-                          Math.abs(new Date(booking.returnDate).getTime() - new Date(booking.pickupDate).getTime()) /
+                          Math.abs(new Date(booking.returnDate + "T00:00:00").getTime() - new Date(booking.pickupDate + "T00:00:00").getTime()) /
                             (1000 * 60 * 60 * 24)
                         ),
                         1

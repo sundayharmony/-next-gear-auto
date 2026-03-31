@@ -107,6 +107,37 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Validate cost field if provided
+    if (cost !== undefined && cost !== null) {
+      if (typeof cost !== "number" || !Number.isFinite(cost) || cost < 0) {
+        return NextResponse.json(
+          { success: false, message: "Cost must be a non-negative number" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate date fields if provided
+    const validateDate = (dateStr: string | null, fieldName: string) => {
+      if (dateStr && typeof dateStr === "string") {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) {
+          throw new Error(`Invalid ${fieldName} format`);
+        }
+      }
+    };
+
+    try {
+      validateDate(scheduledDate, "scheduledDate");
+      validateDate(startedDate, "startedDate");
+      validateDate(completedDate, "completedDate");
+    } catch (err) {
+      return NextResponse.json(
+        { success: false, message: err instanceof Error ? err.message : "Invalid date format" },
+        { status: 400 }
+      );
+    }
+
     const id = "mt_" + crypto.randomUUID();
     const VALID_STATUSES = ["pending", "in-progress", "completed", "cancelled"];
     const recordStatus = VALID_STATUSES.includes(status) ? status : "pending";
@@ -154,19 +185,28 @@ export async function POST(req: NextRequest) {
       logger.error("Failed to update vehicle maintenance status:", vehicleUpdateError);
     }
 
+    // Ensure data is not null before building response
+    if (!data) {
+      logger.error("Maintenance POST returned null data");
+      return NextResponse.json(
+        { success: false, message: "Failed to create record" },
+        { status: 500 }
+      );
+    }
+
     const response = {
-      id: data.id,
-      vehicleId: data.vehicle_id,
-      title: data.title,
-      description: data.description,
-      status: data.status,
-      cost: data.cost,
-      photoUrls: data.photo_urls,
-      scheduledDate: data.scheduled_date,
-      startedDate: data.started_date,
-      completedDate: data.completed_date,
-      notes: data.notes,
-      createdAt: data.created_at,
+      id: data.id || "",
+      vehicleId: data.vehicle_id || "",
+      title: data.title || "",
+      description: data.description || "",
+      status: data.status || "pending",
+      cost: data.cost ?? null,
+      photoUrls: data.photo_urls || [],
+      scheduledDate: data.scheduled_date || null,
+      startedDate: data.started_date || null,
+      completedDate: data.completed_date || null,
+      notes: data.notes || "",
+      createdAt: data.created_at || "",
     };
 
     return NextResponse.json({ success: true, data: response }, { status: 201 });
@@ -192,6 +232,37 @@ export async function PUT(req: NextRequest) {
     if (!id) {
       return NextResponse.json(
         { success: false, message: "Record ID required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate cost field if being updated
+    if (updates.cost !== undefined && updates.cost !== null) {
+      if (typeof updates.cost !== "number" || !Number.isFinite(updates.cost) || updates.cost < 0) {
+        return NextResponse.json(
+          { success: false, message: "Cost must be a non-negative number" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate date fields if being updated
+    const validateDate = (dateStr: any, fieldName: string) => {
+      if (dateStr && typeof dateStr === "string") {
+        const date = new Date(dateStr);
+        if (isNaN(date.getTime())) {
+          throw new Error(`Invalid ${fieldName} format`);
+        }
+      }
+    };
+
+    try {
+      if (updates.scheduledDate !== undefined) validateDate(updates.scheduledDate, "scheduledDate");
+      if (updates.startedDate !== undefined) validateDate(updates.startedDate, "startedDate");
+      if (updates.completedDate !== undefined) validateDate(updates.completedDate, "completedDate");
+    } catch (err) {
+      return NextResponse.json(
+        { success: false, message: err instanceof Error ? err.message : "Invalid date format" },
         { status: 400 }
       );
     }

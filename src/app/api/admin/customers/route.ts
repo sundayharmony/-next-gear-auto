@@ -9,7 +9,12 @@ export async function GET(req: NextRequest) {
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   const { searchParams } = new URL(req.url);
-  const search = searchParams.get("search")?.toLowerCase() || "";
+
+  // Validate and sanitize search parameter
+  let search = searchParams.get("search")?.toLowerCase() || "";
+  if (search.length > 100) {
+    search = search.slice(0, 100);
+  }
 
   try {
     let query = supabase
@@ -56,14 +61,51 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { name, email, phone } = body;
+    let { name, email, phone } = body;
 
+    // Validate required fields
     if (!name || !email) {
       return NextResponse.json(
         { success: false, error: "Name and email are required" },
         { status: 400 }
       );
     }
+
+    // Validate and sanitize input lengths
+    if (typeof name !== "string" || name.length > 100) {
+      return NextResponse.json(
+        { success: false, error: "Name must be a string with max 100 characters" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof email !== "string" || email.length > 255) {
+      return NextResponse.json(
+        { success: false, error: "Email must be a string with max 255 characters" },
+        { status: 400 }
+      );
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid email format" },
+        { status: 400 }
+      );
+    }
+
+    if (phone && typeof phone !== "string" || phone?.length > 20) {
+      return NextResponse.json(
+        { success: false, error: "Phone must be a string with max 20 characters" },
+        { status: 400 }
+      );
+    }
+
+    // Trim inputs
+    name = name.trim();
+    email = email.trim().toLowerCase();
+    phone = phone?.trim() || null;
 
     const customerId = "c_" + crypto.randomUUID();
 
@@ -120,7 +162,45 @@ export async function PATCH(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { name, email, phone } = body;
+    let { name, email, phone } = body;
+
+    // Validate field lengths if provided
+    if (name !== undefined) {
+      if (typeof name !== "string" || name.length > 100) {
+        return NextResponse.json(
+          { success: false, error: "Name must be a string with max 100 characters" },
+          { status: 400 }
+        );
+      }
+      name = name.trim();
+    }
+
+    if (email !== undefined) {
+      if (typeof email !== "string" || email.length > 255) {
+        return NextResponse.json(
+          { success: false, error: "Email must be a string with max 255 characters" },
+          { status: 400 }
+        );
+      }
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return NextResponse.json(
+          { success: false, error: "Invalid email format" },
+          { status: 400 }
+        );
+      }
+      email = email.trim().toLowerCase();
+    }
+
+    if (phone !== undefined && phone !== null) {
+      if (typeof phone !== "string" || phone.length > 20) {
+        return NextResponse.json(
+          { success: false, error: "Phone must be a string with max 20 characters" },
+          { status: 400 }
+        );
+      }
+      phone = phone.trim();
+    }
 
     const updateData: Record<string, unknown> = {};
     if (name !== undefined) updateData.name = name;

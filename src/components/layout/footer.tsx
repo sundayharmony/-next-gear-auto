@@ -54,16 +54,16 @@ export function Footer() {
             <h3 className="mb-3 text-sm font-semibold uppercase tracking-wider text-white">Contact Us</h3>
             <ul className="space-y-3 text-sm">
               <li className="flex items-start gap-2">
-                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" />
-                <span>{CONTACT_INFO.address}<br />{CONTACT_INFO.city}, {CONTACT_INFO.state} {CONTACT_INFO.zip}</span>
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-purple-400" aria-hidden="true" />
+                <address className="not-italic" aria-label="Our location">{CONTACT_INFO.address}<br />{CONTACT_INFO.city}, {CONTACT_INFO.state} {CONTACT_INFO.zip}</address>
               </li>
               <li className="flex items-center gap-2">
-                <Phone className="h-4 w-4 shrink-0 text-purple-400" />
-                <a href={`tel:${CONTACT_INFO.phone.replace(/[^\d+]/g, "")}`} className="hover:text-purple-400 transition-colors focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">{CONTACT_INFO.phone}</a>
+                <Phone className="h-4 w-4 shrink-0 text-purple-400" aria-hidden="true" />
+                <a href={`tel:${CONTACT_INFO.phone.replace(/[^\d+]/g, "")}`} className="hover:text-purple-400 transition-colors focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none" aria-label={`Call us: ${CONTACT_INFO.phone}`}>{CONTACT_INFO.phone}</a>
               </li>
               <li className="flex items-center gap-2">
-                <Mail className="h-4 w-4 shrink-0 text-purple-400" />
-                <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-purple-400 transition-colors focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none">{CONTACT_INFO.email}</a>
+                <Mail className="h-4 w-4 shrink-0 text-purple-400" aria-hidden="true" />
+                <a href={`mailto:${CONTACT_INFO.email}`} className="hover:text-purple-400 transition-colors focus-visible:text-purple-400 focus-visible:outline-2 focus-visible:outline-purple-400 rounded outline-none" aria-label={`Email us: ${CONTACT_INFO.email}`}>{CONTACT_INFO.email}</a>
               </li>
             </ul>
           </div>

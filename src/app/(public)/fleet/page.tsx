@@ -215,6 +215,19 @@ function FleetContent() {
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+                          onError={(e) => {
+                            const imgElement = e.target as HTMLImageElement;
+                            imgElement.style.display = "none";
+                            const parent = imgElement.parentElement;
+                            if (parent && parent.querySelector(".fallback-icon") === null) {
+                              const fallback = document.createElement("div");
+                              fallback.className = "fallback-icon absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-50 to-gray-100";
+                              const icon = document.createElement("div");
+                              icon.innerHTML = '<svg class="h-20 w-20 text-purple-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8m-4-4h4m-4-4h4m-10 8a2 2 0 100-4 2 2 0 000 4zm0-6a3 3 0 00-3 3v4a3 3 0 003 3h8a3 3 0 003-3v-4a3 3 0 00-3-3h-8z"></path></svg>';
+                              fallback.appendChild(icon);
+                              parent.appendChild(fallback);
+                            }
+                          }}
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center">

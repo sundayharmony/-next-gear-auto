@@ -73,6 +73,7 @@ export default function BookingTable({
     <button
       onClick={() => onSort(field)}
       className="flex items-center gap-1 font-semibold hover:text-gray-700 transition-colors"
+      aria-label={`Sort by ${label}${sortField === field ? ` (${sortOrder === "asc" ? "ascending" : "descending"})` : ""}`}
     >
       {label}
       {sortField === field && (sortOrder === "asc" ? <ArrowUp size={16} /> : <ArrowDown size={16} />)}
@@ -84,31 +85,32 @@ export default function BookingTable({
       <table className="w-full text-sm border-collapse">
         <thead>
           <tr className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
-            <th className="px-4 py-3 text-left">
+            <th className="px-4 py-3 text-left" scope="col">
               <input
                 ref={selectAllRef}
                 type="checkbox"
                 checked={allSelected}
                 onChange={onToggleSelectAll}
                 className="rounded border-gray-300 cursor-pointer accent-purple-600"
+                aria-label="Select all bookings"
               />
             </th>
-            <th className="px-4 py-3 text-left">
+            <th className="px-4 py-3 text-left" scope="col">
               <SortableHeader label="Customer" field="customer_name" />
             </th>
-            <th className="px-4 py-3 text-left font-semibold">Vehicle</th>
-            <th className="px-4 py-3 text-left">
+            <th className="px-4 py-3 text-left font-semibold" scope="col">Vehicle</th>
+            <th className="px-4 py-3 text-left" scope="col">
               <SortableHeader label="Dates" field="pickup_date" />
             </th>
-            <th className="px-4 py-3 text-left">
+            <th className="px-4 py-3 text-left" scope="col">
               <SortableHeader label="Total" field="total_price" />
             </th>
-            <th className="px-4 py-3 text-left font-semibold">Balance</th>
-            <th className="px-4 py-3 text-left">
+            <th className="px-4 py-3 text-left font-semibold" scope="col">Balance</th>
+            <th className="px-4 py-3 text-left" scope="col">
               <SortableHeader label="Status" field="status" />
             </th>
-            <th className="px-4 py-3 text-left font-semibold">Docs</th>
-            <th className="px-4 py-3 text-left font-semibold">Actions</th>
+            <th className="px-4 py-3 text-left font-semibold" scope="col">Docs</th>
+            <th className="px-4 py-3 text-left font-semibold" scope="col">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -140,8 +142,8 @@ export default function BookingTable({
                 {/* Customer */}
                 <td className="px-4 py-3">
                   <div className="max-w-xs">
-                    <div className="font-semibold text-gray-900 truncate">{booking.customer_name}</div>
-                    <div className="text-xs text-gray-500 truncate">{booking.customer_email}</div>
+                    <div className="font-semibold text-gray-900 truncate">{booking.customer_name || "Unknown"}</div>
+                    <div className="text-xs text-gray-500 truncate">{booking.customer_email || "No email"}</div>
                   </div>
                 </td>
 
@@ -184,8 +186,8 @@ export default function BookingTable({
 
                 {/* Status */}
                 <td className="px-4 py-3">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[booking.status] || "bg-gray-100 text-gray-600"}`}>
-                    {booking.status}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[booking.status || "pending"] || "bg-gray-100 text-gray-600"}`} aria-label={`Status: ${booking.status || "pending"}`}>
+                    {booking.status || "pending"}
                   </span>
                 </td>
 
@@ -220,6 +222,7 @@ export default function BookingTable({
                         }}
                         disabled={updating === booking.id}
                         className="text-xs"
+                        aria-label={`${action === "confirmed" ? "Confirm" : action === "active" ? "Start" : "Complete"} booking ${booking.id}`}
                       >
                         {action === "confirmed" && "Confirm"}
                         {action === "active" && "Start"}

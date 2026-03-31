@@ -48,6 +48,32 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Code is required" }, { status: 400 });
     }
 
+    // Validate discount value is between 0-100
+    const discountValue = body.discountValue !== undefined ? body.discountValue : 10;
+    if (typeof discountValue !== "number" || discountValue < 0 || discountValue > 100) {
+      return NextResponse.json(
+        { success: false, message: "Discount value must be a number between 0 and 100" },
+        { status: 400 }
+      );
+    }
+
+    // Validate expiry date if provided
+    if (body.expiresAt) {
+      const expiryDate = new Date(body.expiresAt);
+      if (isNaN(expiryDate.getTime())) {
+        return NextResponse.json(
+          { success: false, message: "Invalid expiry date format" },
+          { status: 400 }
+        );
+      }
+      if (expiryDate <= new Date()) {
+        return NextResponse.json(
+          { success: false, message: "Expiry date must be in the future" },
+          { status: 400 }
+        );
+      }
+    }
+
     // Check for duplicate
     const { data: existing } = await supabase
       .from("promo_codes")
@@ -64,7 +90,7 @@ export async function POST(request: NextRequest) {
       .insert({
         code: body.code.toUpperCase(),
         discount_type: body.discountType || "percentage",
-        discount_value: body.discountValue || 10,
+        discount_value: discountValue,
         min_booking_amount: body.minBookingAmount ?? 0,
         max_uses: body.maxUses || 100,
         used_count: 0,
@@ -96,6 +122,33 @@ export async function PUT(request: NextRequest) {
 
     if (!body.code) {
       return NextResponse.json({ success: false, message: "Code is required" }, { status: 400 });
+    }
+
+    // Validate discount value if being updated
+    if (body.discountValue !== undefined) {
+      if (typeof body.discountValue !== "number" || body.discountValue < 0 || body.discountValue > 100) {
+        return NextResponse.json(
+          { success: false, message: "Discount value must be a number between 0 and 100" },
+          { status: 400 }
+        );
+      }
+    }
+
+    // Validate expiry date if being updated
+    if (body.expiresAt !== undefined && body.expiresAt !== null) {
+      const expiryDate = new Date(body.expiresAt);
+      if (isNaN(expiryDate.getTime())) {
+        return NextResponse.json(
+          { success: false, message: "Invalid expiry date format" },
+          { status: 400 }
+        );
+      }
+      if (expiryDate <= new Date()) {
+        return NextResponse.json(
+          { success: false, message: "Expiry date must be in the future" },
+          { status: 400 }
+        );
+      }
     }
 
     const dbUpdates: Record<string, unknown> = {};

@@ -46,8 +46,10 @@ const nextConfig: NextConfig = {
               "frame-ancestors 'none'",
               // Only load from HTTPS (except self and data:)
               "upgrade-insecure-requests",
+              "base-uri 'self'",
             ].join("; "),
           },
+          { key: "Permissions-Policy", value: "geolocation=(), microphone=(), camera=()" },
         ],
       },
     ];

@@ -85,9 +85,10 @@ export async function sendBookingConfirmation(data: BookingEmailData) {
       subject: `Booking Confirmed - ${data.bookingId}`,
       html: bookingConfirmationTemplate(enriched),
     });
-    logger.info("Confirmation email sent to:", data.customerEmail);
+    logger.info("Confirmation email sent successfully");
   } catch (error) {
-    logger.error("Failed to send confirmation email:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send confirmation email:", errorMsg);
     throw error;
   }
 }
@@ -103,9 +104,10 @@ export async function sendBookingPendingEmail(data: BookingEmailData) {
       subject: `Booking Received - ${data.bookingId}`,
       html: bookingPendingTemplate(enriched),
     });
-    logger.info("Pending booking email sent to:", data.customerEmail);
+    logger.info("Pending booking email sent successfully");
   } catch (error) {
-    logger.error("Failed to send pending booking email:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send pending booking email:", errorMsg);
     throw error;
   }
 }
@@ -137,9 +139,10 @@ export async function sendCancellationEmail(data: BookingEmailData) {
       subject: `Booking Cancelled - ${data.bookingId}`,
       html: cancellationTemplate(data),
     });
-    logger.info("Cancellation email sent to:", data.customerEmail);
+    logger.info("Cancellation email sent successfully");
   } catch (error) {
-    logger.error("Failed to send cancellation email:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send cancellation email:", errorMsg);
     throw error;
   }
 }
@@ -154,9 +157,10 @@ export async function sendPickupReminder(data: BookingEmailData) {
       subject: `Pickup Reminder - Your ${data.vehicleName} is Ready!`,
       html: pickupReminderTemplate(data),
     });
-    logger.info("Pickup reminder sent to:", data.customerEmail);
+    logger.info("Pickup reminder email sent successfully");
   } catch (error) {
-    logger.error("Failed to send pickup reminder:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send pickup reminder:", errorMsg);
     throw error;
   }
 }
@@ -188,9 +192,10 @@ export async function sendAgreementEmail(data: BookingEmailData & { pdfBytes: Ui
         },
       ],
     });
-    logger.info("Agreement email sent to:", data.customerEmail);
+    logger.info("Agreement email sent successfully");
   } catch (error) {
-    logger.error("Failed to send agreement email:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send agreement email:", errorMsg);
     throw error;
   }
 }
@@ -252,9 +257,10 @@ export async function sendReturnReminder(data: BookingEmailData) {
       subject: `Return Reminder - ${data.vehicleName} due today`,
       html: returnReminderTemplate(data),
     });
-    logger.info("Return reminder sent to:", data.customerEmail);
+    logger.info("Return reminder email sent successfully");
   } catch (error) {
-    logger.error("Failed to send return reminder:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send return reminder:", errorMsg);
     throw error;
   }
 }
@@ -269,9 +275,10 @@ export async function sendBookingSignAgreement(data: BookingEmailData) {
       subject: `Your Booking Details - Please Sign Agreement | ${data.bookingId}`,
       html: bookingSignAgreementTemplate(data),
     });
-    logger.info("Booking sign-agreement email sent to:", data.customerEmail + " (bcc admin)");
+    logger.info("Booking sign-agreement email sent successfully");
   } catch (error) {
-    logger.error("Failed to send booking sign-agreement email:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send booking sign-agreement email:", errorMsg);
     throw error;
   }
 }
@@ -290,9 +297,10 @@ export async function sendPasswordResetLink(data: { customerName: string; custom
       subject: "Set Your Password - NextGearAuto",
       html: passwordResetTemplate({ ...data, token }),
     });
-    logger.info("Password reset link sent to:", data.customerEmail);
+    logger.info("Password reset link email sent successfully");
   } catch (error) {
-    logger.error("Failed to send password reset link:", error);
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send password reset link:", errorMsg);
     throw error;
   }
 }

@@ -24,16 +24,33 @@ export function getCsrfToken(): string {
 export async function csrfFetch(url: string, options: RequestInit = {}): Promise<Response> {
   const headers = new Headers(options.headers || {});
 
-  const csrf = getCsrfToken();
+  let csrf = getCsrfToken();
   if (csrf) {
     headers.set("x-csrf-token", csrf);
   } else {
     console.warn("CSRF token not found in cookies");
   }
 
-  return fetch(url, {
+  let response = await fetch(url, {
     ...options,
     headers,
     credentials: "same-origin",
   });
+
+  // Retry with refreshed CSRF token on 403 (token might have expired)
+  if (response.status === 403) {
+    const newCsrf = getCsrfToken();
+    if (newCsrf && newCsrf !== csrf) {
+      // Token was refreshed, retry the request
+      const retryHeaders = new Headers(options.headers || {});
+      retryHeaders.set("x-csrf-token", newCsrf);
+      response = await fetch(url, {
+        ...options,
+        headers: retryHeaders,
+        credentials: "same-origin",
+      });
+    }
+  }
+
+  return response;
 }

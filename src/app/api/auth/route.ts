@@ -131,6 +131,11 @@ export async function POST(request: Request) {
           success: true,
         });
 
+        // Add rate limit info to response headers (remaining attempts)
+        const rateCheck = loginLimiter.check(ip);
+        response.headers.set("X-RateLimit-Remaining", String(rateCheck.remaining));
+        response.headers.set("X-RateLimit-Reset", new Date(rateCheck.resetAt).toISOString());
+
         return setAuthCookies(response, accessToken, refreshToken);
       }
 
@@ -188,6 +193,12 @@ export async function POST(request: Request) {
       const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
 
       const response = NextResponse.json({ data: mapped, success: true });
+
+      // Add rate limit info to response headers (remaining attempts)
+      const rateCheck = loginLimiter.check(ip);
+      response.headers.set("X-RateLimit-Remaining", String(rateCheck.remaining));
+      response.headers.set("X-RateLimit-Reset", new Date(rateCheck.resetAt).toISOString());
+
       return setAuthCookies(response, accessToken, refreshToken);
     }
 

@@ -411,8 +411,8 @@ export default function AdminFinancesPage() {
 
     let totalBookedDays = 0;
     revenueBookings.forEach((booking) => {
-      const pickup = new Date(booking.pickup_date).getTime();
-      const returnDate = new Date(booking.return_date).getTime();
+      const pickup = new Date(booking.pickup_date + "T00:00:00").getTime();
+      const returnDate = new Date(booking.return_date + "T00:00:00").getTime();
       totalBookedDays += Math.ceil((returnDate - pickup) / (1000 * 60 * 60 * 24));
     });
 
@@ -535,14 +535,14 @@ export default function AdminFinancesPage() {
         const totalDaysInRange = Math.max(
           1,
           Math.ceil(
-            (new Date(dateRange.to).getTime() - new Date(dateRange.from).getTime()) /
+            (new Date(dateRange.to + "T00:00:00").getTime() - new Date(dateRange.from + "T00:00:00").getTime()) /
               (1000 * 60 * 60 * 24)
           )
         );
         let bookedDays = 0;
         vBookings.forEach((b) => {
           bookedDays += Math.ceil(
-            (new Date(b.return_date).getTime() - new Date(b.pickup_date).getTime()) /
+            (new Date(b.return_date + "T00:00:00").getTime() - new Date(b.pickup_date + "T00:00:00").getTime()) /
               (1000 * 60 * 60 * 24)
           );
         });
@@ -744,10 +744,10 @@ export default function AdminFinancesPage() {
     const profit = revenue - expenseTotal - effectiveCost;
     const totalCost = expenseTotal + effectiveCost;
     const roi = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(1) : "0.0";
-    const totalDays = Math.max(1, Math.ceil((new Date(dateRange.to).getTime() - new Date(dateRange.from).getTime()) / (1000 * 60 * 60 * 24)));
+    const totalDays = Math.max(1, Math.ceil((new Date(dateRange.to + "T00:00:00").getTime() - new Date(dateRange.from + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)));
     let bookedDays = 0;
     vBookings.forEach((b) => {
-      bookedDays += Math.ceil((new Date(b.return_date).getTime() - new Date(b.pickup_date).getTime()) / (1000 * 60 * 60 * 24));
+      bookedDays += Math.ceil((new Date(b.return_date + "T00:00:00").getTime() - new Date(b.pickup_date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24));
     });
     const occupancy = Math.min(100, (bookedDays / totalDays) * 100);
     return { vehicle, bookings: vBookings, expenses: vExpenses, revenue, expenseTotal, effectiveCost, financingInfo, profit, roi, occupancy, bookedDays };
