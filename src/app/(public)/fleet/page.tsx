@@ -1,12 +1,6 @@
 "use client";
 
-import type { Metadata } from "next";
 import React, { useState, useMemo, useEffect, Suspense } from "react";
-
-export const metadata: Metadata = {
-  title: "Fleet | NextGearAuto",
-  description: "Browse our fleet of well-maintained vehicles including compact cars, sedans, SUVs, and trucks. Filter by category or price to find the perfect rental.",
-};
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { Car, Users, Briefcase, Fuel, ArrowUpDown, Search, GitCompareArrows, X, Settings2 } from "lucide-react";
