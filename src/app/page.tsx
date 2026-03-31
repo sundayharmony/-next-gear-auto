@@ -159,10 +159,6 @@ export default async function HomePage() {
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                           loading="lazy"
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          onError={(e) => {
-                            const imgElement = e.target as HTMLImageElement;
-                            imgElement.style.display = "none";
-                          }}
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center">
