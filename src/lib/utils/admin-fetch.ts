@@ -106,10 +106,8 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
   try {
     return await executeRequest();
   } finally {
-    // Always clean up timeout and controller
+    // Clean up the timeout — do NOT abort the controller here,
+    // as the caller still needs to read the response body (.json(), .text(), etc.)
     if (timeoutId) clearTimeout(timeoutId);
-    if (controller) {
-      controller.abort();
-    }
   }
 }
