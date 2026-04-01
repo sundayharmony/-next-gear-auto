@@ -266,13 +266,14 @@ export default function AdminFinancesPage() {
   const [activeTab, setActiveTab] = useState<"overview" | "expenses" | "revenue" | "profit" | "vehicles">("overview");
 
   // ─── Data Fetching ──────────────────────────────────────────────
+  // Fetch ALL data once on mount. Date filtering is done client-side via useMemo.
   const fetchData = async () => {
     setLoading(true);
     setError(null);
     try {
       const [bookingsRes, expensesRes, vehiclesRes, maintenanceRes, ticketsRes] = await Promise.all([
         adminFetch("/api/admin/bookings"),
-        adminFetch(`/api/admin/expenses?from=${dateRange.from}&to=${dateRange.to}`),
+        adminFetch("/api/admin/expenses"),
         adminFetch("/api/admin/vehicles"),
         adminFetch("/api/admin/maintenance"),
         adminFetch("/api/admin/tickets"),
@@ -304,15 +305,25 @@ export default function AdminFinancesPage() {
   useEffect(() => {
     fetchData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dateRange]);
+  }, []);
 
   // ─── Computed Data ──────────────────────────────────────────────
-  const revenueBookings = useMemo(
-    () => bookings.filter((b) => ["confirmed", "active", "completed"].includes(b.status)),
-    [bookings]
+  // Filter bookings to selected date range (a booking is "in range" if its pickup or return overlaps)
+  const filteredBookings = useMemo(
+    () =>
+      bookings.filter((b) => {
+        // Booking overlaps range if pickup_date <= range.to AND return_date >= range.from
+        return b.pickup_date <= dateRange.to && b.return_date >= dateRange.from;
+      }),
+    [bookings, dateRange]
   );
 
-  // Maintenance costs (all completed maintenance records show as expenses)
+  const revenueBookings = useMemo(
+    () => filteredBookings.filter((b) => ["confirmed", "active", "completed"].includes(b.status)),
+    [filteredBookings]
+  );
+
+  // Maintenance costs (all completed maintenance records show as expenses, filtered by date range)
   const maintenanceCosts = useMemo(() => {
     return maintenance
       .filter((m) => m.status === "completed")
@@ -325,8 +336,9 @@ export default function AdminFinancesPage() {
         date: m.completedDate || m.scheduledDate || m.createdAt,
         created_at: m.createdAt,
         fromMaintenance: true,
-      }));
-  }, [maintenance]);
+      }))
+      .filter((m) => m.date >= dateRange.from && m.date <= dateRange.to);
+  }, [maintenance, dateRange]);
 
   // Financing costs (monthly payments for financed vehicles, generated as individual expense entries)
   const financingCosts = useMemo(() => {
@@ -361,16 +373,19 @@ export default function AdminFinancesPage() {
           if (isNaN(actualDate.getTime())) continue; // skip invalid dates
           const dateStr = actualDate.toISOString().split("T")[0];
 
-          entries.push({
-            id: `financing-${vehicle.id}-${i}`,
-            vehicle_id: vehicle.id,
-            category: "financing",
-            amount: financing.monthlyPayment,
-            description: `Monthly payment — ${getVehicleDisplayName(vehicle)}`,
-            date: dateStr,
-            created_at: dateStr,
-            fromFinancing: true,
-          });
+          // Only include financing payments within the selected date range
+          if (dateStr >= dateRange.from && dateStr <= dateRange.to) {
+            entries.push({
+              id: `financing-${vehicle.id}-${i}`,
+              vehicle_id: vehicle.id,
+              category: "financing",
+              amount: financing.monthlyPayment,
+              description: `Monthly payment — ${getVehicleDisplayName(vehicle)}`,
+              date: dateStr,
+              created_at: dateStr,
+              fromFinancing: true,
+            });
+          }
         } catch {
           // Skip any date that fails
           continue;
@@ -379,26 +394,34 @@ export default function AdminFinancesPage() {
     });
 
     return entries;
-  }, [vehicles]);
+  }, [vehicles, dateRange]);
 
-  // Ticket costs (traffic violations converted to expense entries)
+  // Ticket costs (traffic violations converted to expense entries, filtered by date range)
   const ticketCosts = useMemo(() => {
-    return tickets.map((ticket) => ({
-      id: ticket.id,
-      vehicle_id: ticket.vehicle_id,
-      category: "tickets" as const,
-      amount: ticket.amount_due ?? 0,
-      description: `${ticket.ticket_type} — ${ticket.municipality}, ${ticket.state}`,
-      date: ticket.violation_date || ticket.created_at || new Date().toISOString().split("T")[0],
-      created_at: ticket.created_at || new Date().toISOString(),
-      fromTickets: true,
-    }));
-  }, [tickets]);
+    return tickets
+      .map((ticket) => ({
+        id: ticket.id,
+        vehicle_id: ticket.vehicle_id,
+        category: "tickets" as const,
+        amount: ticket.amount_due ?? 0,
+        description: `${ticket.ticket_type} — ${ticket.municipality}, ${ticket.state}`,
+        date: ticket.violation_date || ticket.created_at || new Date().toISOString().split("T")[0],
+        created_at: ticket.created_at || new Date().toISOString(),
+        fromTickets: true,
+      }))
+      .filter((t) => t.date >= dateRange.from && t.date <= dateRange.to);
+  }, [tickets, dateRange]);
 
-  // All costs = explicit expenses + maintenance record costs + financing payments + tickets
+  // Filter explicit expenses by date range
+  const filteredExpenses = useMemo(
+    () => expenses.filter((e) => e.date >= dateRange.from && e.date <= dateRange.to),
+    [expenses, dateRange]
+  );
+
+  // All costs = explicit expenses + maintenance record costs + financing payments + tickets (all already date-filtered)
   const allExpenses = useMemo(() => {
-    return [...expenses, ...maintenanceCosts, ...financingCosts, ...ticketCosts];
-  }, [expenses, maintenanceCosts, financingCosts, ticketCosts]);
+    return [...filteredExpenses, ...maintenanceCosts, ...financingCosts, ...ticketCosts];
+  }, [filteredExpenses, maintenanceCosts, financingCosts, ticketCosts]);
 
   const summaryData = useMemo(() => {
     const totalRevenue = revenueBookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
