@@ -205,7 +205,7 @@ function StatCard({
       <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">
         {label}
       </p>
-      {subtext && <p className="text-xs text-gray-400 mt-0.5">{subtext}</p>}
+      {subtext && <p className="text-xs text-gray-500 mt-0.5">{subtext}</p>}
     </div>
   );
 }
@@ -265,6 +265,26 @@ export default function AdminFinancesPage() {
   const [tickets, setTickets] = useState<Array<{ id: string; vehicle_id?: string; amount_due?: number; ticket_type?: string; municipality?: string; state?: string; violation_date?: string; created_at?: string }>>([]);
   const [activeTab, setActiveTab] = useState<"overview" | "expenses" | "revenue" | "profit" | "vehicles">("overview");
 
+  // ─── Helper Functions ────────────────────────────────────────────
+  // Format currency consistently
+  const fmtCurrency = (val: number): string => {
+    return `$${Math.round(val).toLocaleString()}`;
+  };
+
+  // Build month range for date-based aggregations
+  const buildMonthRange = (fromDate: string, toDate: string) => {
+    const months: Record<string, string> = {};
+    const startD = new Date(fromDate + "T12:00:00");
+    const endD = new Date(toDate + "T12:00:00");
+    const cursor = new Date(startD.getFullYear(), startD.getMonth(), 1);
+    while (cursor <= endD) {
+      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+      months[key] = cursor.toLocaleDateString("en-US", { month: "short" });
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+    return months;
+  };
+
   // ─── Data Fetching ──────────────────────────────────────────────
   // Fetch ALL data once on mount. Date filtering is done client-side via useMemo.
   const fetchData = async () => {
@@ -287,7 +307,9 @@ export default function AdminFinancesPage() {
       const expensesData = await expensesRes.json();
       const vehiclesData = await vehiclesRes.json();
       const maintenanceData = maintenanceRes.ok ? await maintenanceRes.json() : { data: [] };
+      if (!maintenanceRes.ok) logger.warn("Failed to fetch maintenance data");
       const ticketsData = ticketsRes.ok ? await ticketsRes.json() : { data: [] };
+      if (!ticketsRes.ok) logger.warn("Failed to fetch tickets data");
 
       setBookings(Array.isArray(bookingsData?.data) ? bookingsData.data : []);
       setExpenses(Array.isArray(expensesData?.data) ? expensesData.data : []);
@@ -427,6 +449,7 @@ export default function AdminFinancesPage() {
     const totalRevenue = revenueBookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
     const totalExpenses = allExpenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
     const netProfit = totalRevenue - totalExpenses;
+    const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
     const totalDaysInRange = Math.max(
       1,
@@ -440,7 +463,7 @@ export default function AdminFinancesPage() {
     revenueBookings.forEach((booking) => {
       const pickup = new Date(booking.pickup_date + "T00:00:00").getTime();
       const returnDate = new Date(booking.return_date + "T00:00:00").getTime();
-      totalBookedDays += Math.ceil((returnDate - pickup) / (1000 * 60 * 60 * 24));
+      totalBookedDays += Math.max(1, Math.ceil((returnDate - pickup) / (1000 * 60 * 60 * 24)));
     });
 
     const occupancyRate =
@@ -455,6 +478,7 @@ export default function AdminFinancesPage() {
       totalRevenue,
       totalExpenses,
       netProfit,
+      profitMargin,
       occupancyRate,
       totalBookings: revenueBookings.length,
       avgBookingValue,
@@ -464,21 +488,13 @@ export default function AdminFinancesPage() {
 
   // Cash flow data — monthly money in vs money out (based on selected date range)
   const cashFlowData = useMemo(() => {
+    const monthLabels = buildMonthRange(dateRange.from, dateRange.to);
     const months: Record<string, { month: string; income: number; expenses: number }> = {};
 
-    // Build months spanning the selected date range
-    const startD = new Date(dateRange.from + "T12:00:00");
-    const endD = new Date(dateRange.to + "T12:00:00");
-    const cursor = new Date(startD.getFullYear(), startD.getMonth(), 1);
-    while (cursor <= endD) {
-      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
-      months[key] = {
-        month: cursor.toLocaleDateString("en-US", { month: "short" }),
-        income: 0,
-        expenses: 0,
-      };
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
+    // Initialize months with labels from helper
+    Object.entries(monthLabels).forEach(([key, label]) => {
+      months[key] = { month: label, income: 0, expenses: 0 };
+    });
 
     revenueBookings.forEach((b) => {
       const key = b.pickup_date.substring(0, 7); // "YYYY-MM"
@@ -518,14 +534,18 @@ export default function AdminFinancesPage() {
       });
     }
 
+    // Build map for O(1) lookups instead of O(n) .find() per booking/expense
+    const dayMap = new Map<string, number>();
+    days.forEach((d, idx) => dayMap.set(d.date, idx));
+
     revenueBookings.forEach((b) => {
-      const day = days.find((d) => d.date === b.pickup_date);
-      if (day) day.revenue += b.total_price ?? 0;
+      const idx = dayMap.get(b.pickup_date);
+      if (idx !== undefined) days[idx].revenue += b.total_price ?? 0;
     });
 
     allExpenses.forEach((e) => {
-      const day = days.find((d) => d.date === e.date);
-      if (day) day.expenses += e.amount ?? 0;
+      const idx = dayMap.get(e.date);
+      if (idx !== undefined) days[idx].expenses += e.amount ?? 0;
     });
 
     return days.map((d) => ({
@@ -548,14 +568,30 @@ export default function AdminFinancesPage() {
         value: Math.round(value),
       }))
       .sort((a, b) => b.value - a.value);
-  }, [allExpenses, vehicles]);
+  }, [allExpenses]);
 
   // Vehicle profitability rankings
   const vehicleAnalytics = useMemo(() => {
+    // Pre-group bookings and expenses by vehicle_id for O(n) instead of O(n²)
+    const bookingsByVehicle = new Map<string, Booking[]>();
+    const expensesByVehicle = new Map<string, typeof allExpenses>();
+
+    revenueBookings.forEach((b) => {
+      if (!bookingsByVehicle.has(b.vehicle_id)) bookingsByVehicle.set(b.vehicle_id, []);
+      bookingsByVehicle.get(b.vehicle_id)!.push(b);
+    });
+
+    allExpenses.forEach((e) => {
+      if (e.vehicle_id) {
+        if (!expensesByVehicle.has(e.vehicle_id)) expensesByVehicle.set(e.vehicle_id, []);
+        expensesByVehicle.get(e.vehicle_id)!.push(e);
+      }
+    });
+
     return vehicles
       .map((vehicle) => {
-        const vBookings = revenueBookings.filter((b) => b.vehicle_id === vehicle.id);
-        const vExpenses = allExpenses.filter((e) => e.vehicle_id === vehicle.id);
+        const vBookings = bookingsByVehicle.get(vehicle.id) ?? [];
+        const vExpenses = expensesByVehicle.get(vehicle.id) ?? [];
         const revenue = vBookings.reduce((s, b) => s + (b.total_price ?? 0), 0);
         const expenseTotal = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
         // For financed vehicles, costs are already in allExpenses as financing entries
@@ -570,10 +606,10 @@ export default function AdminFinancesPage() {
         );
         let bookedDays = 0;
         vBookings.forEach((b) => {
-          bookedDays += Math.ceil(
+          bookedDays += Math.max(1, Math.ceil(
             (new Date(b.return_date + "T00:00:00").getTime() - new Date(b.pickup_date + "T00:00:00").getTime()) /
               (1000 * 60 * 60 * 24)
-          );
+          ));
         });
 
         return {
@@ -592,21 +628,17 @@ export default function AdminFinancesPage() {
 
   // Revenue by month (based on selected date range)
   const revenueByMonth = useMemo(() => {
+    const monthLabels = buildMonthRange(dateRange.from, dateRange.to);
     const months: Record<string, { month: string; date: string; revenue: number; bookings: number }> = {};
 
-    const startD = new Date(dateRange.from + "T12:00:00");
-    const endD = new Date(dateRange.to + "T12:00:00");
-    const cursor = new Date(startD.getFullYear(), startD.getMonth(), 1);
-    while (cursor <= endD) {
-      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+    Object.entries(monthLabels).forEach(([key, label]) => {
       months[key] = {
-        month: cursor.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        month: label,
         date: key,
         revenue: 0,
         bookings: 0,
       };
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
+    });
 
     revenueBookings.forEach((b) => {
       const key = b.pickup_date.substring(0, 7);
@@ -624,21 +656,17 @@ export default function AdminFinancesPage() {
 
   // Monthly profit data (revenue, expenses, profit — based on selected date range)
   const monthlyProfitData = useMemo(() => {
+    const monthLabels = buildMonthRange(dateRange.from, dateRange.to);
     const months: Record<string, { month: string; date: string; revenue: number; expenses: number }> = {};
 
-    const startD = new Date(dateRange.from + "T12:00:00");
-    const endD = new Date(dateRange.to + "T12:00:00");
-    const cursor = new Date(startD.getFullYear(), startD.getMonth(), 1);
-    while (cursor <= endD) {
-      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
+    Object.entries(monthLabels).forEach(([key, label]) => {
       months[key] = {
-        month: cursor.toLocaleDateString("en-US", { month: "short" }),
+        month: label,
         date: key,
         revenue: 0,
         expenses: 0,
       };
-      cursor.setMonth(cursor.getMonth() + 1);
-    }
+    });
 
     revenueBookings.forEach((b) => {
       const key = b.pickup_date.substring(0, 7);
@@ -748,13 +776,21 @@ export default function AdminFinancesPage() {
   };
 
   const handleExportExpensesCSV = () => {
-    const exportData = expenses.map((expense) => ({
-      Date: formatDate(expense.date),
-      Category: expense.category.charAt(0).toUpperCase() + expense.category.slice(1),
-      Description: expense.description || "",
-      Vehicle: expense.vehicle_id ? ((() => { const v = vehicles.find((v) => v.id === expense.vehicle_id); return v ? `${v.make} ${v.model}` : "N/A"; })()) : "N/A",
-      Amount: `$${expense.amount}`,
-    }));
+    const exportData = allExpenses.map((expense) => {
+      let source = "manual";
+      if ((expense as any).fromMaintenance) source = "maintenance";
+      else if ((expense as any).fromFinancing) source = "financing";
+      else if ((expense as any).fromTickets) source = "ticket";
+
+      return {
+        Date: formatDate(expense.date),
+        Category: expense.category.charAt(0).toUpperCase() + expense.category.slice(1),
+        Description: expense.description || "",
+        Vehicle: expense.vehicle_id ? ((() => { const v = vehicles.find((v) => v.id === expense.vehicle_id); return v ? `${v.make} ${v.model}` : "N/A"; })()) : "N/A",
+        Amount: expense.amount,
+        Source: source,
+      };
+    });
     exportToCSV(exportData, `expenses-export-${new Date().toISOString().split("T")[0]}`);
   };
 
@@ -823,7 +859,7 @@ export default function AdminFinancesPage() {
           </div>
 
           {/* Summary stats */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
             <StatCard label="Total Revenue" value={`$${totalAllTime.toLocaleString()}`} icon={<DollarSign className="h-4 w-4" />} accent="green" />
             <StatCard label="Total Bookings" value={`${totalBookings}`} icon={<Car className="h-4 w-4" />} accent="blue" />
             <StatCard label="Avg / Day" value={`$${Math.round(avgPerDay).toLocaleString()}`} icon={<BarChart3 className="h-4 w-4" />} accent="purple" />
@@ -834,9 +870,9 @@ export default function AdminFinancesPage() {
           <Card>
             <CardContent className="p-5">
               <SectionHeader title="Revenue Over Time" subtitle={`${allTimeDailyRevenue.length} days with revenue`} />
-              <div className="h-64">
+              <div className="h-52 sm:h-64 lg:h-72">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={[...allTimeDailyRevenue].reverse().slice(-30)} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                  <BarChart data={[...allTimeDailyRevenue].reverse().slice(-30)} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis
                       dataKey="date"
@@ -865,9 +901,9 @@ export default function AdminFinancesPage() {
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-gray-500 text-xs uppercase tracking-wider">
-                      <th className="pb-3 font-medium">Date</th>
-                      <th className="pb-3 font-medium text-center">Bookings</th>
-                      <th className="pb-3 font-medium text-right">Revenue</th>
+                      <th scope="col" className="pb-3 font-medium">Date</th>
+                      <th scope="col" className="pb-3 font-medium text-center">Bookings</th>
+                      <th scope="col" className="pb-3 font-medium text-right">Revenue</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y">
@@ -925,7 +961,7 @@ export default function AdminFinancesPage() {
 
           {/* Financing header */}
           <div className="bg-gradient-to-br from-gray-900 to-purple-900 rounded-xl p-6 text-white">
-            <div className={`grid grid-cols-2 ${financingInfo ? "md:grid-cols-4" : "md:grid-cols-3"} gap-6`}>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${financingInfo ? "md:grid-cols-4" : "md:grid-cols-3"} gap-6`}>
               <div>
                 <p className="text-gray-300 text-xs font-medium uppercase tracking-wider">
                   {vehicle.isFinanced ? "Vehicle Price" : "Purchase Price"}
@@ -956,7 +992,7 @@ export default function AdminFinancesPage() {
           </div>
 
           {/* Vehicle stats */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
             <StatCard label="Revenue" value={`$${revenue.toLocaleString()}`} icon={<DollarSign className="h-4 w-4" />} accent="green" />
             <StatCard label="Expenses" value={`$${(expenseTotal + effectiveCost).toLocaleString()}`} icon={<Receipt className="h-4 w-4" />} accent="red" />
             <StatCard label="Profit" value={`$${profit.toLocaleString()}`} icon={<TrendingUp className="h-4 w-4" />} accent={profit >= 0 ? "green" : "red"} />
@@ -970,17 +1006,17 @@ export default function AdminFinancesPage() {
             <CardContent className="p-5">
               <SectionHeader title="Booking History" subtitle={`${vBookings.length} total bookings`} />
               {vBookings.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">No bookings found</p>
+                <p className="text-sm text-gray-500 text-center py-6">No bookings found</p>
               ) : (
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b text-left text-gray-500">
-                        <th className="pb-2 font-medium">Booking ID</th>
-                        <th className="pb-2 font-medium">Pickup</th>
-                        <th className="pb-2 font-medium">Return</th>
-                        <th className="pb-2 font-medium text-right">Amount</th>
-                        <th className="pb-2 font-medium text-right">Status</th>
+                        <th scope="col" className="pb-2 font-medium">Booking ID</th>
+                        <th scope="col" className="pb-2 font-medium">Pickup</th>
+                        <th scope="col" className="pb-2 font-medium">Return</th>
+                        <th scope="col" className="pb-2 font-medium text-right">Amount</th>
+                        <th scope="col" className="pb-2 font-medium text-right">Status</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y">
@@ -1009,7 +1045,7 @@ export default function AdminFinancesPage() {
             <CardContent className="p-5">
               <SectionHeader title="Expense Breakdown" />
               {Object.keys(catBreakdown).length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">No expenses recorded</p>
+                <p className="text-sm text-gray-500 text-center py-6">No expenses recorded</p>
               ) : (
                 <div className="space-y-2">
                   {Object.entries(catBreakdown)
@@ -1053,7 +1089,7 @@ export default function AdminFinancesPage() {
             <CardContent className="p-5">
               <SectionHeader title="Expense History" subtitle={`${vExpenses.length} records`} />
               {vExpenses.length === 0 ? (
-                <p className="text-sm text-gray-400 text-center py-6">No expenses</p>
+                <p className="text-sm text-gray-500 text-center py-6">No expenses</p>
               ) : (
                 <div className="space-y-2">
                   {vExpenses
@@ -1072,7 +1108,7 @@ export default function AdminFinancesPage() {
                         </div>
                         <div className="text-right shrink-0">
                           <p className="text-sm font-semibold">${exp.amount.toLocaleString()}</p>
-                          <p className="text-xs text-gray-400">{formatDate(exp.date)}</p>
+                          <p className="text-xs text-gray-500">{formatDate(exp.date)}</p>
                         </div>
                       </div>
                     ))}
@@ -1090,7 +1126,7 @@ export default function AdminFinancesPage() {
     return (
       <PageContainer>
         <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <RefreshCw className="h-8 w-8 animate-spin text-purple-600" />
+          <RefreshCw className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading financial data" />
           <p className="text-gray-600 font-medium">Loading finances...</p>
         </div>
       </PageContainer>
@@ -1171,12 +1207,23 @@ export default function AdminFinancesPage() {
                 Reset YTD
               </button>
             </div>
-            <div className="flex gap-1 bg-white/10 rounded-lg p-1">
-              {(["overview", "expenses", "revenue", "profit", "vehicles"] as const).map((tab) => (
+            <div className="flex gap-1 bg-white/10 rounded-lg p-1" role="tablist">
+              {(["overview", "expenses", "revenue", "profit", "vehicles"] as const).map((tab, idx) => (
                 <button
                   key={tab}
+                  role="tab"
+                  aria-selected={activeTab === tab}
                   onClick={() => setActiveTab(tab)}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors capitalize ${
+                  onKeyDown={(e) => {
+                    if (e.key === 'ArrowLeft' && idx > 0) {
+                      const tabs = ["overview", "expenses", "revenue", "profit", "vehicles"] as const;
+                      setActiveTab(tabs[idx - 1]);
+                    } else if (e.key === 'ArrowRight' && idx < 4) {
+                      const tabs = ["overview", "expenses", "revenue", "profit", "vehicles"] as const;
+                      setActiveTab(tabs[idx + 1]);
+                    }
+                  }}
+                  className={`px-3 py-1.5 text-sm rounded-md transition-colors capitalize focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-1 ${
                     activeTab === tab
                       ? "bg-white text-gray-900 font-medium"
                       : "text-gray-300 hover:text-white"
@@ -1192,15 +1239,33 @@ export default function AdminFinancesPage() {
 
       <PageContainer>
         {success && (
-          <div className="mb-6 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
-            <CheckCircle2 className="h-4 w-4 shrink-0" />
-            {success}
+          <div role="alert" className="mb-6 flex items-center gap-2 justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              {success}
+            </div>
+            <button
+              onClick={() => setSuccess("")}
+              className="text-green-700 hover:text-green-900 focus:outline-none focus:ring-1 focus:ring-green-500 rounded"
+              aria-label="Dismiss success message"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         )}
         {error && (
-          <div className="mb-6 flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            {error}
+          <div role="alert" className="mb-6 flex items-center gap-2 justify-between bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {error}
+            </div>
+            <button
+              onClick={() => setError("")}
+              className="text-red-700 hover:text-red-900 focus:outline-none focus:ring-1 focus:ring-red-500 rounded"
+              aria-label="Dismiss error message"
+            >
+              <X className="h-4 w-4" />
+            </button>
           </div>
         )}
 
@@ -1210,7 +1275,7 @@ export default function AdminFinancesPage() {
         {activeTab === "overview" && (
           <div className="space-y-6">
             {/* KPI Cards */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               <StatCard
                 label="Total Revenue"
                 value={`$${summaryData.totalRevenue.toLocaleString()}`}
@@ -1265,9 +1330,12 @@ export default function AdminFinancesPage() {
                   title="Cash Flow"
                   subtitle="Monthly income vs. expenses (last 6 months) — click for details"
                 />
-                <div className="h-64">
+                {cashFlowData.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-12">No data for selected date range</p>
+                ) : (
+                <div className="h-52 sm:h-64 lg:h-72">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={cashFlowData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                    <ComposedChart data={cashFlowData} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
@@ -1281,6 +1349,7 @@ export default function AdminFinancesPage() {
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
+                )}
               </CardContent>
             </Card>
 
@@ -1290,9 +1359,12 @@ export default function AdminFinancesPage() {
               <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setShowDailyRevenue(true)}>
                 <CardContent className="p-5">
                   <SectionHeader title="Daily Revenue" subtitle="Last 14 days — click for full breakdown" />
-                  <div className="h-52">
+                  {dailyEarningsData.length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-12">No data for selected date range</p>
+                  ) : (
+                  <div className="h-40 sm:h-52 lg:h-64">
                     <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={dailyEarningsData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                      <AreaChart data={dailyEarningsData} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
                         <defs>
                           <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3} />
@@ -1310,6 +1382,7 @@ export default function AdminFinancesPage() {
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
+                  )}
                 </CardContent>
               </Card>
 
@@ -1318,7 +1391,7 @@ export default function AdminFinancesPage() {
                 <CardContent className="p-5">
                   <SectionHeader title="Expense Categories" subtitle="Click for full expense list" />
                   {expenseCategoryData.length === 0 ? (
-                    <p className="text-sm text-gray-400 text-center py-10">No expenses recorded</p>
+                    <p className="text-sm text-gray-500 text-center py-10">No expenses recorded</p>
                   ) : (
                     <div className="flex gap-4">
                       <div className="w-40 h-40 shrink-0">
@@ -1338,6 +1411,7 @@ export default function AdminFinancesPage() {
                                 <Cell key={entry.key} fill={CATEGORY_COLORS[entry.key] || "#6B7280"} />
                               ))}
                             </Pie>
+                            <Legend />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
@@ -1364,19 +1438,19 @@ export default function AdminFinancesPage() {
                   subtitle="Ranked by profit — click to view details"
                 />
                 {vehicleAnalytics.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">No vehicles found</p>
+                  <p className="text-sm text-gray-500 text-center py-8">No vehicles found</p>
                 ) : (
                   <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                       <thead>
                         <tr className="border-b text-left text-gray-500 text-xs uppercase tracking-wider">
-                          <th className="pb-3 font-medium">#</th>
-                          <th className="pb-3 font-medium">Vehicle</th>
-                          <th className="pb-3 font-medium text-center">Bookings</th>
-                          <th className="pb-3 font-medium text-right">Revenue</th>
-                          <th className="pb-3 font-medium text-right">Expenses</th>
-                          <th className="pb-3 font-medium text-right">Profit</th>
-                          <th className="pb-3 font-medium text-right">Occupancy</th>
+                          <th scope="col" className="pb-3 font-medium">#</th>
+                          <th scope="col" className="pb-3 font-medium">Vehicle</th>
+                          <th scope="col" className="pb-3 font-medium text-center">Bookings</th>
+                          <th scope="col" className="pb-3 font-medium text-right">Revenue</th>
+                          <th scope="col" className="pb-3 font-medium text-right">Expenses</th>
+                          <th scope="col" className="pb-3 font-medium text-right">Profit</th>
+                          <th scope="col" className="pb-3 font-medium text-right">Occupancy</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y">
@@ -1422,7 +1496,7 @@ export default function AdminFinancesPage() {
         {activeTab === "expenses" && (
           <div className="space-y-6">
             {/* Category Totals */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
               {expenseCategoryData.map((cat) => (
                 <div
                   key={cat.key}
@@ -1439,12 +1513,12 @@ export default function AdminFinancesPage() {
                   </div>
                   <p className="text-xl font-bold text-gray-900">${cat.value.toLocaleString()}</p>
                   {cat.key === "financing" && (
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       ${Math.round(cat.value / Math.max(1, new Set(financingCosts.map((f) => f.vehicle_id)).size)).toLocaleString()}/vehicle avg
                     </p>
                   )}
                   {cat.key === "maintenance" && (
-                    <p className="text-xs text-gray-400 mt-0.5">
+                    <p className="text-xs text-gray-500 mt-0.5">
                       {maintenanceCosts.length} completed records
                     </p>
                   )}
@@ -1453,7 +1527,7 @@ export default function AdminFinancesPage() {
               <div className="bg-gradient-to-br from-gray-900 to-purple-900 rounded-xl p-4 text-white">
                 <p className="text-xs font-medium text-gray-300 uppercase tracking-wider mb-2">Total Expenses</p>
                 <p className="text-xl font-bold">${allExpenses.reduce((s, e) => s + (e.amount ?? 0), 0).toLocaleString()}</p>
-                <p className="text-xs text-gray-400 mt-0.5">{allExpenses.length} total entries</p>
+                <p className="text-xs text-gray-500 mt-0.5">{allExpenses.length} total entries</p>
               </div>
             </div>
 
@@ -1573,13 +1647,13 @@ export default function AdminFinancesPage() {
                               </div>
                               <div className="text-right shrink-0">
                                 <p className="text-sm font-semibold">${fc.amount.toLocaleString()}</p>
-                                <p className="text-xs text-gray-400">{formatDate(fc.date)}</p>
+                                <p className="text-xs text-gray-500">{formatDate(fc.date)}</p>
                               </div>
                             </div>
                           );
                         })}
                       {financingCosts.length > 12 && (
-                        <p className="text-xs text-gray-400 text-center py-1">
+                        <p className="text-xs text-gray-500 text-center py-1">
                           + {financingCosts.length - 12} more payments
                         </p>
                       )}
@@ -1614,7 +1688,7 @@ export default function AdminFinancesPage() {
                               </div>
                               <div className="text-right shrink-0">
                                 <p className="text-sm font-semibold">${mc.amount.toLocaleString()}</p>
-                                <p className="text-xs text-gray-400">{formatDate(mc.date)}</p>
+                                <p className="text-xs text-gray-500">{formatDate(mc.date)}</p>
                               </div>
                             </div>
                           );
@@ -1653,7 +1727,7 @@ export default function AdminFinancesPage() {
                               </div>
                               <div className="text-right shrink-0">
                                 <p className="text-sm font-semibold">${ticket.amount.toLocaleString()}</p>
-                                <p className="text-xs text-gray-400">{formatDate(ticket.date)}</p>
+                                <p className="text-xs text-gray-500">{formatDate(ticket.date)}</p>
                               </div>
                             </div>
                           );
@@ -1667,7 +1741,7 @@ export default function AdminFinancesPage() {
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Manual Expenses</p>
                 )}
                 {expenses.length === 0 && maintenanceCosts.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">No expenses recorded in this date range</p>
+                  <p className="text-sm text-gray-500 text-center py-8">No expenses recorded in this date range</p>
                 ) : (
                   <div className="space-y-2">
                     {expenses
@@ -1763,9 +1837,9 @@ export default function AdminFinancesPage() {
                             </div>
                             <div className="text-right shrink-0">
                               <p className="text-sm font-semibold">${exp.amount.toLocaleString()}</p>
-                              <p className="text-xs text-gray-400">{formatDate(exp.date)}</p>
+                              <p className="text-xs text-gray-500">{formatDate(exp.date)}</p>
                             </div>
-                            <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                            <div className="flex gap-1 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity shrink-0">
                               <button
                                 onClick={() =>
                                   setEditingExpense({
@@ -1824,7 +1898,7 @@ export default function AdminFinancesPage() {
         {activeTab === "revenue" && (
           <div className="space-y-6">
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard
                 label="Total Revenue"
                 value={`$${summaryData.totalRevenue.toLocaleString()}`}
@@ -1858,17 +1932,21 @@ export default function AdminFinancesPage() {
                   title="Revenue by Month"
                   subtitle="Last 12 months of booking revenue"
                 />
-                <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={revenueByMonth} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                      <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-                      <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-                      <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-                      <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
+                {revenueByMonth.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-12">No data for selected date range</p>
+                ) : (
+                  <div className="h-80">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={revenueByMonth} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                        <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+                        <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
+                        <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                        <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -1880,7 +1958,7 @@ export default function AdminFinancesPage() {
                   subtitle="Click any booking to view vehicle details"
                 />
                 {revenueBookings.length === 0 ? (
-                  <p className="text-sm text-gray-400 text-center py-8">No revenue bookings found</p>
+                  <p className="text-sm text-gray-500 text-center py-8">No revenue bookings found</p>
                 ) : (
                   <div className="space-y-2 max-h-96 overflow-y-auto">
                     {revenueBookings
@@ -1941,7 +2019,7 @@ export default function AdminFinancesPage() {
         {activeTab === "profit" && (
           <div className="space-y-6">
             {/* Summary Stats */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard
                 label="Total Revenue"
                 value={`$${summaryData.totalRevenue.toLocaleString()}`}
@@ -1962,7 +2040,7 @@ export default function AdminFinancesPage() {
               />
               <StatCard
                 label="Profit Margin"
-                value={summaryData.totalRevenue > 0 ? `${((summaryData.netProfit / summaryData.totalRevenue) * 100).toFixed(1)}%` : "—"}
+                value={`${summaryData.profitMargin.toFixed(1)}%`}
                 icon={<BarChart3 className="h-4 w-4" />}
                 accent="blue"
               />
@@ -1977,7 +2055,7 @@ export default function AdminFinancesPage() {
                 />
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={monthlyProfitData} margin={{ top: 5, right: 5, bottom: 5, left: 5 }}>
+                    <ComposedChart data={monthlyProfitData} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
@@ -2057,7 +2135,7 @@ export default function AdminFinancesPage() {
               subtitle="Click any vehicle for full financial breakdown"
             />
             {vehicleAnalytics.length === 0 ? (
-              <p className="text-sm text-gray-400 text-center py-12">No vehicles found</p>
+              <p className="text-sm text-gray-500 text-center py-12">No vehicles found</p>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {vehicleAnalytics.map((v, idx) => (
