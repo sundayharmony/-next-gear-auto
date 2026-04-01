@@ -107,17 +107,29 @@ interface EditingExpense {
   vehicle_id: string | null;
 }
 
+/** Unified expense entry with source tracking */
+interface UnifiedExpense {
+  id: string;
+  vehicle_id: string | null;
+  category: string;
+  amount: number;
+  description: string | null;
+  date: string;
+  created_at: string;
+  source: "manual" | "maintenance" | "financing" | "ticket";
+}
+
 // ─── Constants ────────────────────────────────────────────────────
 const CATEGORY_COLORS: Record<string, string> = {
-  maintenance: "#EF4444",
-  insurance: "#3B82F6",
-  fuel: "#F59E0B",
-  cleaning: "#10B981",
-  parking: "#8B5CF6",
-  registration: "#EC4899",
-  financing: "#7C3AED",
-  tickets: "#F97316",
-  other: "#6B7280",
+  maintenance: "#EF4444",   // Red
+  insurance: "#3B82F6",     // Blue
+  fuel: "#F59E0B",          // Amber
+  cleaning: "#10B981",      // Emerald
+  parking: "#06B6D4",       // Cyan (was purple — too similar to financing)
+  registration: "#EC4899",  // Pink
+  financing: "#6366F1",     // Indigo (was purple — now clearly indigo)
+  tickets: "#F97316",       // Orange
+  other: "#6B7280",         // Gray
 };
 
 const CATEGORY_ICONS: Record<string, React.ReactNode> = {
@@ -139,6 +151,8 @@ const CATEGORIES = [
   "cleaning",
   "parking",
   "registration",
+  "financing",
+  "tickets",
   "other",
 ];
 
@@ -346,7 +360,7 @@ export default function AdminFinancesPage() {
   );
 
   // Maintenance costs (all completed maintenance records show as expenses, filtered by date range)
-  const maintenanceCosts = useMemo(() => {
+  const maintenanceCosts = useMemo((): UnifiedExpense[] => {
     return maintenance
       .filter((m) => m.status === "completed")
       .map((m) => ({
@@ -357,23 +371,14 @@ export default function AdminFinancesPage() {
         description: m.title,
         date: m.completedDate || m.scheduledDate || m.createdAt,
         created_at: m.createdAt,
-        fromMaintenance: true,
+        source: "maintenance" as const,
       }))
       .filter((m) => m.date >= dateRange.from && m.date <= dateRange.to);
   }, [maintenance, dateRange]);
 
   // Financing costs (monthly payments for financed vehicles, generated as individual expense entries)
-  const financingCosts = useMemo(() => {
-    const entries: Array<{
-      id: string;
-      vehicle_id: string;
-      category: string;
-      amount: number;
-      description: string;
-      date: string;
-      created_at: string;
-      fromFinancing: boolean;
-    }> = [];
+  const financingCosts = useMemo((): UnifiedExpense[] => {
+    const entries: UnifiedExpense[] = [];
 
     vehicles.forEach((vehicle) => {
       if (!vehicle.isFinanced || !vehicle.monthlyPayment || !vehicle.financingStartDate) return;
@@ -405,7 +410,7 @@ export default function AdminFinancesPage() {
               description: `Monthly payment — ${getVehicleDisplayName(vehicle)}`,
               date: dateStr,
               created_at: dateStr,
-              fromFinancing: true,
+              source: "financing" as const,
             });
           }
         } catch {
@@ -419,29 +424,31 @@ export default function AdminFinancesPage() {
   }, [vehicles, dateRange]);
 
   // Ticket costs (traffic violations converted to expense entries, filtered by date range)
-  const ticketCosts = useMemo(() => {
+  const ticketCosts = useMemo((): UnifiedExpense[] => {
     return tickets
       .map((ticket) => ({
         id: ticket.id,
-        vehicle_id: ticket.vehicle_id,
+        vehicle_id: ticket.vehicle_id ?? null,
         category: "tickets" as const,
         amount: ticket.amount_due ?? 0,
-        description: `${ticket.ticket_type} — ${ticket.municipality}, ${ticket.state}`,
+        description: `${ticket.ticket_type || "Ticket"} — ${ticket.municipality || "Unknown"}, ${ticket.state || ""}`,
         date: ticket.violation_date || ticket.created_at || new Date().toISOString().split("T")[0],
         created_at: ticket.created_at || new Date().toISOString(),
-        fromTickets: true,
+        source: "ticket" as const,
       }))
       .filter((t) => t.date >= dateRange.from && t.date <= dateRange.to);
   }, [tickets, dateRange]);
 
   // Filter explicit expenses by date range
   const filteredExpenses = useMemo(
-    () => expenses.filter((e) => e.date >= dateRange.from && e.date <= dateRange.to),
+    (): UnifiedExpense[] => expenses
+      .filter((e) => e.date >= dateRange.from && e.date <= dateRange.to)
+      .map((e) => ({ ...e, description: e.description ?? null, source: "manual" as const })),
     [expenses, dateRange]
   );
 
   // All costs = explicit expenses + maintenance record costs + financing payments + tickets (all already date-filtered)
-  const allExpenses = useMemo(() => {
+  const allExpenses = useMemo((): UnifiedExpense[] => {
     return [...filteredExpenses, ...maintenanceCosts, ...financingCosts, ...ticketCosts];
   }, [filteredExpenses, maintenanceCosts, financingCosts, ticketCosts]);
 
@@ -693,8 +700,8 @@ export default function AdminFinancesPage() {
       return;
     }
     const parsedAmount = parseFloat(newExpense.amount);
-    if (isNaN(parsedAmount) || parsedAmount < 0) {
-      setError("Please enter a valid amount");
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError("Please enter a valid amount greater than zero");
       return;
     }
     try {
@@ -729,8 +736,8 @@ export default function AdminFinancesPage() {
       return;
     }
     const parsedAmount = parseFloat(editingExpense.amount);
-    if (isNaN(parsedAmount) || parsedAmount < 0) {
-      setError("Please enter a valid amount");
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
+      setError("Please enter a valid amount greater than zero");
       return;
     }
     try {
@@ -775,20 +782,23 @@ export default function AdminFinancesPage() {
     }
   };
 
+  // Build vehicle lookup map for O(1) access (used in multiple places)
+  const vehicleMap = useMemo(() => {
+    const map = new Map<string, Vehicle>();
+    vehicles.forEach((v) => map.set(v.id, v));
+    return map;
+  }, [vehicles]);
+
   const handleExportExpensesCSV = () => {
     const exportData = allExpenses.map((expense) => {
-      let source = "manual";
-      if ((expense as any).fromMaintenance) source = "maintenance";
-      else if ((expense as any).fromFinancing) source = "financing";
-      else if ((expense as any).fromTickets) source = "ticket";
-
+      const v = expense.vehicle_id ? vehicleMap.get(expense.vehicle_id) : null;
       return {
         Date: formatDate(expense.date),
         Category: expense.category.charAt(0).toUpperCase() + expense.category.slice(1),
         Description: expense.description || "",
-        Vehicle: expense.vehicle_id ? ((() => { const v = vehicles.find((v) => v.id === expense.vehicle_id); return v ? `${v.make} ${v.model}` : "N/A"; })()) : "N/A",
+        Vehicle: v ? `${v.make} ${v.model}` : "N/A",
         Amount: expense.amount,
-        Source: source,
+        Source: expense.source,
       };
     });
     exportToCSV(exportData, `expenses-export-${new Date().toISOString().split("T")[0]}`);
@@ -811,7 +821,7 @@ export default function AdminFinancesPage() {
     const totalDays = Math.max(1, Math.ceil((new Date(dateRange.to + "T00:00:00").getTime() - new Date(dateRange.from + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)));
     let bookedDays = 0;
     vBookings.forEach((b) => {
-      bookedDays += Math.ceil((new Date(b.return_date + "T00:00:00").getTime() - new Date(b.pickup_date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24));
+      bookedDays += Math.max(1, Math.ceil((new Date(b.return_date + "T00:00:00").getTime() - new Date(b.pickup_date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24)));
     });
     const occupancy = Math.min(100, (bookedDays / totalDays) * 100);
     return { vehicle, bookings: vBookings, expenses: vExpenses, revenue, expenseTotal, effectiveCost, financingInfo, profit, roi, occupancy, bookedDays };
@@ -824,7 +834,7 @@ export default function AdminFinancesPage() {
     const dayMap: Record<string, { date: string; revenue: number; bookingCount: number; bookings: Booking[] }> = {};
 
     revenueBookings.forEach((b) => {
-      const dateStr = new Date(b.created_at).toISOString().split("T")[0];
+      const dateStr = b.pickup_date; // Use pickup_date for consistency with rest of dashboard
       if (!dayMap[dateStr]) {
         dayMap[dateStr] = { date: dateStr, revenue: 0, bookingCount: 0, bookings: [] };
       }
@@ -1215,12 +1225,18 @@ export default function AdminFinancesPage() {
                   aria-selected={activeTab === tab}
                   onClick={() => setActiveTab(tab)}
                   onKeyDown={(e) => {
+                    const tabs = ["overview", "expenses", "revenue", "profit", "vehicles"] as const;
                     if (e.key === 'ArrowLeft' && idx > 0) {
-                      const tabs = ["overview", "expenses", "revenue", "profit", "vehicles"] as const;
+                      e.preventDefault();
                       setActiveTab(tabs[idx - 1]);
-                    } else if (e.key === 'ArrowRight' && idx < 4) {
-                      const tabs = ["overview", "expenses", "revenue", "profit", "vehicles"] as const;
+                      // Focus the adjacent tab button
+                      const sibling = (e.currentTarget as HTMLElement).previousElementSibling as HTMLElement;
+                      sibling?.focus();
+                    } else if (e.key === 'ArrowRight' && idx < tabs.length - 1) {
+                      e.preventDefault();
                       setActiveTab(tabs[idx + 1]);
+                      const sibling = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+                      sibling?.focus();
                     }
                   }}
                   className={`px-3 py-1.5 text-sm rounded-md transition-colors capitalize focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-1 ${
@@ -1278,7 +1294,7 @@ export default function AdminFinancesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
               <StatCard
                 label="Total Revenue"
-                value={`$${summaryData.totalRevenue.toLocaleString()}`}
+                value={fmtCurrency(summaryData.totalRevenue)}
                 icon={<DollarSign className="h-4 w-4" />}
                 accent="green"
                 trend={summaryData.totalRevenue > 0 ? "up" : "neutral"}
@@ -1286,17 +1302,18 @@ export default function AdminFinancesPage() {
               />
               <StatCard
                 label="Total Expenses"
-                value={`$${summaryData.totalExpenses.toLocaleString()}`}
+                value={fmtCurrency(summaryData.totalExpenses)}
                 icon={<Receipt className="h-4 w-4" />}
                 accent="red"
                 onClick={() => setActiveTab("expenses")}
               />
               <StatCard
                 label="Net Profit"
-                value={`$${summaryData.netProfit.toLocaleString()}`}
+                value={fmtCurrency(summaryData.netProfit)}
                 icon={summaryData.netProfit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                 accent={summaryData.netProfit >= 0 ? "purple" : "red"}
                 trend={summaryData.netProfit > 0 ? "up" : summaryData.netProfit < 0 ? "down" : "neutral"}
+                subtext={`${summaryData.profitMargin.toFixed(1)}% margin`}
                 onClick={() => setActiveTab("profit")}
               />
               <StatCard
@@ -1304,6 +1321,7 @@ export default function AdminFinancesPage() {
                 value={`${summaryData.occupancyRate.toFixed(0)}%`}
                 icon={<Target className="h-4 w-4" />}
                 accent="blue"
+                subtext={`${vehicles.length} vehicles`}
                 onClick={() => setActiveTab("vehicles")}
               />
               <StatCard
@@ -1316,7 +1334,7 @@ export default function AdminFinancesPage() {
               />
               <StatCard
                 label="Avg. Booking"
-                value={`$${Math.round(summaryData.avgBookingValue).toLocaleString()}`}
+                value={fmtCurrency(summaryData.avgBookingValue)}
                 icon={<BarChart3 className="h-4 w-4" />}
                 accent="gray"
                 onClick={() => setActiveTab("vehicles")}
@@ -1328,10 +1346,13 @@ export default function AdminFinancesPage() {
               <CardContent className="p-5">
                 <SectionHeader
                   title="Cash Flow"
-                  subtitle="Monthly income vs. expenses (last 6 months) — click for details"
+                  subtitle="Monthly income vs. expenses — click for details"
                 />
                 {cashFlowData.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-12">No data for selected date range</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                    <BarChart3 className="h-8 w-8 mb-2" />
+                    <p className="text-sm">No data for the selected date range</p>
+                  </div>
                 ) : (
                 <div className="h-52 sm:h-64 lg:h-72">
                   <ResponsiveContainer width="100%" height="100%">
@@ -1343,9 +1364,10 @@ export default function AdminFinancesPage() {
                         formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === "income" ? "Income" : name === "expenses" ? "Expenses" : "Net"]}
                         contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
                       />
-                      <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} name="income" />
-                      <Bar dataKey="expenses" fill="#EF4444" radius={[4, 4, 0, 0]} name="expenses" />
-                      <Line type="monotone" dataKey="net" stroke="#7C3AED" strokeWidth={2} dot={{ r: 4 }} name="net" />
+                      <Legend verticalAlign="top" height={36} formatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)} />
+                      <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} name="Income" />
+                      <Bar dataKey="expenses" fill="#EF4444" radius={[4, 4, 0, 0]} name="Expenses" />
+                      <Line type="monotone" dataKey="net" stroke="#7C3AED" strokeWidth={2} dot={{ r: 4 }} name="Net" />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -1358,27 +1380,38 @@ export default function AdminFinancesPage() {
               {/* Daily revenue */}
               <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setShowDailyRevenue(true)}>
                 <CardContent className="p-5">
-                  <SectionHeader title="Daily Revenue" subtitle="Last 14 days — click for full breakdown" />
+                  <SectionHeader title="Daily Revenue" subtitle={`Last ${Math.min(30, dailyEarningsData.length)} days — click for full breakdown`} />
                   {dailyEarningsData.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-12">No data for selected date range</p>
+                    <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                      <DollarSign className="h-8 w-8 mb-2" />
+                      <p className="text-sm">No revenue data for the selected date range</p>
+                    </div>
                   ) : (
                   <div className="h-40 sm:h-52 lg:h-64">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={dailyEarningsData} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
                         <defs>
                           <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#7C3AED" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#7C3AED" stopOpacity={0} />
+                            <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
+                            <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
+                          </linearGradient>
+                          <linearGradient id="expenseGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#EF4444" stopOpacity={0.2} />
+                            <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
                           </linearGradient>
                         </defs>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={2} />
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
                         <Tooltip
-                          formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                          formatter={(value: number, name: string) => [
+                            `$${value.toLocaleString()}`,
+                            name === "revenue" ? "Revenue" : "Expenses",
+                          ]}
                           contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
                         />
-                        <Area type="monotone" dataKey="revenue" stroke="#7C3AED" fill="url(#revenueGradient)" strokeWidth={2} />
+                        <Area type="monotone" dataKey="expenses" stroke="#EF4444" fill="url(#expenseGradient)" strokeWidth={1.5} />
+                        <Area type="monotone" dataKey="revenue" stroke="#10B981" fill="url(#revenueGradient)" strokeWidth={2} />
                       </AreaChart>
                     </ResponsiveContainer>
                   </div>
@@ -1389,12 +1422,18 @@ export default function AdminFinancesPage() {
               {/* Expense categories */}
               <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setActiveTab("expenses")}>
                 <CardContent className="p-5">
-                  <SectionHeader title="Expense Categories" subtitle="Click for full expense list" />
+                  <SectionHeader
+                    title="Expense Categories"
+                    subtitle={`${fmtCurrency(summaryData.totalExpenses)} total — tap for details`}
+                  />
                   {expenseCategoryData.length === 0 ? (
-                    <p className="text-sm text-gray-500 text-center py-10">No expenses recorded</p>
+                    <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                      <Receipt className="h-8 w-8 mb-2" />
+                      <p className="text-sm">No expenses recorded</p>
+                    </div>
                   ) : (
-                    <div className="flex gap-4">
-                      <div className="w-40 h-40 shrink-0">
+                    <div className="space-y-4">
+                      <div className="h-56 sm:h-64">
                         <ResponsiveContainer width="100%" height="100%">
                           <PieChart>
                             <Pie
@@ -1403,26 +1442,42 @@ export default function AdminFinancesPage() {
                               nameKey="name"
                               cx="50%"
                               cy="50%"
-                              innerRadius={35}
-                              outerRadius={65}
-                              paddingAngle={2}
+                              innerRadius={50}
+                              outerRadius={85}
+                              paddingAngle={3}
+                              strokeWidth={2}
+                              stroke="#fff"
                             >
                               {expenseCategoryData.map((entry) => (
                                 <Cell key={entry.key} fill={CATEGORY_COLORS[entry.key] || "#6B7280"} />
                               ))}
                             </Pie>
-                            <Legend />
+                            <Tooltip
+                              formatter={(value: number) => [fmtCurrency(value), "Amount"]}
+                              contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "13px" }}
+                            />
                           </PieChart>
                         </ResponsiveContainer>
                       </div>
-                      <div className="flex-1 space-y-1.5 overflow-y-auto max-h-44">
-                        {expenseCategoryData.map((cat) => (
-                          <div key={cat.key} className="flex items-center gap-2 text-sm">
-                            <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: CATEGORY_COLORS[cat.key] || "#6B7280" }} />
-                            <span className="flex-1 truncate">{cat.name}</span>
-                            <span className="font-semibold">${cat.value.toLocaleString()}</span>
-                          </div>
-                        ))}
+                      <div className="space-y-2">
+                        {expenseCategoryData.map((cat) => {
+                          const pct = summaryData.totalExpenses > 0
+                            ? ((cat.value / summaryData.totalExpenses) * 100).toFixed(1)
+                            : "0";
+                          return (
+                            <div key={cat.key} className="flex items-center gap-2.5 text-sm">
+                              <div
+                                className="w-7 h-7 rounded-md flex items-center justify-center text-white shrink-0"
+                                style={{ backgroundColor: CATEGORY_COLORS[cat.key] || "#6B7280" }}
+                              >
+                                {CATEGORY_ICONS[cat.key] || <MoreHorizontal className="h-3 w-3" />}
+                              </div>
+                              <span className="flex-1 truncate font-medium">{cat.name}</span>
+                              <span className="text-gray-500 text-xs">{pct}%</span>
+                              <span className="font-semibold tabular-nums">{fmtCurrency(cat.value)}</span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -1458,7 +1513,11 @@ export default function AdminFinancesPage() {
                           <tr
                             key={v.id}
                             onClick={() => setSelectedVehicleId(v.id)}
-                            className="cursor-pointer hover:bg-purple-50 transition-colors"
+                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedVehicleId(v.id); } }}
+                            tabIndex={0}
+                            role="button"
+                            aria-label={`View details for ${v.name}`}
+                            className="cursor-pointer hover:bg-purple-50 transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset"
                           >
                             <td className="py-3 text-gray-400 font-medium">{idx + 1}</td>
                             <td className="py-3 font-medium text-gray-900">{v.name}</td>
@@ -1482,6 +1541,21 @@ export default function AdminFinancesPage() {
                           </tr>
                         ))}
                       </tbody>
+                      <tfoot>
+                        <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold">
+                          <td className="py-3"></td>
+                          <td className="py-3 text-gray-900">Fleet Total</td>
+                          <td className="py-3 text-center">{vehicleAnalytics.reduce((s, v) => s + v.bookings, 0)}</td>
+                          <td className="py-3 text-right text-green-600">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.revenue, 0))}</td>
+                          <td className="py-3 text-right text-red-500">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.expenses, 0))}</td>
+                          <td className={`py-3 text-right font-bold ${vehicleAnalytics.reduce((s, v) => s + v.profit, 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                            {fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.profit, 0))}
+                          </td>
+                          <td className="py-3 text-right text-xs text-gray-500">
+                            {vehicleAnalytics.length > 0 ? (vehicleAnalytics.reduce((s, v) => s + v.occupancy, 0) / vehicleAnalytics.length).toFixed(0) : 0}% avg
+                          </td>
+                        </tr>
+                      </tfoot>
                     </table>
                   </div>
                 )}
@@ -1511,7 +1585,7 @@ export default function AdminFinancesPage() {
                     </div>
                     <span className="text-sm font-medium text-gray-600 capitalize">{cat.name}</span>
                   </div>
-                  <p className="text-xl font-bold text-gray-900">${cat.value.toLocaleString()}</p>
+                  <p className="text-xl font-bold text-gray-900">{fmtCurrency(cat.value)}</p>
                   {cat.key === "financing" && (
                     <p className="text-xs text-gray-500 mt-0.5">
                       ${Math.round(cat.value / Math.max(1, new Set(financingCosts.map((f) => f.vehicle_id)).size)).toLocaleString()}/vehicle avg
@@ -1526,8 +1600,8 @@ export default function AdminFinancesPage() {
               ))}
               <div className="bg-gradient-to-br from-gray-900 to-purple-900 rounded-xl p-4 text-white">
                 <p className="text-xs font-medium text-gray-300 uppercase tracking-wider mb-2">Total Expenses</p>
-                <p className="text-xl font-bold">${allExpenses.reduce((s, e) => s + (e.amount ?? 0), 0).toLocaleString()}</p>
-                <p className="text-xs text-gray-500 mt-0.5">{allExpenses.length} total entries</p>
+                <p className="text-xl font-bold">{fmtCurrency(allExpenses.reduce((s, e) => s + (e.amount ?? 0), 0))}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{allExpenses.length} total entries</p>
               </div>
             </div>
 
@@ -1624,12 +1698,12 @@ export default function AdminFinancesPage() {
                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                         .slice(0, 12) // Show last 12 payments max
                         .map((fc) => {
-                          const vehicle = vehicles.find((v) => v.id === fc.vehicle_id);
+                          const vehicle = fc.vehicle_id ? vehicleMap.get(fc.vehicle_id) : undefined;
                           return (
                             <div
                               key={fc.id}
                               className="flex items-center gap-3 p-3 rounded-lg bg-purple-50 border border-purple-100 cursor-pointer hover:bg-purple-100 transition-colors"
-                              onClick={() => setSelectedVehicleId(fc.vehicle_id)}
+                              onClick={() => fc.vehicle_id && setSelectedVehicleId(fc.vehicle_id)}
                             >
                               <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 bg-purple-600">
                                 <Wallet className="h-4 w-4" />
@@ -1669,7 +1743,7 @@ export default function AdminFinancesPage() {
                       {maintenanceCosts
                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                         .map((mc) => {
-                          const vehicle = vehicles.find((v) => v.id === mc.vehicle_id);
+                          const vehicle = mc.vehicle_id ? vehicleMap.get(mc.vehicle_id) : undefined;
                           return (
                             <div key={mc.id} className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-100">
                               <div className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0 bg-amber-500">
@@ -1705,7 +1779,7 @@ export default function AdminFinancesPage() {
                       {ticketCosts
                         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                         .map((ticket) => {
-                          const vehicle = vehicles.find((v) => v.id === ticket.vehicle_id);
+                          const vehicle = ticket.vehicle_id ? vehicleMap.get(ticket.vehicle_id) : undefined;
                           return (
                             <div
                               key={ticket.id}
@@ -1737,17 +1811,20 @@ export default function AdminFinancesPage() {
                 )}
 
                 {/* Manual Expenses List */}
-                {expenses.length > 0 && (
+                {filteredExpenses.length > 0 && (
                   <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Manual Expenses</p>
                 )}
-                {expenses.length === 0 && maintenanceCosts.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-8">No expenses recorded in this date range</p>
+                {filteredExpenses.length === 0 && maintenanceCosts.length === 0 ? (
+                  <div className="flex flex-col items-center justify-center py-8 text-gray-400">
+                    <Receipt className="h-8 w-8 mb-2" />
+                    <p className="text-sm">No expenses recorded in this date range</p>
+                  </div>
                 ) : (
                   <div className="space-y-2">
-                    {expenses
+                    {filteredExpenses
                       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                       .map((exp) => {
-                        const vehicle = vehicles.find((v) => v.id === exp.vehicle_id);
+                        const vehicle = exp.vehicle_id ? vehicleMap.get(exp.vehicle_id) : undefined;
                         const isEditing = editingExpense?.id === exp.id;
                         const isDeleting = deleteConfirm === exp.id;
 
@@ -1851,7 +1928,8 @@ export default function AdminFinancesPage() {
                                     vehicle_id: exp.vehicle_id,
                                   })
                                 }
-                                className="p-1.5 rounded-md hover:bg-blue-100 text-blue-600"
+                                aria-label="Edit expense"
+                                className="p-1.5 rounded-md hover:bg-blue-100 text-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </button>
@@ -1860,14 +1938,16 @@ export default function AdminFinancesPage() {
                                   <button
                                     onClick={() => handleDeleteExpense(exp.id)}
                                     disabled={savingExpenseId === exp.id}
-                                    className="px-2 py-1 text-xs bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50 flex items-center gap-1"
+                                    className="px-2 py-1 text-xs bg-red-500 text-white rounded-md hover:bg-red-600 disabled:opacity-50 flex items-center gap-1 focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    aria-label="Confirm delete"
                                   >
                                     {savingExpenseId === exp.id ? <Loader2 className="h-3 w-3 animate-spin" /> : null}Confirm
                                   </button>
                                   <button
                                     onClick={() => setDeleteConfirm(null)}
                                     disabled={savingExpenseId === exp.id}
-                                    className="px-2 py-1 text-xs bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50"
+                                    className="px-2 py-1 text-xs bg-gray-200 rounded-md hover:bg-gray-300 disabled:opacity-50 focus:outline-none focus:ring-2 focus:ring-gray-400"
+                                    aria-label="Cancel delete"
                                   >
                                     No
                                   </button>
@@ -1901,7 +1981,7 @@ export default function AdminFinancesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard
                 label="Total Revenue"
-                value={`$${summaryData.totalRevenue.toLocaleString()}`}
+                value={fmtCurrency(summaryData.totalRevenue)}
                 icon={<DollarSign className="h-4 w-4" />}
                 accent="green"
               />
@@ -1913,13 +1993,13 @@ export default function AdminFinancesPage() {
               />
               <StatCard
                 label="Avg per Booking"
-                value={`$${Math.round(summaryData.avgBookingValue).toLocaleString()}`}
+                value={fmtCurrency(summaryData.avgBookingValue)}
                 icon={<BarChart3 className="h-4 w-4" />}
                 accent="purple"
               />
               <StatCard
                 label="Best Month"
-                value={`$${Math.max(0, ...revenueByMonth.map((m) => m.revenue)).toLocaleString()}`}
+                value={fmtCurrency(Math.max(0, ...revenueByMonth.map((m) => m.revenue)))}
                 icon={<TrendingUp className="h-4 w-4" />}
                 accent="amber"
               />
@@ -1930,10 +2010,13 @@ export default function AdminFinancesPage() {
               <CardContent className="p-5">
                 <SectionHeader
                   title="Revenue by Month"
-                  subtitle="Last 12 months of booking revenue"
+                  subtitle={`${revenueByMonth.length} months of booking revenue`}
                 />
                 {revenueByMonth.length === 0 ? (
-                  <p className="text-sm text-gray-500 text-center py-12">No data for selected date range</p>
+                  <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                    <BarChart3 className="h-8 w-8 mb-2" />
+                    <p className="text-sm">No revenue data for the selected date range</p>
+                  </div>
                 ) : (
                   <div className="h-80">
                     <ResponsiveContainer width="100%" height="100%">
@@ -1941,7 +2024,10 @@ export default function AdminFinancesPage() {
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                         <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-                        <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
+                        <Tooltip
+                          formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                          contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
+                        />
                         <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
@@ -1954,8 +2040,8 @@ export default function AdminFinancesPage() {
             <Card>
               <CardContent className="p-5">
                 <SectionHeader
-                  title="Recent Bookings"
-                  subtitle="Click any booking to view vehicle details"
+                  title="Bookings"
+                  subtitle={`${revenueBookings.length} bookings in range — click to view vehicle`}
                 />
                 {revenueBookings.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-8">No revenue bookings found</p>
@@ -1964,7 +2050,7 @@ export default function AdminFinancesPage() {
                     {revenueBookings
                       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                       .map((booking) => {
-                        const vehicle = vehicles.find((v) => v.id === booking.vehicle_id);
+                        const vehicle = vehicleMap.get(booking.vehicle_id);
                         return (
                           <div
                             key={booking.id}
@@ -2022,19 +2108,19 @@ export default function AdminFinancesPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <StatCard
                 label="Total Revenue"
-                value={`$${summaryData.totalRevenue.toLocaleString()}`}
+                value={fmtCurrency(summaryData.totalRevenue)}
                 icon={<TrendingUp className="h-4 w-4" />}
                 accent="green"
               />
               <StatCard
                 label="Total Expenses"
-                value={`$${summaryData.totalExpenses.toLocaleString()}`}
+                value={fmtCurrency(summaryData.totalExpenses)}
                 icon={<TrendingDown className="h-4 w-4" />}
                 accent="red"
               />
               <StatCard
                 label="Net Profit"
-                value={`$${summaryData.netProfit.toLocaleString()}`}
+                value={fmtCurrency(summaryData.netProfit)}
                 icon={summaryData.netProfit >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                 accent={summaryData.netProfit >= 0 ? "purple" : "red"}
               />
@@ -2051,7 +2137,7 @@ export default function AdminFinancesPage() {
               <CardContent className="p-5">
                 <SectionHeader
                   title="Monthly Profit Trend"
-                  subtitle="Revenue (green), Expenses (red), and Net Profit (blue line) over the last 12 months"
+                  subtitle="Revenue (green), Expenses (red), and Net Profit (blue line)"
                 />
                 <div className="h-80">
                   <ResponsiveContainer width="100%" height="100%">
@@ -2059,10 +2145,17 @@ export default function AdminFinancesPage() {
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
-                      <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-                      <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} />
-                      <Bar dataKey="expenses" fill="#EF4444" radius={[8, 8, 0, 0]} />
-                      <Line type="monotone" dataKey="profit" stroke="#3B82F6" strokeWidth={2} dot={{ fill: "#3B82F6", r: 4 }} />
+                      <Tooltip
+                        formatter={(value: number, name: string) => [
+                          `$${value.toLocaleString()}`,
+                          name.charAt(0).toUpperCase() + name.slice(1),
+                        ]}
+                        contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
+                      />
+                      <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} name="Revenue" />
+                      <Bar dataKey="expenses" fill="#EF4444" radius={[8, 8, 0, 0]} name="Expenses" />
+                      <Line type="monotone" dataKey="profit" stroke="#3B82F6" strokeWidth={2} dot={{ fill: "#3B82F6", r: 4 }} name="Profit" />
+                      <Legend verticalAlign="top" height={36} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
@@ -2080,16 +2173,16 @@ export default function AdminFinancesPage() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200">
-                        <th className="text-left py-3 px-4 font-semibold text-gray-700">Month</th>
-                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Revenue</th>
-                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Expenses</th>
-                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Profit</th>
-                        <th className="text-right py-3 px-4 font-semibold text-gray-700">Margin %</th>
+                        <th scope="col" className="text-left py-3 px-4 font-semibold text-gray-700">Month</th>
+                        <th scope="col" className="text-right py-3 px-4 font-semibold text-gray-700">Revenue</th>
+                        <th scope="col" className="text-right py-3 px-4 font-semibold text-gray-700">Expenses</th>
+                        <th scope="col" className="text-right py-3 px-4 font-semibold text-gray-700">Profit</th>
+                        <th scope="col" className="text-right py-3 px-4 font-semibold text-gray-700">Margin %</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {monthlyProfitData.map((month, idx) => (
-                        <tr key={idx} className="border-b border-gray-100 hover:bg-gray-50">
+                      {monthlyProfitData.map((month) => (
+                        <tr key={month.date} className="border-b border-gray-100 hover:bg-gray-50">
                           <td className="py-3 px-4 text-gray-700">{month.month}</td>
                           <td className="py-3 px-4 text-right text-green-600 font-medium">
                             ${month.revenue.toLocaleString()}
@@ -2118,6 +2211,23 @@ export default function AdminFinancesPage() {
                         </tr>
                       ))}
                     </tbody>
+                    <tfoot>
+                      <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold">
+                        <td className="py-3 px-4 text-gray-900">Total</td>
+                        <td className="py-3 px-4 text-right text-green-600">
+                          {fmtCurrency(monthlyProfitData.reduce((s, m) => s + m.revenue, 0))}
+                        </td>
+                        <td className="py-3 px-4 text-right text-red-600">
+                          {fmtCurrency(monthlyProfitData.reduce((s, m) => s + m.expenses, 0))}
+                        </td>
+                        <td className={`py-3 px-4 text-right ${summaryData.netProfit >= 0 ? "text-purple-600" : "text-red-600"}`}>
+                          {fmtCurrency(monthlyProfitData.reduce((s, m) => s + m.profit, 0))}
+                        </td>
+                        <td className={`py-3 px-4 text-right ${summaryData.profitMargin >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          {summaryData.profitMargin.toFixed(1)}%
+                        </td>
+                      </tr>
+                    </tfoot>
                   </table>
                 </div>
               </CardContent>
