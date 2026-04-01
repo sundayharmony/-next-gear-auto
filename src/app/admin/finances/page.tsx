@@ -426,12 +426,7 @@ export default function AdminFinancesPage() {
   const summaryData = useMemo(() => {
     const totalRevenue = revenueBookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
     const totalExpenses = allExpenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
-
-    // Non-financed vehicle purchase prices (financed vehicles are already in allExpenses as monthly payments)
-    const nonFinancedCosts = vehicles
-      .filter((v) => !v.isFinanced)
-      .reduce((sum, v) => sum + (v.purchasePrice ?? 0), 0);
-    const netProfit = totalRevenue - totalExpenses - nonFinancedCosts;
+    const netProfit = totalRevenue - totalExpenses;
 
     const totalDaysInRange = Math.max(
       1,
@@ -458,7 +453,7 @@ export default function AdminFinancesPage() {
 
     return {
       totalRevenue,
-      totalExpenses: totalExpenses + nonFinancedCosts,
+      totalExpenses,
       netProfit,
       occupancyRate,
       totalBookings: revenueBookings.length,
@@ -467,31 +462,31 @@ export default function AdminFinancesPage() {
     };
   }, [revenueBookings, allExpenses, vehicles, dateRange]);
 
-  // Cash flow data — monthly money in vs money out
+  // Cash flow data — monthly money in vs money out (based on selected date range)
   const cashFlowData = useMemo(() => {
     const months: Record<string, { month: string; income: number; expenses: number }> = {};
 
-    // Build last 6 months
-    const now = new Date();
-    for (let i = 5; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    // Build months spanning the selected date range
+    const startD = new Date(dateRange.from + "T12:00:00");
+    const endD = new Date(dateRange.to + "T12:00:00");
+    const cursor = new Date(startD.getFullYear(), startD.getMonth(), 1);
+    while (cursor <= endD) {
+      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
       months[key] = {
-        month: d.toLocaleDateString("en-US", { month: "short" }),
+        month: cursor.toLocaleDateString("en-US", { month: "short" }),
         income: 0,
         expenses: 0,
       };
+      cursor.setMonth(cursor.getMonth() + 1);
     }
 
     revenueBookings.forEach((b) => {
-      const d = new Date(b.created_at);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const key = b.pickup_date.substring(0, 7); // "YYYY-MM"
       if (months[key]) months[key].income += b.total_price ?? 0;
     });
 
     allExpenses.forEach((e) => {
-      const d = new Date(e.date);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const key = e.date.substring(0, 7);
       if (months[key]) months[key].expenses += e.amount ?? 0;
     });
 
@@ -501,15 +496,19 @@ export default function AdminFinancesPage() {
       expenses: Math.round(m.expenses),
       net: Math.round(m.income - m.expenses),
     }));
-  }, [revenueBookings, allExpenses]);
+  }, [revenueBookings, allExpenses, dateRange]);
 
-  // Daily earnings (last 14 days)
+  // Daily earnings (within selected date range, max 30 days shown)
   const dailyEarningsData = useMemo(() => {
-    const today = new Date();
+    const startD = new Date(dateRange.from + "T12:00:00");
+    const endD = new Date(dateRange.to + "T12:00:00");
+    const rangeDays = Math.ceil((endD.getTime() - startD.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+    // If range > 30 days, show only last 30 days of the range
+    const showDays = Math.min(rangeDays, 30);
     const days: { label: string; date: string; revenue: number; expenses: number }[] = [];
 
-    for (let i = 13; i >= 0; i--) {
-      const d = new Date(today);
+    for (let i = showDays - 1; i >= 0; i--) {
+      const d = new Date(endD);
       d.setDate(d.getDate() - i);
       days.push({
         date: d.toISOString().split("T")[0],
@@ -520,14 +519,12 @@ export default function AdminFinancesPage() {
     }
 
     revenueBookings.forEach((b) => {
-      const dateStr = new Date(b.created_at).toISOString().split("T")[0];
-      const day = days.find((d) => d.date === dateStr);
+      const day = days.find((d) => d.date === b.pickup_date);
       if (day) day.revenue += b.total_price ?? 0;
     });
 
     allExpenses.forEach((e) => {
-      const dateStr = new Date(e.date).toISOString().split("T")[0];
-      const day = days.find((d) => d.date === dateStr);
+      const day = days.find((d) => d.date === e.date);
       if (day) day.expenses += e.amount ?? 0;
     });
 
@@ -536,7 +533,7 @@ export default function AdminFinancesPage() {
       revenue: Math.round(d.revenue),
       expenses: Math.round(d.expenses),
     }));
-  }, [revenueBookings, allExpenses]);
+  }, [revenueBookings, allExpenses, dateRange]);
 
   // Expense by category (includes maintenance + financing costs)
   const expenseCategoryData = useMemo(() => {
@@ -593,26 +590,26 @@ export default function AdminFinancesPage() {
       .sort((a, b) => b.profit - a.profit);
   }, [vehicles, revenueBookings, allExpenses, dateRange]);
 
-  // Revenue by month
+  // Revenue by month (based on selected date range)
   const revenueByMonth = useMemo(() => {
     const months: Record<string, { month: string; date: string; revenue: number; bookings: number }> = {};
 
-    // Build last 12 months
-    const now = new Date();
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const startD = new Date(dateRange.from + "T12:00:00");
+    const endD = new Date(dateRange.to + "T12:00:00");
+    const cursor = new Date(startD.getFullYear(), startD.getMonth(), 1);
+    while (cursor <= endD) {
+      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
       months[key] = {
-        month: d.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
+        month: cursor.toLocaleDateString("en-US", { month: "short", year: "numeric" }),
         date: key,
         revenue: 0,
         bookings: 0,
       };
+      cursor.setMonth(cursor.getMonth() + 1);
     }
 
     revenueBookings.forEach((b) => {
-      const d = new Date(b.created_at);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const key = b.pickup_date.substring(0, 7);
       if (months[key]) {
         months[key].revenue += b.total_price ?? 0;
         months[key].bookings += 1;
@@ -623,34 +620,33 @@ export default function AdminFinancesPage() {
       ...m,
       revenue: Math.round(m.revenue),
     }));
-  }, [revenueBookings]);
+  }, [revenueBookings, dateRange]);
 
-  // Monthly profit data (revenue, expenses, profit)
+  // Monthly profit data (revenue, expenses, profit — based on selected date range)
   const monthlyProfitData = useMemo(() => {
     const months: Record<string, { month: string; date: string; revenue: number; expenses: number }> = {};
 
-    // Build last 12 months
-    const now = new Date();
-    for (let i = 11; i >= 0; i--) {
-      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const startD = new Date(dateRange.from + "T12:00:00");
+    const endD = new Date(dateRange.to + "T12:00:00");
+    const cursor = new Date(startD.getFullYear(), startD.getMonth(), 1);
+    while (cursor <= endD) {
+      const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, "0")}`;
       months[key] = {
-        month: d.toLocaleDateString("en-US", { month: "short" }),
+        month: cursor.toLocaleDateString("en-US", { month: "short" }),
         date: key,
         revenue: 0,
         expenses: 0,
       };
+      cursor.setMonth(cursor.getMonth() + 1);
     }
 
     revenueBookings.forEach((b) => {
-      const d = new Date(b.created_at);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const key = b.pickup_date.substring(0, 7);
       if (months[key]) months[key].revenue += b.total_price ?? 0;
     });
 
     allExpenses.forEach((e) => {
-      const d = new Date(e.date);
-      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+      const key = e.date.substring(0, 7);
       if (months[key]) months[key].expenses += e.amount ?? 0;
     });
 
@@ -660,7 +656,7 @@ export default function AdminFinancesPage() {
       expenses: Math.round(m.expenses),
       profit: Math.round(m.revenue - m.expenses),
     }));
-  }, [revenueBookings, allExpenses]);
+  }, [revenueBookings, allExpenses, dateRange]);
 
   // ─── Expense CRUD ───────────────────────────────────────────────
   const handleAddExpense = async () => {
