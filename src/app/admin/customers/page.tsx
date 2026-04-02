@@ -57,6 +57,7 @@ interface CustomerRow {
   role: string;
   createdAt: string;
   profilePictureUrl?: string;
+  idDocumentUrl?: string | null;
 }
 
 type BookingRow = BookingDbRow;
@@ -77,6 +78,7 @@ export default function AdminCustomersPage() {
   const [editPhone, setEditPhone] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+  const [uploadingCustomerDoc, setUploadingCustomerDoc] = useState(false);
   const { currentPage, pageSize, handlePageChange, handlePageSizeChange, resetPage, paginateArray } = usePagination(12);
   const [selectedBookingForUpload, setSelectedBookingForUpload] = useState<string | null>(null);
   const [uploadDocType, setUploadDocType] = useState<"id_document" | "insurance_proof">("id_document");
@@ -328,6 +330,45 @@ export default function AdminCustomersPage() {
       setToastError("Error uploading document");
     }
     setUploadingDoc(false);
+  };
+
+  // Upload ID document directly to customer profile (no booking required)
+  const handleCustomerDocUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!selectedCustomer || !e.target.files?.[0]) return;
+
+    const file = e.target.files[0];
+    const formData = new FormData();
+    formData.append("customerId", selectedCustomer.id);
+    formData.append("type", "id_document");
+    formData.append("file", file);
+
+    setUploadingCustomerDoc(true);
+    try {
+      const res = await adminFetch("/api/admin/customer-documents", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error(`Upload failed: ${res.status}`);
+      const data = await res.json();
+      if (data.success || data.url) {
+        setToastSuccess("ID document uploaded to customer profile");
+        // Update the selected customer's idDocumentUrl in state
+        setSelectedCustomer((prev) => prev ? { ...prev, idDocumentUrl: data.url } : prev);
+        // Also update in the customers list
+        setCustomers((prev) =>
+          prev.map((c) => c.id === selectedCustomer.id ? { ...c, idDocumentUrl: data.url } : c)
+        );
+      } else {
+        setToastError("Failed to upload: " + (data.error || "Unknown error"));
+      }
+    } catch (err) {
+      logger.error("Failed to upload customer document:", err);
+      setToastError("Error uploading document");
+    }
+    setUploadingCustomerDoc(false);
+    // Reset file input
+    e.target.value = "";
   };
 
   const handleDeleteFromList = async (customer: CustomerRow) => {
@@ -657,8 +698,8 @@ export default function AdminCustomersPage() {
     };
   }, [customerBookings]);
 
-  // Get document URLs from bookings
-  const latestIdUrl = customerBookings.find((b) => b.id_document_url)?.id_document_url;
+  // Get document URLs: prefer customer-level docs, fall back to booking-level
+  const latestIdUrl = selectedCustomer?.idDocumentUrl || customerBookings.find((b) => b.id_document_url)?.id_document_url;
   const latestInsuranceUrl = customerBookings.find((b) => b.insurance_proof_url)?.insurance_proof_url;
 
   // === FULL-SCREEN CUSTOMER DETAIL VIEW ===
@@ -977,10 +1018,38 @@ export default function AdminCustomersPage() {
                         </div>
                       </div>
 
-                      {/* Admin Document Upload */}
+                      {/* Direct Customer ID Upload (no booking required) */}
+                      <div className="mt-4 pt-3 border-t">
+                        <p className="text-xs font-semibold text-gray-600 mb-2">Upload ID Document</p>
+                        <label className="block">
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,application/pdf"
+                            onChange={handleCustomerDocUpload}
+                            disabled={uploadingCustomerDoc}
+                            className="hidden"
+                            id="customer-doc-upload-input"
+                          />
+                          <Button
+                            onClick={() => document.getElementById("customer-doc-upload-input")?.click()}
+                            disabled={uploadingCustomerDoc}
+                            size="sm"
+                            variant="outline"
+                            className="w-full text-xs"
+                          >
+                            {uploadingCustomerDoc ? (
+                              <><Loader2 className="h-3 w-3 mr-1 animate-spin" /> Uploading...</>
+                            ) : (
+                              <><Upload className="h-3 w-3 mr-1" /> {latestIdUrl ? "Replace ID Document" : "Upload Driver License"}</>
+                            )}
+                          </Button>
+                        </label>
+                      </div>
+
+                      {/* Booking-specific Document Upload */}
                       {customerBookings.length > 0 && (
-                        <div className="mt-4 pt-3 border-t">
-                          <p className="text-xs font-semibold text-gray-600 mb-2">Admin: Upload Documents</p>
+                        <div className="mt-3 pt-3 border-t">
+                          <p className="text-xs font-semibold text-gray-600 mb-2">Upload to Booking</p>
                           <div className="space-y-2">
                             <div className="flex gap-2 w-full min-w-0">
                               <select
