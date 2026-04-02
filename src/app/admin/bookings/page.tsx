@@ -260,21 +260,21 @@ function AdminBookingsContent() {
   return (
     <>
       {/* Page Header */}
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
+      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Link href="/admin" className="text-purple-300 hover:text-white transition-colors">
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div>
-              <h1 className="text-3xl font-bold">All Bookings</h1>
-              <p className="mt-1 text-purple-200">Manage and track all reservations.</p>
+              <h1 className="text-2xl sm:text-3xl font-bold">All Bookings</h1>
+              <p className="mt-1 text-sm sm:text-base text-purple-200">Manage and track all reservations.</p>
             </div>
           </div>
         </div>
       </section>
 
-      <PageContainer className="py-8">
+      <PageContainer className="py-5 sm:py-8">
         {/* Toast Messages */}
         {success && (
           <div className="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center justify-between">

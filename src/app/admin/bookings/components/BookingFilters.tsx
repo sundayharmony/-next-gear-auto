@@ -88,15 +88,15 @@ export default function BookingFilters({
 
   return (
     <div className="space-y-4">
-      {/* Status filter pills */}
-      <div className="flex gap-2 flex-wrap" role="group" aria-label="Filter bookings by status">
+      {/* Status filter pills — horizontal scroll on mobile, wrap on desktop */}
+      <div className="flex gap-2 overflow-x-auto sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 scrollbar-hide" role="group" aria-label="Filter bookings by status">
         {statuses.map((status) => (
           <button
             key={status}
             onClick={() => onStatusChange(status)}
             aria-pressed={statusFilter === status}
             aria-label={`Filter by ${status} status${statusFilter === status ? " (current)" : ""}`}
-            className={`px-4 py-2 rounded-full font-medium text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 outline-none ${
+            className={`px-4 py-2 rounded-full font-medium text-sm transition-colors whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 outline-none ${
               statusFilter === status
                 ? "bg-purple-600 text-white focus-visible:outline-purple-700"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300 focus-visible:outline-purple-600"
@@ -107,8 +107,9 @@ export default function BookingFilters({
         ))}
       </div>
 
-      {/* Search bar + vehicle filter + actions row */}
-      <div className="flex gap-3 items-center">
+      {/* Search bar + vehicle filter + actions */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        {/* Search input — full width on mobile */}
         <div className="flex-1 relative">
           <label htmlFor="search-input" className="sr-only">Search bookings</label>
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" aria-hidden="true" />
@@ -122,50 +123,54 @@ export default function BookingFilters({
             aria-label="Search bookings by customer name, email, or phone"
           />
         </div>
-        <div className="relative">
-          <Car className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" aria-hidden="true" />
-          <label htmlFor="vehicle-filter" className="sr-only">Filter by vehicle</label>
-          <select
-            id="vehicle-filter"
-            value={vehicleFilter}
-            onChange={(e) => onVehicleChange(e.target.value)}
-            className="pl-8 pr-3 py-2 border rounded text-sm bg-white text-gray-700 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none min-w-[180px] appearance-none cursor-pointer"
-            aria-label="Filter by vehicle"
+
+        {/* Vehicle filter + action buttons — wrap on mobile */}
+        <div className="flex gap-2 items-center flex-wrap">
+          <div className="relative flex-1 sm:flex-none">
+            <Car className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" aria-hidden="true" />
+            <label htmlFor="vehicle-filter" className="sr-only">Filter by vehicle</label>
+            <select
+              id="vehicle-filter"
+              value={vehicleFilter}
+              onChange={(e) => onVehicleChange(e.target.value)}
+              className="w-full sm:w-auto pl-8 pr-3 py-2 border rounded text-sm bg-white text-gray-700 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none sm:min-w-[180px] appearance-none cursor-pointer"
+              aria-label="Filter by vehicle"
+            >
+              <option value="all">All Vehicles</option>
+              {vehicleOptions.map((v) => (
+                <option key={v.id} value={v.name}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onRefresh}
+            disabled={loading}
+            title="Refresh bookings"
+            aria-label="Refresh bookings"
           >
-            <option value="all">All Vehicles</option>
-            {vehicleOptions.map((v) => (
-              <option key={v.id} value={v.name}>{v.name}</option>
-            ))}
-          </select>
+            <RefreshCw className="w-4 h-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onExportCSV}
+            disabled={loading}
+            title="Export as CSV"
+            aria-label="Export as CSV"
+          >
+            <Download className="w-4 h-4" />
+          </Button>
+          <Button
+            onClick={onCreateNew}
+            size="sm"
+            className="bg-purple-600 hover:bg-purple-700 text-white"
+          >
+            <Plus className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">New Booking</span>
+          </Button>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onRefresh}
-          disabled={loading}
-          title="Refresh bookings"
-          aria-label="Refresh bookings"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={onExportCSV}
-          disabled={loading}
-          title="Export as CSV"
-          aria-label="Export as CSV"
-        >
-          <Download className="w-4 h-4" />
-        </Button>
-        <Button
-          onClick={onCreateNew}
-          size="sm"
-          className="bg-purple-600 hover:bg-purple-700 text-white"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          New Booking
-        </Button>
       </div>
 
       {/* Bulk action bar */}

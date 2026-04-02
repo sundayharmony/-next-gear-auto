@@ -671,16 +671,16 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex overflow-hidden">
-      {/* Dark backdrop */}
+      {/* Dark backdrop — hidden on mobile since panel is full-screen */}
       <div
-        className="flex-1 bg-black/50 cursor-pointer"
+        className="hidden md:block flex-1 bg-black/50 cursor-pointer"
         onClick={onClose}
       />
 
-      {/* Slide-over panel */}
-      <div ref={panelRef} tabIndex={0} autoFocus className="w-full max-w-lg bg-white shadow-xl overflow-y-auto flex flex-col outline-none">
+      {/* Slide-over panel — full-screen on mobile, side panel on desktop */}
+      <div ref={panelRef} tabIndex={0} autoFocus className="w-full md:max-w-lg bg-white shadow-xl overflow-y-auto flex flex-col outline-none">
         {/* Sticky Header */}
-        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-6 py-4">
+        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">
               {editMode ? "Edit Booking" : "Booking Details"}
@@ -711,7 +711,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
         </div>
 
         {/* Panel content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4 space-y-6">
+        <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-5 sm:space-y-6">
           {/* Booking ID & Status */}
           <div className="flex items-start justify-between">
             <div>
@@ -727,8 +727,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
           {/* Status Tracker */}
           {booking.status !== "cancelled" && (
-            <div className="py-4 border-y border-gray-200">
-              <div className="flex items-center justify-between">
+            <div className="py-3 sm:py-4 border-y border-gray-200 overflow-x-auto">
+              <div className="flex items-center justify-between min-w-0">
                 {STATUS_STEPS.map((step, idx) => {
                   const isCompleted = idx < currentStatusIndex;
                   const isCurrent = idx === currentStatusIndex;
@@ -748,7 +748,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                         title={isLocked ? "Agreement must be signed before confirming" : undefined}
                       >
                         <div
-                          className={`w-8 h-8 rounded-full flex items-center justify-center text-white font-semibold transition-colors ${
+                          className={`w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-white font-semibold transition-colors ${
                             isCompleted
                               ? "bg-green-500"
                               : isCurrent
@@ -766,7 +766,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                             <span className="text-xs">{idx + 1}</span>
                           )}
                         </div>
-                        <span className="text-xs font-medium capitalize">
+                        <span className="text-[10px] sm:text-xs font-medium capitalize text-center leading-tight">
                           {isLocked ? "Awaiting signature" : step}
                         </span>
                       </div>
@@ -953,7 +953,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             </h3>
             {editMode ? (
               <>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="text-xs font-medium text-gray-700 block mb-1">
                       Pickup Date
@@ -1031,7 +1031,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 </div>
                 {/* Location */}
                 {locations.length > 0 && (
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
                         <MapPin className="w-3 h-3" /> Pickup Location
