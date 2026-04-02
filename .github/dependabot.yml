@@ -1,0 +1,48 @@
+# Dependabot — automatic dependency vulnerability scanning and updates
+# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
+version: 2
+updates:
+  # npm dependencies
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "sundayharmony"
+    labels:
+      - "dependencies"
+      - "security"
+    # Group minor/patch updates to reduce PR noise
+    groups:
+      production-deps:
+        patterns:
+          - "*"
+        exclude-patterns:
+          - "@types/*"
+          - "eslint*"
+          - "prettier*"
+          - "typescript"
+        update-types:
+          - "minor"
+          - "patch"
+      dev-deps:
+        patterns:
+          - "@types/*"
+          - "eslint*"
+          - "prettier*"
+          - "typescript"
+        update-types:
+          - "minor"
+          - "patch"
+    # Auto-approve patch updates for known safe packages
+    versioning-strategy: increase
+
+  # GitHub Actions (if any are added later)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

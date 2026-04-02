@@ -1,0 +1,11 @@
+# https://www.robotstxt.org/robotstxt.html
+User-agent: *
+Allow: /
+
+# Block access to admin and API routes from crawlers
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/
+
+# Sitemap
+Sitemap: https://www.rentnextgearauto.com/sitemap.xml
