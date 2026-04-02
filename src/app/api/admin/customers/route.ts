@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("customers")
-      .select("id, name, email, phone, role, profile_picture_url, id_document_url, created_at", { count: "exact" })
+      .select("*", { count: "exact" })
       .order("created_at", { ascending: false });
 
     if (search) {
@@ -44,7 +44,8 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Failed to fetch customers" }, { status: 500 });
     }
 
-    const customers = (data || []).map((c) => ({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const customers = (data || []).map((c: any) => ({
       id: c.id,
       name: c.name,
       email: c.email,
@@ -231,22 +232,24 @@ export async function PATCH(req: NextRequest) {
       .from("customers")
       .update(updateData)
       .eq("id", id)
-      .select("id, name, email, phone, role, profile_picture_url, id_document_url, created_at");
+      .select("*");
 
     if (error) {
       logger.error("Customer update error:", error);
       return NextResponse.json({ success: false, error: "Failed to update customer" }, { status: 500 });
     }
 
-    const customer = (data && data[0]) ? {
-      id: data[0].id,
-      name: data[0].name,
-      email: data[0].email,
-      phone: data[0].phone || "",
-      role: data[0].role || "customer",
-      profilePictureUrl: data[0].profile_picture_url || null,
-      idDocumentUrl: data[0].id_document_url || null,
-      createdAt: data[0].created_at,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const row: any = data?.[0];
+    const customer = row ? {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      phone: row.phone || "",
+      role: row.role || "customer",
+      profilePictureUrl: row.profile_picture_url || null,
+      idDocumentUrl: row.id_document_url || null,
+      createdAt: row.created_at,
     } : null;
 
     return NextResponse.json({ success: true, data: customer });
