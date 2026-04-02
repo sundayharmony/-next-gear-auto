@@ -881,7 +881,7 @@ export default function AdminFinancesPage() {
             <CardContent className="p-5">
               <SectionHeader title="Revenue Over Time" subtitle={`${allTimeDailyRevenue.length} days with revenue`} />
               <div className="h-52 sm:h-64 lg:h-72">
-                <ResponsiveContainer width="100%" height="100%">
+                <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                   <BarChart data={[...allTimeDailyRevenue].reverse().slice(-30)} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                     <XAxis
@@ -1355,7 +1355,7 @@ export default function AdminFinancesPage() {
                   </div>
                 ) : (
                 <div className="h-52 sm:h-64 lg:h-72">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <ComposedChart data={cashFlowData} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
@@ -1388,7 +1388,7 @@ export default function AdminFinancesPage() {
                     </div>
                   ) : (
                   <div className="h-40 sm:h-52 lg:h-64">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                       <AreaChart data={dailyEarningsData} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
                         <defs>
                           <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
@@ -1434,7 +1434,7 @@ export default function AdminFinancesPage() {
                   ) : (
                     <div className="space-y-4">
                       <div className="h-56 sm:h-64">
-                        <ResponsiveContainer width="100%" height="100%">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                           <PieChart>
                             <Pie
                               data={expenseCategoryData}
@@ -2019,7 +2019,7 @@ export default function AdminFinancesPage() {
                   </div>
                 ) : (
                   <div className="h-80">
-                    <ResponsiveContainer width="100%" height="100%">
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                       <BarChart data={revenueByMonth} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="month" tick={{ fontSize: 12 }} />
@@ -2140,7 +2140,7 @@ export default function AdminFinancesPage() {
                   subtitle="Revenue (green), Expenses (red), and Net Profit (blue line)"
                 />
                 <div className="h-80">
-                  <ResponsiveContainer width="100%" height="100%">
+                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                     <ComposedChart data={monthlyProfitData} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
