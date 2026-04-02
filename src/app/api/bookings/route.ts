@@ -439,7 +439,7 @@ export async function POST(request: Request) {
       return_time: body.returnTime || null,
       extras: Array.isArray(body.extras) ? body.extras : [],
       total_price: body.totalPrice ?? 0,
-      deposit: body.deposit ?? body.totalPrice ?? 0,
+      deposit: body.deposit ?? 0,
       status: bookingStatus,
       signed_name: body.signedName || null,
       agreement_signed_at: null,
@@ -501,7 +501,7 @@ export async function POST(request: Request) {
         pickupTime: body.pickupTime || null,
         returnTime: body.returnTime || null,
         totalPrice: body.totalPrice ?? 0,
-        deposit: body.deposit ?? body.totalPrice ?? 0,
+        deposit: body.deposit ?? 0,
         needsPassword,
       };
 

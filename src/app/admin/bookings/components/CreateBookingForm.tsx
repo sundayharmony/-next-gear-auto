@@ -41,6 +41,7 @@ const emptyForm = {
   pickupTime: "10:00",
   returnTime: "10:00",
   totalPrice: 0,
+  deposit: 0,
   status: "pending",
   selectedExtras: [] as string[],
   paymentMethod: "stripe",
@@ -335,6 +336,7 @@ export default function CreateBookingForm({
         pickupTime: form.pickupTime,
         returnTime: form.returnTime,
         totalPrice: form.totalPrice,
+        deposit: form.deposit,
         status: form.status,
         selectedExtras: form.selectedExtras,
         paymentMethod: form.paymentMethod,
@@ -645,7 +647,7 @@ export default function CreateBookingForm({
           </select>
         </div>
 
-        {/* PRICE + STATUS */}
+        {/* PRICE + DEPOSIT + STATUS */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">Total Price ($)</label>
@@ -681,11 +683,35 @@ export default function CreateBookingForm({
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Initial Status</label>
-            <p className="text-sm text-gray-500 px-3 py-2 bg-gray-50 border rounded">
-              Pending — booking can be confirmed after the customer signs the rental agreement
-            </p>
+            <label className="block text-sm font-medium mb-1">Amount Paid ($)</label>
+            <Input
+              type="number"
+              step="0.01"
+              min="0"
+              value={form.deposit}
+              onChange={(e) => {
+                const amount = parseFloat(e.target.value);
+                setForm({ ...form, deposit: isNaN(amount) ? 0 : Math.max(0, amount) });
+              }}
+              placeholder="0.00"
+            />
+            <div className="text-xs text-gray-500 mt-1">
+              {form.deposit === 0 && form.totalPrice > 0
+                ? "No payment recorded — balance will show as due"
+                : form.deposit > 0 && form.deposit < form.totalPrice
+                ? `$${(form.totalPrice - form.deposit).toFixed(2)} remaining balance`
+                : form.deposit >= form.totalPrice && form.totalPrice > 0
+                ? "Fully paid"
+                : "Leave at $0 if unpaid"}
+            </div>
           </div>
+        </div>
+
+        <div>
+          <label className="block text-sm font-medium mb-1">Initial Status</label>
+          <p className="text-sm text-gray-500 px-3 py-2 bg-gray-50 border rounded">
+            Pending — booking can be confirmed after the customer signs the rental agreement
+          </p>
         </div>
 
         {/* BUTTONS */}
