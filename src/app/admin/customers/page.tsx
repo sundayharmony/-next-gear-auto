@@ -1010,6 +1010,10 @@ export default function AdminCustomersPage() {
                             <Badge className="bg-green-100 text-green-700">
                               <CheckCircle2 className="h-3 w-3 mr-1" /> Signed
                             </Badge>
+                          ) : customerBookings.length === 0 ? (
+                            <Badge className="bg-gray-100 text-gray-500">
+                              N/A
+                            </Badge>
                           ) : (
                             <Badge className="bg-yellow-100 text-yellow-700">
                               <AlertCircle className="h-3 w-3 mr-1" /> Pending
