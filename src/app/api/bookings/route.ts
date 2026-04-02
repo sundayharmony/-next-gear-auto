@@ -652,20 +652,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Block date changes on confirmed bookings
-    if (booking.status === "confirmed" || booking.status === "active") {
-      const pickupDateChanged = updateFields.pickup_date && updateFields.pickup_date !== booking.pickup_date;
-      const returnDateChanged = updateFields.return_date && updateFields.return_date !== booking.return_date;
-
-      if (pickupDateChanged || returnDateChanged) {
-        return NextResponse.json(
-          { success: false, message: "Cannot change pickup or return dates on confirmed or active bookings" },
-          { status: 400 }
-        );
-      }
-    }
-
-    // Skip overlap check for PATCH — edits are admin-only and admins can overlap
+    // Admins can change dates on any booking — skip overlap check for PATCH
 
     const { error } = await supabase
       .from("bookings")

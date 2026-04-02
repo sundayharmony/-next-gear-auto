@@ -376,9 +376,14 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
         body: JSON.stringify({ ...editData, bookingId: booking.id }),
       });
 
-      if (!response.ok) throw new Error("Failed to save booking");
-
       const result = await response.json();
+
+      if (!response.ok) {
+        onError(result.message || "Failed to save booking");
+        setSaving(false);
+        return;
+      }
+
       // The PATCH endpoint returns { success, data: updatedBooking }
       // Merge server data with existing booking to ensure all fields are present
       const updatedBooking = result.data
