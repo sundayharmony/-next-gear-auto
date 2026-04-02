@@ -72,7 +72,7 @@ export default function AdminPromoCodesPage() {
       setError("Percentage discount cannot exceed 100%");
       return;
     }
-    if (newCode.maxUses !== undefined && newCode.maxUses !== "" && newCode.maxUses <= 0) {
+    if (newCode.maxUses !== undefined && newCode.maxUses !== null && newCode.maxUses <= 0) {
       setError("Max uses must be greater than 0 if set");
       return;
     }
@@ -112,7 +112,7 @@ export default function AdminPromoCodesPage() {
       setError("Percentage discount cannot exceed 100%");
       return;
     }
-    if (editForm.maxUses !== undefined && editForm.maxUses !== "" && editForm.maxUses <= 0) {
+    if (editForm.maxUses !== undefined && editForm.maxUses !== null && editForm.maxUses <= 0) {
       setError("Max uses must be greater than 0 if set");
       return;
     }
