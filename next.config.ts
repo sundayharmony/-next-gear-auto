@@ -79,7 +79,7 @@ const nextConfig: NextConfig = {
               "autoplay=()",
               "fullscreen=(self)",
               "display-capture=()",
-              "document-domain=()",
+
               "encrypted-media=(self)",
               "picture-in-picture=()",
               "screen-wake-lock=()",

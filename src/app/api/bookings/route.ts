@@ -32,7 +32,21 @@ export async function GET(request: NextRequest) {
   // for single-booking lookup only (needed by success/agreement pages).
   let auth: TokenPayload | null = null;
   try { auth = await getAuthFromRequest(request); } catch { /* unauthenticated */ }
-  const isAdmin = auth?.role === "admin";
+
+  // Legacy fallback: x-admin-id header (matches verifyAdmin behavior)
+  let isAdmin = auth?.role === "admin";
+  if (!auth) {
+    const legacyAdminId = request.headers.get("x-admin-id");
+    if (legacyAdminId) {
+      try {
+        const { data: admin } = await supabase.from("admins").select("id, email").eq("id", legacyAdminId).single();
+        if (admin) {
+          isAdmin = true;
+          auth = { sub: admin.id, email: admin.email || "", role: "admin" } as TokenPayload;
+        }
+      } catch { /* ignore */ }
+    }
+  }
   const callerEmail = auth?.email?.toLowerCase().trim();
 
   // Column mapping for sort parameter
