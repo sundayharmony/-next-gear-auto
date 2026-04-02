@@ -892,7 +892,7 @@ export default function AdminFinancesPage() {
                     />
                     <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
                     <Tooltip
-                      formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                      formatter={(value: number | string) => [`$${Number(value).toLocaleString()}`, "Revenue"]}
                       labelFormatter={(d) => { if (!d) return ""; const parts = d.split("-").map(Number); if (parts.length < 3 || parts.some(isNaN)) return d; const [y, m, day] = parts; return new Date(y, m - 1, day).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }); }}
                       contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
                     />
@@ -1361,10 +1361,10 @@ export default function AdminFinancesPage() {
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
                       <Tooltip
-                        formatter={(value: number, name: string) => [`$${value.toLocaleString()}`, name === "income" ? "Income" : name === "expenses" ? "Expenses" : "Net"]}
+                        formatter={(value: number | string, name: string) => [`$${Number(value).toLocaleString()}`, name === "income" ? "Income" : name === "expenses" ? "Expenses" : "Net"]}
                         contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
                       />
-                      <Legend verticalAlign="top" height={36} formatter={(value: string) => value.charAt(0).toUpperCase() + value.slice(1)} />
+                      <Legend verticalAlign="top" height={36} formatter={(value: string | number) => String(value).charAt(0).toUpperCase() + String(value).slice(1)} />
                       <Bar dataKey="income" fill="#10B981" radius={[4, 4, 0, 0]} name="Income" />
                       <Bar dataKey="expenses" fill="#EF4444" radius={[4, 4, 0, 0]} name="Expenses" />
                       <Line type="monotone" dataKey="net" stroke="#7C3AED" strokeWidth={2} dot={{ r: 4 }} name="Net" />
@@ -1404,8 +1404,8 @@ export default function AdminFinancesPage() {
                         <XAxis dataKey="label" tick={{ fontSize: 10 }} interval={2} />
                         <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `$${v}`} />
                         <Tooltip
-                          formatter={(value: number, name: string) => [
-                            `$${value.toLocaleString()}`,
+                          formatter={(value: number | string, name: string) => [
+                            `$${Number(value).toLocaleString()}`,
                             name === "revenue" ? "Revenue" : "Expenses",
                           ]}
                           contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
@@ -1453,7 +1453,7 @@ export default function AdminFinancesPage() {
                               ))}
                             </Pie>
                             <Tooltip
-                              formatter={(value: number) => [fmtCurrency(value), "Amount"]}
+                              formatter={(value: number | string) => [fmtCurrency(Number(value)), "Amount"]}
                               contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb", fontSize: "13px" }}
                             />
                           </PieChart>
@@ -2025,7 +2025,7 @@ export default function AdminFinancesPage() {
                         <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                         <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
                         <Tooltip
-                          formatter={(value: number) => [`$${value.toLocaleString()}`, "Revenue"]}
+                          formatter={(value: number | string) => [`$${Number(value).toLocaleString()}`, "Revenue"]}
                           contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}
                         />
                         <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} />
@@ -2146,8 +2146,8 @@ export default function AdminFinancesPage() {
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
                       <Tooltip
-                        formatter={(value: number, name: string) => [
-                          `$${value.toLocaleString()}`,
+                        formatter={(value: number | string, name: string) => [
+                          `$${Number(value).toLocaleString()}`,
                           name.charAt(0).toUpperCase() + name.slice(1),
                         ]}
                         contentStyle={{ borderRadius: "8px", border: "1px solid #e5e7eb" }}

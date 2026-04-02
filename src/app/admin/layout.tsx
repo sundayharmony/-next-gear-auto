@@ -4,8 +4,9 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Instagram, Ticket, Bell, MapPin, ShieldBan, Loader2
+  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Ticket, Bell, MapPin, ShieldBan, Loader2
 } from "lucide-react";
+import { Instagram } from "@/components/icons/instagram";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/auth-context";
 import { cn } from "@/lib/utils/cn";

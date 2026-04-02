@@ -1,7 +1,8 @@
 import React from "react";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { Car, Search, Instagram, MapPin, ArrowLeft } from "lucide-react";
+import { Car, Search, MapPin, ArrowLeft } from "lucide-react";
+import { Instagram } from "@/components/icons/instagram";
 import { Button } from "@/components/ui/button";
 import { SITE_NAME } from "@/lib/constants";
 

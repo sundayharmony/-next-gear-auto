@@ -4,7 +4,6 @@ import React, { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
-  Instagram,
   ArrowRight,
   Play,
   Heart,
@@ -13,6 +12,7 @@ import {
   X,
   Loader2,
 } from "lucide-react";
+import { Instagram } from "@/components/icons/instagram";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout/page-container";
 import { logger } from "@/lib/utils/logger";
