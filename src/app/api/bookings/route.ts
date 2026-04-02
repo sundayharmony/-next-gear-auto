@@ -67,7 +67,7 @@ export async function GET(request: NextRequest) {
   // Pagination
   const page = pageParam ? Math.max(1, parseInt(pageParam, 10) || 1) : null;
   const perPage = perPageParam ? Math.min(Math.max(1, parseInt(perPageParam, 10) || 50), 200) : 50;
-  const offset = page && page > 0 ? (page - 1) * perPage : null;
+  const offset = page !== null && page > 0 ? (page - 1) * perPage : null;
 
   try {
     // Single booking lookup (used by success page) — single query with JOIN
@@ -106,7 +106,6 @@ export async function GET(request: NextRequest) {
         status: rest.status,
         customer_name: rest.customer_name,
         customer_email: rest.customer_email,
-        customer_phone: rest.customer_phone,
         extras: rest.extras,
         agreement_signed_at: rest.agreement_signed_at,
         signed_name: rest.signed_name,
@@ -141,8 +140,9 @@ export async function GET(request: NextRequest) {
 
     if (isAdmin) {
       // Admins can filter by any customer
+      // Use proper Supabase or() method with separate filter conditions
       if (customerId && customerEmail) {
-        query = query.or(`customer_id.eq.${customerId},customer_email.ilike.${customerEmail}`);
+        query = query.or(`customer_id.eq.${encodeURIComponent(customerId)},customer_email.ilike.${encodeURIComponent(customerEmail)}`);
       } else if (customerId) {
         query = query.eq("customer_id", customerId);
       } else if (customerEmail) {
@@ -167,12 +167,14 @@ export async function GET(request: NextRequest) {
     }
     // Server-side search: filter by customer_name, customer_email, or id (case-insensitive)
     if (search) {
-      // Limit search length to 100 characters (Bug 19)
+      // Limit search length to 100 characters
       const safeSearch = (search || "").slice(0, 100);
-      // Sanitize search to prevent PostgREST filter injection - only remove SQL-dangerous chars
-      const sanitized = safeSearch.replace(/[%_*]/g, "");
+      // Sanitize search to prevent PostgREST filter injection - strip all special PostgREST characters
+      const sanitized = safeSearch.replace(/[%_*(),.<>!=&|]/g, "");
       if (sanitized) {
-        query = query.or(`customer_name.ilike.%${sanitized}%,customer_email.ilike.%${sanitized}%,id.eq.${sanitized}`);
+        // Use proper parameter escaping with encodeURIComponent
+        const escapedSearch = encodeURIComponent(sanitized);
+        query = query.or(`customer_name.ilike.%${escapedSearch}%,customer_email.ilike.%${escapedSearch}%,id.eq.${escapedSearch}`);
       }
     }
     if (limitParam) {
@@ -258,6 +260,16 @@ export async function POST(request: Request) {
     // Validate totalPrice is numeric if provided
     if (body.totalPrice !== undefined && (typeof body.totalPrice !== "number" || !Number.isFinite(body.totalPrice) || body.totalPrice < 0)) {
       return NextResponse.json({ success: false, error: "totalPrice must be a non-negative number" }, { status: 400 });
+    }
+
+    // Validate extras is an array of valid strings
+    if (body.extras !== undefined) {
+      if (!Array.isArray(body.extras)) {
+        return NextResponse.json({ success: false, error: "extras must be an array" }, { status: 400 });
+      }
+      if (!body.extras.every((extra: any) => typeof extra === "string")) {
+        return NextResponse.json({ success: false, error: "all extras must be strings" }, { status: 400 });
+      }
     }
 
     // Double-booking check — admins can always overlap; clients need 60min gap
@@ -430,7 +442,7 @@ export async function POST(request: Request) {
       deposit: body.deposit ?? body.totalPrice ?? 0,
       status: bookingStatus,
       signed_name: body.signedName || null,
-      agreement_signed_at: body.signedName ? new Date().toISOString() : null,
+      agreement_signed_at: null,
       insurance_proof_url: body.insuranceProofUrl || null,
       insurance_opted_out: body.insuranceOptedOut || false,
       pickup_location_id: body.pickup_location_id || body.pickupLocationId || null,
@@ -546,6 +558,14 @@ export async function PATCH(request: NextRequest) {
   } catch {
     return NextResponse.json(
       { success: false, message: "Invalid JSON" },
+      { status: 400 }
+    );
+  }
+
+  // Validate body is a non-null object
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return NextResponse.json(
+      { success: false, message: "Request body must be a JSON object" },
       { status: 400 }
     );
   }

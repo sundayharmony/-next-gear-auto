@@ -725,7 +725,8 @@ export default function AdminVehiclesPage() {
                 value={form.dailyRate || 0}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setForm({ ...form, dailyRate: val === "" ? 0 : Number(val) });
+                  const num = val === "" ? 0 : parseFloat(val);
+                  setForm({ ...form, dailyRate: isNaN(num) ? 0 : num });
                 }}
                 min="0"
               />

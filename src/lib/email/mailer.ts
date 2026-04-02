@@ -65,6 +65,8 @@ function stripHtmlTags(html: string): string {
 }
 
 // Retry logic for transient email errors
+// NOTE: maxRetries parameter is confusing — it's actually the max number of retry attempts (0-based).
+// maxRetries=1 means try once + 1 retry = 2 total attempts.
 async function sendMailWithRetry(
   transporter: nodemailer.Transporter,
   mailOptions: nodemailer.SendMailOptions,

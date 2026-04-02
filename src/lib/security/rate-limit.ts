@@ -153,6 +153,10 @@ export const generalLimiter = createRateLimiter({
 /**
  * Simple hash function for IP addresses.
  * Used as fallback when x-forwarded-for header is untrusted.
+ *
+ * NOTE: "unknown" IPs are all hashed to the same value, which means all
+ * anonymous users share the same rate limit bucket. To differentiate them,
+ * consider adding request identifiers (session ID, request path, etc.).
  */
 function hashIp(ip: string): string {
   let hash = 0;
@@ -195,7 +199,7 @@ export function rateLimitResponse(resetAt: number) {
       status: 429,
       headers: {
         "Content-Type": "application/json",
-        "Retry-After": String(Math.ceil((resetAt - Date.now()) / 1000)),
+        "Retry-After": String(Math.max(0, Math.ceil((resetAt - Date.now()) / 1000))),
         "X-RateLimit-Reset": new Date(resetAt).toISOString(),
       },
     }

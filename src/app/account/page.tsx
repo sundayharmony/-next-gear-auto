@@ -144,6 +144,7 @@ export default function AccountPage() {
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      // Only the booking owner can cancel their own bookings
       if (res.ok && data.success) {
         setBookings((prev) => prev.map((b) => b.id === bookingId ? { ...b, status: "cancelled" } : b));
         setProfileMsg("Booking cancelled successfully.");
@@ -578,7 +579,7 @@ export default function AccountPage() {
                       </p>
                     )}
                     <div className="flex justify-end">
-                      <Button onClick={handleSaveProfile} disabled={profileSaving}>
+                      <Button onClick={handleSaveProfile} disabled={profileSaving || (!profileForm.name.trim() && !profileForm.phone.trim() && !profileForm.dob.trim())}>
                         {profileSaving ? (
                           <>
                             <Loader2 className="h-4 w-4 mr-1 animate-spin" />

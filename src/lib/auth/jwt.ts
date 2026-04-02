@@ -31,6 +31,16 @@ function getSecret(): Uint8Array {
   if (!secret || secret.length < 32) {
     throw new Error("JWT_SECRET must be set and at least 32 characters.");
   }
+  // Entropy validation: ensure the secret has sufficient character variety
+  // to prevent weak secrets like "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+  const hasLower = /[a-z]/.test(secret);
+  const hasUpper = /[A-Z]/.test(secret);
+  const hasDigits = /\d/.test(secret);
+  const hasSpecial = /[^a-zA-Z0-9]/.test(secret);
+  const entropyScore = Number(hasLower) + Number(hasUpper) + Number(hasDigits) + Number(hasSpecial);
+  if (entropyScore < 3) {
+    throw new Error("JWT_SECRET lacks sufficient entropy. Use at least 3 of: lowercase, uppercase, digits, special characters.");
+  }
   return new TextEncoder().encode(secret);
 }
 

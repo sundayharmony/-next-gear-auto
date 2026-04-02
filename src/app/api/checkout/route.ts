@@ -8,7 +8,12 @@ import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/security/
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+// Fix 1: Validate Stripe key at module load
+if (!process.env.STRIPE_SECRET_KEY) {
+  throw new Error("STRIPE_SECRET_KEY is not configured");
+}
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   // ─── Rate limiting (Bug 16) ─────────────────────────────────────────
@@ -29,6 +34,15 @@ export async function POST(request: NextRequest) {
         { status: 400 }
       );
     }
+
+    // Fix 2: Validate body is an object and has required fields with correct types
+    if (typeof body !== 'object' || body === null) {
+      return NextResponse.json(
+        { success: false, message: "Request body must be a valid JSON object" },
+        { status: 400 }
+      );
+    }
+
     const {
       vehicleId,
       vehicleName,
@@ -52,6 +66,28 @@ export async function POST(request: NextRequest) {
       returnLocationName,
       locationSurcharge,
     } = body;
+
+    // Validate required field types
+    if (typeof customerDetails !== 'object' || customerDetails === null) {
+      return NextResponse.json(
+        { success: false, message: "customerDetails must be a valid object" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof totalPrice !== 'undefined' && typeof totalPrice !== 'number') {
+      return NextResponse.json(
+        { success: false, message: "totalPrice must be a number" },
+        { status: 400 }
+      );
+    }
+
+    if (typeof discountAmount !== 'undefined' && typeof discountAmount !== 'number') {
+      return NextResponse.json(
+        { success: false, message: "discountAmount must be a number" },
+        { status: 400 }
+      );
+    }
 
     if (!vehicleId || !pickupDate || !returnDate || !customerDetails?.email) {
       return NextResponse.json(
@@ -114,6 +150,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Sanitize customer name
+    // Fix 8: Check for empty string after sanitization
     const safeName = (customerDetails.name || "")
       .replace(/<[^>]*>/g, "")
       .replace(/&/g, "&amp;")
@@ -121,6 +158,14 @@ export async function POST(request: NextRequest) {
       .replace(/>/g, "&gt;")
       .trim()
       .slice(0, 100);
+
+    // Ensure name is not empty after sanitization
+    if (!safeName) {
+      return NextResponse.json(
+        { success: false, message: "Customer name cannot be empty" },
+        { status: 400 }
+      );
+    }
 
     // Double-booking check — allow same-day turnovers with 60-minute gap
     const { data: conflicting } = await supabase
@@ -132,12 +177,13 @@ export async function POST(request: NextRequest) {
       .gte("return_date", pickupDate);
 
     if (conflicting && conflicting.length > 0) {
-      const newPickupDt = new Date(`${pickupDate}T${pickupTime || "00:00"}`);
-      const newReturnDt = new Date(`${returnDate}T${returnTime || "23:59"}`);
+      // Fix 6: Use nullish coalescing (??) instead of || for default time values
+      const newPickupDt = new Date(`${pickupDate}T${pickupTime ?? "00:00"}`);
+      const newReturnDt = new Date(`${returnDate}T${returnTime ?? "23:59"}`);
 
       const hasRealConflict = conflicting.some((existing) => {
-        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time || "00:00"}`);
-        const existReturn = new Date(`${existing.return_date}T${existing.return_time || "23:59"}`);
+        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time ?? "00:00"}`);
+        const existReturn = new Date(`${existing.return_date}T${existing.return_time ?? "23:59"}`);
         const gapAfterExisting = (newPickupDt.getTime() - existReturn.getTime()) / 60000;
         const gapAfterNew = (existPickup.getTime() - newReturnDt.getTime()) / 60000;
         return gapAfterExisting < 60 && gapAfterNew < 60;
@@ -210,18 +256,20 @@ export async function POST(request: NextRequest) {
             description: promo.description || "",
           });
 
-          // Atomically increment usage: only succeeds if used_count is still
-          // below max_uses at the moment of the UPDATE. This prevents two
-          // concurrent checkouts from both applying the same last-use code.
+          // Fix 4: Atomically increment usage with optimistic locking
+          // Only succeeds if used_count hasn't changed since we read it (optimistic lock)
+          // and is still below max_uses. Prevents concurrent checkouts from both applying the same last-use code.
           if (promo.max_uses) {
+            const currentCount = promo.used_count ?? 0;
             const { count: updated } = await supabase
               .from("promo_codes")
-              .update({ used_count: (promo.used_count ?? 0) + 1 })
+              .update({ used_count: currentCount + 1 })
               .eq("id", promo.id)
+              .eq("used_count", currentCount)  // Optimistic lock: verify count hasn't changed
               .lt("used_count", promo.max_uses);
 
             if (updated === 0) {
-              // Race condition: another checkout used the last redemption
+              // Race condition: another checkout used the last redemption or count changed
               return NextResponse.json(
                 { success: false, message: "This promo code has reached its usage limit" },
                 { status: 409 }
@@ -229,16 +277,19 @@ export async function POST(request: NextRequest) {
             }
           } else {
             // No max_uses limit — just increment for tracking
+            const currentCount = promo.used_count ?? 0;
             await supabase
               .from("promo_codes")
-              .update({ used_count: (promo.used_count ?? 0) + 1 })
-              .eq("id", promo.id);
+              .update({ used_count: currentCount + 1 })
+              .eq("id", promo.id)
+              .eq("used_count", currentCount);  // Optimistic lock for consistency
           }
         }
       }
     }
 
     // Add location surcharge (validated against DB)
+    // Fix 7: Verify location is active before charging - only active locations are queried
     let validatedSurcharge = 0;
     if (pickupLocationId || returnLocationId) {
       const locationIds = [pickupLocationId, returnLocationId].filter(Boolean);
@@ -246,7 +297,7 @@ export async function POST(request: NextRequest) {
         .from("locations")
         .select("id, surcharge")
         .in("id", locationIds)
-        .eq("is_active", true);
+        .eq("is_active", true);  // Ensures only active locations are charged
       if (!locError && locations) {
         validatedSurcharge = locations.reduce((sum: number, loc: { surcharge: number }) => sum + (loc.surcharge || 0), 0);
         validatedSurcharge = Math.round(validatedSurcharge * 100) / 100;
@@ -260,9 +311,18 @@ export async function POST(request: NextRequest) {
 
     const serverTotal = Math.round(serverPricing.total * 100) / 100;
 
-    // Allow small rounding tolerance ($0.02) between client and server
-    if (totalPrice != null && Math.abs(totalPrice - serverTotal) > 0.02) {
-      logger.warn(`Price mismatch: client=${totalPrice}, server=${serverTotal}, booking for vehicle ${vehicleId}`);
+    // Fix 3: Reject large price mismatches (> $1.00) instead of just logging
+    if (totalPrice != null && Math.abs(totalPrice - serverTotal) > 1.00) {
+      logger.warn(`Price mismatch rejected: client=${totalPrice}, server=${serverTotal}, booking for vehicle ${vehicleId}`);
+      return NextResponse.json(
+        { success: false, message: "Price mismatch detected. Please try again." },
+        { status: 400 }
+      );
+    }
+
+    // Allow small rounding tolerance ($0.02) between client and server for logging only
+    if (totalPrice != null && Math.abs(totalPrice - serverTotal) > 0.02 && Math.abs(totalPrice - serverTotal) <= 1.00) {
+      logger.warn(`Minor price variance: client=${totalPrice}, server=${serverTotal}, booking for vehicle ${vehicleId}`);
     }
 
     // Always use server-calculated price
@@ -310,14 +370,24 @@ export async function POST(request: NextRequest) {
           .maybeSingle();
         customerId = newCustomer?.id || newId;
       } catch {
-        // Race condition: customer created between our SELECT and INSERT
-        // Retry the SELECT to get the existing customer ID
+        // Fix 5: Race condition: customer created between our SELECT and INSERT
+        // Retry the SELECT to verify the existing customer exists
         const { data: retryCustomer } = await supabase
           .from("customers")
           .select("id")
           .eq("email", customerDetails.email.toLowerCase().trim())
           .maybeSingle();
-        customerId = retryCustomer?.id || newId;
+
+        if (retryCustomer?.id) {
+          customerId = retryCustomer.id;
+        } else {
+          // Customer still doesn't exist - this is unexpected
+          logger.error("Failed to resolve customer after race condition for email:", customerDetails.email.toLowerCase().trim());
+          return NextResponse.json(
+            { success: false, message: "Failed to create or retrieve customer record" },
+            { status: 500 }
+          );
+        }
       }
     }
 
@@ -331,12 +401,13 @@ export async function POST(request: NextRequest) {
       .gte("return_date", pickupDate);
 
     if (finalConflictCheck && finalConflictCheck.length > 0) {
-      const newPickupDt = new Date(`${pickupDate}T${pickupTime || "00:00"}`);
-      const newReturnDt = new Date(`${returnDate}T${returnTime || "23:59"}`);
+      // Use nullish coalescing (??) instead of || for default time values
+      const newPickupDt = new Date(`${pickupDate}T${pickupTime ?? "00:00"}`);
+      const newReturnDt = new Date(`${returnDate}T${returnTime ?? "23:59"}`);
 
       const hasRealConflict = finalConflictCheck.some((existing) => {
-        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time || "00:00"}`);
-        const existReturn = new Date(`${existing.return_date}T${existing.return_time || "23:59"}`);
+        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time ?? "00:00"}`);
+        const existReturn = new Date(`${existing.return_date}T${existing.return_time ?? "23:59"}`);
         const gapAfterExisting = (newPickupDt.getTime() - existReturn.getTime()) / 60000;
         const gapAfterNew = (existPickup.getTime() - newReturnDt.getTime()) / 60000;
         return gapAfterExisting < 60 && gapAfterNew < 60;

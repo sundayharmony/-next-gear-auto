@@ -17,12 +17,8 @@ export const supabase = createClient(supabaseUrl as string, supabaseAnonKey as s
 export function getServiceSupabase() {
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
   if (!serviceKey) {
-    if (process.env.NODE_ENV === "production") {
-      throw new Error("SUPABASE_SERVICE_KEY environment variable is required in production for admin operations");
-    }
-    // Fall back to anon key in development only
-    console.warn("SUPABASE_SERVICE_KEY not set — falling back to anon key (dev only)");
-    return supabase;
+    // Require service key for all environments (admin operations must not use anon key)
+    throw new Error("SUPABASE_SERVICE_KEY environment variable is required for admin operations");
   }
   if (!supabaseUrl) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL is required to create service client");

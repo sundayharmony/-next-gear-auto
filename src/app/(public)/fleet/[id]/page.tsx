@@ -112,7 +112,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
   if (!vehicle) return {};
 
   const vehicleReviews = await getVehicleReviews(id);
-  const avgRating = vehicleReviews.length > 0
+  const avgRating = vehicleReviews && vehicleReviews.length > 0
     ? (vehicleReviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / vehicleReviews.length).toFixed(1)
     : null;
 
@@ -142,7 +142,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
   }
 
   const vehicleReviews = await getVehicleReviews(id);
-  const avgRating = vehicleReviews.length > 0
+  const avgRating = vehicleReviews && vehicleReviews.length > 0
     ? (vehicleReviews.reduce((sum, r) => sum + (r.rating ?? 0), 0) / vehicleReviews.length).toFixed(1)
     : null;
 

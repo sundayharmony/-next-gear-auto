@@ -301,6 +301,14 @@ export default function AdminCustomersPage() {
     if (!selectedBookingForUpload || !e.target.files?.[0]) return;
 
     const file = e.target.files[0];
+
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setToastError("File size must not exceed 10MB");
+      return;
+    }
+
     const formData = new FormData();
     formData.append("bookingId", selectedBookingForUpload);
     formData.append("type", uploadDocType);
@@ -337,6 +345,13 @@ export default function AdminCustomersPage() {
     if (!selectedCustomer || !e.target.files?.[0]) return;
 
     const file = e.target.files[0];
+
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      setToastError("File size must not exceed 10MB");
+      return;
+    }
     const formData = new FormData();
     formData.append("customerId", selectedCustomer.id);
     formData.append("type", "id_document");

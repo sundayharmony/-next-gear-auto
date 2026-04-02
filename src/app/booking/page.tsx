@@ -163,6 +163,7 @@ function BookingPageInner() {
     async function fetchLocations() {
       try {
         const res = await fetch("/api/locations");
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         if (data.success && !cancelled) {
           setLocationsData(data.data);
@@ -172,8 +173,14 @@ function BookingPageInner() {
             setSelectedPickupLocation(defaultLoc.id);
             setSelectedReturnLocation(defaultLoc.id);
           }
+        } else if (!cancelled) {
+          logger.error("Failed to fetch locations:", data.error);
         }
-      } catch { /* silent */ }
+      } catch (err) {
+        if (!cancelled) {
+          logger.error("Location fetch error:", err);
+        }
+      }
       if (!cancelled) setLocationsLoading(false);
     }
     fetchLocations();
@@ -448,14 +455,17 @@ function BookingPageInner() {
           const rhVal = parseInt(String(rh)) || 0;
           const rmVal = parseInt(String(rm)) || 0;
           if ((rhVal * 60 + rmVal) <= (phVal * 60 + pmVal)) {
-            setDateValidationError("Minimum 1 day rental required");
+            setDateValidationError("Return time must be after pickup time on same day");
             return false;
           }
         }
 
         setDateValidationError("");
         // Require location selection if locations are available
-        if (locations.length > 0 && !selectedPickupLocation) return false;
+        if (locations.length > 0 && !selectedPickupLocation) {
+          setDateValidationError("Please select a pickup location");
+          return false;
+        }
         return true;
       }
       case 2: return !!booking.selectedVehicle;
@@ -472,15 +482,16 @@ function BookingPageInner() {
         if (!details.name || !details.email || !details.phone || !details.dob) {
           return false;
         }
-        // Age validation: must be 18+
+        // Age validation: must be 18+ (handle leap day births correctly)
         const dob = new Date(details.dob);
         if (isNaN(dob.getTime())) return false;
         const today = new Date();
-        let age = today.getFullYear() - dob.getFullYear();
-        const monthDiff = today.getMonth() - dob.getMonth();
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
-          age--;
-        }
+        // Calculate age by comparing the person's birthday this year with today
+        const birthdayThisYear = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+        // If birthday hasn't occurred yet this year, subtract 1 from age
+        const age = birthdayThisYear > today
+          ? today.getFullYear() - dob.getFullYear() - 1
+          : today.getFullYear() - dob.getFullYear();
         if (age < 18) {
           return false;
         }
@@ -1178,7 +1189,7 @@ function BookingPageInner() {
                       <CardContent className="flex items-center gap-4 p-4">
                         <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg bg-gray-100 overflow-hidden">
                           {vehicle.images && vehicle.images.length > 0 ? (
-                            <img src={vehicle.images[0]} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} loading="lazy" className="h-full w-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
+                            <img src={vehicle.images[0]} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} loading="lazy" className="h-full w-full object-cover" onError={(e) => { const img = e.target as HTMLImageElement; const parent = img.parentElement; if (parent) { img.style.display = 'none'; const fallback = document.createElement('div'); fallback.className = 'flex h-full w-full items-center justify-center'; fallback.innerHTML = '<svg class="h-10 w-10 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'; parent.appendChild(fallback); } }} />
                           ) : (
                             <Car className="h-10 w-10 text-gray-300" />
                           )}
@@ -1639,8 +1650,14 @@ function BookingPageInner() {
                           variant="outline"
                           onClick={handleApplyPromo}
                           disabled={promoLoading || !promoInput.trim()}
+                          aria-busy={promoLoading}
                         >
-                          {promoLoading ? "..." : "Apply"}
+                          {promoLoading ? (
+                            <>
+                              <span className="animate-spin inline-block h-4 w-4 border-2 border-gray-600 border-t-transparent rounded-full mr-2" />
+                              Applying...
+                            </>
+                          ) : "Apply"}
                         </Button>
                       </div>
                       {promoError && (

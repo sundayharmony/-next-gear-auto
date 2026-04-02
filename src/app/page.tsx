@@ -146,7 +146,7 @@ export default async function HomePage() {
           </div>
         )}
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {featuredVehicles.length > 0 ? (
+          {Array.isArray(featuredVehicles) && featuredVehicles.length > 0 ? (
             featuredVehicles.map((vehicle) => {
               const specs = vehicle.specs as Record<string, any>;
               return (
@@ -189,7 +189,7 @@ export default async function HomePage() {
                       </div>
                       <div className="mt-3 flex items-center justify-between">
                         <div>
-                          <span className="text-lg font-bold text-purple-600">${vehicle.daily_rate.toFixed(2)}</span>
+                          <span className="text-lg font-bold text-purple-600">${vehicle.daily_rate ? vehicle.daily_rate.toFixed(2) : "0.00"}</span>
                           <span className="text-sm text-gray-500">/day</span>
                         </div>
                         <Button size="sm" variant="outline" aria-label={`View details for ${vehicle.year} ${vehicle.make} ${vehicle.model}`}>Details</Button>

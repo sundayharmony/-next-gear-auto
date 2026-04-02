@@ -195,10 +195,10 @@ function SuccessContent() {
                         </span>
                         <div className="text-right">
                           <div className="text-xl font-bold">
-                            <span className="text-gray-900">{formatDate(booking.pickup_date)}</span> at <span className="text-purple-600">{formatTime(booking.pickup_time)}</span>
+                            <span className="text-gray-900">{formatDate(booking.pickup_date)}</span> at <span className="text-purple-600">{booking.pickup_time ? formatTime(booking.pickup_time) : "—"}</span>
                           </div>
                           <div className="text-xl font-bold">
-                            <span className="text-gray-900">{formatDate(booking.return_date)}</span> at <span className="text-purple-600">{formatTime(booking.return_time)}</span>
+                            <span className="text-gray-900">{formatDate(booking.return_date)}</span> at <span className="text-purple-600">{booking.return_time ? formatTime(booking.return_time) : "—"}</span>
                           </div>
                         </div>
                       </div>

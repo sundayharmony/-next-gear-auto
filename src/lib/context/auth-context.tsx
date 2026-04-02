@@ -66,8 +66,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const stored = localStorage.getItem("nga_user");
       if (stored) {
         const user = JSON.parse(stored);
-        if (user && typeof user === 'object' && user.id && user.email) {
-          dispatch({ type: "LOGIN_SUCCESS", payload: user });
+        // Validate parsed structure before using
+        if (user && typeof user === 'object' && user.id && user.email && user.role) {
+          // Additional validation: ensure role is one of the expected values
+          if (user.role === 'admin' || user.role === 'customer') {
+            dispatch({ type: "LOGIN_SUCCESS", payload: user });
+          } else {
+            localStorage.removeItem("nga_user");
+          }
         } else {
           localStorage.removeItem("nga_user");
         }
@@ -148,7 +154,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("nga_user");
     dispatch({ type: "LOGOUT" });
     // Clear server-side HTTP-only cookies
-    try { await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" }); } catch { /* best-effort */ }
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "same-origin" });
+    } catch {
+      // best-effort logout — continue even if API call fails
+    }
   }, []);
 
   const signup = useCallback(async (data: { name: string; email: string; password: string; phone: string }): Promise<boolean> => {

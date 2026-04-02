@@ -9,7 +9,13 @@ function parseLocalDate(dateStr: string): Date {
   const parts = dateStr.split("-");
   if (parts.length !== 3) return new Date(NaN);
   const [y, m, d] = parts.map(Number);
-  return new Date(y, m - 1, d);
+  // Use UTC methods to ensure consistent date representation across timezones
+  const date = new Date();
+  date.setUTCFullYear(y);
+  date.setUTCMonth(m - 1);
+  date.setUTCDate(d);
+  date.setUTCHours(0, 0, 0, 0);
+  return date;
 }
 
 export function formatDate(dateStr: string | null | undefined): string {

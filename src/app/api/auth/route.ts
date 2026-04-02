@@ -188,7 +188,12 @@ export async function POST(request: Request) {
       };
 
       // Issue JWT tokens
-      const customerRole = (customer.role || "customer") as "admin" | "customer";
+      // Validate role type before casting to prevent type errors
+      const roleValue = customer.role || "customer";
+      if (roleValue !== "admin" && roleValue !== "customer") {
+        throw new Error(`Invalid role type in database: ${roleValue}`);
+      }
+      const customerRole = roleValue as "admin" | "customer";
       const accessToken = await createAccessToken({ userId: customer.id, role: customerRole, email: customer.email });
       const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
 
@@ -210,7 +215,8 @@ export async function POST(request: Request) {
         );
       }
 
-      // Validate email format
+      // Validate email format BEFORE checking database existence
+      // This prevents unnecessary database queries for obviously invalid emails
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(body.email)) {
         return NextResponse.json(
@@ -254,7 +260,12 @@ export async function POST(request: Request) {
             .maybeSingle();
 
           if (updated) {
-            const updatedRole = (updated.role || "customer") as "admin" | "customer";
+            // Validate role type before casting
+            const roleValue = updated.role || "customer";
+            if (roleValue !== "admin" && roleValue !== "customer") {
+              throw new Error(`Invalid role type in database: ${roleValue}`);
+            }
+            const updatedRole = roleValue as "admin" | "customer";
             const accessToken = await createAccessToken({ userId: updated.id, role: updatedRole, email: updated.email });
             const refreshToken = await createRefreshToken({ userId: updated.id, role: updatedRole, email: updated.email });
 

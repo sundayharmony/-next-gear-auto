@@ -72,7 +72,7 @@ export default function AdminPromoCodesPage() {
       setError("Percentage discount cannot exceed 100%");
       return;
     }
-    if (newCode.maxUses && newCode.maxUses <= 0) {
+    if (newCode.maxUses !== undefined && newCode.maxUses !== "" && newCode.maxUses <= 0) {
       setError("Max uses must be greater than 0 if set");
       return;
     }
@@ -112,17 +112,19 @@ export default function AdminPromoCodesPage() {
       setError("Percentage discount cannot exceed 100%");
       return;
     }
-    if (editForm.maxUses && editForm.maxUses <= 0) {
+    if (editForm.maxUses !== undefined && editForm.maxUses !== "" && editForm.maxUses <= 0) {
       setError("Max uses must be greater than 0 if set");
       return;
     }
 
     setSaving(true);
     try {
+      const originalCode = codes.find((c) => c.code === editingCode);
+      const updateData = { code: editingCode, ...originalCode, ...editForm };
       const res = await adminFetch("/api/admin/promo-codes", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code: editingCode, ...editForm }),
+        body: JSON.stringify(updateData),
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();

@@ -30,6 +30,8 @@ export async function verifyAdmin(
   }
 
   // ── Method 2: Legacy header-based auth (backward compat) ──────────
+  // TODO: Add rate limiting for legacy header fallback to prevent brute force attacks
+  // on this deprecated endpoint. Consider using loginLimiter from rate-limit.ts.
   const adminId = req.headers.get("x-admin-id");
   if (!adminId) {
     return {

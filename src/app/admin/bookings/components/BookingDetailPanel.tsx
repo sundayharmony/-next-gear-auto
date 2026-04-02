@@ -82,7 +82,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
-  const [editData, setEditData] = useState<Partial<BookingRow>>(booking);
+  const [editData, setEditData] = useState<Partial<BookingRow>>(JSON.parse(JSON.stringify(booking)));
   const [saving, setSaving] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [confirmingCancel, setConfirmingCancel] = useState(false);
@@ -215,7 +215,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   // Sync editData when booking prop changes from parent (e.g., status update)
   useEffect(() => {
     if (!editMode) {
-      setEditData(booking);
+      setEditData(JSON.parse(JSON.stringify(booking)));
     }
   }, [booking, editMode]);
 
@@ -549,6 +549,13 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
+
+    // Validate file size (10MB limit)
+    const maxSize = 10 * 1024 * 1024;
+    if (file.size > maxSize) {
+      onError("File size must not exceed 10MB");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -1368,7 +1375,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       <Input
                         type="number"
                         step="0.01"
-                        min="0"
+                        min="0.01"
                         placeholder="Amount"
                         value={paymentForm.amount}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>

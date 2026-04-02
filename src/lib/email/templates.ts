@@ -25,6 +25,7 @@ function escHtml(s: string): string {
 /** Sanitize CSS color values to prevent injection */
 function safeCssColor(value: string): string {
   // Allow hex colors, named colors, rgb/rgba/hsl, and linear-gradient
+  // Preserve commas for rgb/rgba functions
   const safe = value.replace(/[^a-zA-Z0-9#(),.\s%-]/g, "");
   return safe;
 }
@@ -45,7 +46,7 @@ export function fmtDate(dateStr: string): string {
 export function fmtTime(timeStr: string | undefined | null): string {
   if (!timeStr) return "";
   const [h, m] = timeStr.split(":").map(Number);
-  if (isNaN(h) || isNaN(m)) return timeStr;
+  if (isNaN(h) || isNaN(m) || h < 0 || h > 23) return timeStr;
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 }
