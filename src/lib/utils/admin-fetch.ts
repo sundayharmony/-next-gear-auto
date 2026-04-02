@@ -109,8 +109,5 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
     // Clean up the timeout — do NOT abort the controller here,
     // as the caller still needs to read the response body (.json(), .text(), etc.)
     if (timeoutId) clearTimeout(timeoutId);
-    // Abort the controller in finally block after response is obtained
-    // This ensures pending network activity is cleaned up
-    if (controller) controller.abort();
   }
 }
