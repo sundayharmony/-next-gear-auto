@@ -685,7 +685,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       {/* Slide-over panel — full-screen on mobile, side panel on desktop */}
       <div ref={panelRef} tabIndex={0} autoFocus className="w-full md:max-w-lg bg-white shadow-xl overflow-y-auto flex flex-col outline-none">
         {/* Sticky Header */}
-        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4">
+        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] lg:pt-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold">
               {editMode ? "Edit Booking" : "Booking Details"}
