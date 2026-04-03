@@ -55,8 +55,8 @@ const formatTime = (t: string | undefined | null) => {
 
 const Field = ({ value, width = "auto" }: { value?: string | number | null; width?: string }) => (
   <span
-    className="inline-block border-b border-gray-400 min-w-[80px] px-1 text-gray-900 font-medium"
-    style={{ width }}
+    className="inline-block border-b border-gray-400 min-w-[60px] px-1 text-gray-900 font-medium"
+    style={{ width, maxWidth: "100%" }}
   >
     {value || "\u00A0"}
   </span>
@@ -144,8 +144,8 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
       <div className="mb-5">
         <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">3. AUTHORIZED DRIVERS</h3>
         <div className="grid grid-cols-1 gap-y-2 mb-2">
-          <div><span className="font-semibold">Primary Renter (age 18+):</span>{" "}<Field value={customerName} width="200px" /><span className="ml-4 font-semibold">Driver&apos;s Lic:</span>{" "}<Field width="120px" /></div>
-          <div><span className="font-semibold">Additional Driver (age 18+):</span>{" "}<Field width="200px" /><span className="ml-4 font-semibold">Driver&apos;s Lic:</span>{" "}<Field width="120px" /></div>
+          <div className="flex flex-wrap gap-y-1"><span className="font-semibold">Primary Renter (age 18+):</span>{" "}<Field value={customerName} width="200px" /><span className="ml-4 font-semibold">Driver&apos;s Lic:</span>{" "}<Field width="120px" /></div>
+          <div className="flex flex-wrap gap-y-1"><span className="font-semibold">Additional Driver (age 18+):</span>{" "}<Field width="200px" /><span className="ml-4 font-semibold">Driver&apos;s Lic:</span>{" "}<Field width="120px" /></div>
         </div>
         <p className="text-gray-700">Only these two drivers are authorized to operate this vehicle. Unauthorized drivers will result in: $750 penalty, full liability for all damage, and immediate agreement termination.</p>
       </div>

@@ -933,7 +933,7 @@ export default function AdminMaintenancePage() {
           {/* Backdrop */}
           <div className="flex-1 bg-black/50 transition-opacity duration-200" onClick={closeDetail} />
           {/* Panel */}
-          <div className="w-full max-w-2xl bg-white shadow-xl overflow-y-auto transition-transform duration-300 ease-in-out" tabIndex={-1}>
+          <div className="w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl bg-white shadow-xl overflow-y-auto transition-transform duration-300 ease-in-out" tabIndex={-1}>
             {/* Sticky Header */}
             <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
               <div className="min-w-0">

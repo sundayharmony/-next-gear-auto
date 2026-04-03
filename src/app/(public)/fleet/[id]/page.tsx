@@ -253,10 +253,10 @@ export default async function VehicleDetailPage({ params }: PageProps) {
             <Card>
               <CardContent className="p-6">
                 <h2 className="text-xl font-semibold text-gray-900 mb-4">Specifications</h2>
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+                <div className="grid grid-cols-2 gap-2 sm:gap-4 sm:grid-cols-3">
                   {specRows.map((spec) => (
-                    <div key={spec.label} className="flex items-center gap-3 rounded-lg bg-gray-50 p-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100">
+                    <div key={spec.label} className="flex items-center gap-2 sm:gap-3 rounded-lg bg-gray-50 p-2 sm:p-3">
+                      <div className="flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-lg bg-purple-100">
                         <spec.icon className="h-5 w-5 text-purple-600" aria-hidden="true" />
                       </div>
                       <div>
@@ -319,7 +319,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
           {/* Sidebar */}
           <div className="space-y-6">
             {/* Pricing card */}
-            <Card className="sticky top-24">
+            <Card className="sticky top-20 sm:top-24">
               <CardContent className="p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Pricing</h2>
                 <div className="space-y-3">

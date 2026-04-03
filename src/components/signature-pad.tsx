@@ -24,7 +24,7 @@ export function SignaturePad({
   const [hasContent, setHasContent] = useState(false);
   const lastPointRef = useRef<{ x: number; y: number } | null>(null);
 
-  const padWidth = isInitials ? Math.min(width, 200) : width;
+  const padWidth = isInitials ? Math.min(width, 200) : Math.min(width, 340);
   const padHeight = isInitials ? Math.min(height, 80) : height;
 
   const getCtx = useCallback(() => {
@@ -185,7 +185,7 @@ export function SignaturePad({
         )}
       </div>
       <div
-        className={`relative rounded-lg border-2 w-full max-w-[400px] ${
+        className={`relative rounded-lg border-2 w-full max-w-[min(400px,calc(100vw-3rem))] ${
           hasContent ? "border-solid border-purple-300 bg-white" : "border-dashed border-gray-300 bg-gray-50"
         } transition-colors`}
       >

@@ -68,10 +68,10 @@ export function Pagination({
         <button
           onClick={() => onPageChange(currentPage - 1)}
           disabled={currentPage <= 1}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-2 sm:p-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
           aria-label="Previous page"
         >
-          <ChevronLeft className="w-4 h-4" />
+          <ChevronLeft className="w-5 h-5 sm:w-4 sm:h-4" />
         </button>
 
         {getPageNumbers().map((page, idx) =>
@@ -83,7 +83,7 @@ export function Pagination({
             <button
               key={page}
               onClick={() => onPageChange(page)}
-              className={`min-w-[32px] h-8 rounded text-sm font-medium ${
+              className={`min-w-[40px] h-10 sm:min-w-[32px] sm:h-8 rounded text-sm font-medium ${
                 page === currentPage
                   ? "bg-gray-900 text-white"
                   : "hover:bg-gray-100 text-gray-600"
@@ -97,10 +97,10 @@ export function Pagination({
         <button
           onClick={() => onPageChange(currentPage + 1)}
           disabled={currentPage >= totalPages}
-          className="p-1.5 rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
+          className="p-2 sm:p-1.5 min-w-[40px] min-h-[40px] sm:min-w-0 sm:min-h-0 flex items-center justify-center rounded hover:bg-gray-100 disabled:opacity-30 disabled:cursor-not-allowed"
           aria-label="Next page"
         >
-          <ChevronRight className="w-4 h-4" />
+          <ChevronRight className="w-5 h-5 sm:w-4 sm:h-4" />
         </button>
       </div>
     </div>
