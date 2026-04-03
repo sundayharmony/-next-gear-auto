@@ -5,6 +5,7 @@ const MULTI_DAY_DISCOUNT_RATE = 0.075; // 7.5% per additional day
 const MAX_MULTI_DAY_DISCOUNT = 0.25;  // cap at 25% max discount per day
 const INSURANCE_DISCOUNT_RATE = 0.15;  // 15% off insurance
 const INSURANCE_EXTRA_ID = "e1";
+const SETUP_FEE = 10;  // $10 one-time booking setup/processing fee
 
 /** Round to 2 decimal places with epsilon correction for floating-point precision */
 function roundCents(n: number): number {
@@ -97,7 +98,8 @@ export function calculatePricing(
   const base = calculateBaseRate(days, dailyRate);
   const extrasResult = calculateExtrasTotal(extras, days);
   const extrasTotal = extrasResult.items.reduce((sum, e) => sum + e.total, 0);
-  const subtotal = base.total + extrasTotal;
+  const setupFee = SETUP_FEE;
+  const subtotal = base.total + extrasTotal + setupFee;
   const tax = roundCents(subtotal * TAX_RATE);
   const total = subtotal + tax;
 
@@ -109,6 +111,7 @@ export function calculatePricing(
     insuranceDiscount: extrasResult.insuranceDiscount,
     extras: extrasResult.items,
     extrasTotal,
+    setupFee,
     subtotal,
     tax,
     taxRate: TAX_RATE,

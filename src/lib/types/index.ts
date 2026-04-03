@@ -159,6 +159,7 @@ export interface PricingBreakdown {
   insuranceDiscount: number;
   extras: { name: string; total: number }[];
   extrasTotal: number;
+  setupFee: number;
   subtotal: number;
   tax: number;
   taxRate: number;

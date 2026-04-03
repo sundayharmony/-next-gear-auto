@@ -1578,6 +1578,12 @@ function BookingPageInner() {
                                 <span>-${booking.pricing.insuranceDiscount.toFixed(2)}</span>
                               </div>
                             )}
+                            {booking.pricing.setupFee > 0 && (
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Setup fee</span>
+                                <span>${booking.pricing.setupFee.toFixed(2)}</span>
+                              </div>
+                            )}
                             {booking.promoDiscount && (
                               <div className="flex justify-between text-sm text-green-600">
                                 <span className="flex items-center gap-1">

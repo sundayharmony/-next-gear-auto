@@ -185,15 +185,15 @@ function StatCard({
 
   return (
     <div
-      className={`bg-white rounded-xl border border-gray-100 p-5 hover:shadow-md transition-shadow ${onClick ? "cursor-pointer hover:border-purple-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500" : ""}`}
+      className={`bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 hover:shadow-md transition-all admin-card-press ${onClick ? "cursor-pointer hover:border-purple-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500" : ""}`}
       onClick={onClick}
       tabIndex={onClick ? 0 : undefined}
       onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
       role={onClick ? "button" : undefined}
     >
-      <div className="flex items-start justify-between mb-3">
+      <div className="flex items-start justify-between mb-2 sm:mb-3">
         <div
-          className={`p-2.5 rounded-lg bg-gradient-to-br ${accentMap[accent]} text-white`}
+          className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-br ${accentMap[accent]} text-white`}
         >
           {icon}
         </div>
@@ -215,11 +215,11 @@ function StatCard({
           </div>
         )}
       </div>
-      <p className="text-2xl font-bold text-gray-900 tracking-tight">{value}</p>
-      <p className="text-xs text-gray-500 mt-1 font-medium uppercase tracking-wide">
+      <p className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">{value}</p>
+      <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 font-medium uppercase tracking-wide">
         {label}
       </p>
-      {subtext && <p className="text-xs text-gray-500 mt-0.5">{subtext}</p>}
+      {subtext && <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">{subtext}</p>}
     </div>
   );
 }
@@ -1152,13 +1152,13 @@ export default function AdminFinancesPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Finances</h1>
-              <p className="text-gray-300 mt-1">Track revenue, expenses, and profitability</p>
+              <p className="text-gray-300 mt-1 hidden sm:block">Track revenue, expenses, and profitability</p>
             </div>
             <Button
               onClick={fetchData}
               variant="outline"
               size="sm"
-              className="border-white/20 text-white hover:bg-white/10 bg-transparent"
+              className="border-white/20 text-white hover:bg-white/10 bg-transparent hidden sm:inline-flex"
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
               Refresh
@@ -1166,88 +1166,91 @@ export default function AdminFinancesPage() {
           </div>
 
           {/* Date range + tabs */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mt-6">
-            <div className="flex flex-col gap-2">
-              <p className="text-xs font-medium text-gray-300">Date Range</p>
-              <div className="flex items-center gap-2 bg-white/10 rounded-lg px-3 py-1.5">
-                <Calendar className="h-4 w-4 text-gray-300" />
-                <input
-                  type="date"
-                  value={draftDateRange.from}
-                  onChange={(e) => {
-                    const newFrom = e.target.value;
-                    setDraftDateRange((p) => {
-                      const newTo = newFrom > p.to ? newFrom : p.to;
-                      return { from: newFrom, to: newTo };
-                    });
-                  }}
-                  aria-label="Start date"
-                  className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1"
-                />
-                <span className="text-gray-400">—</span>
-                <input
-                  type="date"
-                  value={draftDateRange.to}
-                  onChange={(e) => {
-                    const newTo = e.target.value;
-                    setDraftDateRange((p) => {
-                      const newFrom = newTo < p.from ? newTo : p.from;
-                      return { from: newFrom, to: newTo };
-                    });
-                  }}
-                  aria-label="End date"
-                  className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1"
-                />
-                {draftDirty && (
-                  <button
-                    onClick={() => setDateRange({ ...draftDateRange })}
-                    className="ml-1 px-2.5 py-0.5 text-xs font-medium bg-purple-600 hover:bg-purple-500 text-white rounded transition-colors"
-                  >
-                    Apply
-                  </button>
-                )}
-              </div>
-              <button
-                onClick={() => {
-                  setDraftDateRange(defaultDateRange);
-                  setDateRange(defaultDateRange);
-                }}
-                className="text-xs text-purple-300 hover:text-white transition-colors"
-              >
-                Reset YTD
-              </button>
-            </div>
-            <div className="flex gap-1 bg-white/10 rounded-lg p-1" role="tablist">
-              {(["overview", "expenses", "revenue", "profit", "vehicles"] as const).map((tab, idx) => (
+          <div className="flex flex-col gap-4 mt-6">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+              <div className="flex flex-col gap-1.5">
+                <p className="text-xs font-medium text-gray-300">Date Range</p>
+                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 sm:py-1.5">
+                  <Calendar className="h-4 w-4 text-gray-300 shrink-0" />
+                  <input
+                    type="date"
+                    value={draftDateRange.from}
+                    onChange={(e) => {
+                      const newFrom = e.target.value;
+                      setDraftDateRange((p) => {
+                        const newTo = newFrom > p.to ? newFrom : p.to;
+                        return { from: newFrom, to: newTo };
+                      });
+                    }}
+                    aria-label="Start date"
+                    className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1 min-w-0"
+                  />
+                  <span className="text-gray-400">—</span>
+                  <input
+                    type="date"
+                    value={draftDateRange.to}
+                    onChange={(e) => {
+                      const newTo = e.target.value;
+                      setDraftDateRange((p) => {
+                        const newFrom = newTo < p.from ? newTo : p.from;
+                        return { from: newFrom, to: newTo };
+                      });
+                    }}
+                    aria-label="End date"
+                    className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1 min-w-0"
+                  />
+                  {draftDirty && (
+                    <button
+                      onClick={() => setDateRange({ ...draftDateRange })}
+                      className="ml-1 px-3 py-1 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors shrink-0"
+                    >
+                      Apply
+                    </button>
+                  )}
+                </div>
                 <button
-                  key={tab}
-                  role="tab"
-                  aria-selected={activeTab === tab}
-                  onClick={() => setActiveTab(tab)}
-                  onKeyDown={(e) => {
-                    const tabs = ["overview", "expenses", "revenue", "profit", "vehicles"] as const;
-                    if (e.key === 'ArrowLeft' && idx > 0) {
-                      e.preventDefault();
-                      setActiveTab(tabs[idx - 1]);
-                      // Focus the adjacent tab button
-                      const sibling = (e.currentTarget as HTMLElement).previousElementSibling as HTMLElement;
-                      sibling?.focus();
-                    } else if (e.key === 'ArrowRight' && idx < tabs.length - 1) {
-                      e.preventDefault();
-                      setActiveTab(tabs[idx + 1]);
-                      const sibling = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
-                      sibling?.focus();
-                    }
+                  onClick={() => {
+                    setDraftDateRange(defaultDateRange);
+                    setDateRange(defaultDateRange);
                   }}
-                  className={`px-3 py-1.5 text-sm rounded-md transition-colors capitalize focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-1 ${
-                    activeTab === tab
-                      ? "bg-white text-gray-900 font-medium"
-                      : "text-gray-300 hover:text-white"
-                  }`}
+                  className="text-xs text-purple-300 hover:text-white transition-colors self-start"
                 >
-                  {tab}
+                  Reset YTD
                 </button>
-              ))}
+              </div>
+            </div>
+            <div className="w-full sm:w-auto overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
+              <div className="flex gap-1 bg-white/10 rounded-lg p-1 w-max sm:w-auto" role="tablist">
+                {(["overview", "expenses", "revenue", "profit", "vehicles"] as const).map((tab, idx) => (
+                  <button
+                    key={tab}
+                    role="tab"
+                    aria-selected={activeTab === tab}
+                    onClick={() => setActiveTab(tab)}
+                    onKeyDown={(e) => {
+                      const tabs = ["overview", "expenses", "revenue", "profit", "vehicles"] as const;
+                      if (e.key === 'ArrowLeft' && idx > 0) {
+                        e.preventDefault();
+                        setActiveTab(tabs[idx - 1]);
+                        const sibling = (e.currentTarget as HTMLElement).previousElementSibling as HTMLElement;
+                        sibling?.focus();
+                      } else if (e.key === 'ArrowRight' && idx < tabs.length - 1) {
+                        e.preventDefault();
+                        setActiveTab(tabs[idx + 1]);
+                        const sibling = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+                        sibling?.focus();
+                      }
+                    }}
+                    className={`px-4 py-2 sm:px-3 sm:py-1.5 text-sm rounded-lg sm:rounded-md transition-colors capitalize whitespace-nowrap focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-1 ${
+                      activeTab === tab
+                        ? "bg-white text-gray-900 font-semibold shadow-sm"
+                        : "text-gray-300 hover:text-white active:bg-white/10"
+                    }`}
+                  >
+                    {tab}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -1291,7 +1294,7 @@ export default function AdminFinancesPage() {
         {activeTab === "overview" && (
           <div className="space-y-6">
             {/* KPI Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
               <StatCard
                 label="Total Revenue"
                 value={fmtCurrency(summaryData.totalRevenue)}
@@ -1342,8 +1345,8 @@ export default function AdminFinancesPage() {
             </div>
 
             {/* Cash Flow Chart */}
-            <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setActiveTab("expenses")}>
-              <CardContent className="p-5">
+            <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all admin-card-press rounded-2xl" onClick={() => setActiveTab("expenses")}>
+              <CardContent className="p-4 sm:p-5">
                 <SectionHeader
                   title="Cash Flow"
                   subtitle="Monthly income vs. expenses — click for details"
@@ -1356,7 +1359,7 @@ export default function AdminFinancesPage() {
                 ) : (
                 <div className="h-52 sm:h-64 lg:h-72">
                   <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                    <ComposedChart data={cashFlowData} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
+                    <ComposedChart data={cashFlowData} margin={{ top: 10, right: 10, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
@@ -1378,8 +1381,8 @@ export default function AdminFinancesPage() {
             {/* Daily Revenue + Expense Breakdown side by side */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               {/* Daily revenue */}
-              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setShowDailyRevenue(true)}>
-                <CardContent className="p-5">
+              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all admin-card-press rounded-2xl" onClick={() => setShowDailyRevenue(true)}>
+                <CardContent className="p-4 sm:p-5">
                   <SectionHeader title="Daily Revenue" subtitle={`Last ${Math.min(30, dailyEarningsData.length)} days — click for full breakdown`} />
                   {dailyEarningsData.length === 0 ? (
                     <div className="flex flex-col items-center justify-center py-12 text-gray-400">
@@ -1389,7 +1392,7 @@ export default function AdminFinancesPage() {
                   ) : (
                   <div className="h-40 sm:h-52 lg:h-64">
                     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                      <AreaChart data={dailyEarningsData} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
+                      <AreaChart data={dailyEarningsData} margin={{ top: 10, right: 10, bottom: 5, left: 0 }}>
                         <defs>
                           <linearGradient id="revenueGradient" x1="0" y1="0" x2="0" y2="1">
                             <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
@@ -1420,8 +1423,8 @@ export default function AdminFinancesPage() {
               </Card>
 
               {/* Expense categories */}
-              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all" onClick={() => setActiveTab("expenses")}>
-                <CardContent className="p-5">
+              <Card className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all admin-card-press rounded-2xl" onClick={() => setActiveTab("expenses")}>
+                <CardContent className="p-4 sm:p-5">
                   <SectionHeader
                     title="Expense Categories"
                     subtitle={`${fmtCurrency(summaryData.totalExpenses)} total — tap for details`}
@@ -1487,77 +1490,148 @@ export default function AdminFinancesPage() {
 
             {/* Vehicle Profitability Rankings */}
             <Card>
-              <CardContent className="p-5">
+              <CardContent className="p-4 sm:p-5">
                 <SectionHeader
                   title="Vehicle Profitability"
-                  subtitle="Ranked by profit — click to view details"
+                  subtitle="Ranked by profit — tap to view details"
                 />
                 {vehicleAnalytics.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-8">No vehicles found</p>
                 ) : (
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-left text-gray-500 text-xs uppercase tracking-wider">
-                          <th scope="col" className="pb-3 font-medium">#</th>
-                          <th scope="col" className="pb-3 font-medium">Vehicle</th>
-                          <th scope="col" className="pb-3 font-medium text-center">Bookings</th>
-                          <th scope="col" className="pb-3 font-medium text-right">Revenue</th>
-                          <th scope="col" className="pb-3 font-medium text-right">Expenses</th>
-                          <th scope="col" className="pb-3 font-medium text-right">Profit</th>
-                          <th scope="col" className="pb-3 font-medium text-right">Occupancy</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y">
-                        {vehicleAnalytics.map((v, idx) => (
-                          <tr
-                            key={v.id}
-                            onClick={() => setSelectedVehicleId(v.id)}
-                            onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedVehicleId(v.id); } }}
-                            tabIndex={0}
-                            role="button"
-                            aria-label={`View details for ${v.name}`}
-                            className="cursor-pointer hover:bg-purple-50 transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset"
-                          >
-                            <td className="py-3 text-gray-400 font-medium">{idx + 1}</td>
-                            <td className="py-3 font-medium text-gray-900">{v.name}</td>
-                            <td className="py-3 text-center">{v.bookings}</td>
-                            <td className="py-3 text-right text-green-600 font-medium">${v.revenue.toLocaleString()}</td>
-                            <td className="py-3 text-right text-red-500">${v.expenses.toLocaleString()}</td>
-                            <td className={`py-3 text-right font-bold ${v.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
-                              ${v.profit.toLocaleString()}
-                            </td>
-                            <td className="py-3 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                                  <div
-                                    className="h-full rounded-full bg-purple-500"
-                                    style={{ width: `${v.occupancy}%` }}
-                                  />
+                  <>
+                    {/* Mobile: Card-based view */}
+                    <div className="space-y-2.5 sm:hidden">
+                      {vehicleAnalytics.map((v, idx) => (
+                        <div
+                          key={v.id}
+                          onClick={() => setSelectedVehicleId(v.id)}
+                          className="bg-gray-50 rounded-xl p-3.5 cursor-pointer active:bg-purple-50 transition-colors admin-card-press"
+                          role="button"
+                          tabIndex={0}
+                          onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedVehicleId(v.id); } }}
+                          aria-label={`View details for ${v.name}`}
+                        >
+                          <div className="flex items-center justify-between mb-2.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className={`text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shrink-0 ${idx === 0 ? "bg-yellow-100 text-yellow-700" : idx === 1 ? "bg-gray-200 text-gray-600" : idx === 2 ? "bg-orange-100 text-orange-700" : "bg-gray-100 text-gray-400"}`}>
+                                {idx + 1}
+                              </span>
+                              <p className="font-semibold text-gray-900 text-sm truncate">{v.name}</p>
+                            </div>
+                            <span className="text-xs text-gray-500 shrink-0">{v.bookings} bookings</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center">
+                            <div className="bg-white rounded-lg py-1.5">
+                              <p className="text-sm font-bold text-green-600">${v.revenue.toLocaleString()}</p>
+                              <p className="text-[10px] text-gray-400">Revenue</p>
+                            </div>
+                            <div className="bg-white rounded-lg py-1.5">
+                              <p className="text-sm font-bold text-red-500">${v.expenses.toLocaleString()}</p>
+                              <p className="text-[10px] text-gray-400">Expenses</p>
+                            </div>
+                            <div className="bg-white rounded-lg py-1.5">
+                              <p className={`text-sm font-bold ${v.profit >= 0 ? "text-purple-600" : "text-red-600"}`}>${v.profit.toLocaleString()}</p>
+                              <p className="text-[10px] text-gray-400">Profit</p>
+                            </div>
+                          </div>
+                          <div className="mt-2.5">
+                            <div className="flex justify-between text-[10px] text-gray-500 mb-1">
+                              <span>Occupancy</span>
+                              <span className="font-medium">{v.occupancy.toFixed(0)}%</span>
+                            </div>
+                            <div className="h-1.5 bg-gray-200 rounded-full overflow-hidden">
+                              <div
+                                className={`h-full rounded-full ${v.occupancy >= 60 ? "bg-green-500" : v.occupancy >= 30 ? "bg-amber-500" : "bg-red-400"}`}
+                                style={{ width: `${v.occupancy}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {/* Fleet total card */}
+                      <div className="bg-purple-50 border border-purple-100 rounded-xl p-3.5">
+                        <p className="text-xs font-semibold text-purple-700 mb-2">Fleet Total</p>
+                        <div className="grid grid-cols-3 gap-2 text-center">
+                          <div>
+                            <p className="text-sm font-bold text-green-600">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.revenue, 0))}</p>
+                            <p className="text-[10px] text-gray-500">Revenue</p>
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-red-500">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.expenses, 0))}</p>
+                            <p className="text-[10px] text-gray-500">Expenses</p>
+                          </div>
+                          <div>
+                            <p className={`text-sm font-bold ${vehicleAnalytics.reduce((s, v) => s + v.profit, 0) >= 0 ? "text-purple-600" : "text-red-600"}`}>{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.profit, 0))}</p>
+                            <p className="text-[10px] text-gray-500">Profit</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    {/* Desktop: Table view */}
+                    <div className="hidden sm:block overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-gray-500 text-xs uppercase tracking-wider">
+                            <th scope="col" className="pb-3 font-medium">#</th>
+                            <th scope="col" className="pb-3 font-medium">Vehicle</th>
+                            <th scope="col" className="pb-3 font-medium text-center">Bookings</th>
+                            <th scope="col" className="pb-3 font-medium text-right">Revenue</th>
+                            <th scope="col" className="pb-3 font-medium text-right">Expenses</th>
+                            <th scope="col" className="pb-3 font-medium text-right">Profit</th>
+                            <th scope="col" className="pb-3 font-medium text-right">Occupancy</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y">
+                          {vehicleAnalytics.map((v, idx) => (
+                            <tr
+                              key={v.id}
+                              onClick={() => setSelectedVehicleId(v.id)}
+                              onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSelectedVehicleId(v.id); } }}
+                              tabIndex={0}
+                              role="button"
+                              aria-label={`View details for ${v.name}`}
+                              className="cursor-pointer hover:bg-purple-50 transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset"
+                            >
+                              <td className="py-3 text-gray-400 font-medium">{idx + 1}</td>
+                              <td className="py-3 font-medium text-gray-900">{v.name}</td>
+                              <td className="py-3 text-center">{v.bookings}</td>
+                              <td className="py-3 text-right text-green-600 font-medium">${v.revenue.toLocaleString()}</td>
+                              <td className="py-3 text-right text-red-500">${v.expenses.toLocaleString()}</td>
+                              <td className={`py-3 text-right font-bold ${v.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                                ${v.profit.toLocaleString()}
+                              </td>
+                              <td className="py-3 text-right">
+                                <div className="flex items-center justify-end gap-2">
+                                  <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full rounded-full bg-purple-500"
+                                      style={{ width: `${v.occupancy}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-xs text-gray-500 w-8 text-right">{v.occupancy.toFixed(0)}%</span>
                                 </div>
-                                <span className="text-xs text-gray-500 w-8 text-right">{v.occupancy.toFixed(0)}%</span>
-                              </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold">
+                            <td className="py-3"></td>
+                            <td className="py-3 text-gray-900">Fleet Total</td>
+                            <td className="py-3 text-center">{vehicleAnalytics.reduce((s, v) => s + v.bookings, 0)}</td>
+                            <td className="py-3 text-right text-green-600">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.revenue, 0))}</td>
+                            <td className="py-3 text-right text-red-500">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.expenses, 0))}</td>
+                            <td className={`py-3 text-right font-bold ${vehicleAnalytics.reduce((s, v) => s + v.profit, 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                              {fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.profit, 0))}
+                            </td>
+                            <td className="py-3 text-right text-xs text-gray-500">
+                              {vehicleAnalytics.length > 0 ? (vehicleAnalytics.reduce((s, v) => s + v.occupancy, 0) / vehicleAnalytics.length).toFixed(0) : 0}% avg
                             </td>
                           </tr>
-                        ))}
-                      </tbody>
-                      <tfoot>
-                        <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold">
-                          <td className="py-3"></td>
-                          <td className="py-3 text-gray-900">Fleet Total</td>
-                          <td className="py-3 text-center">{vehicleAnalytics.reduce((s, v) => s + v.bookings, 0)}</td>
-                          <td className="py-3 text-right text-green-600">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.revenue, 0))}</td>
-                          <td className="py-3 text-right text-red-500">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.expenses, 0))}</td>
-                          <td className={`py-3 text-right font-bold ${vehicleAnalytics.reduce((s, v) => s + v.profit, 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
-                            {fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.profit, 0))}
-                          </td>
-                          <td className="py-3 text-right text-xs text-gray-500">
-                            {vehicleAnalytics.length > 0 ? (vehicleAnalytics.reduce((s, v) => s + v.occupancy, 0) / vehicleAnalytics.length).toFixed(0) : 0}% avg
-                          </td>
-                        </tr>
-                      </tfoot>
-                    </table>
-                  </div>
+                        </tfoot>
+                      </table>
+                    </div>
+                  </>
                 )}
               </CardContent>
             </Card>
@@ -1570,11 +1644,11 @@ export default function AdminFinancesPage() {
         {activeTab === "expenses" && (
           <div className="space-y-6">
             {/* Category Totals */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
               {expenseCategoryData.map((cat) => (
                 <div
                   key={cat.key}
-                  className="bg-white rounded-xl border border-gray-100 p-4 hover:shadow-md transition-shadow"
+                  className="bg-white rounded-2xl border border-gray-100 p-3 sm:p-4 hover:shadow-md transition-all admin-card-press"
                 >
                   <div className="flex items-center gap-2 mb-2">
                     <div
@@ -1894,7 +1968,7 @@ export default function AdminFinancesPage() {
                         }
 
                         return (
-                          <div key={exp.id} className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors group">
+                          <div key={exp.id} className="flex items-center gap-3 p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors group admin-card-press">
                             <div
                               className="w-9 h-9 rounded-lg flex items-center justify-center text-white shrink-0"
                               style={{ backgroundColor: CATEGORY_COLORS[exp.category] || "#6B7280" }}
@@ -1902,10 +1976,10 @@ export default function AdminFinancesPage() {
                               {CATEGORY_ICONS[exp.category] || <MoreHorizontal className="h-4 w-4" />}
                             </div>
                             <div className="flex-1 min-w-0">
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 <p className="text-sm font-medium capitalize">{exp.category}</p>
                                 {vehicle && (
-                                  <Badge variant="secondary" className="text-xs">
+                                  <Badge variant="secondary" className="text-[10px] sm:text-xs truncate max-w-[120px] sm:max-w-none">
                                     {vehicle.year} {vehicle.make} {vehicle.model}
                                   </Badge>
                                 )}
@@ -2006,8 +2080,8 @@ export default function AdminFinancesPage() {
             </div>
 
             {/* Revenue by Month Chart */}
-            <Card>
-              <CardContent className="p-5">
+            <Card className="rounded-2xl">
+              <CardContent className="p-4 sm:p-5">
                 <SectionHeader
                   title="Revenue by Month"
                   subtitle={`${revenueByMonth.length} months of booking revenue`}
@@ -2018,9 +2092,9 @@ export default function AdminFinancesPage() {
                     <p className="text-sm">No revenue data for the selected date range</p>
                   </div>
                 ) : (
-                  <div className="h-80">
+                  <div className="h-56 sm:h-72 lg:h-80">
                     <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                      <BarChart data={revenueByMonth} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
+                      <BarChart data={revenueByMonth} margin={{ top: 10, right: 10, bottom: 5, left: 0 }}>
                         <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                         <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                         <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
@@ -2037,11 +2111,11 @@ export default function AdminFinancesPage() {
             </Card>
 
             {/* Detailed Bookings List */}
-            <Card>
-              <CardContent className="p-5">
+            <Card className="rounded-2xl">
+              <CardContent className="p-4 sm:p-5">
                 <SectionHeader
                   title="Bookings"
-                  subtitle={`${revenueBookings.length} bookings in range — click to view vehicle`}
+                  subtitle={`${revenueBookings.length} bookings in range — tap to view vehicle`}
                 />
                 {revenueBookings.length === 0 ? (
                   <p className="text-sm text-gray-500 text-center py-8">No revenue bookings found</p>
@@ -2054,7 +2128,7 @@ export default function AdminFinancesPage() {
                         return (
                           <div
                             key={booking.id}
-                            className="flex items-center justify-between p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer"
+                            className="flex items-center justify-between p-3 rounded-xl bg-gray-50 hover:bg-gray-100 transition-colors cursor-pointer admin-card-press"
                             onClick={() => vehicle && setSelectedVehicleId(vehicle.id)}
                           >
                             <div className="flex-1 min-w-0">
@@ -2133,15 +2207,15 @@ export default function AdminFinancesPage() {
             </div>
 
             {/* Monthly Profit Trend Chart */}
-            <Card>
-              <CardContent className="p-5">
+            <Card className="rounded-2xl">
+              <CardContent className="p-4 sm:p-5">
                 <SectionHeader
                   title="Monthly Profit Trend"
                   subtitle="Revenue (green), Expenses (red), and Net Profit (blue line)"
                 />
-                <div className="h-80">
+                <div className="h-56 sm:h-72 lg:h-80">
                   <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                    <ComposedChart data={monthlyProfitData} margin={{ top: 10, right: 20, bottom: 5, left: 20 }}>
+                    <ComposedChart data={monthlyProfitData} margin={{ top: 10, right: 10, bottom: 5, left: 0 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
                       <XAxis dataKey="month" tick={{ fontSize: 12 }} />
                       <YAxis tick={{ fontSize: 12 }} tickFormatter={(v) => `$${v}`} />
@@ -2162,14 +2236,60 @@ export default function AdminFinancesPage() {
               </CardContent>
             </Card>
 
-            {/* Monthly Breakdown Table */}
+            {/* Monthly Breakdown */}
             <Card>
-              <CardContent className="p-5">
+              <CardContent className="p-4 sm:p-5">
                 <SectionHeader
                   title="Monthly Breakdown"
                   subtitle="Detailed profit analysis by month"
                 />
-                <div className="overflow-x-auto">
+                {/* Mobile: Card-based */}
+                <div className="space-y-2.5 sm:hidden">
+                  {monthlyProfitData.map((month) => (
+                    <div key={month.date} className="bg-gray-50 rounded-xl p-3.5">
+                      <div className="flex items-center justify-between mb-2">
+                        <p className="font-semibold text-gray-900 text-sm">{month.month}</p>
+                        <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${month.revenue > 0 && month.profit >= 0 ? "bg-green-100 text-green-700" : month.revenue > 0 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-500"}`}>
+                          {month.revenue > 0 ? ((month.profit / month.revenue) * 100).toFixed(1) : "0"}%
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-2 text-center">
+                        <div className="bg-white rounded-lg py-1.5">
+                          <p className="text-sm font-bold text-green-600">${month.revenue.toLocaleString()}</p>
+                          <p className="text-[10px] text-gray-400">Revenue</p>
+                        </div>
+                        <div className="bg-white rounded-lg py-1.5">
+                          <p className="text-sm font-bold text-red-500">${month.expenses.toLocaleString()}</p>
+                          <p className="text-[10px] text-gray-400">Expenses</p>
+                        </div>
+                        <div className="bg-white rounded-lg py-1.5">
+                          <p className={`text-sm font-bold ${month.profit >= 0 ? "text-purple-600" : "text-red-600"}`}>${month.profit.toLocaleString()}</p>
+                          <p className="text-[10px] text-gray-400">Profit</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {/* Total row */}
+                  <div className="bg-purple-50 border border-purple-100 rounded-xl p-3.5">
+                    <p className="text-xs font-semibold text-purple-700 mb-2">Total</p>
+                    <div className="grid grid-cols-3 gap-2 text-center">
+                      <div>
+                        <p className="text-sm font-bold text-green-600">{fmtCurrency(monthlyProfitData.reduce((s, m) => s + m.revenue, 0))}</p>
+                        <p className="text-[10px] text-gray-500">Revenue</p>
+                      </div>
+                      <div>
+                        <p className="text-sm font-bold text-red-500">{fmtCurrency(monthlyProfitData.reduce((s, m) => s + m.expenses, 0))}</p>
+                        <p className="text-[10px] text-gray-500">Expenses</p>
+                      </div>
+                      <div>
+                        <p className={`text-sm font-bold ${summaryData.netProfit >= 0 ? "text-purple-600" : "text-red-600"}`}>{fmtCurrency(monthlyProfitData.reduce((s, m) => s + m.profit, 0))}</p>
+                        <p className="text-[10px] text-gray-500">Profit</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                {/* Desktop: Table */}
+                <div className="hidden sm:block overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-gray-200">
@@ -2251,10 +2371,10 @@ export default function AdminFinancesPage() {
                 {vehicleAnalytics.map((v, idx) => (
                   <Card
                     key={v.id}
-                    className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all"
+                    className="cursor-pointer hover:shadow-lg hover:border-purple-200 transition-all rounded-2xl admin-card-press"
                     onClick={() => setSelectedVehicleId(v.id)}
                   >
-                    <CardContent className="p-5">
+                    <CardContent className="p-4 sm:p-5">
                       <div className="flex items-start justify-between mb-4">
                         <div>
                           <p className="font-bold text-gray-900">{v.name}</p>
