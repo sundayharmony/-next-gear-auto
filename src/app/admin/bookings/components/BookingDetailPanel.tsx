@@ -675,7 +675,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex overflow-hidden">
       {/* Dark backdrop — hidden on mobile since panel is full-screen */}
       <div
         className="hidden md:block flex-1 bg-black/50 cursor-pointer"
