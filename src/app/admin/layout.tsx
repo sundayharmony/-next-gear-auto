@@ -42,6 +42,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   // Track abort controller for fetch cancellation
   const abortControllerRef = React.useRef<AbortController | null>(null);
+  const bellButtonRef = React.useRef<HTMLButtonElement>(null);
 
   // Handle Escape key to close notifications dropdown
   useEffect(() => {
@@ -159,6 +160,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div className="relative">
               <button
+                ref={bellButtonRef}
                 onClick={() => setShowNotifications(!showNotifications)}
                 aria-label={`Notifications${pendingCount > 0 ? ` — ${pendingCount} pending` : ""}`}
                 aria-expanded={showNotifications}
@@ -177,12 +179,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                 )}
               </button>
 
-              {/* Notification dropdown */}
+              {/* Notification dropdown — fixed position to escape sidebar overflow */}
               {showNotifications && (
                 <>
                   {/* Click-outside overlay */}
-                  <div className="fixed inset-0 z-[45]" onClick={() => setShowNotifications(false)} />
-                  <div className="absolute right-0 top-full mt-2 w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 z-50 overflow-hidden">
+                  <div className="fixed inset-0 z-[55]" onClick={() => setShowNotifications(false)} />
+                  <div
+                    className="fixed w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] overflow-hidden"
+                    style={(() => {
+                      const rect = bellButtonRef.current?.getBoundingClientRect();
+                      const top = rect ? rect.bottom + 8 : 80;
+                      const preferredLeft = rect ? rect.right - 320 : 16;
+                      const left = Math.max(16, Math.min(preferredLeft, (typeof window !== "undefined" ? window.innerWidth : 400) - 336));
+                      return { top, left };
+                    })()}
+                  >
                     <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
                       <h3 className="text-sm font-semibold text-gray-900">
                         Pending Bookings
