@@ -120,7 +120,7 @@ export default function AdminInstagramPage() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
+      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Link href="/admin" className="text-purple-300 hover:text-white transition-colors">
@@ -129,7 +129,7 @@ export default function AdminInstagramPage() {
             <div>
               <div className="flex items-center gap-2">
                 <Instagram className="h-6 w-6 text-pink-400" />
-                <h1 className="text-3xl font-bold">Instagram Feed</h1>
+                <h1 className="text-2xl sm:text-3xl font-bold">Instagram Feed</h1>
               </div>
               <p className="mt-1 text-purple-200">Manage the Instagram posts shown on your blog page.</p>
             </div>

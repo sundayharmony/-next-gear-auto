@@ -13,6 +13,8 @@ import { cn } from "@/lib/utils/cn";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
+import { BottomTabBar } from "@/components/admin/bottom-tab-bar";
+import { SwipeBack } from "@/components/admin/swipe-back";
 
 const NAV_ITEMS = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
@@ -29,6 +31,23 @@ const NAV_ITEMS = [
   { href: "/admin/reviews", label: "Reviews", icon: Star },
   { href: "/admin/instagram", label: "Instagram", icon: Instagram },
 ];
+
+// Map pathnames to short page titles for mobile header
+const PAGE_TITLES: Record<string, string> = {
+  "/admin": "Dashboard",
+  "/admin/calendar": "Calendar",
+  "/admin/bookings": "Bookings",
+  "/admin/vehicles": "Vehicles",
+  "/admin/blocked-dates": "Blocked Dates",
+  "/admin/maintenance": "Maintenance",
+  "/admin/locations": "Locations",
+  "/admin/finances": "Finances",
+  "/admin/tickets": "Tickets",
+  "/admin/customers": "Customers",
+  "/admin/promo-codes": "Promo Codes",
+  "/admin/reviews": "Reviews",
+  "/admin/instagram": "Instagram",
+};
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -52,19 +71,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       }
     };
     window.addEventListener("keydown", handleEscapeKey);
-    // Cleanup: remove listener on unmount and when showNotifications changes
     return () => {
       window.removeEventListener("keydown", handleEscapeKey);
     };
   }, [showNotifications]);
 
   const fetchPendingBookings = useCallback(async () => {
-    // Abort previous request if it's still pending
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
 
-    // Create new abort controller for this fetch
     abortControllerRef.current = new AbortController();
 
     try {
@@ -75,7 +91,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       const data = await res.json();
       if (data.success && data.data) {
         setPendingCount(data.data.length);
-        // Keep 5 most recent
         setRecentBookings(
           data.data
             .sort((a: { created_at: string }, b: { created_at: string }) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
@@ -89,7 +104,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         );
       }
     } catch (err) {
-      // Ignore abort errors
       if (err instanceof Error && err.name === "AbortError") return;
       logger.error("Failed to fetch pending bookings:", err);
     }
@@ -97,12 +111,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     fetchPendingBookings();
-    // Add jitter to polling interval (45-75 seconds) to prevent thundering herd
     const jitter = 45000 + Math.random() * 30000;
     const interval = setInterval(fetchPendingBookings, jitter);
     return () => {
       clearInterval(interval);
-      // Abort fetch on unmount
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }
@@ -124,31 +136,132 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
     return pathname.startsWith(href);
   };
 
+  // Get current page title for mobile header
+  const currentTitle = PAGE_TITLES[pathname] || Object.entries(PAGE_TITLES).find(([path]) => pathname.startsWith(path))?.[1] || "Admin";
+
   return (
     <div className="flex min-h-[calc(100vh-64px)]">
-      {/* Mobile sidebar toggle */}
-      <button
-        onClick={() => setSidebarOpen(!sidebarOpen)}
-        aria-label={sidebarOpen ? "Close sidebar" : "Open sidebar"}
-        aria-expanded={sidebarOpen}
-        className="fixed bottom-6 right-6 z-[60] lg:hidden rounded-full bg-purple-600 p-3 text-white shadow-lg"
-      >
-        {sidebarOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-      </button>
+      {/* ═══════ MOBILE STICKY HEADER BAR ═══════ */}
+      <div className="fixed top-0 left-0 right-0 z-[45] lg:hidden">
+        <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm pwa-safe-top">
+          <div className="flex items-center justify-between px-4 h-14">
+            {/* Page title */}
+            <h1 className="text-[17px] font-semibold text-gray-900 truncate">
+              {currentTitle}
+            </h1>
 
-      {/* Sidebar overlay on mobile */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-black/50 lg:hidden transition-opacity duration-300 ease-in-out"
-          onClick={() => setSidebarOpen(false)}
-        />
+            {/* Right actions */}
+            <div className="flex items-center gap-1">
+              {/* Notification bell */}
+              <button
+                ref={bellButtonRef}
+                onClick={() => setShowNotifications(!showNotifications)}
+                aria-label={`Notifications${pendingCount > 0 ? ` — ${pendingCount} pending` : ""}`}
+                aria-expanded={showNotifications}
+                className={cn(
+                  "relative p-2.5 rounded-full transition-colors active:scale-90",
+                  pendingCount > 0
+                    ? "bg-purple-50"
+                    : "hover:bg-gray-100 active:bg-gray-200"
+                )}
+              >
+                <Bell className={cn("h-[22px] w-[22px]", pendingCount > 0 ? "text-purple-600" : "text-gray-500")} />
+                {pendingCount > 0 && (
+                  <span className="absolute top-1 right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 ring-2 ring-white">
+                    {pendingCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Profile / logout */}
+              <button
+                disabled={loggingOut}
+                onClick={async () => { setLoggingOut(true); await logout(); router.push("/"); }}
+                className="p-2.5 rounded-full hover:bg-gray-100 active:bg-gray-200 active:scale-90 transition-all disabled:opacity-50"
+                aria-label="Sign out"
+              >
+                {loggingOut ? (
+                  <Loader2 className="h-[22px] w-[22px] text-gray-400 animate-spin" />
+                ) : (
+                  <LogOut className="h-[22px] w-[22px] text-gray-500" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ═══════ NOTIFICATION DROPDOWN (shared mobile + desktop) ═══════ */}
+      {showNotifications && (
+        <>
+          <div className="fixed inset-0 z-[55]" onClick={() => setShowNotifications(false)} />
+          <div
+            className="fixed w-80 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 z-[60] overflow-hidden"
+            style={(() => {
+              const rect = bellButtonRef.current?.getBoundingClientRect();
+              const top = rect ? rect.bottom + 8 : 80;
+              const preferredLeft = rect ? rect.right - 320 : 16;
+              const left = Math.max(16, Math.min(preferredLeft, (typeof window !== "undefined" ? window.innerWidth : 400) - 336));
+              return { top, left };
+            })()}
+          >
+            <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between">
+              <h3 className="text-sm font-semibold text-gray-900">
+                Pending Bookings
+                {pendingCount > 0 && (
+                  <span className="ml-2 inline-flex items-center justify-center bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full px-1.5 py-0.5">
+                    {pendingCount}
+                  </span>
+                )}
+              </h3>
+              <button
+                onClick={() => setShowNotifications(false)}
+                className="p-1.5 rounded-full hover:bg-gray-200 active:bg-gray-300 text-gray-400 hover:text-gray-600 transition-colors"
+                aria-label="Close notifications"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            {recentBookings.length === 0 ? (
+              <div className="px-4 py-8 text-center">
+                <Bell className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                <p className="text-sm text-gray-500">No pending bookings</p>
+              </div>
+            ) : (
+              <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+                {recentBookings.map((b) => (
+                  <Link
+                    key={b.id}
+                    href={`/admin/bookings?booking=${b.id}`}
+                    onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
+                    className="flex items-center justify-between px-4 py-3 hover:bg-purple-50 active:bg-purple-100 transition-colors group"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-gray-900 truncate group-hover:text-purple-700">{b.customer_name || "Unknown"}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">
+                        {b.created_at ? new Date(b.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold text-purple-600 ml-3">${b.total_price.toLocaleString()}</span>
+                  </Link>
+                ))}
+              </div>
+            )}
+            <Link
+              href="/admin/bookings?status=pending"
+              onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
+              className="block px-4 py-3 text-center text-xs font-semibold text-purple-600 hover:bg-purple-50 active:bg-purple-100 border-t transition-colors"
+            >
+              View all pending bookings →
+            </Link>
+          </div>
+        </>
       )}
 
-      {/* Sidebar */}
+      {/* ═══════ DESKTOP SIDEBAR (hidden on mobile) ═══════ */}
       <aside
         className={cn(
-          "fixed z-40 top-[64px] bottom-0 left-0 w-64 bg-gray-900 text-white flex flex-col transition-transform duration-300 ease-in-out lg:relative lg:top-0 lg:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          "fixed z-40 top-0 bottom-0 left-0 w-64 bg-gray-900 text-white flex-col transition-transform duration-300 ease-in-out hidden lg:flex lg:relative lg:translate-x-0"
         )}
       >
         {/* Logo area */}
@@ -160,7 +273,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             </div>
             <div className="relative">
               <button
-                ref={bellButtonRef}
                 onClick={() => setShowNotifications(!showNotifications)}
                 aria-label={`Notifications${pendingCount > 0 ? ` — ${pendingCount} pending` : ""}`}
                 aria-expanded={showNotifications}
@@ -178,74 +290,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
                   </span>
                 )}
               </button>
-
-              {/* Notification dropdown — fixed position to escape sidebar overflow */}
-              {showNotifications && (
-                <>
-                  {/* Click-outside overlay */}
-                  <div className="fixed inset-0 z-[55]" onClick={() => setShowNotifications(false)} />
-                  <div
-                    className="fixed w-80 max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border border-gray-200 z-[60] overflow-hidden"
-                    style={(() => {
-                      const rect = bellButtonRef.current?.getBoundingClientRect();
-                      const top = rect ? rect.bottom + 8 : 80;
-                      const preferredLeft = rect ? rect.right - 320 : 16;
-                      const left = Math.max(16, Math.min(preferredLeft, (typeof window !== "undefined" ? window.innerWidth : 400) - 336));
-                      return { top, left };
-                    })()}
-                  >
-                    <div className="px-4 py-3 bg-gray-50 border-b flex items-center justify-between">
-                      <h3 className="text-sm font-semibold text-gray-900">
-                        Pending Bookings
-                        {pendingCount > 0 && (
-                          <span className="ml-2 inline-flex items-center justify-center bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full px-1.5 py-0.5">
-                            {pendingCount}
-                          </span>
-                        )}
-                      </h3>
-                      <button
-                        onClick={() => setShowNotifications(false)}
-                        className="p-1 rounded hover:bg-gray-200 text-gray-400 hover:text-gray-600"
-                        aria-label="Close notifications"
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                    {recentBookings.length === 0 ? (
-                      <div className="px-4 py-8 text-center">
-                        <Bell className="h-8 w-8 text-gray-300 mx-auto mb-2" />
-                        <p className="text-sm text-gray-500">No pending bookings</p>
-                      </div>
-                    ) : (
-                      <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
-                        {recentBookings.map((b) => (
-                          <Link
-                            key={b.id}
-                            href={`/admin/bookings?booking=${b.id}`}
-                            onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
-                            className="flex items-center justify-between px-4 py-3 hover:bg-purple-50 transition-colors group"
-                          >
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm font-medium text-gray-900 truncate group-hover:text-purple-700">{b.customer_name || "Unknown"}</p>
-                              <p className="text-xs text-gray-400 mt-0.5">
-                                {b.created_at ? new Date(b.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" }) : "—"}
-                              </p>
-                            </div>
-                            <span className="text-sm font-bold text-purple-600 ml-3">${b.total_price.toLocaleString()}</span>
-                          </Link>
-                        ))}
-                      </div>
-                    )}
-                    <Link
-                      href="/admin/bookings?status=pending"
-                      onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
-                      className="block px-4 py-3 text-center text-xs font-semibold text-purple-600 hover:bg-purple-50 border-t transition-colors"
-                    >
-                      View all pending bookings →
-                    </Link>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </div>
@@ -288,10 +332,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </div>
       </aside>
 
-      {/* Main content */}
-      <main className="flex-1 min-w-0">
-        {children}
+      {/* ═══════ MAIN CONTENT ═══════ */}
+      <main className="flex-1 min-w-0 pt-14 pb-20 lg:pt-0 lg:pb-0 native-scroll">
+        <SwipeBack>
+          {children}
+        </SwipeBack>
       </main>
+
+      {/* ═══════ BOTTOM TAB BAR (mobile only, rendered in layout for persistence) ═══════ */}
+      <BottomTabBar />
     </div>
   );
 }

@@ -17,6 +17,8 @@ body {
   color: #111827;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior-y: none;
 }
 
 /* Focus styles */
@@ -88,4 +90,74 @@ body {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #7C3AED;
+}
+
+/* ═══ Native App Animations ═══ */
+
+/* Tailwind animate-in extensions */
+@keyframes fade-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes slide-in-from-bottom {
+  from { transform: translateY(8px); }
+  to { transform: translateY(0); }
+}
+.animate-in {
+  animation-duration: 300ms;
+  animation-fill-mode: both;
+  animation-timing-function: cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+.fade-in {
+  animation-name: fade-in;
+}
+.slide-in-from-bottom-2 {
+  animation-name: fade-in, slide-in-from-bottom;
+}
+.duration-200 {
+  animation-duration: 200ms;
+}
+.duration-300 {
+  animation-duration: 300ms;
+}
+
+/* iOS-style active press effect for interactive cards */
+@media screen and (max-width: 1023px) {
+  .admin-card-press {
+    transition: transform 0.12s ease, opacity 0.12s ease;
+  }
+  .admin-card-press:active {
+    transform: scale(0.97);
+    opacity: 0.85;
+  }
+}
+
+/* Native-feel haptic button feedback */
+@media screen and (max-width: 1023px) {
+  .native-btn {
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    user-select: none;
+  }
+  .native-btn:active {
+    transform: scale(0.95);
+  }
+}
+
+/* Rubber-band overscroll indicator */
+@supports (-webkit-overflow-scrolling: touch) {
+  .native-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+  }
+}
+
+/* iOS standalone mode: extra padding on notch devices */
+@media all and (display-mode: standalone) {
+  .pwa-safe-top {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+  .pwa-safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
 }

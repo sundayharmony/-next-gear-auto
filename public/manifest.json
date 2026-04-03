@@ -8,6 +8,8 @@
   "orientation": "any",
   "background_color": "#ffffff",
   "theme_color": "#7c3aed",
+  "categories": ["business", "productivity"],
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/images/icons/icon-192.png",
@@ -26,6 +28,27 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
+    }
+  ],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Bookings",
+      "short_name": "Bookings",
+      "url": "/admin/bookings",
+      "icons": []
+    },
+    {
+      "name": "Calendar",
+      "short_name": "Calendar",
+      "url": "/admin/calendar",
+      "icons": []
+    },
+    {
+      "name": "Vehicles",
+      "short_name": "Fleet",
+      "url": "/admin/vehicles",
+      "icons": []
     }
   ]
 }

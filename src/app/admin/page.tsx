@@ -97,17 +97,18 @@ export default function AdminDashboardPage() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
+      {/* Hero header — hidden on mobile since the sticky header shows the title */}
+      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
-            <p className="mt-1 text-purple-200">Overview of your rental business.</p>
+            <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
+            <p className="mt-1 text-sm sm:text-base text-purple-200">Overview of your rental business.</p>
           </div>
           {data && (
             <Button
               variant="outline"
               size="sm"
-              className="border-purple-400 text-purple-200 hover:bg-purple-800 hover:text-white"
+              className="border-purple-400 text-purple-200 hover:bg-purple-800 hover:text-white hidden sm:inline-flex"
               onClick={() => fetchData()}
             >
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
@@ -116,7 +117,7 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      <PageContainer className="py-8">
+      <PageContainer className="py-6 sm:py-8">
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" role="status" aria-label="Loading dashboard" />
@@ -172,8 +173,8 @@ export default function AdminDashboardPage() {
                 { label: "Reviews", desc: "Moderate feedback", icon: Star, href: "/admin/reviews", color: "bg-amber-100 text-amber-700" },
               ].map((item) => (
                 <Link key={item.href} href={item.href}>
-                  <Card className="group h-full cursor-pointer transition-all hover:shadow-md hover:border-purple-200 focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2">
-                    <CardContent className="p-5">
+                  <Card className="group h-full cursor-pointer transition-all hover:shadow-md hover:border-purple-200 focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 admin-card-press">
+                    <CardContent className="p-4 sm:p-5">
                       <div className={`inline-flex rounded-lg p-2.5 mb-3 ${item.color}`}>
                         <item.icon className="h-5 w-5" />
                       </div>
@@ -234,7 +235,7 @@ export default function AdminDashboardPage() {
                     <div
                       key={booking.id}
                       onClick={() => router.push(`/admin/bookings?booking=${booking.id}`)}
-                      className={`group relative rounded-xl border border-gray-200 border-l-[3px] ${accent} bg-white hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer overflow-hidden ${isPending ? "ring-1 ring-yellow-100" : ""}`}
+                      className={`group relative rounded-xl border border-gray-200 border-l-[3px] ${accent} bg-white hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer overflow-hidden admin-card-press ${isPending ? "ring-1 ring-yellow-100" : ""}`}
                     >
                       <div className="px-4 py-3.5 sm:px-5">
                         {/* Top row: Customer + Status + Price */}

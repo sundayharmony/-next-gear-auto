@@ -1259,11 +1259,11 @@ export default function AdminVehiclesPage() {
   return (
     <>
       {/* Header Section */}
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
+      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Fleet Management</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">Fleet Management</h1>
               <p className="mt-1 text-purple-200">
                 Manage your rental vehicle fleet{vehicles.length > 0 && ` · ${vehicles.length} vehicle${vehicles.length !== 1 ? "s" : ""}`}
               </p>

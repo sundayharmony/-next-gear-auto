@@ -732,7 +732,7 @@ export default function AdminCustomersPage() {
             {toastError}
           </div>
         )}
-        <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
+        <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <button onClick={closeCustomer} className="flex items-center gap-1 text-sm text-purple-300 hover:text-white mb-2 transition-colors">
               <ArrowLeft className="h-4 w-4" /> Back to all customers
@@ -1646,11 +1646,11 @@ export default function AdminCustomersPage() {
           {toastError}
         </div>
       )}
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-8 text-white">
+      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold">Customers</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold">Customers</h1>
               <p className="mt-1 text-purple-200">{customers.length} total customers</p>
             </div>
             <Button
