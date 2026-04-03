@@ -17,6 +17,21 @@ export const metadata: Metadata = {
   description:
     "Premium car rentals in Jersey City, NJ at competitive prices. Choose from our well-maintained fleet of compact cars, sedans, SUVs, and trucks.",
   keywords: ["car rental", "vehicle rental", "NextGearAuto", "rent a car", "SUV rental", "truck rental", "Jersey City car rental", "NJ car rental"],
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "NGA Admin",
+  },
+  icons: {
+    icon: [
+      { url: "/images/icons/icon-192.png", sizes: "192x192", type: "image/png" },
+      { url: "/images/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/images/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
+    ],
+  },
   openGraph: {
     type: "website",
     locale: "en_US",
@@ -43,6 +58,7 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  themeColor: "#7c3aed",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
