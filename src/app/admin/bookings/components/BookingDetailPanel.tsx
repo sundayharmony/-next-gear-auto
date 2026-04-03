@@ -1610,7 +1610,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
         </div>
 
         {/* Footer Actions */}
-        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-6 py-4 space-y-3">
+        <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:pb-4 space-y-3">
           {editMode ? (
             <>
               <div className="flex gap-3">

@@ -955,11 +955,11 @@ export default function AdminVehiclesPage() {
                 </span>
               )}
             </div>
-            <div className="flex flex-wrap gap-1.5 mb-2">
+            <div className="flex flex-wrap gap-2 mb-3">
               {(form.images || []).map((img, idx) => (
                 <div
                   key={`${img}-${idx}`}
-                  className="relative w-20 h-20 rounded-lg border border-gray-200 overflow-hidden bg-gray-50"
+                  className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-xl border border-gray-200 overflow-hidden bg-gray-50"
                 >
                   <img
                     src={img}
@@ -1011,16 +1011,16 @@ export default function AdminVehiclesPage() {
               onDragOver={(e) => handleDragOver(e, formKey)}
               onDragLeave={(e) => handleDragLeave(e, formKey)}
               onDrop={(e) => handleDrop(e, formKey)}
-              className={`cursor-pointer block rounded-lg border-2 border-dashed p-2.5 text-center transition-colors ${
+              className={`cursor-pointer block rounded-xl border-2 border-dashed p-6 sm:p-8 text-center transition-colors ${
                 dragOver[formKey]
                   ? "border-purple-500 bg-purple-50"
                   : "border-gray-300 hover:border-purple-400 hover:bg-gray-50"
               } ${uploadingImage[formKey] ? "opacity-60 pointer-events-none" : ""}`}
             >
               {uploadingImage[formKey] ? (
-                <Loader2 className="h-5 w-5 mx-auto mb-1 text-purple-500 animate-spin" />
+                <Loader2 className="h-8 w-8 mx-auto mb-2 text-purple-500 animate-spin" />
               ) : (
-                <Upload className="h-5 w-5 mx-auto mb-1 text-gray-400" />
+                <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
               )}
               <p className="text-sm text-gray-600">
                 {uploadingImage[formKey]

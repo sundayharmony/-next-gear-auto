@@ -141,7 +141,7 @@ export async function POST(req: NextRequest) {
     // Calculate discount
     let discountAmount = 0;
     if (promo.discount_type === "percentage") {
-      discountAmount = bookingAmount ? Math.round(bookingAmount * (promo.discount_value / 100) * 100) / 100 : 0;
+      discountAmount = (bookingAmount && Number.isFinite(bookingAmount)) ? Math.round(bookingAmount * (promo.discount_value / 100) * 100) / 100 : 0;
     } else {
       discountAmount = promo.discount_value;
     }

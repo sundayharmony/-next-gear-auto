@@ -220,7 +220,7 @@ export async function GET(request: NextRequest) {
 
     // Handle pagination response
     if (page !== null && offset !== null) {
-      const totalPages = Math.ceil((count || 0) / perPage);
+      const totalPages = Math.max(1, Math.ceil((count || 0) / perPage));
       return NextResponse.json({
         data: enriched,
         success: true,

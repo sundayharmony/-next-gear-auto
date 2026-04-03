@@ -225,7 +225,8 @@ export async function POST(request: NextRequest) {
     const availableExtras = extrasData as BookingExtra[];
 
     // Map client extras to server-validated extras with correct prices
-    const validatedExtras: BookingExtra[] = (extras || []).map((clientExtra: { id: string; selected?: boolean }) => {
+    const safeExtras = Array.isArray(extras) ? extras : [];
+    const validatedExtras: BookingExtra[] = safeExtras.map((clientExtra: { id: string; selected?: boolean }) => {
       const serverExtra = availableExtras.find((e) => e.id === clientExtra.id);
       if (!serverExtra) return null;
       return { ...serverExtra, selected: clientExtra.selected ?? true };
