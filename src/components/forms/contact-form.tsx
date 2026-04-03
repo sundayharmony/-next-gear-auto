@@ -44,7 +44,6 @@ export function ContactForm() {
         setSubmitted(true);
       } catch (err) {
         setSubmitError(err instanceof Error ? err.message : "An error occurred. Please try again.");
-        throw err;
       } finally {
         setIsSubmitting(false);
       }

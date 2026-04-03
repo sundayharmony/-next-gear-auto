@@ -17,14 +17,10 @@ export async function POST(request: Request) {
   let event: Stripe.Event;
 
   try {
-    // Always verify webhooks. Log warning in development if key is missing.
+    // Fail-closed: reject ALL webhook requests if secret is not properly configured
     if (!webhookSecret || webhookSecret.includes("REPLACE")) {
-      if (process.env.NODE_ENV === "development") {
-        logger.warn("DEV WARNING: Webhook secret not configured - verification will fail");
-      } else {
-        logger.error("SECURITY: Webhook secret not configured - rejecting request");
-        return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
-      }
+      logger.error("SECURITY: Webhook secret not configured - rejecting request");
+      return NextResponse.json({ error: "Webhook secret not configured" }, { status: 500 });
     }
     if (!sig) {
       logger.error("SECURITY: Missing webhook signature - rejecting request");

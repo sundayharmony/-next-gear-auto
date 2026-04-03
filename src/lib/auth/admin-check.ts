@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
+import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 
 /**
  * Verify the request comes from an authenticated admin.
@@ -30,8 +31,19 @@ export async function verifyAdmin(
   }
 
   // ── Method 2: Legacy header-based auth (backward compat) ──────────
-  // TODO: Add rate limiting for legacy header fallback to prevent brute force attacks
-  // on this deprecated endpoint. Consider using loginLimiter from rate-limit.ts.
+  // Rate-limit legacy header to prevent brute force attacks
+  const clientIp = getClientIp(req);
+  const rateCheck = loginLimiter.check(`admin-legacy:${clientIp}`);
+  if (!rateCheck.allowed) {
+    return {
+      authorized: false,
+      response: new NextResponse(
+        JSON.stringify({ success: false, message: "Too many requests. Please try again later." }),
+        { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(Math.max(0, Math.ceil((rateCheck.resetAt - Date.now()) / 1000))) } }
+      ),
+    };
+  }
+
   const adminId = req.headers.get("x-admin-id");
   if (!adminId) {
     return {

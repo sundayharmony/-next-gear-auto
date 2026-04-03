@@ -33,3 +33,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backup files
+*.bak
+*.bak1
+*.backup
+
+# dev artifacts
+NGA-Bug-Audit-*.xlsx
+email-previews.html

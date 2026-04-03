@@ -186,7 +186,7 @@ export function SignaturePad({
       </div>
       <div
         className={`relative rounded-lg border-2 w-full max-w-[400px] ${
-          hasContent ? "border-purple-300 bg-white" : "border-dashed border-gray-300 bg-gray-50"
+          hasContent ? "border-solid border-purple-300 bg-white" : "border-dashed border-gray-300 bg-gray-50"
         } transition-colors`}
       >
         <canvas
