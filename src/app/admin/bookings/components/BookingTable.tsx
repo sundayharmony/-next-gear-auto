@@ -165,7 +165,7 @@ export default function BookingTable({
               {(booking.pickup_time || booking.pickup_location_name) && (
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mb-3">
                   {booking.pickup_time && (
-                    <span>{booking.pickup_time}{booking.return_time ? ` – ${booking.return_time}` : ""}</span>
+                    <span>{formatTime(booking.pickup_time)}{booking.return_time ? ` – ${formatTime(booking.return_time)}` : ""}</span>
                   )}
                   {booking.pickup_location_name && (
                     <span className="flex items-center gap-0.5 truncate max-w-[180px]">
@@ -298,9 +298,9 @@ export default function BookingTable({
                           {formatDateShort(booking.pickup_date)} → {formatDateShort(booking.return_date)}
                         </div>
                         <div className="text-xs text-gray-500">
-                          {booking.pickup_time && `${booking.pickup_time}`}
+                          {booking.pickup_time && formatTime(booking.pickup_time)}
                           {booking.pickup_time && booking.return_time && " – "}
-                          {booking.return_time && `${booking.return_time}`}
+                          {booking.return_time && formatTime(booking.return_time)}
                         </div>
                         {booking.pickup_location_name && (
                           <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[140px] flex items-center gap-1"><MapPin className="h-3 w-3 flex-shrink-0" /> {booking.pickup_location_name}</p>
