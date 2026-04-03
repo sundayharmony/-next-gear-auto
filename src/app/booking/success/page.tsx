@@ -60,7 +60,13 @@ function SuccessContent() {
       const storageKey = `nga_agreement_sigs_${bookingId}`;
       try {
         if (typeof window === "undefined") return;
-        const savedSigs = localStorage.getItem(storageKey);
+        let savedSigs: string | null = null;
+        try {
+          savedSigs = localStorage.getItem(storageKey);
+        } catch {
+          // localStorage unavailable (private browsing)
+          return;
+        }
         if (!savedSigs) return;
 
         let signatures: Record<string, unknown>;

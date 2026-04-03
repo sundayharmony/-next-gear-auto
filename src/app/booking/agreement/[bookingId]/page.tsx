@@ -67,11 +67,14 @@ export default function AgreementSigningPage() {
 
   // Fetch booking details
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchBooking() {
       try {
         const res = await fetch(`/api/bookings?id=${bookingId}`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
+        if (!isMounted) return;
         if (data.success && data.data) {
           setBooking(data.data);
           // Fetch vehicle details if vehicle_id is available
@@ -80,7 +83,7 @@ export default function AgreementSigningPage() {
               const vRes = await fetch("/api/vehicles");
               if (!vRes.ok) throw new Error(`HTTP ${vRes.status}`);
               const vData = await vRes.json();
-              if (vData.success && Array.isArray(vData.data)) {
+              if (isMounted && vData.success && Array.isArray(vData.data)) {
                 const v = vData.data.find((veh: { id: string }) => veh.id === data.data.vehicle_id);
                 if (v) setVehicle(v);
               }
@@ -97,9 +100,9 @@ export default function AgreementSigningPage() {
           setError("Booking not found. Please check your booking ID.");
         }
       } catch {
-        setError("Failed to load booking details.");
+        if (isMounted) setError("Failed to load booking details.");
       }
-      setLoading(false);
+      if (isMounted) setLoading(false);
     }
     if (bookingId && isValidId) {
       fetchBooking();
@@ -107,6 +110,8 @@ export default function AgreementSigningPage() {
       setError("Invalid booking ID format.");
       setLoading(false);
     }
+
+    return () => { isMounted = false; };
   }, [bookingId, isValidId]);
 
   const handleSignatureChange = useCallback(

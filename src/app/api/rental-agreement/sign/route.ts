@@ -219,9 +219,12 @@ export async function POST(req: NextRequest) {
     setText("t17", booking.customer_email || "");
 
     // Compact MM/DD/YYYY formatter for PDF form fields
-    const pdfDate = (d: string) => {
-      if (!d) return "";
-      const [y, m, day] = d.split("-").map(Number);
+    const pdfDate = (d: string | null | undefined) => {
+      if (!d || typeof d !== "string") return "";
+      const parts = d.split("-");
+      if (parts.length !== 3) return "";
+      const [y, m, day] = parts.map(Number);
+      if (!y || !m || !day || isNaN(y) || isNaN(m) || isNaN(day)) return "";
       const date = new Date(y, m - 1, day);
       return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
     };

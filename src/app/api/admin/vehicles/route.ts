@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       logger.error("Admin vehicles GET Supabase error:", error);
-      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to load vehicles" }, { status: 500 });
     }
 
     const vehicles = (data || []).map((v) => ({
@@ -73,6 +73,18 @@ export async function POST(request: NextRequest) {
     if (body.year !== undefined && (typeof body.year !== "number" || body.year < 1900 || body.year > new Date().getFullYear() + 1)) {
       return NextResponse.json({ success: false, message: "Invalid vehicle year" }, { status: 400 });
     }
+    if (body.purchasePrice !== undefined && (typeof body.purchasePrice !== "number" || body.purchasePrice < 0 || !Number.isFinite(body.purchasePrice))) {
+      return NextResponse.json({ success: false, message: "Purchase price must be a non-negative number" }, { status: 400 });
+    }
+    if (body.mileage !== undefined && (typeof body.mileage !== "number" || body.mileage < 0 || !Number.isFinite(body.mileage))) {
+      return NextResponse.json({ success: false, message: "Mileage must be a non-negative number" }, { status: 400 });
+    }
+    if (body.monthlyPayment !== undefined && (typeof body.monthlyPayment !== "number" || body.monthlyPayment < 0 || !Number.isFinite(body.monthlyPayment))) {
+      return NextResponse.json({ success: false, message: "Monthly payment must be a non-negative number" }, { status: 400 });
+    }
+    if (body.paymentDayOfMonth !== undefined && (typeof body.paymentDayOfMonth !== "number" || body.paymentDayOfMonth < 1 || body.paymentDayOfMonth > 31)) {
+      return NextResponse.json({ success: false, message: "Payment day must be between 1 and 31" }, { status: 400 });
+    }
 
     const id = crypto.randomUUID();
 
@@ -107,7 +119,7 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       logger.error("Vehicle create error:", error);
-      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to create vehicle" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data }, { status: 201 });
@@ -142,6 +154,18 @@ export async function PUT(request: NextRequest) {
     if (updates.year !== undefined && (typeof updates.year !== "number" || updates.year < 1900 || updates.year > new Date().getFullYear() + 1)) {
       return NextResponse.json({ success: false, message: "Invalid vehicle year" }, { status: 400 });
     }
+    if (updates.purchasePrice !== undefined && (typeof updates.purchasePrice !== "number" || updates.purchasePrice < 0 || !Number.isFinite(updates.purchasePrice))) {
+      return NextResponse.json({ success: false, message: "Purchase price must be a non-negative number" }, { status: 400 });
+    }
+    if (updates.mileage !== undefined && (typeof updates.mileage !== "number" || updates.mileage < 0 || !Number.isFinite(updates.mileage))) {
+      return NextResponse.json({ success: false, message: "Mileage must be a non-negative number" }, { status: 400 });
+    }
+    if (updates.monthlyPayment !== undefined && (typeof updates.monthlyPayment !== "number" || updates.monthlyPayment < 0 || !Number.isFinite(updates.monthlyPayment))) {
+      return NextResponse.json({ success: false, message: "Monthly payment must be a non-negative number" }, { status: 400 });
+    }
+    if (updates.paymentDayOfMonth !== undefined && (typeof updates.paymentDayOfMonth !== "number" || updates.paymentDayOfMonth < 1 || updates.paymentDayOfMonth > 31)) {
+      return NextResponse.json({ success: false, message: "Payment day must be between 1 and 31" }, { status: 400 });
+    }
 
     const dbUpdates: Record<string, unknown> = {};
     if (updates.year !== undefined) dbUpdates.year = updates.year;
@@ -173,7 +197,7 @@ export async function PUT(request: NextRequest) {
 
     if (error) {
       logger.error("Vehicle update error:", error);
-      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to update vehicle" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: "Vehicle updated" });
@@ -206,7 +230,7 @@ export async function DELETE(request: NextRequest) {
 
     if (error) {
       logger.error("Vehicle delete error:", error);
-      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to delete vehicle" }, { status: 500 });
     }
 
     // Clean up images from Supabase storage after successful delete

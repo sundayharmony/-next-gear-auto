@@ -669,12 +669,15 @@ export async function PATCH(request: NextRequest) {
 
     // If status changed to cancelled, delete blocked dates for this vehicle in the booking's date range
     if (updateFields.status === "cancelled" && booking.vehicle_id && booking.pickup_date && booking.return_date) {
-      await supabase
+      const { error: blockedErr } = await supabase
         .from("blocked_dates")
         .delete()
         .eq("vehicle_id", booking.vehicle_id)
         .gte("end_date", booking.pickup_date)
         .lte("start_date", booking.return_date);
+      if (blockedErr) {
+        logger.error("Failed to delete blocked dates during cancellation:", blockedErr);
+      }
     }
 
     // Detect if customer email was changed

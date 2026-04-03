@@ -52,6 +52,27 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    // Validate file magic bytes match declared MIME type
+    const magicBytes = new Uint8Array(arrayBuffer.slice(0, 12));
+    const isJpeg = magicBytes[0] === 0xFF && magicBytes[1] === 0xD8 && magicBytes[2] === 0xFF;
+    const isPng = magicBytes[0] === 0x89 && magicBytes[1] === 0x50 && magicBytes[2] === 0x4E && magicBytes[3] === 0x47;
+    const isWebp = magicBytes[0] === 0x52 && magicBytes[1] === 0x49 && magicBytes[2] === 0x46 && magicBytes[3] === 0x46 &&
+                   magicBytes[8] === 0x57 && magicBytes[9] === 0x45 && magicBytes[10] === 0x42 && magicBytes[11] === 0x50;
+    const isSvg = file.type === "image/svg+xml"; // SVG is text-based, no magic bytes
+
+    const magicValid =
+      (file.type === "image/jpeg" && isJpeg) ||
+      (file.type === "image/png" && isPng) ||
+      (file.type === "image/webp" && isWebp) ||
+      isSvg;
+
+    if (!magicValid) {
+      return NextResponse.json(
+        { success: false, error: "File content does not match declared type" },
+        { status: 400 }
+      );
+    }
+
     // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("vehicle-images")
@@ -63,7 +84,7 @@ export async function POST(request: NextRequest) {
     if (uploadError) {
       logger.error("Supabase storage upload error:", uploadError);
       return NextResponse.json(
-        { success: false, error: "Failed to upload image: " + uploadError.message },
+        { success: false, error: "Failed to upload image" },
         { status: 500 }
       );
     }
@@ -152,7 +173,7 @@ export async function DELETE(request: NextRequest) {
     const { error } = await supabase.storage.from(bucket).remove([filePath]);
     if (error) {
       logger.error("Failed to remove image from storage:", error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, error: "Failed to remove image" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });

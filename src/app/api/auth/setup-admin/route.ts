@@ -2,10 +2,24 @@ import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
 import { logger } from "@/lib/utils/logger";
+import { createRateLimiter, getClientIp } from "@/lib/security/rate-limit";
+
+// Strict rate limit: 3 calls per 24 hours per IP
+const setupLimiter = createRateLimiter({ windowMs: 24 * 60 * 60 * 1000, max: 3 });
 
 // One-time setup: creates or updates the admin account with a hashed password
 // Call this once via: POST /api/auth/setup-admin with { "secret": "SUPABASE_SERVICE_KEY first 20 chars" }
 export async function POST(request: Request) {
+  // Rate limit to prevent brute force
+  const ip = getClientIp(request);
+  const rateCheck = setupLimiter.check(`setup-admin:${ip}`);
+  if (!rateCheck.allowed) {
+    return NextResponse.json(
+      { success: false, message: "Too many requests. Please try again later." },
+      { status: 429, headers: { "Retry-After": String(Math.max(0, Math.ceil((rateCheck.resetAt - Date.now()) / 1000))) } }
+    );
+  }
+
   try {
     const body = await request.json();
 
@@ -23,12 +37,12 @@ export async function POST(request: Request) {
     const adminDb = getServiceSupabase();
     const adminEmail = "admin@nextgearauto.com";
 
-    // Get password from environment variable or request body
-    let adminPassword = process.env.ADMIN_PASSWORD || body.password;
+    // Password must come from environment variable only (never from request body)
+    const adminPassword = process.env.ADMIN_PASSWORD;
 
     if (!adminPassword) {
       return NextResponse.json(
-        { success: false, message: "Admin password must be provided via ADMIN_PASSWORD env var or password in request body" },
+        { success: false, message: "Admin password must be set via ADMIN_PASSWORD environment variable" },
         { status: 400 }
       );
     }
@@ -50,8 +64,9 @@ export async function POST(request: Request) {
         .eq("email", adminEmail);
 
       if (error) {
+        logger.error("Failed to update admin:", error);
         return NextResponse.json(
-          { success: false, message: `Failed to update admin: ${error.message}` },
+          { success: false, message: "Failed to update admin" },
           { status: 500 }
         );
       }
@@ -74,8 +89,9 @@ export async function POST(request: Request) {
         });
 
       if (error) {
+        logger.error("Failed to create admin:", error);
         return NextResponse.json(
-          { success: false, message: `Failed to create admin: ${error.message}` },
+          { success: false, message: "Failed to create admin" },
           { status: 500 }
         );
       }

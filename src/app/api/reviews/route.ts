@@ -90,16 +90,16 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (rating < 1 || rating > 5) {
+    if (typeof rating !== "number" || !Number.isInteger(rating) || rating < 1 || rating > 5) {
       return NextResponse.json(
-        { success: false, error: "Rating must be between 1 and 5" },
+        { success: false, error: "Rating must be an integer between 1 and 5" },
         { status: 400 }
       );
     }
 
-    if (text.length > 500) {
+    if (typeof text !== "string" || text.trim().length === 0 || text.length > 500) {
       return NextResponse.json(
-        { success: false, error: "Review text cannot exceed 500 characters" },
+        { success: false, error: "Review text must be between 1 and 500 characters" },
         { status: 400 }
       );
     }

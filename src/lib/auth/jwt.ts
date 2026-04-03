@@ -24,7 +24,7 @@ export interface TokenPayload extends JWTPayload {
 const COOKIE_NAME = "nga_token";
 const TOKEN_EXPIRY = "1h";           // access token lifetime
 const REFRESH_COOKIE = "nga_refresh";
-const REFRESH_EXPIRY = "7d";         // refresh token lifetime
+const REFRESH_EXPIRY = "48h";        // refresh token lifetime
 
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
@@ -117,7 +117,7 @@ export function setAuthCookies(
     secure: true, // Always secure, even in dev (localhost works with Secure cookies)
     sameSite: "strict",
     path: "/",
-    maxAge: 60 * 60 * 24 * 7, // 7 days in seconds
+    maxAge: 60 * 60 * 48, // 48 hours in seconds
   });
 
   return response;
