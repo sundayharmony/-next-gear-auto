@@ -165,15 +165,15 @@ body {
 /* ═══ Admin Dark Mode ═══ */
 
 .admin-dark {
-  background-color: #0f172a !important;
+  background-color: #000000 !important;
   color: #e2e8f0;
 }
 
-/* Backgrounds */
-.admin-dark .bg-white { background-color: #1e293b !important; }
-.admin-dark .bg-gray-50 { background-color: #0f172a !important; }
-.admin-dark .bg-gray-100 { background-color: #1e293b !important; }
-.admin-dark .bg-gray-200 { background-color: #334155 !important; }
+/* Backgrounds — true black base with dark gray cards */
+.admin-dark .bg-white { background-color: #111111 !important; }
+.admin-dark .bg-gray-50 { background-color: #000000 !important; }
+.admin-dark .bg-gray-100 { background-color: #111111 !important; }
+.admin-dark .bg-gray-200 { background-color: #222222 !important; }
 
 /* Text colors */
 .admin-dark .text-gray-900 { color: #f1f5f9 !important; }
@@ -184,31 +184,31 @@ body {
 .admin-dark .text-gray-400 { color: #64748b !important; }
 
 /* Borders */
-.admin-dark .border-gray-200 { border-color: #334155 !important; }
-.admin-dark .border-gray-100 { border-color: #1e293b !important; }
-.admin-dark .border-gray-300 { border-color: #475569 !important; }
+.admin-dark .border-gray-200 { border-color: #222222 !important; }
+.admin-dark .border-gray-100 { border-color: #1a1a1a !important; }
+.admin-dark .border-gray-300 { border-color: #333333 !important; }
 
 /* Divide */
-.admin-dark .divide-gray-200 > :not(:last-child) { border-color: #334155 !important; }
-.admin-dark .divide-gray-100 > :not(:last-child) { border-color: #1e293b !important; }
+.admin-dark .divide-gray-200 > :not(:last-child) { border-color: #222222 !important; }
+.admin-dark .divide-gray-100 > :not(:last-child) { border-color: #1a1a1a !important; }
 
 /* Form inputs */
 .admin-dark input,
 .admin-dark textarea,
 .admin-dark select {
-  background-color: #1e293b !important;
+  background-color: #111111 !important;
   color: #e2e8f0 !important;
-  border-color: #475569 !important;
+  border-color: #333333 !important;
 }
 .admin-dark input::placeholder,
 .admin-dark textarea::placeholder {
-  color: #64748b !important;
+  color: #555555 !important;
 }
 
 /* Cards and panels */
-.admin-dark .bg-white\/80 { background-color: rgba(30, 41, 59, 0.8) !important; }
-.admin-dark .bg-white\/95 { background-color: rgba(30, 41, 59, 0.95) !important; }
-.admin-dark .bg-gray-50\/80 { background-color: rgba(15, 23, 42, 0.8) !important; }
+.admin-dark .bg-white\/80 { background-color: rgba(17, 17, 17, 0.85) !important; }
+.admin-dark .bg-white\/95 { background-color: rgba(17, 17, 17, 0.95) !important; }
+.admin-dark .bg-gray-50\/80 { background-color: rgba(0, 0, 0, 0.8) !important; }
 
 /* Shadow adjustments */
 .admin-dark .shadow-sm,
@@ -217,84 +217,84 @@ body {
 .admin-dark .shadow-lg,
 .admin-dark .shadow-xl,
 .admin-dark .shadow-2xl {
-  --tw-shadow-color: rgba(0, 0, 0, 0.3) !important;
+  --tw-shadow-color: rgba(0, 0, 0, 0.5) !important;
 }
 
 /* Ring colors */
-.admin-dark .ring-white { --tw-ring-color: #1e293b !important; }
+.admin-dark .ring-white { --tw-ring-color: #111111 !important; }
 
 /* Hover states */
-.admin-dark .hover\:bg-gray-50:hover { background-color: #334155 !important; }
-.admin-dark .hover\:bg-gray-100:hover { background-color: #334155 !important; }
-.admin-dark .hover\:bg-gray-200:hover { background-color: #475569 !important; }
+.admin-dark .hover\:bg-gray-50:hover { background-color: #1a1a1a !important; }
+.admin-dark .hover\:bg-gray-100:hover { background-color: #1a1a1a !important; }
+.admin-dark .hover\:bg-gray-200:hover { background-color: #222222 !important; }
 
 /* Purple tints in dark mode */
-.admin-dark .bg-purple-50 { background-color: rgba(124, 58, 237, 0.15) !important; }
-.admin-dark .bg-purple-100 { background-color: rgba(124, 58, 237, 0.25) !important; }
-.admin-dark .hover\:bg-purple-50:hover { background-color: rgba(124, 58, 237, 0.2) !important; }
+.admin-dark .bg-purple-50 { background-color: rgba(124, 58, 237, 0.12) !important; }
+.admin-dark .bg-purple-100 { background-color: rgba(124, 58, 237, 0.2) !important; }
+.admin-dark .hover\:bg-purple-50:hover { background-color: rgba(124, 58, 237, 0.18) !important; }
 .admin-dark .border-purple-200 { border-color: rgba(124, 58, 237, 0.3) !important; }
 
 /* Yellow/warning tints */
-.admin-dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.15) !important; }
-.admin-dark .border-yellow-200 { border-color: rgba(234, 179, 8, 0.3) !important; }
+.admin-dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.1) !important; }
+.admin-dark .border-yellow-200 { border-color: rgba(234, 179, 8, 0.25) !important; }
 
 /* Green tints */
-.admin-dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.15) !important; }
-.admin-dark .border-green-200 { border-color: rgba(34, 197, 94, 0.3) !important; }
+.admin-dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.1) !important; }
+.admin-dark .border-green-200 { border-color: rgba(34, 197, 94, 0.25) !important; }
 
 /* Red tints */
-.admin-dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.15) !important; }
-.admin-dark .border-red-200 { border-color: rgba(239, 68, 68, 0.3) !important; }
+.admin-dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.1) !important; }
+.admin-dark .border-red-200 { border-color: rgba(239, 68, 68, 0.25) !important; }
 
 /* Blue tints */
-.admin-dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.15) !important; }
-.admin-dark .border-blue-200 { border-color: rgba(59, 130, 246, 0.3) !important; }
+.admin-dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.1) !important; }
+.admin-dark .border-blue-200 { border-color: rgba(59, 130, 246, 0.25) !important; }
 
 /* Table striping */
-.admin-dark tr:nth-child(even) { background-color: rgba(30, 41, 59, 0.5); }
-.admin-dark thead { background-color: #1e293b !important; }
+.admin-dark tr:nth-child(even) { background-color: rgba(17, 17, 17, 0.6); }
+.admin-dark thead { background-color: #111111 !important; }
 
 /* Scrollbar in dark mode */
-.admin-dark ::-webkit-scrollbar-track { background: #1e293b; }
-.admin-dark ::-webkit-scrollbar-thumb { background: #475569; }
+.admin-dark ::-webkit-scrollbar-track { background: #0a0a0a; }
+.admin-dark ::-webkit-scrollbar-thumb { background: #333333; }
 .admin-dark ::-webkit-scrollbar-thumb:hover { background: #7c3aed; }
 
 /* Bottom tab bar & header glass effect */
 .admin-dark .bg-white\/80,
-.admin-dark [class*="bg-white/80"] { background-color: rgba(15, 23, 42, 0.85) !important; }
+.admin-dark [class*="bg-white/80"] { background-color: rgba(0, 0, 0, 0.85) !important; }
 
 /* Border opacity variants */
-.admin-dark .border-gray-200\/50 { border-color: rgba(51, 65, 85, 0.5) !important; }
-.admin-dark .border-gray-100\/50 { border-color: rgba(30, 41, 59, 0.5) !important; }
+.admin-dark .border-gray-200\/50 { border-color: rgba(34, 34, 34, 0.7) !important; }
+.admin-dark .border-gray-100\/50 { border-color: rgba(26, 26, 26, 0.7) !important; }
 
 /* Notification dropdown */
-.admin-dark .bg-white\/95 { background-color: rgba(30, 41, 59, 0.95) !important; }
+.admin-dark .bg-white\/95 { background-color: rgba(17, 17, 17, 0.97) !important; }
 
 /* Active states */
-.admin-dark .active\:bg-gray-200:active { background-color: #475569 !important; }
-.admin-dark .active\:bg-gray-300:active { background-color: #475569 !important; }
-.admin-dark .active\:bg-purple-100:active { background-color: rgba(124, 58, 237, 0.3) !important; }
+.admin-dark .active\:bg-gray-200:active { background-color: #2a2a2a !important; }
+.admin-dark .active\:bg-gray-300:active { background-color: #2a2a2a !important; }
+.admin-dark .active\:bg-purple-100:active { background-color: rgba(124, 58, 237, 0.25) !important; }
 
 /* Disabled/muted states */
-.admin-dark .bg-gray-50\/50 { background-color: rgba(15, 23, 42, 0.5) !important; }
-.admin-dark .text-gray-300 { color: #475569 !important; }
+.admin-dark .bg-gray-50\/50 { background-color: rgba(0, 0, 0, 0.5) !important; }
+.admin-dark .text-gray-300 { color: #444444 !important; }
 
 /* Badge and status chip backgrounds */
-.admin-dark .bg-gray-100\/80 { background-color: rgba(30, 41, 59, 0.8) !important; }
+.admin-dark .bg-gray-100\/80 { background-color: rgba(17, 17, 17, 0.8) !important; }
 
 /* Focus ring */
-.admin-dark .ring-gray-900 { --tw-ring-color: #0f172a !important; }
+.admin-dark .ring-gray-900 { --tw-ring-color: #000000 !important; }
 
 /* Desktop main content area */
-.admin-dark main { background-color: #0f172a; }
+.admin-dark main { background-color: #000000; }
 
 /* Amber/orange tints */
-.admin-dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.15) !important; }
-.admin-dark .bg-amber-50\/50 { background-color: rgba(245, 158, 11, 0.1) !important; }
-.admin-dark .border-amber-400 { border-color: rgba(245, 158, 11, 0.5) !important; }
+.admin-dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.1) !important; }
+.admin-dark .bg-amber-50\/50 { background-color: rgba(245, 158, 11, 0.08) !important; }
+.admin-dark .border-amber-400 { border-color: rgba(245, 158, 11, 0.4) !important; }
 
 /* More dropdown menu items */
 .admin-dark .hover\:text-gray-600:hover { color: #cbd5e1 !important; }
 
 /* Card shadows become darker */
-.admin-dark [class*="shadow-"] { --tw-shadow: 0 1px 3px 0 rgba(0,0,0,0.4), 0 1px 2px -1px rgba(0,0,0,0.4) !important; }
+.admin-dark [class*="shadow-"] { --tw-shadow: 0 1px 3px 0 rgba(0,0,0,0.6), 0 1px 2px -1px rgba(0,0,0,0.6) !important; }
