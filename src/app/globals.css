@@ -303,3 +303,86 @@ body:has(.admin-dark) {
 
 /* Card shadows become darker */
 .admin-dark [class*="shadow-"] { --tw-shadow: 0 1px 3px 0 rgba(0,0,0,0.6), 0 1px 2px -1px rgba(0,0,0,0.6) !important; }
+
+/* ═══ Additional Dark Mode Overrides ═══ */
+
+/* Skeleton shimmer */
+.admin-dark .bg-gray-200\/70 { background-color: rgba(34, 34, 34, 0.7) !important; }
+
+/* Glass/overlay opacity variants */
+.admin-dark .bg-white\/90 { background-color: rgba(17, 17, 17, 0.9) !important; }
+.admin-dark .bg-white\/20 { background-color: rgba(255, 255, 255, 0.08) !important; }
+.admin-dark .bg-white\/10 { background-color: rgba(255, 255, 255, 0.06) !important; }
+
+/* Pagination active button — avoid invisible dark-on-dark */
+.admin-dark .bg-gray-900.text-white { background-color: #7C3AED !important; }
+.admin-dark .bg-gray-900 { background-color: #1a1a1a !important; }
+
+/* Modal & dialog ring offset */
+.admin-dark .ring-offset-white { --tw-ring-offset-color: #111111 !important; }
+
+/* Text colors for toast-like accents */
+.admin-dark .text-green-900 { color: #4ade80 !important; }
+.admin-dark .text-red-900 { color: #f87171 !important; }
+.admin-dark .text-amber-900 { color: #fbbf24 !important; }
+.admin-dark .text-purple-900 { color: #c084fc !important; }
+
+/* Border opacity variants missed */
+.admin-dark .border-gray-100\/50 { border-color: rgba(26, 26, 26, 0.7) !important; }
+
+/* Hover gray for mobile header buttons */
+.admin-dark .hover\:bg-gray-200:hover { background-color: #222222 !important; }
+
+/* Disabled button states */
+.admin-dark .disabled\:opacity-30:disabled { opacity: 0.2 !important; }
+
+/* ═══ Dashboard & page color tints ═══ */
+
+/* Emerald */
+.admin-dark .bg-emerald-50 { background-color: rgba(16, 185, 129, 0.1) !important; }
+.admin-dark .bg-emerald-100 { background-color: rgba(16, 185, 129, 0.15) !important; }
+
+/* Indigo */
+.admin-dark .bg-indigo-100 { background-color: rgba(99, 102, 241, 0.15) !important; }
+.admin-dark .bg-indigo-50 { background-color: rgba(99, 102, 241, 0.1) !important; }
+
+/* Sky */
+.admin-dark .bg-sky-100 { background-color: rgba(14, 165, 233, 0.15) !important; }
+.admin-dark .bg-sky-50 { background-color: rgba(14, 165, 233, 0.1) !important; }
+
+/* Orange */
+.admin-dark .bg-orange-100 { background-color: rgba(249, 115, 22, 0.15) !important; }
+.admin-dark .bg-orange-50 { background-color: rgba(249, 115, 22, 0.1) !important; }
+
+/* Amber 100 (dashboard management card) */
+.admin-dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.15) !important; }
+
+/* Pink / Rose (if used in reviews/ratings) */
+.admin-dark .bg-pink-50 { background-color: rgba(236, 72, 153, 0.1) !important; }
+.admin-dark .bg-rose-50 { background-color: rgba(244, 63, 94, 0.1) !important; }
+
+/* Stronger purple variants */
+.admin-dark .bg-purple-100 { background-color: rgba(124, 58, 237, 0.2) !important; }
+
+/* Focus ring offset default */
+.admin-dark [class*="ring-offset-"] { --tw-ring-offset-color: #111111 !important; }
+
+/* ═══ Colored text readable on dark backgrounds ═══ */
+/* -700 variants are too dark on black; lighten to -400 equivalents */
+.admin-dark .text-green-700 { color: #4ade80 !important; }
+.admin-dark .text-red-700 { color: #f87171 !important; }
+.admin-dark .text-blue-700 { color: #60a5fa !important; }
+.admin-dark .text-yellow-700 { color: #facc15 !important; }
+.admin-dark .text-amber-700 { color: #fbbf24 !important; }
+.admin-dark .text-purple-700 { color: #a78bfa !important; }
+.admin-dark .text-indigo-700 { color: #818cf8 !important; }
+.admin-dark .text-sky-700 { color: #38bdf8 !important; }
+.admin-dark .text-emerald-700 { color: #34d399 !important; }
+.admin-dark .text-orange-700 { color: #fb923c !important; }
+.admin-dark .text-pink-700 { color: #f472b6 !important; }
+
+/* -600 colored text (used for status icons/accents) */
+.admin-dark .text-green-600 { color: #22c55e !important; }
+.admin-dark .text-blue-600 { color: #3b82f6 !important; }
+.admin-dark .text-yellow-600 { color: #eab308 !important; }
+.admin-dark .text-emerald-600 { color: #10b981 !important; }

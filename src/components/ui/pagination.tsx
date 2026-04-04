@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { cn } from "@/lib/utils/cn";
 
 interface PaginationProps {
   currentPage: number;
@@ -83,11 +84,12 @@ export function Pagination({
             <button
               key={page}
               onClick={() => onPageChange(page)}
-              className={`min-w-[40px] h-10 sm:min-w-[32px] sm:h-8 rounded text-sm font-medium ${
+              className={cn(
+                "min-w-[40px] h-10 sm:min-w-[32px] sm:h-8 rounded text-sm font-medium",
                 page === currentPage
-                  ? "bg-gray-900 text-white"
+                  ? "bg-purple-600 text-white"
                   : "hover:bg-gray-100 text-gray-600"
-              }`}
+              )}
             >
               {page}
             </button>
