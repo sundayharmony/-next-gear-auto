@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Ticket, Bell, MapPin, ShieldBan, Loader2
+  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Ticket, Bell, MapPin, ShieldBan, Loader2, Moon, Sun
 } from "lucide-react";
 import { Instagram } from "@/components/icons/instagram";
 import { Button } from "@/components/ui/button";
@@ -54,7 +54,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
-  const { isDark } = useTheme();
+  const { isDark, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -318,7 +318,25 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Footer */}
-        <div className="px-3 py-4 border-t border-gray-800">
+        <div className="px-3 py-4 border-t border-gray-800 space-y-1">
+          {/* Dark mode toggle */}
+          <button
+            onClick={toggleTheme}
+            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+            aria-label="Toggle dark mode"
+          >
+            {isDark ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
+            {isDark ? "Light Mode" : "Dark Mode"}
+            <span className={cn(
+              "ml-auto relative inline-flex h-5 w-9 items-center rounded-full transition-colors",
+              isDark ? "bg-purple-600" : "bg-gray-600"
+            )}>
+              <span className={cn(
+                "inline-block h-3.5 w-3.5 rounded-full bg-white shadow-sm transition-transform",
+                isDark ? "translate-x-4" : "translate-x-0.5"
+              )} />
+            </span>
+          </button>
           <button
             disabled={loggingOut}
             onClick={async () => { setLoggingOut(true); await logout(); setSidebarOpen(false); router.push("/"); }}

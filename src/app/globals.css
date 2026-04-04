@@ -266,3 +266,35 @@ body {
 /* Border opacity variants */
 .admin-dark .border-gray-200\/50 { border-color: rgba(51, 65, 85, 0.5) !important; }
 .admin-dark .border-gray-100\/50 { border-color: rgba(30, 41, 59, 0.5) !important; }
+
+/* Notification dropdown */
+.admin-dark .bg-white\/95 { background-color: rgba(30, 41, 59, 0.95) !important; }
+
+/* Active states */
+.admin-dark .active\:bg-gray-200:active { background-color: #475569 !important; }
+.admin-dark .active\:bg-gray-300:active { background-color: #475569 !important; }
+.admin-dark .active\:bg-purple-100:active { background-color: rgba(124, 58, 237, 0.3) !important; }
+
+/* Disabled/muted states */
+.admin-dark .bg-gray-50\/50 { background-color: rgba(15, 23, 42, 0.5) !important; }
+.admin-dark .text-gray-300 { color: #475569 !important; }
+
+/* Badge and status chip backgrounds */
+.admin-dark .bg-gray-100\/80 { background-color: rgba(30, 41, 59, 0.8) !important; }
+
+/* Focus ring */
+.admin-dark .ring-gray-900 { --tw-ring-color: #0f172a !important; }
+
+/* Desktop main content area */
+.admin-dark main { background-color: #0f172a; }
+
+/* Amber/orange tints */
+.admin-dark .bg-amber-50 { background-color: rgba(245, 158, 11, 0.15) !important; }
+.admin-dark .bg-amber-50\/50 { background-color: rgba(245, 158, 11, 0.1) !important; }
+.admin-dark .border-amber-400 { border-color: rgba(245, 158, 11, 0.5) !important; }
+
+/* More dropdown menu items */
+.admin-dark .hover\:text-gray-600:hover { color: #cbd5e1 !important; }
+
+/* Card shadows become darker */
+.admin-dark [class*="shadow-"] { --tw-shadow: 0 1px 3px 0 rgba(0,0,0,0.4), 0 1px 2px -1px rgba(0,0,0,0.4) !important; }
