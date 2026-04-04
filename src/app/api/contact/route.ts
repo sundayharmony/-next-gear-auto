@@ -53,7 +53,7 @@ export async function POST(request: Request) {
     await transporter.sendMail({
       from: `"NextGearAuto Website" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
       to: process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com",
-      replyTo: safeEmail,
+      replyTo: email.toLowerCase().trim(),
       subject: `Website Inquiry from ${safeName}`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -81,7 +81,7 @@ export async function POST(request: Request) {
     // Send auto-reply to customer
     await transporter.sendMail({
       from: `"NextGearAuto" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
-      to: safeEmail,
+      to: email.toLowerCase().trim(),
       subject: "We received your message — NextGearAuto",
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">

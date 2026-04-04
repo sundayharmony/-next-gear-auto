@@ -222,7 +222,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   // Handle edit mode toggle
   const toggleEditMode = () => {
     if (!editMode) {
-      setEditData(booking);
+      setEditData(JSON.parse(JSON.stringify(booking)));
     }
     setEditMode(!editMode);
   };
