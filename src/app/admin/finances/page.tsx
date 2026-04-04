@@ -1152,109 +1152,111 @@ export default function AdminFinancesPage() {
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Finances</h1>
-              <p className="text-gray-300 mt-1 hidden sm:block">Track revenue, expenses, and profitability</p>
+              <p className="text-purple-200 mt-1 hidden sm:block">Track revenue, expenses, and profitability</p>
             </div>
             <Button
               onClick={fetchData}
               variant="outline"
               size="sm"
-              className="border-white/20 text-white hover:bg-white/10 bg-transparent hidden sm:inline-flex"
+              className="border-purple-400 text-purple-200 hover:bg-purple-800 hover:text-white hidden sm:inline-flex"
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
           </div>
+        </div>
+      </section>
 
-          {/* Date range + tabs */}
-          <div className="flex flex-col gap-4 mt-6">
-            <div className="flex flex-col sm:flex-row sm:items-end gap-3">
-              <div className="flex flex-col gap-1.5">
-                <p className="text-xs font-medium text-gray-300">Date Range</p>
-                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-3 py-2 sm:py-1.5">
-                  <Calendar className="h-4 w-4 text-gray-300 shrink-0" />
-                  <input
-                    type="date"
-                    value={draftDateRange.from}
-                    onChange={(e) => {
-                      const newFrom = e.target.value;
-                      setDraftDateRange((p) => {
-                        const newTo = newFrom > p.to ? newFrom : p.to;
-                        return { from: newFrom, to: newTo };
-                      });
-                    }}
-                    aria-label="Start date"
-                    className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1 min-w-0"
-                  />
-                  <span className="text-gray-400">—</span>
-                  <input
-                    type="date"
-                    value={draftDateRange.to}
-                    onChange={(e) => {
-                      const newTo = e.target.value;
-                      setDraftDateRange((p) => {
-                        const newFrom = newTo < p.from ? newTo : p.from;
-                        return { from: newFrom, to: newTo };
-                      });
-                    }}
-                    aria-label="End date"
-                    className="bg-transparent text-white text-sm border-none outline-none focus:outline-none focus:ring-1 focus:ring-purple-300 rounded px-1 min-w-0"
-                  />
-                  {draftDirty && (
-                    <button
-                      onClick={() => setDateRange({ ...draftDateRange })}
-                      className="ml-1 px-3 py-1 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors shrink-0"
-                    >
-                      Apply
-                    </button>
-                  )}
-                </div>
-                <button
-                  onClick={() => {
-                    setDraftDateRange(defaultDateRange);
-                    setDateRange(defaultDateRange);
+      {/* Date range + tabs — below header for readability */}
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 -mt-4">
+        <div className="bg-white border border-gray-200 rounded-xl shadow-sm p-4 sm:p-5 flex flex-col gap-4">
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="flex flex-col gap-1.5">
+              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Range</p>
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
+                <input
+                  type="date"
+                  value={draftDateRange.from}
+                  onChange={(e) => {
+                    const newFrom = e.target.value;
+                    setDraftDateRange((p) => {
+                      const newTo = newFrom > p.to ? newFrom : p.to;
+                      return { from: newFrom, to: newTo };
+                    });
                   }}
-                  className="text-xs text-purple-300 hover:text-white transition-colors self-start"
-                >
-                  Reset YTD
-                </button>
-              </div>
-            </div>
-            <div className="w-full sm:w-auto overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0">
-              <div className="flex gap-1 bg-white/10 rounded-lg p-1 w-max sm:w-auto" role="tablist">
-                {(["overview", "expenses", "revenue", "profit", "vehicles"] as const).map((tab, idx) => (
+                  aria-label="Start date"
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 min-w-0"
+                />
+                <span className="text-gray-400 font-medium">—</span>
+                <input
+                  type="date"
+                  value={draftDateRange.to}
+                  onChange={(e) => {
+                    const newTo = e.target.value;
+                    setDraftDateRange((p) => {
+                      const newFrom = newTo < p.from ? newTo : p.from;
+                      return { from: newFrom, to: newTo };
+                    });
+                  }}
+                  aria-label="End date"
+                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 min-w-0"
+                />
+                {draftDirty && (
                   <button
-                    key={tab}
-                    role="tab"
-                    aria-selected={activeTab === tab}
-                    onClick={() => setActiveTab(tab)}
-                    onKeyDown={(e) => {
-                      const tabs = ["overview", "expenses", "revenue", "profit", "vehicles"] as const;
-                      if (e.key === 'ArrowLeft' && idx > 0) {
-                        e.preventDefault();
-                        setActiveTab(tabs[idx - 1]);
-                        const sibling = (e.currentTarget as HTMLElement).previousElementSibling as HTMLElement;
-                        sibling?.focus();
-                      } else if (e.key === 'ArrowRight' && idx < tabs.length - 1) {
-                        e.preventDefault();
-                        setActiveTab(tabs[idx + 1]);
-                        const sibling = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
-                        sibling?.focus();
-                      }
-                    }}
-                    className={`px-4 py-2 sm:px-3 sm:py-1.5 text-sm rounded-lg sm:rounded-md transition-colors capitalize whitespace-nowrap focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-1 ${
-                      activeTab === tab
-                        ? "bg-purple-600 text-white font-semibold shadow-sm"
-                        : "text-gray-300 hover:text-white active:bg-white/10"
-                    }`}
+                    onClick={() => setDateRange({ ...draftDateRange })}
+                    className="ml-1 px-4 py-1.5 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors shrink-0"
                   >
-                    {tab}
+                    Apply
                   </button>
-                ))}
+                )}
               </div>
+              <button
+                onClick={() => {
+                  setDraftDateRange(defaultDateRange);
+                  setDateRange(defaultDateRange);
+                }}
+                className="text-xs text-purple-600 hover:text-purple-800 font-medium transition-colors self-start"
+              >
+                Reset YTD
+              </button>
+            </div>
+          </div>
+          <div className="w-full sm:w-auto overflow-x-auto scrollbar-hide -mx-1 px-1">
+            <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-max sm:w-auto" role="tablist">
+              {(["overview", "expenses", "revenue", "profit", "vehicles"] as const).map((tab, idx) => (
+                <button
+                  key={tab}
+                  role="tab"
+                  aria-selected={activeTab === tab}
+                  onClick={() => setActiveTab(tab)}
+                  onKeyDown={(e) => {
+                    const tabs = ["overview", "expenses", "revenue", "profit", "vehicles"] as const;
+                    if (e.key === 'ArrowLeft' && idx > 0) {
+                      e.preventDefault();
+                      setActiveTab(tabs[idx - 1]);
+                      const sibling = (e.currentTarget as HTMLElement).previousElementSibling as HTMLElement;
+                      sibling?.focus();
+                    } else if (e.key === 'ArrowRight' && idx < tabs.length - 1) {
+                      e.preventDefault();
+                      setActiveTab(tabs[idx + 1]);
+                      const sibling = (e.currentTarget as HTMLElement).nextElementSibling as HTMLElement;
+                      sibling?.focus();
+                    }
+                  }}
+                  className={`px-4 py-2 sm:px-4 sm:py-1.5 text-sm rounded-md transition-colors capitalize whitespace-nowrap focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-1 ${
+                    activeTab === tab
+                      ? "bg-white text-gray-900 font-semibold shadow-sm"
+                      : "text-gray-500 hover:text-gray-900 active:bg-gray-200"
+                  }`}
+                >
+                  {tab}
+                </button>
+              ))}
             </div>
           </div>
         </div>
-      </section>
+      </div>
 
       <PageContainer>
         {success && (
