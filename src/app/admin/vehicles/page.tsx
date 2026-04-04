@@ -657,7 +657,7 @@ export default function AdminVehiclesPage() {
           {/* Year Make Model Category Row */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Year
               </label>
               <Input
@@ -672,7 +672,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Make <span className="text-red-500">*</span>
               </label>
               <Input
@@ -683,7 +683,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Model <span className="text-red-500">*</span>
               </label>
               <Input
@@ -694,7 +694,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Category
               </label>
               <Select
@@ -718,7 +718,7 @@ export default function AdminVehiclesPage() {
           {/* Pricing Row */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Daily Rate ($)
               </label>
               <Input
@@ -733,7 +733,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Purchase Price ($)
               </label>
               <Input
@@ -749,7 +749,7 @@ export default function AdminVehiclesPage() {
             </div>
 
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Available
               </label>
               <Select
@@ -763,7 +763,7 @@ export default function AdminVehiclesPage() {
               </Select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Published
               </label>
               <Select
@@ -807,7 +807,7 @@ export default function AdminVehiclesPage() {
             {form.isFinanced && (
               <div className="grid grid-cols-3 gap-2">
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                     Monthly Payment ($)
                   </label>
                   <Input
@@ -822,7 +822,7 @@ export default function AdminVehiclesPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                     Payment Day (1-31)
                   </label>
                   <Input
@@ -839,7 +839,7 @@ export default function AdminVehiclesPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                     Financing Start
                   </label>
                   <Input
@@ -857,7 +857,7 @@ export default function AdminVehiclesPage() {
           {/* Color, License, VIN, Mileage, Maintenance Row */}
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Color
               </label>
               <Input
@@ -867,7 +867,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 License Plate
               </label>
               <Input
@@ -879,7 +879,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 VIN
               </label>
               <Input
@@ -889,7 +889,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Mileage
               </label>
               <Input
@@ -903,7 +903,7 @@ export default function AdminVehiclesPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Maintenance
               </label>
               <Select
@@ -927,7 +927,7 @@ export default function AdminVehiclesPage() {
 
           {/* Description */}
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
               Description
             </label>
             <Textarea
@@ -943,7 +943,7 @@ export default function AdminVehiclesPage() {
           {/* Images Section */}
           <div>
             <div className="flex items-center gap-2 mb-1.5">
-              <label className="text-xs font-medium text-gray-700 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block">
                 Images
               </label>
               {(form.images || []).length > 0 && (
@@ -1040,7 +1040,7 @@ export default function AdminVehiclesPage() {
 
           {/* Features Section */}
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">
               Features
             </label>
             <div className="flex flex-wrap gap-1.5 mb-2">
@@ -1098,7 +1098,7 @@ export default function AdminVehiclesPage() {
             </h4>
             <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                   Passengers
                 </label>
                 <Input
@@ -1118,7 +1118,7 @@ export default function AdminVehiclesPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                   Luggage
                 </label>
                 <Input
@@ -1138,7 +1138,7 @@ export default function AdminVehiclesPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                   Doors
                 </label>
                 <Input
@@ -1159,7 +1159,7 @@ export default function AdminVehiclesPage() {
                 />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                   Transmission
                 </label>
                 <Select
@@ -1184,7 +1184,7 @@ export default function AdminVehiclesPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                   Fuel Type
                 </label>
                 <Select
@@ -1211,7 +1211,7 @@ export default function AdminVehiclesPage() {
                 </Select>
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-0.5 block">
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                   MPG
                 </label>
                 <Input

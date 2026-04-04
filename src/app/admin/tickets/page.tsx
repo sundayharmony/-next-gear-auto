@@ -543,7 +543,7 @@ export default function AdminTicketsPage() {
         <CardContent className="p-5 space-y-4">
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Type</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Type</label>
               <Select
                 value={form.ticketType}
                 onChange={(e) => setForm((f) => ({ ...f, ticketType: e.target.value }))}
@@ -553,7 +553,7 @@ export default function AdminTicketsPage() {
               </Select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Violation Date *</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Violation Date *</label>
               <Input
                 type="date"
                 value={form.violationDate}
@@ -561,7 +561,7 @@ export default function AdminTicketsPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Amount Due</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Amount Due</label>
               <Input
                 type="number"
                 step="0.01"
@@ -571,7 +571,7 @@ export default function AdminTicketsPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">State</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">State</label>
               <Input
                 placeholder="NJ"
                 value={form.state}
@@ -579,7 +579,7 @@ export default function AdminTicketsPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Municipality</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Municipality</label>
               <Input
                 placeholder="Jersey City"
                 value={form.municipality}
@@ -587,7 +587,7 @@ export default function AdminTicketsPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Court ID</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Court ID</label>
               <Input
                 placeholder="e.g. 0906"
                 value={form.courtId}
@@ -595,7 +595,7 @@ export default function AdminTicketsPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Prefix</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Prefix</label>
               <Input
                 placeholder="e.g. S"
                 value={form.prefix}
@@ -603,7 +603,7 @@ export default function AdminTicketsPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Ticket Number</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Ticket Number</label>
               <Input
                 placeholder="e.g. 123456"
                 value={form.ticketNumber}
@@ -611,7 +611,7 @@ export default function AdminTicketsPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">License Plate</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">License Plate</label>
               <Input
                 placeholder="e.g. ABC-1234"
                 value={form.licensePlate}
@@ -619,7 +619,7 @@ export default function AdminTicketsPage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Status</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Status</label>
               <Select
                 value={form.status}
                 onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
@@ -631,7 +631,7 @@ export default function AdminTicketsPage() {
               </Select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Linked Booking</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Linked Booking</label>
               <Select
                 value={form.bookingId}
                 onChange={(e) => handleBookingSelect(e.target.value)}
@@ -648,7 +648,7 @@ export default function AdminTicketsPage() {
               </Select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-600 block mb-1">Vehicle</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Vehicle</label>
               <Select
                 value={form.vehicleId}
                 onChange={(e) => setForm((f) => ({ ...f, vehicleId: e.target.value }))}
@@ -663,7 +663,7 @@ export default function AdminTicketsPage() {
             </div>
           </div>
           <div>
-            <label className="text-xs font-medium text-gray-600 block mb-1">Notes</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Notes</label>
             <Textarea
               rows={3}
               placeholder="Additional details..."

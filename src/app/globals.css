@@ -197,35 +197,54 @@ body:has(.admin-dark) {
 .admin-dark .divide-gray-200 > :not(:last-child) { border-color: #222222 !important; }
 .admin-dark .divide-gray-100 > :not(:last-child) { border-color: #1a1a1a !important; }
 
-/* Form inputs */
+/* ── Form inputs (dark mode) ── */
 .admin-dark input,
 .admin-dark textarea,
 .admin-dark select {
-  background-color: #111111 !important;
+  background-color: #1a1a1a !important;
   color: #e2e8f0 !important;
-  border-color: #333333 !important;
+  border-color: #2a2a2a !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), inset 0 1px 2px 0 rgba(0, 0, 0, 0.3) !important;
 }
 .admin-dark input:hover:not(:disabled):not(:focus),
 .admin-dark textarea:hover:not(:disabled):not(:focus),
 .admin-dark select:hover:not(:disabled):not(:focus) {
-  border-color: #444444 !important;
+  border-color: #7c3aed !important;
+  background-color: #1e1e1e !important;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4), inset 0 1px 2px 0 rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(124, 58, 237, 0.1) !important;
+}
+.admin-dark input:focus,
+.admin-dark textarea:focus,
+.admin-dark select:focus {
+  border-color: #8b5cf6 !important;
+  background-color: #111111 !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.25), inset 0 1px 2px 0 rgba(0, 0, 0, 0.3) !important;
 }
 .admin-dark input:disabled,
 .admin-dark textarea:disabled,
 .admin-dark select:disabled {
-  background-color: #0a0a0a !important;
-  color: #666666 !important;
+  background-color: #0d0d0d !important;
+  color: #555555 !important;
+  border-color: #1a1a1a !important;
+  box-shadow: none !important;
 }
 .admin-dark input::placeholder,
 .admin-dark textarea::placeholder {
+  color: #4a4a4a !important;
+}
+/* Labels */
+.admin-dark label,
+.admin-dark .nga-label {
+  color: #888888 !important;
+}
+/* Select chevron */
+.admin-dark .nga-select-chevron,
+.admin-dark select + svg {
   color: #555555 !important;
 }
-.admin-dark label {
-  color: #a0aec0 !important;
-}
-/* Select chevron in dark mode */
-.admin-dark select + svg {
-  color: #666666 !important;
+.admin-dark select:hover + svg,
+.admin-dark select:hover + .nga-select-chevron {
+  color: #8b5cf6 !important;
 }
 
 /* Cards and panels */

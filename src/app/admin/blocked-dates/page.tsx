@@ -421,7 +421,7 @@ export default function BlockedDatesPage() {
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Vehicle</label>
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Vehicle</label>
                   <Select
                     value={manualVehicleId}
                     onChange={(e) => setManualVehicleId(e.target.value)}
@@ -434,7 +434,7 @@ export default function BlockedDatesPage() {
                   </Select>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Start Date</label>
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Start Date</label>
                   <Input
                     type="date"
                     value={manualStartDate}
@@ -443,7 +443,7 @@ export default function BlockedDatesPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">End Date</label>
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">End Date</label>
                   <Input
                     type="date"
                     value={manualEndDate}
@@ -452,7 +452,7 @@ export default function BlockedDatesPage() {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 mb-1 block">Reason (optional)</label>
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Reason (optional)</label>
                   <Input
                     value={manualReason}
                     onChange={(e) => setManualReason(e.target.value)}

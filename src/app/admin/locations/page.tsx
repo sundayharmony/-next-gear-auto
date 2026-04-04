@@ -201,11 +201,11 @@ export default function AdminLocationsPage() {
           {/* Row 1: Name + Address */}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">Location Name <span className="text-red-500">*</span></label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">Location Name <span className="text-red-500">*</span></label>
               <Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="e.g. Downtown Office" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">Address <span className="text-red-500">*</span></label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">Address <span className="text-red-500">*</span></label>
               <AddressAutocomplete
                 value={form.address}
                 onChange={(val) => setForm({ ...form, address: val })}
@@ -217,15 +217,15 @@ export default function AdminLocationsPage() {
           {/* Row 2: City / State / ZIP */}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">City</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">City</label>
               <Input value={form.city} onChange={(e) => setForm({ ...form, city: e.target.value })} placeholder="e.g. New York" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">State</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">State</label>
               <Input value={form.state} onChange={(e) => setForm({ ...form, state: e.target.value.slice(0, 2).toUpperCase() })} placeholder="e.g. NY" maxLength={2} />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">ZIP</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">ZIP</label>
               <Input value={form.zip} onChange={(e) => setForm({ ...form, zip: e.target.value })} placeholder="e.g. 10001" />
             </div>
           </div>
@@ -233,11 +233,11 @@ export default function AdminLocationsPage() {
           {/* Row 3: Surcharge / Status */}
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">Surcharge ($)</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">Surcharge ($)</label>
               <Input type="number" value={form.surcharge} onChange={(e) => { const v = Math.max(0, parseFloat(e.target.value) || 0); setForm({ ...form, surcharge: v }); }} min="0" step="0.01" />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-0.5 block">Status</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">Status</label>
               <Select value={form.is_active ? "active" : "inactive"} onChange={(e) => setForm({ ...form, is_active: e.target.value === "active" })}>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
@@ -247,14 +247,14 @@ export default function AdminLocationsPage() {
 
           {/* Coordinates */}
           <div className="border border-gray-200 rounded-lg p-3">
-            <label className="text-xs font-medium text-gray-700 block mb-2">Coordinates</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-2">Coordinates</label>
             <div className="grid grid-cols-2 gap-3 mb-2">
               <div>
-                <label className="text-xs font-medium text-gray-700 block mb-1">Latitude</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Latitude</label>
                 <Input type="number" step="any" value={form.lat ?? ""} onChange={(e) => setForm({ ...form, lat: e.target.value ? parseFloat(e.target.value) : null })} placeholder="40.7128" />
               </div>
               <div>
-                <label className="text-xs font-medium text-gray-700 block mb-1">Longitude</label>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Longitude</label>
                 <Input type="number" step="any" value={form.lng ?? ""} onChange={(e) => setForm({ ...form, lng: e.target.value ? parseFloat(e.target.value) : null })} placeholder="-74.0060" />
               </div>
             </div>
@@ -269,7 +269,7 @@ export default function AdminLocationsPage() {
 
           {/* Notes */}
           <div>
-            <label className="text-xs font-medium text-gray-700 mb-0.5 block">Notes</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">Notes</label>
             <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="e.g. Business hours: 9AM-6PM" />
           </div>
 

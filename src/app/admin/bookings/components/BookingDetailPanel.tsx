@@ -961,7 +961,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
                       Pickup Date
                     </label>
                     <Input
@@ -976,7 +976,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
                       Pickup Time
                     </label>
                     <Select
@@ -997,7 +997,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     </Select>
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
                       Return Date
                     </label>
                     <Input
@@ -1012,7 +1012,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     />
                   </div>
                   <div>
-                    <label className="text-xs font-medium text-gray-700 block mb-1">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
                       Return Time
                     </label>
                     <Select
@@ -1037,7 +1037,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 {locations.length > 0 && (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 flex items-center gap-1">
                         <MapPin className="w-3 h-3" /> Pickup Location
                       </label>
                       <Select
@@ -1051,7 +1051,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       </Select>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 flex items-center gap-1">
                         <MapPin className="w-3 h-3" /> Dropoff Location
                       </label>
                       <Select
@@ -1193,7 +1193,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
               <div className="space-y-3">
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="text-xs font-medium text-gray-700">
+                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500">
                       Total Price
                     </label>
                     <button
@@ -1220,7 +1220,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   </div>
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
                     Deposit
                   </label>
                   <Input
@@ -1236,7 +1236,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   />
                 </div>
                 <div>
-                  <label className="text-xs font-medium text-gray-700 block mb-1">
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
                     Payment Method
                   </label>
                   <Select

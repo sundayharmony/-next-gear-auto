@@ -14,13 +14,13 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
     return (
       <div className="w-full">
         {label && (
-          <label htmlFor={id} className="mb-1.5 block text-sm font-medium text-gray-700">
+          <label htmlFor={id} className="nga-label mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
             {label}
           </label>
         )}
         <div className="relative">
           {icon && (
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+            <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400">
               {icon}
             </span>
           )}
@@ -28,9 +28,9 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
             id={id}
             className={cn(
               inputBase,
-              "appearance-none cursor-pointer pr-9",
-              icon && "pl-9",
-              error ? "border-red-400 focus-visible:ring-red-500/40 focus-visible:border-red-500" : "border-gray-300 hover:border-gray-400",
+              "appearance-none cursor-pointer pr-10",
+              icon && "pl-10",
+              error ? "border-red-400 focus:ring-red-500/20 focus:border-red-500 bg-red-50/50" : "border-gray-200 hover:border-purple-300 hover:bg-white",
               className
             )}
             ref={ref}
@@ -42,7 +42,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           </select>
           {/* Chevron */}
           <svg
-            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
+            className="nga-select-chevron pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"
             xmlns="http://www.w3.org/2000/svg"
             viewBox="0 0 20 20"
             fill="currentColor"
@@ -56,7 +56,7 @@ const Select = React.forwardRef<HTMLSelectElement, SelectProps>(
           </svg>
         </div>
         {error && <p id={`${id}-error`} className="mt-1.5 text-xs font-medium text-red-500">{error}</p>}
-        {!error && hint && <p id={`${id}-hint`} className="mt-1.5 text-xs text-gray-500">{hint}</p>}
+        {!error && hint && <p id={`${id}-hint`} className="mt-1.5 text-xs text-gray-400">{hint}</p>}
       </div>
     );
   }

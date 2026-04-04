@@ -540,7 +540,7 @@ export default function AdminMaintenancePage() {
           </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 block">
                 Vehicle <span className="text-red-500">*</span>
               </label>
               <Select
@@ -561,7 +561,7 @@ export default function AdminMaintenancePage() {
               </Select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1.5 block">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 block">
                 Title <span className="text-red-500">*</span>
               </label>
               <Input
@@ -573,7 +573,7 @@ export default function AdminMaintenancePage() {
             </div>
           </div>
           <div className="mt-4">
-            <label className="text-xs font-medium text-gray-700 mb-1.5 block">Description</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 block">Description</label>
             <Textarea
               value={newRecord.description || ""}
               onChange={(e) => setNewRecord({ ...newRecord, description: e.target.value })}
@@ -594,7 +594,7 @@ export default function AdminMaintenancePage() {
 
           {/* Status pills */}
           <div className="mb-4">
-            <label className="text-xs font-medium text-gray-700 mb-2 block">Status</label>
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2 block">Status</label>
             <div className="flex gap-2">
               {([
                 { value: "pending", label: "Pending", icon: Clock },
@@ -620,7 +620,7 @@ export default function AdminMaintenancePage() {
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1.5 block flex items-center gap-1">
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 block flex items-center gap-1">
                 <DollarSign className="w-3 h-3 text-green-500" /> Estimated Cost
               </label>
               <div className="relative">
@@ -642,7 +642,7 @@ export default function AdminMaintenancePage() {
               </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1.5 block">Start Date</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 block">Start Date</label>
               <Input
                 type="date"
                 value={newRecord.startedDate || ""}
@@ -651,7 +651,7 @@ export default function AdminMaintenancePage() {
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1.5 block">Completed Date</label>
+              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 block">Completed Date</label>
               <Input
                 type="date"
                 value={newRecord.completedDate || ""}
@@ -664,7 +664,7 @@ export default function AdminMaintenancePage() {
 
         {/* ── Notes ── */}
         <div>
-          <label className="text-xs font-medium text-gray-700 mb-1.5 block">Additional Notes</label>
+          <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 block">Additional Notes</label>
           <Textarea
             value={newRecord.notes || ""}
             onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })}
@@ -1031,7 +1031,7 @@ export default function AdminMaintenancePage() {
                 <>
                   {/* Vehicle */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
                       Vehicle <span className="text-red-500">*</span>
                     </label>
                     <Select
@@ -1054,7 +1054,7 @@ export default function AdminMaintenancePage() {
 
                   {/* Title */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">
                       Title <span className="text-red-500">*</span>
                     </label>
                     <Input
@@ -1066,7 +1066,7 @@ export default function AdminMaintenancePage() {
 
                   {/* Description */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Description</label>
                     <Textarea
                       value={detailEditData.description || ""}
                       onChange={(e) => setDetailEditData({ ...detailEditData, description: e.target.value })}
@@ -1076,7 +1076,7 @@ export default function AdminMaintenancePage() {
 
                   {/* Status */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Status</label>
                     <Select
                       value={detailEditData.status || "pending"}
                       onChange={(e) =>
@@ -1094,7 +1094,7 @@ export default function AdminMaintenancePage() {
 
                   {/* Cost */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Cost ($)</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Cost ($)</label>
                     <Input
                       type="number"
                       value={detailEditData.cost ?? ""}
@@ -1113,7 +1113,7 @@ export default function AdminMaintenancePage() {
                   {/* Dates */}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Start Date</label>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Start Date</label>
                       <Input
                         type="date"
                         value={detailEditData.startedDate || ""}
@@ -1121,7 +1121,7 @@ export default function AdminMaintenancePage() {
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-gray-600 mb-1">Completed Date</label>
+                      <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Completed Date</label>
                       <Input
                         type="date"
                         value={detailEditData.completedDate || ""}
@@ -1132,7 +1132,7 @@ export default function AdminMaintenancePage() {
 
                   {/* Notes */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Notes</label>
                     <Textarea
                       value={detailEditData.notes || ""}
                       onChange={(e) => setDetailEditData({ ...detailEditData, notes: e.target.value })}
@@ -1142,7 +1142,7 @@ export default function AdminMaintenancePage() {
 
                   {/* Photos */}
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 mb-2">
+                    <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-2">
                       Photos
                       {detailEditData.photoUrls?.length > 0 && (
                         <Badge variant="secondary" className="ml-2 text-xs">{detailEditData.photoUrls.length}</Badge>

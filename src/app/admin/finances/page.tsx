@@ -1719,7 +1719,7 @@ export default function AdminFinancesPage() {
                   <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
-                        <label className="text-xs font-medium text-gray-600 block mb-1">Category <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Category <span className="text-red-500">*</span></label>
                         <Select
                           value={newExpense.category}
                           onChange={(e) => setNewExpense((p) => ({ ...p, category: e.target.value }))}
@@ -1730,7 +1730,7 @@ export default function AdminFinancesPage() {
                         </Select>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-600 block mb-1">Amount <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Amount <span className="text-red-500">*</span></label>
                         <Input
                           type="number"
                           step="0.01"
@@ -1741,7 +1741,7 @@ export default function AdminFinancesPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-600 block mb-1">Date <span className="text-red-500">*</span></label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Date <span className="text-red-500">*</span></label>
                         <Input
                           type="date"
                           value={newExpense.date}
@@ -1750,7 +1750,7 @@ export default function AdminFinancesPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-gray-600 block mb-1">Vehicle (optional)</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Vehicle (optional)</label>
                         <Select
                           value={newExpense.vehicleId}
                           onChange={(e) => setNewExpense((p) => ({ ...p, vehicleId: e.target.value }))}
@@ -1763,7 +1763,7 @@ export default function AdminFinancesPage() {
                       </div>
                     </div>
                     <div>
-                      <label className="text-xs font-medium text-gray-600 block mb-1">Description (optional)</label>
+                      <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Description (optional)</label>
                       <Input
                         placeholder="e.g. Oil change, monthly premium..."
                         value={newExpense.description}
@@ -1921,7 +1921,7 @@ export default function AdminFinancesPage() {
                             <div key={exp.id} className="bg-purple-50 border border-purple-200 rounded-lg p-4 space-y-3">
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                 <div>
-                                  <label className="text-xs font-medium text-gray-600 block mb-1">Category <span className="text-red-500">*</span></label>
+                                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Category <span className="text-red-500">*</span></label>
                                   <Select
                                     value={editingExpense.category}
                                     onChange={(e) => setEditingExpense((p) => p ? { ...p, category: e.target.value } : p)}
@@ -1932,7 +1932,7 @@ export default function AdminFinancesPage() {
                                   </Select>
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium text-gray-600 block mb-1">Amount <span className="text-red-500">*</span></label>
+                                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Amount <span className="text-red-500">*</span></label>
                                   <Input
                                     type="number"
                                     step="0.01"
@@ -1942,7 +1942,7 @@ export default function AdminFinancesPage() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium text-gray-600 block mb-1">Date <span className="text-red-500">*</span></label>
+                                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Date <span className="text-red-500">*</span></label>
                                   <Input
                                     type="date"
                                     value={editingExpense.date}
@@ -1951,7 +1951,7 @@ export default function AdminFinancesPage() {
                                   />
                                 </div>
                                 <div>
-                                  <label className="text-xs font-medium text-gray-600 block mb-1">Vehicle</label>
+                                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Vehicle</label>
                                   <Select
                                     value={editingExpense.vehicle_id || ""}
                                     onChange={(e) => setEditingExpense((p) => p ? { ...p, vehicle_id: e.target.value || null } : p)}

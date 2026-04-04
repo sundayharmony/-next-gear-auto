@@ -540,7 +540,7 @@ export default function CreateBookingForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Full Name <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Full Name <span className="text-red-500">*</span></label>
               <Input
                 type="text"
                 value={form.customerName}
@@ -550,7 +550,7 @@ export default function CreateBookingForm({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Email Address <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Email Address <span className="text-red-500">*</span></label>
               <Input
                 type="email"
                 value={form.customerEmail}
@@ -563,7 +563,7 @@ export default function CreateBookingForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
               <Input
                 type="tel"
                 value={form.customerPhone}
@@ -573,7 +573,7 @@ export default function CreateBookingForm({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">ID Document <span className="text-gray-400 font-normal">(optional)</span></label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">ID Document <span className="text-gray-400 font-normal">(optional)</span></label>
               <input
                 ref={idInputRef}
                 type="file"
@@ -657,7 +657,7 @@ export default function CreateBookingForm({
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Pickup Date <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Pickup Date <span className="text-red-500">*</span></label>
               <Input
                 type="date"
                 min={new Date().toISOString().split("T")[0]}
@@ -667,7 +667,7 @@ export default function CreateBookingForm({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Pickup Time <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Pickup Time <span className="text-red-500">*</span></label>
               <Select
                 value={form.pickupTime}
                 onChange={(e) => setForm({ ...form, pickupTime: e.target.value })}
@@ -678,7 +678,7 @@ export default function CreateBookingForm({
               </Select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Return Date <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Return Date <span className="text-red-500">*</span></label>
               <Input
                 type="date"
                 value={form.returnDate}
@@ -687,7 +687,7 @@ export default function CreateBookingForm({
               />
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Return Time <span className="text-red-500">*</span></label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Return Time <span className="text-red-500">*</span></label>
               <Select
                 value={form.returnTime}
                 onChange={(e) => setForm({ ...form, returnTime: e.target.value })}
@@ -713,7 +713,7 @@ export default function CreateBookingForm({
           {!locationsLoading && locations.length > 0 && (
             <div className="space-y-3 pt-1">
               <div>
-                <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1">
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-purple-500" /> Pickup Location
                 </label>
                 <Select
@@ -737,7 +737,7 @@ export default function CreateBookingForm({
               </label>
               {differentDropoff && (
                 <div>
-                  <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1">
+                  <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-purple-500" /> Dropoff Location
                   </label>
                   <Select
@@ -835,7 +835,7 @@ export default function CreateBookingForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Price ($)</label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Total Price ($)</label>
               <div className="relative">
                 <Input
                   type="number"
@@ -866,7 +866,7 @@ export default function CreateBookingForm({
               )}
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Amount Paid ($)</label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Amount Paid ($)</label>
               <Input
                 type="number"
                 step="0.01"
@@ -889,7 +889,7 @@ export default function CreateBookingForm({
               </p>
             </div>
             <div>
-              <label className="block text-xs font-medium text-gray-700 mb-1.5">Payment Method</label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Payment Method</label>
               <Select
                 value={form.paymentMethod}
                 onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
