@@ -31,6 +31,7 @@ import {
   KeyRound,
   Crop,
   User,
+  Users,
   Move,
   ZoomIn,
   ZoomOut,
