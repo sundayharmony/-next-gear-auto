@@ -164,6 +164,11 @@ body {
 
 /* ═══ Admin Dark Mode ═══ */
 
+/* Propagate black background to all ancestors so no white peeks through */
+body:has(.admin-dark) {
+  background-color: #000000 !important;
+}
+
 .admin-dark {
   background-color: #000000 !important;
   color: #e2e8f0;

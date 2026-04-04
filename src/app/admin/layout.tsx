@@ -142,7 +142,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const currentTitle = PAGE_TITLES[pathname] || Object.entries(PAGE_TITLES).find(([path]) => pathname.startsWith(path))?.[1] || "Admin";
 
   return (
-    <div className={cn("flex min-h-[calc(100vh-64px)]", isDark && "admin-dark")}>
+    <div className={cn("flex min-h-screen", isDark && "admin-dark")}>
       {/* ═══════ MOBILE STICKY HEADER BAR ═══════ */}
       <div className="fixed top-0 left-0 right-0 z-[45] lg:hidden">
         <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm pwa-safe-top">
@@ -261,13 +261,15 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       )}
 
       {/* ═══════ DESKTOP SIDEBAR (hidden on mobile) ═══════ */}
+      {/* Sidebar spacer — reserves 256px for the fixed sidebar on desktop */}
+      <div className="hidden lg:block w-64 shrink-0" />
       <aside
         className={cn(
-          "fixed z-40 top-0 bottom-0 left-0 w-64 bg-gray-900 text-white flex-col transition-transform duration-300 ease-in-out hidden lg:flex lg:relative lg:translate-x-0"
+          "fixed z-40 top-0 bottom-0 left-0 w-64 bg-gray-900 text-white flex-col transition-transform duration-300 ease-in-out hidden lg:flex lg:translate-x-0"
         )}
       >
         {/* Logo area */}
-        <div className="px-5 py-5 border-b border-gray-800">
+        <div className="px-5 py-5 border-b border-gray-800 shrink-0">
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold">Admin Panel</h2>
@@ -297,7 +299,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
 
         {/* Nav links */}
-        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <nav className="flex-1 min-h-0 px-3 py-4 space-y-1 overflow-y-auto">
           {NAV_ITEMS.map((item) => (
             <Link
               key={item.href}
@@ -318,7 +320,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Footer */}
-        <div className="px-3 py-4 border-t border-gray-800 space-y-1">
+        <div className="px-3 py-4 border-t border-gray-800 space-y-1 shrink-0">
           {/* Dark mode toggle */}
           <button
             onClick={toggleTheme}
