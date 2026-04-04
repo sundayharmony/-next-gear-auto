@@ -385,3 +385,14 @@ body:has(.admin-dark) {
 .admin-dark .text-blue-600 { color: #3b82f6 !important; }
 .admin-dark .text-yellow-600 { color: #eab308 !important; }
 .admin-dark .text-emerald-600 { color: #10b981 !important; }
+
+/* ═══ Vehicle Profitability table dark mode ═══ */
+.admin-dark .text-yellow-700 { color: #facc15 !important; }
+.admin-dark .bg-yellow-100 { background-color: rgba(234, 179, 8, 0.15) !important; }
+.admin-dark .text-orange-700 { color: #fb923c !important; }
+.admin-dark .bg-gray-200.text-gray-600 { background-color: rgba(156, 163, 175, 0.15) !important; }
+.admin-dark .text-purple-900 { color: #c084fc !important; }
+.admin-dark .text-purple-700 { color: #a78bfa !important; }
+.admin-dark .border-purple-200 { border-color: rgba(124, 58, 237, 0.3) !important; }
+.admin-dark .border-gray-200 { border-color: #222222 !important; }
+.admin-dark .divide-gray-100 > :not(:first-child) { border-color: #1a1a1a !important; }

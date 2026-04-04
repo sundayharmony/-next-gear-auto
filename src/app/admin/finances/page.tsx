@@ -1243,7 +1243,7 @@ export default function AdminFinancesPage() {
                     }}
                     className={`px-4 py-2 sm:px-3 sm:py-1.5 text-sm rounded-lg sm:rounded-md transition-colors capitalize whitespace-nowrap focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-1 ${
                       activeTab === tab
-                        ? "bg-white text-gray-900 font-semibold shadow-sm"
+                        ? "bg-purple-600 text-white font-semibold shadow-sm"
                         : "text-gray-300 hover:text-white active:bg-white/10"
                     }`}
                   >
@@ -1568,20 +1568,20 @@ export default function AdminFinancesPage() {
                       </div>
                     </div>
                     {/* Desktop: Table view */}
-                    <div className="hidden sm:block overflow-x-auto">
+                    <div className="hidden sm:block overflow-x-auto mt-1">
                       <table className="w-full text-sm">
                         <thead>
-                          <tr className="border-b text-left text-gray-500 text-xs uppercase tracking-wider">
-                            <th scope="col" className="pb-3 font-medium">#</th>
-                            <th scope="col" className="pb-3 font-medium">Vehicle</th>
-                            <th scope="col" className="pb-3 font-medium text-center">Bookings</th>
-                            <th scope="col" className="pb-3 font-medium text-right">Revenue</th>
-                            <th scope="col" className="pb-3 font-medium text-right">Expenses</th>
-                            <th scope="col" className="pb-3 font-medium text-right">Profit</th>
-                            <th scope="col" className="pb-3 font-medium text-right">Occupancy</th>
+                          <tr className="border-b-2 border-gray-200 text-left text-gray-500 text-xs uppercase tracking-wider">
+                            <th scope="col" className="pb-3 pl-3 font-semibold w-10">#</th>
+                            <th scope="col" className="pb-3 font-semibold">Vehicle</th>
+                            <th scope="col" className="pb-3 font-semibold text-center">Bookings</th>
+                            <th scope="col" className="pb-3 font-semibold text-right">Revenue</th>
+                            <th scope="col" className="pb-3 font-semibold text-right">Expenses</th>
+                            <th scope="col" className="pb-3 font-semibold text-right">Profit</th>
+                            <th scope="col" className="pb-3 pr-3 font-semibold text-right w-44">Occupancy</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y">
+                        <tbody className="divide-y divide-gray-100">
                           {vehicleAnalytics.map((v, idx) => (
                             <tr
                               key={v.id}
@@ -1590,41 +1590,54 @@ export default function AdminFinancesPage() {
                               tabIndex={0}
                               role="button"
                               aria-label={`View details for ${v.name}`}
-                              className="cursor-pointer hover:bg-purple-50 transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset"
+                              className="cursor-pointer hover:bg-purple-50 transition-colors focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-inset group"
                             >
-                              <td className="py-3 text-gray-400 font-medium">{idx + 1}</td>
-                              <td className="py-3 font-medium text-gray-900">{v.name}</td>
-                              <td className="py-3 text-center">{v.bookings}</td>
-                              <td className="py-3 text-right text-green-600 font-medium">${v.revenue.toLocaleString()}</td>
-                              <td className="py-3 text-right text-red-500">${v.expenses.toLocaleString()}</td>
-                              <td className={`py-3 text-right font-bold ${v.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                              <td className="py-3.5 pl-3">
+                                <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-xs font-bold ${
+                                  idx === 0 ? "bg-yellow-100 text-yellow-700" :
+                                  idx === 1 ? "bg-gray-200 text-gray-600" :
+                                  idx === 2 ? "bg-orange-100 text-orange-700" :
+                                  "bg-gray-100 text-gray-400"
+                                }`}>{idx + 1}</span>
+                              </td>
+                              <td className="py-3.5 font-semibold text-gray-900 group-hover:text-purple-700 transition-colors">{v.name}</td>
+                              <td className="py-3.5 text-center text-gray-600">{v.bookings}</td>
+                              <td className="py-3.5 text-right text-green-600 font-semibold">${v.revenue.toLocaleString()}</td>
+                              <td className="py-3.5 text-right text-red-500 font-medium">${v.expenses.toLocaleString()}</td>
+                              <td className={`py-3.5 text-right font-bold ${v.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
                                 ${v.profit.toLocaleString()}
                               </td>
-                              <td className="py-3 text-right">
-                                <div className="flex items-center justify-end gap-2">
-                                  <div className="w-16 h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                              <td className="py-3.5 pr-3 text-right">
+                                <div className="flex items-center justify-end gap-2.5">
+                                  <div className="w-24 h-2 bg-gray-100 rounded-full overflow-hidden">
                                     <div
-                                      className="h-full rounded-full bg-purple-500"
+                                      className={`h-full rounded-full transition-all ${
+                                        v.occupancy >= 60 ? "bg-green-500" :
+                                        v.occupancy >= 30 ? "bg-amber-500" :
+                                        v.occupancy > 0 ? "bg-red-400" : "bg-gray-200"
+                                      }`}
                                       style={{ width: `${v.occupancy}%` }}
                                     />
                                   </div>
-                                  <span className="text-xs text-gray-500 w-8 text-right">{v.occupancy.toFixed(0)}%</span>
+                                  <span className="text-xs font-medium text-gray-500 w-10 text-right">{v.occupancy.toFixed(0)}%</span>
                                 </div>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot>
-                          <tr className="border-t-2 border-gray-300 bg-gray-50 font-bold">
-                            <td className="py-3"></td>
-                            <td className="py-3 text-gray-900">Fleet Total</td>
-                            <td className="py-3 text-center">{vehicleAnalytics.reduce((s, v) => s + v.bookings, 0)}</td>
-                            <td className="py-3 text-right text-green-600">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.revenue, 0))}</td>
-                            <td className="py-3 text-right text-red-500">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.expenses, 0))}</td>
-                            <td className={`py-3 text-right font-bold ${vehicleAnalytics.reduce((s, v) => s + v.profit, 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
+                          <tr className="border-t-2 border-purple-200 bg-purple-50 font-bold">
+                            <td className="py-3.5 pl-3">
+                              <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-purple-100 text-purple-600 text-xs font-bold">∑</span>
+                            </td>
+                            <td className="py-3.5 text-purple-900 font-bold">Fleet Total</td>
+                            <td className="py-3.5 text-center text-purple-700">{vehicleAnalytics.reduce((s, v) => s + v.bookings, 0)}</td>
+                            <td className="py-3.5 text-right text-green-600 font-bold">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.revenue, 0))}</td>
+                            <td className="py-3.5 text-right text-red-500 font-bold">{fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.expenses, 0))}</td>
+                            <td className={`py-3.5 text-right font-bold ${vehicleAnalytics.reduce((s, v) => s + v.profit, 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
                               {fmtCurrency(vehicleAnalytics.reduce((s, v) => s + v.profit, 0))}
                             </td>
-                            <td className="py-3 text-right text-xs text-gray-500">
+                            <td className="py-3.5 pr-3 text-right text-xs font-semibold text-purple-600">
                               {vehicleAnalytics.length > 0 ? (vehicleAnalytics.reduce((s, v) => s + v.occupancy, 0) / vehicleAnalytics.length).toFixed(0) : 0}% avg
                             </td>
                           </tr>
