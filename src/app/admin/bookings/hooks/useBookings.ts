@@ -138,15 +138,13 @@ export function useBookings(): UseBookingsReturn {
   }, [fetchVehicles, fetchCustomers]);
 
   const setSort = useCallback((field: SortField) => {
-    setSortField((prev) => {
-      if (prev === field) {
-        setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
-        return prev;
-      }
+    if (sortField === field) {
+      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSortField(field);
       setSortOrder("desc");
-      return field;
-    });
-  }, []);
+    }
+  }, [sortField]);
 
   const updateStatus = useCallback(async (bookingId: string, newStatus: string) => {
     setUpdating(bookingId);

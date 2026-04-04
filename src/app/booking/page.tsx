@@ -448,12 +448,12 @@ function BookingPageInner() {
 
         // If same day, validate return time is at least 1 hour after pickup time
         if (searchDates.pickup === searchDates.return) {
-          const [ph, pm] = (searchDates.pickupTime || "00:00").split(":").map(Number);
-          const [rh, rm] = (searchDates.returnTime || "00:00").split(":").map(Number);
-          const phVal = parseInt(String(ph)) || 0;
-          const pmVal = parseInt(String(pm)) || 0;
-          const rhVal = parseInt(String(rh)) || 0;
-          const rmVal = parseInt(String(rm)) || 0;
+          const pickupParts = (searchDates.pickupTime || "00:00").split(":");
+          const returnParts = (searchDates.returnTime || "00:00").split(":");
+          const phVal = parseInt(pickupParts[0] || "0", 10) || 0;
+          const pmVal = parseInt(pickupParts[1] || "0", 10) || 0;
+          const rhVal = parseInt(returnParts[0] || "0", 10) || 0;
+          const rmVal = parseInt(returnParts[1] || "0", 10) || 0;
           if ((rhVal * 60 + rmVal) <= (phVal * 60 + pmVal)) {
             setDateValidationError("Return time must be after pickup time on same day");
             return false;

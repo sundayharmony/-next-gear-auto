@@ -103,6 +103,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Type guard: ensure dates are strings before calling .includes()
+    if (typeof pickupDate !== "string" || typeof returnDate !== "string") {
+      return NextResponse.json(
+        { success: false, message: "Pickup and return dates must be strings" },
+        { status: 400 }
+      );
+    }
+
     // Validate dates
     const pickup = new Date(pickupDate.includes("T") ? pickupDate : pickupDate + "T00:00:00");
     const returnDt = new Date(returnDate.includes("T") ? returnDate : returnDate + "T00:00:00");

@@ -8,9 +8,11 @@ export async function GET(request: Request) {
   const supabase = getServiceSupabase();
 
   try {
+    const selectClause = "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, maintenance_status, color, vin, description";
+
     let query = supabase
       .from("vehicles")
-      .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, maintenance_status, color, vin, description")
+      .select(selectClause)
       .eq("is_published", true)
       .order("created_at", { ascending: true })
       .limit(100);
@@ -21,11 +23,11 @@ export async function GET(request: Request) {
 
     let { data, error } = await query;
 
-    // Fallback: if is_published filter fails (column may not exist yet), retry without it
-    if (error || !data || data.length === 0) {
+    // Fallback: if is_published filter returns empty (not on error), retry with is_available
+    if (!error && (!data || data.length === 0)) {
       let fallbackQuery = supabase
         .from("vehicles")
-        .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, maintenance_status, color, vin, description")
+        .select(selectClause)
         .eq("is_available", true)
         .order("make", { ascending: true })
         .order("model", { ascending: true })
@@ -62,12 +64,8 @@ export async function GET(request: Request) {
         maintenanceStatus: v.maintenance_status || "good",
       }));
       return NextResponse.json(
-        { data: vehicles, success: true },
-        {
-          headers: {
-            "Cache-Control": "public, s-maxage=60, stale-while-revalidate=300",
-          },
-        }
+        { success: true, data: vehicles },
+        { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } }
       );
     }
 

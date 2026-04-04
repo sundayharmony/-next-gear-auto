@@ -146,34 +146,36 @@ function ComparisonContent() {
                   Pricing
                 </td>
               </tr>
-              {priceRows.map((row) => (
-                <tr key={row.label} className="border-b border-gray-100">
-                  <td className="p-3 text-sm text-gray-500">{row.label}</td>
-                  {selectedVehicles.map((v) => {
-                    const value = row.getValue(v) || "";
-                    const isLowest = selectedVehicles.every(
-                      (other) => {
-                        const otherVal = row.getValue(other) || "";
-                        return parseFloat(otherVal.replace("$", "") || "0") >=
-                          parseFloat(value.replace("$", "") || "0");
-                      }
-                    );
-                    return (
-                      <td
-                        key={v.id}
-                        className={`p-3 text-center text-sm font-medium ${
-                          isLowest ? "text-green-600 font-bold" : "text-gray-900"
-                        }`}
-                      >
-                        {value}
-                        {isLowest && selectedVehicles.length > 1 && (
-                          <span className="ml-1 text-xs text-green-500">Best</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              ))}
+              {priceRows.map((row) => {
+                const lowestValue = Math.min(
+                  ...selectedVehicles.map((v) =>
+                    parseFloat((row.getValue(v) || "").replace("$", "").replace(",", "") || "0")
+                  )
+                );
+                return (
+                  <tr key={row.label} className="border-b border-gray-100">
+                    <td className="p-3 text-sm text-gray-500">{row.label}</td>
+                    {selectedVehicles.map((v) => {
+                      const value = row.getValue(v) || "";
+                      const numValue = parseFloat(value.replace("$", "").replace(",", "") || "0");
+                      const isLowest = numValue <= lowestValue && numValue > 0;
+                      return (
+                        <td
+                          key={v.id}
+                          className={`p-3 text-center text-sm font-medium ${
+                            isLowest ? "text-green-600 font-bold" : "text-gray-900"
+                          }`}
+                        >
+                          {value}
+                          {isLowest && selectedVehicles.length > 1 && (
+                            <span className="ml-1 text-xs text-green-500">Best</span>
+                          )}
+                        </td>
+                      );
+                    })}
+                  </tr>
+                );
+              })}
 
               {/* Specs Section */}
               <tr>
