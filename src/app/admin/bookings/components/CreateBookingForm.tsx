@@ -634,7 +634,7 @@ export default function CreateBookingForm({
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-semibold text-sm text-gray-900">{selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}</p>
-                <p className="text-xs text-gray-600">{selectedVehicle.color || "N/A"} &middot; {selectedVehicle.category || "Standard"}</p>
+                <p className="text-xs text-gray-600">{selectedVehicle.year} &middot; {selectedVehicle.isAvailable ? "Available" : "Unavailable"}</p>
               </div>
               <div className="text-right shrink-0">
                 <p className="text-lg font-bold text-purple-600">${selectedVehicle.dailyRate}</p>
