@@ -1,6 +1,6 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback, useMemo } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useMemo, useRef } from "react";
 import type { Toast, ToastType } from "@/lib/types";
 
 interface NotificationState {
@@ -38,21 +38,33 @@ const NotificationContext = createContext<NotificationContextType | undefined>(u
 
 export function NotificationProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(notificationReducer, initialState);
+  const timerMapRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const showToast = useCallback((type: ToastType, title: string, message?: string) => {
     const id = Date.now().toString() + Math.random().toString(36).slice(2);
     dispatch({ type: "ADD_TOAST", payload: { id, type, title, message } });
-    // Auto-dismiss after 6 seconds to prevent unbounded toast accumulation
-    setTimeout(() => {
+    // Auto-dismiss after 6 seconds; store timer so manual dismiss can clear it
+    const timer = setTimeout(() => {
+      timerMapRef.current.delete(id);
       dispatch({ type: "DISMISS_TOAST", payload: id });
     }, 6000);
+    timerMapRef.current.set(id, timer);
   }, []);
 
   const dismissToast = useCallback((id: string) => {
+    // Clear the auto-dismiss timer to prevent memory leak
+    const timer = timerMapRef.current.get(id);
+    if (timer) {
+      clearTimeout(timer);
+      timerMapRef.current.delete(id);
+    }
     dispatch({ type: "DISMISS_TOAST", payload: id });
   }, []);
 
   const clearAll = useCallback(() => {
+    // Clear all pending timers
+    timerMapRef.current.forEach((timer) => clearTimeout(timer));
+    timerMapRef.current.clear();
     dispatch({ type: "CLEAR_ALL" });
   }, []);
 

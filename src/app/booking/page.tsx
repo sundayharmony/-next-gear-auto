@@ -89,7 +89,7 @@ function BookingPageInner() {
   const [checkingAvailability, setCheckingAvailability] = useState(false);
 
   // Fetch vehicles from API
-  const { vehicles: hookVehicles, loading: hookLoading, error: hookError } = useVehicles();
+  const { vehicles: hookVehicles, loading: hookLoading, error: hookError, retry: retryVehicles } = useVehicles();
 
   // Sync hook state to component state
   useEffect(() => {
@@ -317,11 +317,16 @@ function BookingPageInner() {
     }
   }, [localExtras, booking.selectedVehicle, booking.pickupDate, booking.returnDate]);
 
+  // Track currentStep in a ref so the beforeunload handler doesn't churn on every step change
+  const currentStepRef = useRef(booking.currentStep);
+  useEffect(() => {
+    currentStepRef.current = booking.currentStep;
+  }, [booking.currentStep]);
+
   // Warn user before leaving if they've progressed past step 1 but haven't completed checkout
   useEffect(() => {
     const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      // Only warn if user is past step 1 and hasn't completed checkout (step 7)
-      if (booking.currentStep > 1 && booking.currentStep < 7) {
+      if (currentStepRef.current > 1 && currentStepRef.current < 7) {
         e.preventDefault();
         e.returnValue = "";
         return "";
@@ -332,7 +337,7 @@ function BookingPageInner() {
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
     };
-  }, [booking.currentStep]);
+  }, []);
 
   const handleToggleExtra = (id: string) => {
     if (id === "e1") {
@@ -1155,8 +1160,14 @@ function BookingPageInner() {
               <h2 className="text-xl font-semibold text-gray-900">Choose Your Vehicle</h2>
               <p className="text-sm text-gray-500">Select from our available fleet for your dates.</p>
               {vehiclesError && (
-                <div className="rounded-lg bg-red-50 p-3 text-sm text-red-700 border border-red-200">
-                  {vehiclesError}
+                <div className="rounded-lg bg-red-50 p-4 text-sm text-red-700 border border-red-200 flex items-center justify-between gap-3">
+                  <span>{vehiclesError}</span>
+                  <button
+                    onClick={retryVehicles}
+                    className="shrink-0 rounded-md bg-red-100 px-3 py-1.5 text-xs font-medium text-red-800 hover:bg-red-200 transition-colors"
+                  >
+                    Retry
+                  </button>
                 </div>
               )}
               {vehiclesLoading && (

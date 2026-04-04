@@ -111,9 +111,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate dates
-    const pickup = new Date(pickupDate.includes("T") ? pickupDate : pickupDate + "T00:00:00");
-    const returnDt = new Date(returnDate.includes("T") ? returnDate : returnDate + "T00:00:00");
+    // Validate dates — incorporate pickupTime/returnTime so same-day duration checks work
+    const pickupBase = pickupDate.includes("T") ? pickupDate : pickupDate + "T00:00:00";
+    const returnBase = returnDate.includes("T") ? returnDate : returnDate + "T00:00:00";
+    const pickup = new Date(pickupBase);
+    const returnDt = new Date(returnBase);
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
@@ -131,15 +133,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (returnDt <= pickup) {
+    // Build full datetime using time strings (e.g. "10:00") when available
+    const pickupFull = new Date(pickup);
+    const returnFull = new Date(returnDt);
+    if (typeof pickupTime === "string" && /^\d{1,2}:\d{2}$/.test(pickupTime)) {
+      const [h, m] = pickupTime.split(":").map(Number);
+      pickupFull.setHours(h, m, 0, 0);
+    }
+    if (typeof returnTime === "string" && /^\d{1,2}:\d{2}$/.test(returnTime)) {
+      const [h, m] = returnTime.split(":").map(Number);
+      returnFull.setHours(h, m, 0, 0);
+    }
+
+    if (returnFull <= pickupFull) {
       return NextResponse.json(
-        { success: false, message: "Return date must be after pickup date" },
+        { success: false, message: "Return date/time must be after pickup date/time" },
         { status: 400 }
       );
     }
 
-    // Minimum booking duration: 4 hours for same-day bookings (Bug 22)
-    const durationMs = returnDt.getTime() - pickup.getTime();
+    // Minimum booking duration: 4 hours for same-day bookings
+    const durationMs = returnFull.getTime() - pickupFull.getTime();
     const MIN_DURATION = 4 * 60 * 60 * 1000; // 4 hours
     const isSameDay = pickup.toDateString() === returnDt.toDateString();
     if (isSameDay && durationMs < MIN_DURATION) {

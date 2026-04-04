@@ -1705,8 +1705,14 @@ export default function AdminCustomersPage() {
           </div>
         ) : customers.length === 0 ? (
           <Card>
-            <CardContent className="p-8 text-center text-gray-400">
-              No customers found.
+            <CardContent className="p-12 text-center">
+              <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
+              <p className="text-gray-500 font-medium mb-1">
+                {searchInput ? "No customers match your search" : "No customers yet"}
+              </p>
+              <p className="text-gray-400 text-sm">
+                {searchInput ? "Try a different name or email" : "Customers will appear here after their first booking"}
+              </p>
             </CardContent>
           </Card>
         ) : (

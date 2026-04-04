@@ -1555,7 +1555,7 @@ export default function AdminVehiclesPage() {
                 {/* Content */}
                 <CardContent className="p-4">
                   {/* Title */}
-                  <h3 className="font-semibold text-gray-900 mb-2 text-lg">
+                  <h3 className="font-semibold text-gray-900 mb-2 text-lg truncate" title={getVehicleDisplayName(vehicle)}>
                     {getVehicleDisplayName(vehicle)}
                   </h3>
 

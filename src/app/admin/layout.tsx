@@ -274,7 +274,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold">Admin Panel</h2>
-              <p className={cn("text-xs mt-0.5", isDark ? "text-gray-400" : "text-gray-500")}>{user?.email}</p>
+              <p className={cn("text-xs mt-0.5 truncate max-w-[160px]", isDark ? "text-gray-400" : "text-gray-500")} title={user?.email}>{user?.email}</p>
             </div>
             <div className="relative">
               <button
