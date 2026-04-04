@@ -492,21 +492,53 @@ export default function AdminMaintenancePage() {
   };
 
   // Render the "Add New Record" form (inline on the page)
-  const renderAddForm = () => (
-    <Card className="mb-6 border-purple-200" ref={addFormRef}>
-      <CardContent className="p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <div className="rounded-lg bg-purple-100 p-1.5">
-            <Plus className="h-4 w-4 text-purple-600" aria-hidden="true" />
-          </div>
-          <h3 className="font-semibold text-gray-900">Add New Maintenance Record</h3>
-        </div>
+  const renderAddForm = () => {
+    const statusColors: Record<string, string> = {
+      pending: "bg-amber-100 text-amber-700 border-amber-200",
+      "in-progress": "bg-blue-100 text-blue-700 border-blue-200",
+      completed: "bg-green-100 text-green-700 border-green-200",
+    };
 
-        <div className="space-y-6">
-          {/* Vehicle and Title Row */}
+    return (
+    <Card className="mb-6 border-purple-200 overflow-hidden" ref={addFormRef}>
+      {/* Header with gradient */}
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
+              <Wrench className="h-4.5 w-4.5 text-white" aria-hidden="true" />
+            </div>
+            <div>
+              <h3 className="font-semibold text-white">New Maintenance Record</h3>
+              <p className="text-white/70 text-xs mt-0.5">Log service, repairs, or inspections</p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              newRecord.photoUrls.forEach((url) => { if (url.startsWith("blob:")) URL.revokeObjectURL(url); });
+              setTempNewPhotos([]); setShowAddForm(false); setNewRecord(emptyRecord);
+            }}
+            className="text-white/70 hover:text-white transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+      </div>
+
+      <CardContent className="p-6 space-y-6">
+
+        {/* ── Vehicle & Title ── */}
+        <div>
+          <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+              <Wrench className="w-4 h-4" />
+            </div>
+            <h4 className="text-sm font-semibold text-gray-900">Basic Information</h4>
+          </div>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-1.5 block">
                 Vehicle <span className="text-red-500">*</span>
               </label>
               <select
@@ -519,170 +551,205 @@ export default function AdminMaintenancePage() {
                     vehicleName: selected ? getVehicleDisplayName(selected) : "",
                   });
                 }}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
               >
-                <option value="">Select a vehicle</option>
+                <option value="">Select a vehicle...</option>
                 {vehicles.map((v) => (
                   <option key={v.id} value={v.id}>{getVehicleDisplayName(v)}</option>
                 ))}
               </select>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">
+              <label className="text-xs font-medium text-gray-700 mb-1.5 block">
                 Title <span className="text-red-500">*</span>
               </label>
               <Input
                 value={newRecord.title || ""}
                 onChange={(e) => setNewRecord({ ...newRecord, title: e.target.value })}
-                placeholder="e.g. Oil Change"
+                placeholder="e.g. Oil Change, Brake Inspection"
+                className="focus-visible:outline-2 focus-visible:outline-purple-600"
               />
             </div>
           </div>
-
-          {/* Description */}
-          <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Description</label>
+          <div className="mt-4">
+            <label className="text-xs font-medium text-gray-700 mb-1.5 block">Description</label>
             <textarea
               value={newRecord.description || ""}
               onChange={(e) => setNewRecord({ ...newRecord, description: e.target.value })}
-              placeholder="Details about the maintenance work"
+              placeholder="Describe the maintenance work to be performed..."
               rows={3}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
             />
           </div>
+        </div>
 
-          {/* Status, Cost, Dates Row */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+        {/* ── Status & Scheduling ── */}
+        <div>
+          <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+              <Clock className="w-4 h-4" />
+            </div>
+            <h4 className="text-sm font-semibold text-gray-900">Status & Schedule</h4>
+          </div>
+
+          {/* Status pills */}
+          <div className="mb-4">
+            <label className="text-xs font-medium text-gray-700 mb-2 block">Status</label>
+            <div className="flex gap-2">
+              {([
+                { value: "pending", label: "Pending", icon: Clock },
+                { value: "in-progress", label: "In Progress", icon: Wrench },
+                { value: "completed", label: "Completed", icon: CheckCircle },
+              ] as const).map(({ value, label, icon: StatusIcon }) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setNewRecord({ ...newRecord, status: value })}
+                  className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg border text-xs font-medium transition-all ${
+                    newRecord.status === value
+                      ? statusColors[value] + " shadow-sm"
+                      : "bg-white border-gray-200 text-gray-500 hover:border-gray-300"
+                  }`}
+                >
+                  <StatusIcon className="w-3.5 h-3.5" />
+                  {label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Status</label>
-              <select
-                value={newRecord.status || "pending"}
-                onChange={(e) =>
-                  setNewRecord({
-                    ...newRecord,
-                    status: e.target.value as "pending" | "in-progress" | "completed",
-                  })
-                }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              >
-                <option value="pending">Pending</option>
-                <option value="in-progress">In Progress</option>
-                <option value="completed">Completed</option>
-              </select>
+              <label className="text-xs font-medium text-gray-700 mb-1.5 block flex items-center gap-1">
+                <DollarSign className="w-3 h-3 text-green-500" /> Estimated Cost
+              </label>
+              <div className="relative">
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+                <Input
+                  type="number"
+                  value={newRecord.cost ?? ""}
+                  onChange={(e) =>
+                    setNewRecord({
+                      ...newRecord,
+                      cost: e.target.value ? Number(e.target.value) : null,
+                    })
+                  }
+                  placeholder="0.00"
+                  min="0"
+                  step="0.01"
+                  className="pl-7"
+                />
+              </div>
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Estimated Cost ($)</label>
-              <Input
-                type="number"
-                value={newRecord.cost ?? ""}
-                onChange={(e) =>
-                  setNewRecord({
-                    ...newRecord,
-                    cost: e.target.value ? Number(e.target.value) : null,
-                  })
-                }
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Start Date</label>
+              <label className="text-xs font-medium text-gray-700 mb-1.5 block">Start Date</label>
               <Input
                 type="date"
                 value={newRecord.startedDate || ""}
                 onChange={(e) => setNewRecord({ ...newRecord, startedDate: e.target.value })}
+                className="focus-visible:outline-2 focus-visible:outline-purple-600"
               />
             </div>
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 block">Completed Date</label>
+              <label className="text-xs font-medium text-gray-700 mb-1.5 block">Completed Date</label>
               <Input
                 type="date"
                 value={newRecord.completedDate || ""}
                 onChange={(e) => setNewRecord({ ...newRecord, completedDate: e.target.value })}
+                className="focus-visible:outline-2 focus-visible:outline-purple-600"
               />
             </div>
           </div>
+        </div>
 
-          {/* Notes */}
-          <div>
-            <label className="text-xs font-medium text-gray-700 mb-1 block">Notes</label>
-            <textarea
-              value={newRecord.notes || ""}
-              onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })}
-              placeholder="Additional notes about the maintenance"
-              rows={2}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-            />
-          </div>
+        {/* ── Notes ── */}
+        <div>
+          <label className="text-xs font-medium text-gray-700 mb-1.5 block">Additional Notes</label>
+          <textarea
+            value={newRecord.notes || ""}
+            onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })}
+            placeholder="Any additional notes about parts, vendor info, warranty..."
+            rows={2}
+            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
+          />
+        </div>
 
-          {/* Photos Section */}
-          <div>
-            <label className="text-xs font-medium text-gray-700 mb-2 block">
-              Photos
+        {/* ── Photos ── */}
+        <div>
+          <div className="flex items-center gap-2.5 pb-3 border-b border-gray-100 mb-4">
+            <div className="w-8 h-8 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+              <Camera className="w-4 h-4" />
+            </div>
+            <div className="flex items-center gap-2">
+              <h4 className="text-sm font-semibold text-gray-900">Photos</h4>
               {newRecord.photoUrls.length > 0 && (
-                <Badge variant="secondary" className="ml-2 text-xs">{newRecord.photoUrls.length}</Badge>
+                <Badge variant="secondary" className="text-xs">{newRecord.photoUrls.length}</Badge>
               )}
-            </label>
+            </div>
+          </div>
 
-            {newRecord.photoUrls && newRecord.photoUrls.length > 0 ? (
-              <div className="mb-3">
-                <MaintenancePhotoGallery
-                  photos={newRecord.photoUrls}
-                  alt={newRecord.title || "Maintenance"}
-                  onDeletePhoto={(url) => removePhoto(url, "new")}
-                  showDelete={true}
-                />
-              </div>
-            ) : (
-              <p className="text-xs text-gray-400 mb-2 flex items-center gap-1">
-                <Camera className="h-3.5 w-3.5" aria-hidden="true" />
-                No photos yet — add photos of the maintenance work
-              </p>
-            )}
-
-            <label className="cursor-pointer inline-block">
-              <div className="flex items-center gap-2 rounded-md border border-gray-200 px-3 py-2 text-sm hover:bg-gray-50 transition-colors">
-                <Upload className="h-4 w-4" />
-                Upload Photo
-              </div>
-              <input
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png,.webp"
-                onChange={(e) => handlePhotoUpload(e, "new")}
-                className="hidden"
+          {newRecord.photoUrls && newRecord.photoUrls.length > 0 ? (
+            <div className="mb-3">
+              <MaintenancePhotoGallery
+                photos={newRecord.photoUrls}
+                alt={newRecord.title || "Maintenance"}
+                onDeletePhoto={(url) => removePhoto(url, "new")}
+                showDelete={true}
               />
-            </label>
-          </div>
+            </div>
+          ) : (
+            <div className="mb-3 p-6 border-2 border-dashed border-gray-200 rounded-xl text-center">
+              <Camera className="h-8 w-8 text-gray-300 mx-auto mb-2" aria-hidden="true" />
+              <p className="text-xs text-gray-400">No photos yet — document the maintenance work</p>
+            </div>
+          )}
 
-          {/* Actions */}
-          <div className="flex gap-2 pt-4 border-t">
-            <Button
-              onClick={addRecord}
-              disabled={saving || !newRecord.vehicleId || !newRecord.title}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              {saving ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Saving...</> : "Save"}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                // Clean up blob URLs
-                newRecord.photoUrls.forEach((url) => {
-                  if (url.startsWith("blob:")) URL.revokeObjectURL(url);
-                });
-                setTempNewPhotos([]);
-                setShowAddForm(false);
-                setNewRecord(emptyRecord);
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
+          <label className="cursor-pointer inline-block">
+            <div className="flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-600 transition-colors">
+              <Upload className="h-4 w-4" />
+              Upload Photo
+            </div>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              onChange={(e) => handlePhotoUpload(e, "new")}
+              className="hidden"
+            />
+          </label>
+        </div>
+
+        {/* ── Actions ── */}
+        <div className="flex gap-3 justify-end pt-4 border-t border-gray-100">
+          <Button
+            variant="outline"
+            onClick={() => {
+              newRecord.photoUrls.forEach((url) => {
+                if (url.startsWith("blob:")) URL.revokeObjectURL(url);
+              });
+              setTempNewPhotos([]);
+              setShowAddForm(false);
+              setNewRecord(emptyRecord);
+            }}
+            className="px-5"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={addRecord}
+            disabled={saving || !newRecord.vehicleId || !newRecord.title}
+            className="bg-purple-600 hover:bg-purple-700 px-6 shadow-sm shadow-purple-200"
+          >
+            {saving ? (
+              <span className="flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Saving...</span>
+            ) : (
+              "Save Record"
+            )}
+          </Button>
         </div>
       </CardContent>
     </Card>
-  );
+    );
+  };
 
   return (
     <>

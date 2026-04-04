@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Check, AlertTriangle, Calculator, MapPin, Upload } from "lucide-react";
+import { X, Check, AlertTriangle, Calculator, MapPin, Upload, User, Car, CalendarDays, Package, CreditCard, DollarSign, Clock, Shield, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -16,6 +16,21 @@ import {
   TIME_SLOTS,
 } from "../types";
 import { Location } from "@/lib/types";
+
+/* ── Section header component ── */
+function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle?: string }) {
+  return (
+    <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
+      <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-purple-100 text-purple-600 shrink-0">
+        <Icon className="w-4.5 h-4.5" />
+      </div>
+      <div>
+        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
+        {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
+      </div>
+    </div>
+  );
+}
 
 interface CreateBookingFormProps {
   vehicles: Vehicle[];
@@ -427,253 +442,289 @@ export default function CreateBookingForm({
   const selectedVehicle = vehicles.find((v) => v.id === form.vehicleId);
   const days = calculateDays();
 
+  /* ── Compute price breakdown for summary card ── */
+  const baseTotal = selectedVehicle && days ? days * (selectedVehicle.dailyRate ?? 0) : 0;
+  let extrasTotal = 0;
+  form.selectedExtras.forEach((extraId) => {
+    const extra = AVAILABLE_EXTRAS.find((e) => e.id === extraId);
+    if (extra && days) {
+      if (extra.billingType === "per-day") extrasTotal += days * extra.pricePerDay;
+      else if (extra.billingType === "per-day-capped" && extra.maxPrice) extrasTotal += Math.min(days * extra.pricePerDay, extra.maxPrice);
+      else if (extra.billingType === "one-time") extrasTotal += extra.pricePerDay;
+    }
+  });
+  const subtotal = baseTotal + extrasTotal;
+  const tax = subtotal * 0.08;
+
+  /* ── Completion progress ── */
+  const completedSteps = [
+    form.customerName && form.customerEmail && form.customerPhone,
+    form.vehicleId,
+    form.pickupDate && form.returnDate,
+    true, // extras are optional
+  ].filter(Boolean).length;
+  const progressPercent = Math.round((completedSteps / 4) * 100);
+
   return (
-    <Card className="border-purple-200 p-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* CUSTOMER SEARCH DROPDOWN */}
-        <div ref={dropdownRef} className="relative">
-          <label className="block text-sm font-medium mb-2">Find Existing Customer</label>
-          <Input
-            ref={searchInputRef}
-            type="text"
-            placeholder="Search by name or email..."
-            value={searchValue}
-            onChange={handleSearchChange}
-            onFocus={() => searchValue && setShowDropdown(true)}
-            className="w-full"
-          />
-          {showDropdown && filteredCustomers.length > 0 && (
-            <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded shadow-lg z-50">
-              {filteredCustomers.map((customer) => (
-                <button
-                  key={customer.id}
-                  type="button"
-                  onClick={() => selectCustomer(customer)}
-                  className="w-full text-left px-4 py-2 hover:bg-purple-50"
-                >
-                  <div className="font-medium">{customer.name}</div>
-                  <div className="text-xs text-gray-500">{customer.email}</div>
-                </button>
-              ))}
-              {filteredCustomers.length >= 8 && (
-                <div className="px-4 py-2 text-xs text-gray-400 bg-gray-50 border-t">
-                  Type more to narrow results...
+    <Card className="border-purple-200 overflow-hidden">
+      {/* ═══ Header with progress ═══ */}
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-white font-semibold text-lg">New Booking</h2>
+          <button type="button" onClick={onClose} className="text-white/70 hover:text-white transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        {/* Progress bar */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
+            <div className="h-full bg-white rounded-full transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <span className="text-white/80 text-xs font-medium">{progressPercent}%</span>
+        </div>
+      </div>
+
+      <form onSubmit={handleSubmit} className="p-6 space-y-8">
+
+        {/* ═══ SECTION 1: Customer ═══ */}
+        <section className="space-y-4">
+          <SectionHeader icon={User} title="Customer Information" subtitle="Search existing or add new customer" />
+
+          {/* Search dropdown */}
+          <div ref={dropdownRef} className="relative">
+            <div className="relative">
+              <Input
+                ref={searchInputRef}
+                type="text"
+                placeholder="Search existing customers by name or email..."
+                value={searchValue}
+                onChange={handleSearchChange}
+                onFocus={() => searchValue && setShowDropdown(true)}
+                className="pl-9 focus-visible:outline-2 focus-visible:outline-purple-600"
+              />
+              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+            </div>
+            {showDropdown && filteredCustomers.length > 0 && (
+              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+                {filteredCustomers.map((customer) => (
+                  <button
+                    key={customer.id}
+                    type="button"
+                    onClick={() => selectCustomer(customer)}
+                    className="w-full text-left px-4 py-2.5 hover:bg-purple-50 transition-colors flex items-center gap-3 border-b border-gray-50 last:border-0"
+                  >
+                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-xs font-bold shrink-0">
+                      {customer.name?.charAt(0)?.toUpperCase() || "?"}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="font-medium text-sm text-gray-900 truncate">{customer.name}</div>
+                      <div className="text-xs text-gray-500 truncate">{customer.email}</div>
+                    </div>
+                  </button>
+                ))}
+                {filteredCustomers.length >= 8 && (
+                  <div className="px-4 py-2 text-xs text-gray-400 bg-gray-50 border-t text-center">
+                    Type more to narrow results...
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          <div className="relative flex items-center gap-3 py-1">
+            <div className="flex-1 border-t border-gray-200" />
+            <span className="text-xs text-gray-400 font-medium">or enter details manually</span>
+            <div className="flex-1 border-t border-gray-200" />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Full Name <span className="text-red-500">*</span></label>
+              <Input
+                type="text"
+                value={form.customerName}
+                onChange={(e) => setForm({ ...form, customerName: e.target.value })}
+                placeholder="John Doe"
+                className="focus-visible:outline-2 focus-visible:outline-purple-600"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Email Address <span className="text-red-500">*</span></label>
+              <Input
+                type="email"
+                value={form.customerEmail}
+                onChange={(e) => setForm({ ...form, customerEmail: e.target.value })}
+                placeholder="john@example.com"
+                className="focus-visible:outline-2 focus-visible:outline-purple-600"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
+              <Input
+                type="tel"
+                value={form.customerPhone}
+                onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
+                placeholder="+1 (555) 123-4567"
+                className="focus-visible:outline-2 focus-visible:outline-purple-600"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">ID Document <span className="text-gray-400 font-normal">(optional)</span></label>
+              <input
+                ref={idInputRef}
+                type="file"
+                accept="image/*,.pdf"
+                onChange={handleIdFileChange}
+                className="hidden"
+              />
+              {idDocumentPreview ? (
+                <div className="relative inline-block">
+                  <img src={idDocumentPreview} alt="ID preview" className="h-[38px] w-auto rounded-lg border border-gray-200 object-cover" />
+                  <button type="button" onClick={() => { setIdDocument(null); setIdDocumentPreview(null); if (idInputRef.current) idInputRef.current.value = ""; }} className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 shadow hover:bg-red-600">
+                    <X className="w-3 h-3" />
+                  </button>
                 </div>
+              ) : idDocument ? (
+                <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
+                  <FileText className="w-4 h-4 text-gray-400 shrink-0" />
+                  <span className="text-sm text-gray-700 truncate flex-1">{idDocument.name}</span>
+                  <button type="button" onClick={() => { setIdDocument(null); if (idInputRef.current) idInputRef.current.value = ""; }} className="text-red-500 hover:text-red-700">
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => idInputRef.current?.click()}
+                  className="flex items-center gap-2 px-3 py-2 border border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-purple-400 hover:text-purple-600 hover:bg-purple-50/50 transition-colors w-full"
+                >
+                  <Upload className="w-4 h-4" />
+                  Upload license, passport, or ID
+                </button>
               )}
             </div>
-          )}
-          <div className="my-3 text-xs text-gray-400 text-center">
-            ──────── Or enter new customer details below ────────
           </div>
-        </div>
+        </section>
 
-        {/* CUSTOMER FIELDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Customer Name <span className="text-red-500">*</span></label>
-            <Input
-              type="text"
-              value={form.customerName}
-              onChange={(e) => setForm({ ...form, customerName: e.target.value })}
-              placeholder="John Doe"
-              className="focus-visible:outline-2 focus-visible:outline-purple-600"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Email <span className="text-red-500">*</span></label>
-            <Input
-              type="email"
-              value={form.customerEmail}
-              onChange={(e) => setForm({ ...form, customerEmail: e.target.value })}
-              placeholder="john@example.com"
-              className="focus-visible:outline-2 focus-visible:outline-purple-600"
-            />
-          </div>
-        </div>
+        {/* ═══ SECTION 2: Vehicle ═══ */}
+        <section className="space-y-4">
+          <SectionHeader icon={Car} title="Vehicle Selection" subtitle="Choose from available fleet" />
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Phone <span className="text-red-500">*</span></label>
-          <Input
-            type="tel"
-            value={form.customerPhone}
-            onChange={(e) => setForm({ ...form, customerPhone: e.target.value })}
-            placeholder="+1 (555) 123-4567"
-            className="focus-visible:outline-2 focus-visible:outline-purple-600"
-          />
-        </div>
-
-        {/* ID DOCUMENT UPLOAD */}
-        <div>
-          <label className="block text-sm font-medium mb-2">ID Document (optional)</label>
-          <input
-            ref={idInputRef}
-            type="file"
-            accept="image/*,.pdf"
-            onChange={handleIdFileChange}
-            className="hidden"
-          />
-          {idDocumentPreview ? (
-            <div className="relative inline-block">
-              <img
-                src={idDocumentPreview}
-                alt="ID preview"
-                className="h-32 w-auto rounded-lg border border-gray-200 object-cover"
-              />
-              <button
-                type="button"
-                onClick={() => { setIdDocument(null); setIdDocumentPreview(null); if (idInputRef.current) idInputRef.current.value = ""; }}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ) : idDocument ? (
-            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
-              <span className="text-sm text-gray-700 truncate flex-1">{idDocument.name}</span>
-              <button
-                type="button"
-                onClick={() => { setIdDocument(null); if (idInputRef.current) idInputRef.current.value = ""; }}
-                className="text-red-500 hover:text-red-700"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => idInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-purple-400 hover:text-purple-600 transition-colors w-full justify-center"
-            >
-              <Upload className="w-4 h-4" />
-              Upload ID Photo or PDF
-            </button>
-          )}
-          <p className="text-xs text-gray-400 mt-1">Driver&apos;s license, passport, or state ID. Max 10MB.</p>
-        </div>
-
-        {/* VEHICLE SELECT */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Vehicle <span className="text-red-500">*</span></label>
           <select
             value={form.vehicleId}
             onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}
-            className="w-full px-3 py-2 border rounded text-sm focus-visible:outline-2 focus-visible:outline-purple-600 outline-none"
+            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
           >
-            <option value="">Select a vehicle</option>
+            <option value="">Select a vehicle...</option>
             {vehicles.map((v) => (
-              <option
-                key={v.id}
-                value={v.id}
-                disabled={!v.isAvailable}
-                className={!v.isAvailable ? "text-gray-400" : ""}
-              >
-                {v.year} {v.make} {v.model} — ${v.dailyRate}/day
-                {!v.isAvailable ? " (Unavailable)" : ""}
+              <option key={v.id} value={v.id} disabled={!v.isAvailable}>
+                {v.year} {v.make} {v.model} — ${v.dailyRate}/day{!v.isAvailable ? " (Unavailable)" : ""}
               </option>
             ))}
           </select>
-        </div>
 
-        {/* OVERLAP WARNING */}
-        {hasOverlappingBookings && (
-          <div className="flex gap-2 p-3 bg-yellow-50 border border-yellow-200 rounded">
-            <AlertTriangle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-            <div className="text-sm text-yellow-800">
-              This vehicle has overlapping bookings for the selected dates. Please review.
+          {/* Selected vehicle preview card */}
+          {selectedVehicle && (
+            <div className="flex items-center gap-4 p-3 bg-purple-50 border border-purple-100 rounded-xl">
+              <div className="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center text-purple-600 shrink-0">
+                <Car className="w-6 h-6" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm text-gray-900">{selectedVehicle.year} {selectedVehicle.make} {selectedVehicle.model}</p>
+                <p className="text-xs text-gray-600">{selectedVehicle.color || "N/A"} &middot; {selectedVehicle.category || "Standard"}</p>
+              </div>
+              <div className="text-right shrink-0">
+                <p className="text-lg font-bold text-purple-600">${selectedVehicle.dailyRate}</p>
+                <p className="text-[10px] text-gray-500 uppercase tracking-wide">per day</p>
+              </div>
             </div>
-          </div>
-        )}
+          )}
 
-        {/* DATE/TIME FIELDS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Pickup Date <span className="text-red-500">*</span></label>
-            <Input
-              type="date"
-              min={new Date().toISOString().split("T")[0]}
-              value={form.pickupDate}
-              onChange={(e) => setForm({ ...form, pickupDate: e.target.value })}
-              className="focus-visible:outline-2 focus-visible:outline-purple-600"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Pickup Time <span className="text-red-500">*</span></label>
-            <select
-              value={form.pickupTime}
-              onChange={(e) => setForm({ ...form, pickupTime: e.target.value })}
-              className="w-full px-3 py-2 border rounded text-sm focus-visible:outline-2 focus-visible:outline-purple-600 outline-none"
-            >
-              {TIME_SLOTS.map((slot) => (
-                <option key={slot.value} value={slot.value}>
-                  {slot.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+          {hasOverlappingBookings && (
+            <div className="flex gap-2.5 p-3 bg-amber-50 border border-amber-200 rounded-lg">
+              <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <div className="text-sm text-amber-800">This vehicle has overlapping bookings for the selected dates. Proceed with caution.</div>
+            </div>
+          )}
+        </section>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Return Date <span className="text-red-500">*</span></label>
-            <Input
-              type="date"
-              value={form.returnDate}
-              onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
-              className="focus-visible:outline-2 focus-visible:outline-purple-600"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Return Time <span className="text-red-500">*</span></label>
-            <select
-              value={form.returnTime}
-              onChange={(e) => setForm({ ...form, returnTime: e.target.value })}
-              className="w-full px-3 py-2 border rounded text-sm focus-visible:outline-2 focus-visible:outline-purple-600 outline-none"
-            >
-              {TIME_SLOTS.map((slot) => (
-                <option key={slot.value} value={slot.value}>
-                  {slot.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        {/* ═══ SECTION 3: Dates & Location ═══ */}
+        <section className="space-y-4">
+          <SectionHeader icon={CalendarDays} title="Rental Period" subtitle="Set pickup and return schedule" />
 
-        {/* Locations */}
-        {!locationsLoading && locations.length > 0 && (
-          <div className="space-y-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
-              <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                <MapPin className="w-3 h-3" /> Pickup Location
-              </label>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Pickup Date <span className="text-red-500">*</span></label>
+              <Input
+                type="date"
+                min={new Date().toISOString().split("T")[0]}
+                value={form.pickupDate}
+                onChange={(e) => setForm({ ...form, pickupDate: e.target.value })}
+                className="focus-visible:outline-2 focus-visible:outline-purple-600 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Pickup Time <span className="text-red-500">*</span></label>
               <select
-                value={pickupLocationId}
-                onChange={(e) => {
-                  setPickupLocationId(e.target.value);
-                  if (!differentDropoff) setReturnLocationId(e.target.value);
-                }}
-                className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                value={form.pickupTime}
+                onChange={(e) => setForm({ ...form, pickupTime: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
               >
-                <option value="">Select location...</option>
-                {locations.map(l => (
-                  <option key={l.id} value={l.id}>
-                    {l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}{l.is_default ? ' (Default)' : ''}
-                  </option>
+                {TIME_SLOTS.map((slot) => (
+                  <option key={slot.value} value={slot.value}>{slot.label}</option>
                 ))}
               </select>
             </div>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <input type="checkbox" checked={differentDropoff} onChange={(e) => { setDifferentDropoff(e.target.checked); if (!e.target.checked) setReturnLocationId(pickupLocationId); }} className="rounded border-gray-300 text-purple-600" />
-              <span className="text-xs text-gray-600">Different dropoff location</span>
-            </label>
-            {differentDropoff && (
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Return Date <span className="text-red-500">*</span></label>
+              <Input
+                type="date"
+                value={form.returnDate}
+                onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
+                className="focus-visible:outline-2 focus-visible:outline-purple-600 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Return Time <span className="text-red-500">*</span></label>
+              <select
+                value={form.returnTime}
+                onChange={(e) => setForm({ ...form, returnTime: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+              >
+                {TIME_SLOTS.map((slot) => (
+                  <option key={slot.value} value={slot.value}>{slot.label}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {/* Duration badge */}
+          {days > 0 && (
+            <div className="flex items-center gap-2">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium">
+                <Clock className="w-3 h-3" />
+                {days} day{days !== 1 ? "s" : ""}
+              </div>
+            </div>
+          )}
+
+          {/* Locations */}
+          {!locationsLoading && locations.length > 0 && (
+            <div className="space-y-3 pt-1">
               <div>
-                <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
-                  <MapPin className="w-3 h-3" /> Dropoff Location
+                <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1">
+                  <MapPin className="w-3 h-3 text-purple-500" /> Pickup Location
                 </label>
                 <select
-                  value={returnLocationId}
-                  onChange={(e) => setReturnLocationId(e.target.value)}
-                  className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
+                  value={pickupLocationId}
+                  onChange={(e) => {
+                    setPickupLocationId(e.target.value);
+                    if (!differentDropoff) setReturnLocationId(e.target.value);
+                  }}
+                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
                 >
                   <option value="">Select location...</option>
                   {locations.map(l => (
@@ -683,155 +734,199 @@ export default function CreateBookingForm({
                   ))}
                 </select>
               </div>
-            )}
-          </div>
-        )}
-
-        {/* EXTRAS / INSURANCE */}
-        <div>
-          <label className="block text-sm font-medium mb-3">Extras & Insurance</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {AVAILABLE_EXTRAS.map((extra) => (
-              <button
-                key={extra.id}
-                type="button"
-                onClick={() => toggleExtra(extra.id)}
-                className={`p-3 border-2 rounded text-left transition ${
-                  form.selectedExtras.includes(extra.id)
-                    ? "border-purple-500 bg-purple-50"
-                    : "border-gray-200 bg-white hover:border-gray-300"
-                }`}
-              >
-                <div className="flex items-start gap-2">
-                  <div
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 mt-0.5 ${
-                      form.selectedExtras.includes(extra.id)
-                        ? "bg-purple-500 border-purple-500"
-                        : "border-gray-300"
-                    }`}
+              <label className="flex items-center gap-2 cursor-pointer">
+                <input type="checkbox" checked={differentDropoff} onChange={(e) => { setDifferentDropoff(e.target.checked); if (!e.target.checked) setReturnLocationId(pickupLocationId); }} className="rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
+                <span className="text-xs text-gray-600">Different dropoff location</span>
+              </label>
+              {differentDropoff && (
+                <div>
+                  <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1">
+                    <MapPin className="w-3 h-3 text-purple-500" /> Dropoff Location
+                  </label>
+                  <select
+                    value={returnLocationId}
+                    onChange={(e) => setReturnLocationId(e.target.value)}
+                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
                   >
-                    {form.selectedExtras.includes(extra.id) && (
-                      <Check className="w-3 h-3 text-white" />
-                    )}
-                  </div>
-                  <div className="flex-1">
-                    <div className="font-medium text-sm">
-                      {extra.name}
-                      {extra.id === "e1" && <span className="text-green-600 ml-1">(Recommended)</span>}
-                    </div>
-                    <div className="text-xs text-gray-600">{extra.description}</div>
-                    <div className="text-xs font-medium text-purple-600 mt-1">
-                      ${extra.pricePerDay}
-                      {extra.billingType === "per-day" && "/day"}
-                      {extra.billingType === "per-day-capped" && ` (max: $${extra.maxPrice})`}
-                      {extra.billingType === "one-time" && " (one-time)"}
-                    </div>
-                  </div>
+                    <option value="">Select location...</option>
+                    {locations.map(l => (
+                      <option key={l.id} value={l.id}>
+                        {l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}{l.is_default ? ' (Default)' : ''}
+                      </option>
+                    ))}
+                  </select>
                 </div>
-              </button>
-            ))}
+              )}
+            </div>
+          )}
+        </section>
+
+        {/* ═══ SECTION 4: Extras ═══ */}
+        <section className="space-y-4">
+          <SectionHeader icon={Package} title="Extras & Insurance" subtitle="Optional add-ons for this booking" />
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {AVAILABLE_EXTRAS.map((extra) => {
+              const isSelected = form.selectedExtras.includes(extra.id);
+              return (
+                <button
+                  key={extra.id}
+                  type="button"
+                  onClick={() => toggleExtra(extra.id)}
+                  className={`p-3.5 border-2 rounded-xl text-left transition-all ${
+                    isSelected
+                      ? "border-purple-500 bg-purple-50 shadow-sm shadow-purple-100"
+                      : "border-gray-200 bg-white hover:border-gray-300 hover:shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <div
+                      className={`w-5 h-5 rounded-md border-2 flex items-center justify-center flex-shrink-0 mt-0.5 transition-colors ${
+                        isSelected ? "bg-purple-500 border-purple-500" : "border-gray-300"
+                      }`}
+                    >
+                      {isSelected && <Check className="w-3 h-3 text-white" />}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-sm text-gray-900">
+                        {extra.name}
+                        {extra.id === "e1" && (
+                          <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-md bg-green-100 text-green-700 text-[10px] font-semibold uppercase">Recommended</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-500 mt-0.5">{extra.description}</div>
+                      <div className="text-xs font-semibold text-purple-600 mt-1">
+                        ${extra.pricePerDay}
+                        {extra.billingType === "per-day" && "/day"}
+                        {extra.billingType === "per-day-capped" && ` (max $${extra.maxPrice})`}
+                        {extra.billingType === "one-time" && " one-time"}
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
           </div>
-        </div>
+        </section>
 
-        {/* PAYMENT METHOD */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Payment Method</label>
-          <select
-            value={form.paymentMethod}
-            onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-            className="w-full px-3 py-2 border rounded text-sm focus-visible:outline-2 focus-visible:outline-purple-600 outline-none"
-          >
-            {PAYMENT_METHODS.map((method) => (
-              <option key={method.value} value={method.value}>
-                {method.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* ═══ SECTION 5: Payment & Pricing ═══ */}
+        <section className="space-y-4">
+          <SectionHeader icon={CreditCard} title="Payment & Pricing" subtitle="Review total and payment method" />
 
-        {/* PRICE + DEPOSIT + STATUS */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">Total Price ($)</label>
-            <div className="relative">
+          {/* Price breakdown summary */}
+          {selectedVehicle && days > 0 && !manualPriceOverride && (
+            <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>${selectedVehicle.dailyRate}/day &times; {days} day{days !== 1 ? "s" : ""}</span>
+                <span>${baseTotal.toFixed(2)}</span>
+              </div>
+              {extrasTotal > 0 && (
+                <div className="flex justify-between text-gray-600">
+                  <span>Extras & add-ons</span>
+                  <span>${extrasTotal.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-gray-600">
+                <span>Tax (8%)</span>
+                <span>${tax.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
+                <span>Estimated Total</span>
+                <span className="text-purple-600">${(subtotal + tax).toFixed(2)}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Total Price ($)</label>
+              <div className="relative">
+                <Input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={form.totalPrice}
+                  onChange={(e) => {
+                    const amount = parseFloat(e.target.value);
+                    setManualPriceOverride(true);
+                    setForm({ ...form, totalPrice: isNaN(amount) ? 0 : Math.max(0, amount) });
+                  }}
+                  placeholder="0.00"
+                  className={manualPriceOverride ? "border-amber-400 bg-amber-50/50 pr-10" : ""}
+                />
+                {manualPriceOverride && (
+                  <button
+                    type="button"
+                    onClick={() => setManualPriceOverride(false)}
+                    title="Recalculate from daily rate"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-purple-500 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
+                  >
+                    <Calculator className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {manualPriceOverride && (
+                <p className="text-[10px] text-amber-600 mt-1 font-medium">Custom price — tap calculator to restore</p>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Amount Paid ($)</label>
               <Input
                 type="number"
                 step="0.01"
                 min="0"
-                value={form.totalPrice}
+                value={form.deposit}
                 onChange={(e) => {
                   const amount = parseFloat(e.target.value);
-                  setManualPriceOverride(true);
-                  setForm({ ...form, totalPrice: isNaN(amount) ? 0 : Math.max(0, amount) });
+                  setForm({ ...form, deposit: isNaN(amount) ? 0 : Math.max(0, amount) });
                 }}
                 placeholder="0.00"
-                className={manualPriceOverride ? "border-amber-400 bg-amber-50/50 pr-10" : ""}
               />
-              {manualPriceOverride && (
-                <button
-                  type="button"
-                  onClick={() => setManualPriceOverride(false)}
-                  title="Recalculate from daily rate"
-                  className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-purple-500 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
-                >
-                  <Calculator className="w-4 h-4" />
-                </button>
-              )}
+              <p className="text-[10px] text-gray-500 mt-1">
+                {form.deposit === 0 && form.totalPrice > 0
+                  ? "No payment recorded"
+                  : form.deposit > 0 && form.deposit < form.totalPrice
+                  ? `$${(form.totalPrice - form.deposit).toFixed(2)} remaining`
+                  : form.deposit >= form.totalPrice && form.totalPrice > 0
+                  ? "Fully paid"
+                  : "Leave at $0 if unpaid"}
+              </p>
             </div>
-            <div className="text-xs text-gray-500 mt-1">
-              {manualPriceOverride
-                ? "Custom price — tap calculator to restore auto-pricing"
-                : "Auto-calculated from daily rate, editable for custom pricing"}
-            </div>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">Amount Paid ($)</label>
-            <Input
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.deposit}
-              onChange={(e) => {
-                const amount = parseFloat(e.target.value);
-                setForm({ ...form, deposit: isNaN(amount) ? 0 : Math.max(0, amount) });
-              }}
-              placeholder="0.00"
-            />
-            <div className="text-xs text-gray-500 mt-1">
-              {form.deposit === 0 && form.totalPrice > 0
-                ? "No payment recorded — balance will show as due"
-                : form.deposit > 0 && form.deposit < form.totalPrice
-                ? `$${(form.totalPrice - form.deposit).toFixed(2)} remaining balance`
-                : form.deposit >= form.totalPrice && form.totalPrice > 0
-                ? "Fully paid"
-                : "Leave at $0 if unpaid"}
+            <div>
+              <label className="block text-xs font-medium text-gray-700 mb-1.5">Payment Method</label>
+              <select
+                value={form.paymentMethod}
+                onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
+              >
+                {PAYMENT_METHODS.map((method) => (
+                  <option key={method.value} value={method.value}>{method.label}</option>
+                ))}
+              </select>
             </div>
           </div>
-        </div>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Initial Status</label>
-          <p className="text-sm text-gray-500 px-3 py-2 bg-gray-50 border rounded">
-            Pending — booking can be confirmed after the customer signs the rental agreement
-          </p>
-        </div>
+          <div className="flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-700">
+            <Shield className="w-4 h-4 shrink-0" />
+            <span>Status: <strong>Pending</strong> — confirm after the customer signs the rental agreement</span>
+          </div>
+        </section>
 
-        {/* BUTTONS */}
-        <div className="flex gap-3 justify-end pt-4">
-          <Button
-            type="button"
-            onClick={onClose}
-            variant="outline"
-            disabled={loading}
-          >
+        {/* ═══ ACTION BUTTONS ═══ */}
+        <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
+          <Button type="button" onClick={onClose} variant="outline" disabled={loading} className="px-5">
             Cancel
           </Button>
           <Button
             type="submit"
             disabled={loading}
-            className="bg-purple-600 hover:bg-purple-700 text-white"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-6 shadow-sm shadow-purple-200"
           >
-            {loading ? "Creating..." : "Create Booking"}
+            {loading ? (
+              <span className="flex items-center gap-2"><span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> Creating...</span>
+            ) : (
+              "Create Booking"
+            )}
           </Button>
         </div>
       </form>
