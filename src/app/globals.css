@@ -316,7 +316,6 @@ body:has(.admin-dark) {
 
 /* Pagination active button — avoid invisible dark-on-dark */
 .admin-dark .bg-gray-900.text-white { background-color: #7C3AED !important; }
-.admin-dark .bg-gray-900 { background-color: #1a1a1a !important; }
 
 /* Modal & dialog ring offset */
 .admin-dark .ring-offset-white { --tw-ring-offset-color: #111111 !important; }

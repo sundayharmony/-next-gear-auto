@@ -265,15 +265,16 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       <div className="hidden lg:block w-64 shrink-0" />
       <aside
         className={cn(
-          "fixed z-40 top-0 bottom-0 left-0 w-64 bg-gray-900 text-white flex-col transition-transform duration-300 ease-in-out hidden lg:flex lg:translate-x-0"
+          "fixed z-40 top-0 bottom-0 left-0 w-64 text-white flex-col transition-transform duration-300 ease-in-out hidden lg:flex lg:translate-x-0",
+          isDark ? "bg-[#111111] border-r border-[#222222]" : "bg-gray-900"
         )}
       >
         {/* Logo area */}
-        <div className="px-5 py-5 border-b border-gray-800 shrink-0">
+        <div className={cn("px-5 py-5 border-b shrink-0", isDark ? "border-[#222222]" : "border-gray-800")}>
           <div className="flex items-center justify-between">
             <div>
               <h2 className="text-lg font-bold">Admin Panel</h2>
-              <p className="text-xs text-gray-500 mt-0.5">{user?.email}</p>
+              <p className={cn("text-xs mt-0.5", isDark ? "text-gray-400" : "text-gray-500")}>{user?.email}</p>
             </div>
             <div className="relative">
               <button
@@ -287,9 +288,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                     : "hover:bg-gray-800"
                 )}
               >
-                <Bell className={cn("h-5 w-5", pendingCount > 0 ? "text-white" : "text-gray-500")} />
+                <Bell className={cn("h-5 w-5", pendingCount > 0 ? "text-white" : isDark ? "text-gray-400" : "text-gray-500")} />
                 {pendingCount > 0 && (
-                  <span className="absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5 ring-2 ring-gray-900">
+                  <span className={cn("absolute -top-1.5 -right-1.5 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[20px] h-[20px] flex items-center justify-center px-1.5 ring-2", isDark ? "ring-[#111111]" : "ring-gray-900")}>
                     {pendingCount}
                   </span>
                 )}
@@ -309,7 +310,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive(item.href)
                   ? "bg-purple-600 text-white"
-                  : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                  : isDark
+                    ? "text-gray-300 hover:bg-[#1a1a1a] hover:text-white"
+                    : "text-gray-400 hover:bg-gray-800 hover:text-white"
               )}
             >
               <item.icon className="h-4.5 w-4.5 shrink-0" />
@@ -320,11 +323,14 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </nav>
 
         {/* Footer */}
-        <div className="px-3 py-4 border-t border-gray-800 space-y-1 shrink-0">
+        <div className={cn("px-3 py-4 border-t space-y-1 shrink-0", isDark ? "border-[#222222]" : "border-gray-800")}>
           {/* Dark mode toggle */}
           <button
             onClick={toggleTheme}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors"
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+              isDark ? "text-gray-300 hover:bg-[#1a1a1a] hover:text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+            )}
             aria-label="Toggle dark mode"
           >
             {isDark ? <Sun className="h-4.5 w-4.5" /> : <Moon className="h-4.5 w-4.5" />}
@@ -342,7 +348,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
           <button
             disabled={loggingOut}
             onClick={async () => { setLoggingOut(true); await logout(); setSidebarOpen(false); router.push("/"); }}
-            className="flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium text-gray-400 hover:bg-gray-800 hover:text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className={cn(
+              "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+              isDark ? "text-gray-300 hover:bg-[#1a1a1a] hover:text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+            )}
           >
             {loggingOut ? (
               <Loader2 className="h-4.5 w-4.5 animate-spin" />
