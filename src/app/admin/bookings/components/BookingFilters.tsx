@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { SortField, SortOrder } from "../types";
 
 interface VehicleOption {
@@ -126,21 +127,20 @@ export default function BookingFilters({
 
         {/* Vehicle filter + action buttons — wrap on mobile */}
         <div className="flex gap-2 items-center flex-wrap">
-          <div className="relative flex-1 sm:flex-none">
-            <Car className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" aria-hidden="true" />
+          <div className="flex-1 sm:flex-none">
             <label htmlFor="vehicle-filter" className="sr-only">Filter by vehicle</label>
-            <select
+            <Select
               id="vehicle-filter"
               value={vehicleFilter}
               onChange={(e) => onVehicleChange(e.target.value)}
-              className="w-full sm:w-auto pl-8 pr-3 py-2 border rounded text-sm bg-white text-gray-700 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none sm:min-w-[180px] appearance-none cursor-pointer"
               aria-label="Filter by vehicle"
+              icon={<Car className="w-4 h-4" />}
             >
               <option value="all">All Vehicles</option>
               {vehicleOptions.map((v) => (
                 <option key={v.id} value={v.name}>{v.name}</option>
               ))}
-            </select>
+            </Select>
           </div>
           <Button
             variant="outline"

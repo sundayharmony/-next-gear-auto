@@ -26,6 +26,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { PageContainer } from "@/components/layout/page-container";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/utils/date-helpers";
@@ -542,14 +544,13 @@ export default function AdminTicketsPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
             <div>
               <label className="text-xs font-medium text-gray-600 block mb-1">Type</label>
-              <select
+              <Select
                 value={form.ticketType}
                 onChange={(e) => setForm((f) => ({ ...f, ticketType: e.target.value }))}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="traffic">Traffic</option>
                 <option value="parking">Parking</option>
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-600 block mb-1">Violation Date *</label>
@@ -619,23 +620,21 @@ export default function AdminTicketsPage() {
             </div>
             <div>
               <label className="text-xs font-medium text-gray-600 block mb-1">Status</label>
-              <select
+              <Select
                 value={form.status}
                 onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="unpaid">Unpaid</option>
                 <option value="paid">Paid</option>
                 <option value="disputed">Disputed</option>
                 <option value="dismissed">Dismissed</option>
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-600 block mb-1">Linked Booking</label>
-              <select
+              <Select
                 value={form.bookingId}
                 onChange={(e) => handleBookingSelect(e.target.value)}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">No booking</option>
                 {bookings
@@ -646,14 +645,13 @@ export default function AdminTicketsPage() {
                       {b.customer_name} — {b.vehicleName || "Vehicle"} ({b.pickup_date})
                     </option>
                   ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-600 block mb-1">Vehicle</label>
-              <select
+              <Select
                 value={form.vehicleId}
                 onChange={(e) => setForm((f) => ({ ...f, vehicleId: e.target.value }))}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="">Select vehicle</option>
                 {vehicles.map((v) => (
@@ -661,17 +659,16 @@ export default function AdminTicketsPage() {
                     {v.year} {v.make} {v.model}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
           <div>
             <label className="text-xs font-medium text-gray-600 block mb-1">Notes</label>
-            <textarea
+            <Textarea
               rows={3}
               placeholder="Additional details..."
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
           <div className="flex gap-2">

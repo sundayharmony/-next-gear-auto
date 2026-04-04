@@ -24,6 +24,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { PageContainer } from "@/components/layout/page-container";
 import { Vehicle, getVehicleDisplayName } from "@/lib/types";
 import { MaintenancePhotoGallery } from "@/components/maintenance-photo-gallery";
@@ -541,7 +543,7 @@ export default function AdminMaintenancePage() {
               <label className="text-xs font-medium text-gray-700 mb-1.5 block">
                 Vehicle <span className="text-red-500">*</span>
               </label>
-              <select
+              <Select
                 value={newRecord.vehicleId || ""}
                 onChange={(e) => {
                   const selected = vehicles.find((v) => v.id === e.target.value);
@@ -551,13 +553,12 @@ export default function AdminMaintenancePage() {
                     vehicleName: selected ? getVehicleDisplayName(selected) : "",
                   });
                 }}
-                className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
               >
                 <option value="">Select a vehicle...</option>
                 {vehicles.map((v) => (
                   <option key={v.id} value={v.id}>{getVehicleDisplayName(v)}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-700 mb-1.5 block">
@@ -573,12 +574,11 @@ export default function AdminMaintenancePage() {
           </div>
           <div className="mt-4">
             <label className="text-xs font-medium text-gray-700 mb-1.5 block">Description</label>
-            <textarea
+            <Textarea
               value={newRecord.description || ""}
               onChange={(e) => setNewRecord({ ...newRecord, description: e.target.value })}
               placeholder="Describe the maintenance work to be performed..."
               rows={3}
-              className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
             />
           </div>
         </div>
@@ -665,12 +665,11 @@ export default function AdminMaintenancePage() {
         {/* ── Notes ── */}
         <div>
           <label className="text-xs font-medium text-gray-700 mb-1.5 block">Additional Notes</label>
-          <textarea
+          <Textarea
             value={newRecord.notes || ""}
             onChange={(e) => setNewRecord({ ...newRecord, notes: e.target.value })}
             placeholder="Any additional notes about parts, vendor info, warranty..."
             rows={2}
-            className="w-full rounded-lg border border-gray-200 px-3 py-2.5 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none resize-none"
           />
         </div>
 
@@ -1035,7 +1034,7 @@ export default function AdminMaintenancePage() {
                     <label className="block text-xs font-medium text-gray-600 mb-1">
                       Vehicle <span className="text-red-500">*</span>
                     </label>
-                    <select
+                    <Select
                       value={detailEditData.vehicleId || ""}
                       onChange={(e) => {
                         const selected = vehicles.find((v) => v.id === e.target.value);
@@ -1045,13 +1044,12 @@ export default function AdminMaintenancePage() {
                           vehicleName: selected ? getVehicleDisplayName(selected) : "",
                         });
                       }}
-                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     >
                       <option value="">Select a vehicle</option>
                       {vehicles.map((v) => (
                         <option key={v.id} value={v.id}>{getVehicleDisplayName(v)}</option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
 
                   {/* Title */}
@@ -1069,18 +1067,17 @@ export default function AdminMaintenancePage() {
                   {/* Description */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Description</label>
-                    <textarea
+                    <Textarea
                       value={detailEditData.description || ""}
                       onChange={(e) => setDetailEditData({ ...detailEditData, description: e.target.value })}
                       rows={3}
-                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
 
                   {/* Status */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Status</label>
-                    <select
+                    <Select
                       value={detailEditData.status || "pending"}
                       onChange={(e) =>
                         setDetailEditData({
@@ -1088,12 +1085,11 @@ export default function AdminMaintenancePage() {
                           status: e.target.value as "pending" | "in-progress" | "completed",
                         })
                       }
-                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     >
                       <option value="pending">Pending</option>
                       <option value="in-progress">In Progress</option>
                       <option value="completed">Completed</option>
-                    </select>
+                    </Select>
                   </div>
 
                   {/* Cost */}
@@ -1137,11 +1133,10 @@ export default function AdminMaintenancePage() {
                   {/* Notes */}
                   <div>
                     <label className="block text-xs font-medium text-gray-600 mb-1">Notes</label>
-                    <textarea
+                    <Textarea
                       value={detailEditData.notes || ""}
                       onChange={(e) => setDetailEditData({ ...detailEditData, notes: e.target.value })}
                       rows={2}
-                      className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                     />
                   </div>
 

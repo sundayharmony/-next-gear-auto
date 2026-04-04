@@ -13,6 +13,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatTime, formatDate } from "@/lib/utils/date-helpers";
@@ -258,10 +259,9 @@ export default function AdminCalendarPage() {
             {/* Vehicle Filter */}
             <div className="flex gap-2 items-center">
               <span className="text-sm font-medium text-gray-700">Vehicle:</span>
-              <select
+              <Select
                 value={vehicleFilter}
                 onChange={(e) => setVehicleFilter(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="all">All Vehicles</option>
                 {vehicles.map((vehicle) => (
@@ -269,7 +269,7 @@ export default function AdminCalendarPage() {
                     {vehicle.year} {vehicle.make} {vehicle.model}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
 

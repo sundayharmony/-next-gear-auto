@@ -5,6 +5,7 @@ import { X, Check, AlertTriangle, Calculator, MapPin, Upload, User, Car, Calenda
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
 import {
@@ -613,10 +614,9 @@ export default function CreateBookingForm({
         <section className="space-y-4">
           <SectionHeader icon={Car} title="Vehicle Selection" subtitle="Choose from available fleet" />
 
-          <select
+          <Select
             value={form.vehicleId}
             onChange={(e) => setForm({ ...form, vehicleId: e.target.value })}
-            className="w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
           >
             <option value="">Select a vehicle...</option>
             {vehicles.map((v) => (
@@ -624,7 +624,7 @@ export default function CreateBookingForm({
                 {v.year} {v.make} {v.model} — ${v.dailyRate}/day{!v.isAvailable ? " (Unavailable)" : ""}
               </option>
             ))}
-          </select>
+          </Select>
 
           {/* Selected vehicle preview card */}
           {selectedVehicle && (
@@ -668,15 +668,14 @@ export default function CreateBookingForm({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Pickup Time <span className="text-red-500">*</span></label>
-              <select
+              <Select
                 value={form.pickupTime}
                 onChange={(e) => setForm({ ...form, pickupTime: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
               >
                 {TIME_SLOTS.map((slot) => (
                   <option key={slot.value} value={slot.value}>{slot.label}</option>
                 ))}
-              </select>
+              </Select>
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Return Date <span className="text-red-500">*</span></label>
@@ -689,15 +688,14 @@ export default function CreateBookingForm({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Return Time <span className="text-red-500">*</span></label>
-              <select
+              <Select
                 value={form.returnTime}
                 onChange={(e) => setForm({ ...form, returnTime: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
               >
                 {TIME_SLOTS.map((slot) => (
                   <option key={slot.value} value={slot.value}>{slot.label}</option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -718,13 +716,12 @@ export default function CreateBookingForm({
                 <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1">
                   <MapPin className="w-3 h-3 text-purple-500" /> Pickup Location
                 </label>
-                <select
+                <Select
                   value={pickupLocationId}
                   onChange={(e) => {
                     setPickupLocationId(e.target.value);
                     if (!differentDropoff) setReturnLocationId(e.target.value);
                   }}
-                  className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
                 >
                   <option value="">Select location...</option>
                   {locations.map(l => (
@@ -732,7 +729,7 @@ export default function CreateBookingForm({
                       {l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}{l.is_default ? ' (Default)' : ''}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={differentDropoff} onChange={(e) => { setDifferentDropoff(e.target.checked); if (!e.target.checked) setReturnLocationId(pickupLocationId); }} className="rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
@@ -743,10 +740,9 @@ export default function CreateBookingForm({
                   <label className="block text-xs font-medium text-gray-700 mb-1.5 flex items-center gap-1">
                     <MapPin className="w-3 h-3 text-purple-500" /> Dropoff Location
                   </label>
-                  <select
+                  <Select
                     value={returnLocationId}
                     onChange={(e) => setReturnLocationId(e.target.value)}
-                    className="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
                   >
                     <option value="">Select location...</option>
                     {locations.map(l => (
@@ -754,7 +750,7 @@ export default function CreateBookingForm({
                         {l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}{l.is_default ? ' (Default)' : ''}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               )}
             </div>
@@ -894,15 +890,14 @@ export default function CreateBookingForm({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-700 mb-1.5">Payment Method</label>
-              <select
+              <Select
                 value={form.paymentMethod}
                 onChange={(e) => setForm({ ...form, paymentMethod: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-purple-500 focus:border-transparent outline-none"
               >
                 {PAYMENT_METHODS.map((method) => (
                   <option key={method.value} value={method.value}>{method.label}</option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
 

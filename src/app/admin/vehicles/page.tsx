@@ -30,6 +30,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { PageContainer } from "@/components/layout/page-container";
 import { Vehicle, VehicleCategory, getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
@@ -695,7 +697,7 @@ export default function AdminVehiclesPage() {
               <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Category
               </label>
-              <select
+              <Select
                 value={form.category || "sedan"}
                 onChange={(e) =>
                   setForm({
@@ -703,14 +705,13 @@ export default function AdminVehiclesPage() {
                     category: e.target.value as VehicleCategory,
                   })
                 }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 {CATEGORIES.map((cat) => (
                   <option key={cat} value={cat}>
                     {cat.charAt(0).toUpperCase() + cat.slice(1)}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -751,31 +752,29 @@ export default function AdminVehiclesPage() {
               <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Available
               </label>
-              <select
+              <Select
                 value={form.isAvailable ? "yes" : "no"}
                 onChange={(e) =>
                   setForm({ ...form, isAvailable: e.target.value === "yes" })
                 }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="yes">Available</option>
                 <option value="no">Unavailable</option>
-              </select>
+              </Select>
             </div>
             <div>
               <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Published
               </label>
-              <select
+              <Select
                 value={form.isPublished !== false ? "yes" : "no"}
                 onChange={(e) =>
                   setForm({ ...form, isPublished: e.target.value === "yes" })
                 }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="yes">Visible</option>
                 <option value="no">Hidden</option>
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -907,7 +906,7 @@ export default function AdminVehiclesPage() {
               <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                 Maintenance
               </label>
-              <select
+              <Select
                 value={form.maintenanceStatus || "good"}
                 onChange={(e) =>
                   setForm({
@@ -918,12 +917,11 @@ export default function AdminVehiclesPage() {
                       | "in-maintenance",
                   })
                 }
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
               >
                 <option value="good">Good</option>
                 <option value="needs-service">Needs Service</option>
                 <option value="in-maintenance">In Maintenance</option>
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -932,14 +930,13 @@ export default function AdminVehiclesPage() {
             <label className="text-xs font-medium text-gray-700 mb-0.5 block">
               Description
             </label>
-            <textarea
+            <Textarea
               value={form.description || ""}
               onChange={(e) =>
                 setForm({ ...form, description: e.target.value })
               }
               placeholder="Brief description of the vehicle"
               rows={2}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             />
           </div>
 
@@ -1165,7 +1162,7 @@ export default function AdminVehiclesPage() {
                 <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                   Transmission
                 </label>
-                <select
+                <Select
                   value={form.specs?.transmission || "Automatic"}
                   onChange={(e) =>
                     setForm({
@@ -1178,20 +1175,19 @@ export default function AdminVehiclesPage() {
                       },
                     })
                   }
-                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   {TRANSMISSION_OPTIONS.map((t) => (
                     <option key={t} value={t}>
                       {t}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-700 mb-0.5 block">
                   Fuel Type
                 </label>
-                <select
+                <Select
                   value={form.specs?.fuelType || "Gasoline"}
                   onChange={(e) =>
                     setForm({
@@ -1206,14 +1202,13 @@ export default function AdminVehiclesPage() {
                       },
                     })
                   }
-                  className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 >
                   {FUEL_TYPE_OPTIONS.map((f) => (
                     <option key={f} value={f}>
                       {f}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
               <div>
                 <label className="text-xs font-medium text-gray-700 mb-0.5 block">
@@ -1410,13 +1405,12 @@ export default function AdminVehiclesPage() {
           </div>
           <div className="flex items-center gap-2">
             <Filter className="h-4 w-4 text-gray-400" />
-            <select
+            <Select
               value={filterCategory}
               onChange={(e) =>
                 setFilterCategory(e.target.value as VehicleCategory | "")
               }
               aria-label="Filter by category"
-              className="rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
             >
               <option value="">All Categories</option>
               {CATEGORIES.map((cat) => (
@@ -1424,7 +1418,7 @@ export default function AdminVehiclesPage() {
                   {cat.charAt(0).toUpperCase() + cat.slice(1)}
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
           <Button
             variant="outline"

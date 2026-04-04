@@ -22,6 +22,8 @@ import {
   Calendar,
   Car,
 } from "lucide-react";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 interface BlockedDate {
   id: string;
@@ -309,11 +311,10 @@ export default function BlockedDatesPage() {
                 Copy the full text of the Turo booking confirmation email and paste it below.
                 The system will extract the vehicle, dates, and guest name automatically.
               </p>
-              <textarea
+              <Textarea
                 value={emailText}
                 onChange={(e) => { setEmailText(e.target.value); setParseResult(null); }}
                 placeholder="Paste the full Turo booking confirmation email here..."
-                className="w-full h-32 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-y"
               />
               <div className="flex gap-2 mt-3">
                 <Button onClick={handleParseEmail} disabled={parsing || !emailText.trim()} size="sm">
@@ -371,17 +372,16 @@ export default function BlockedDatesPage() {
                       <label className="text-xs font-semibold text-gray-700 block mb-1">
                         Select Vehicle to Block
                       </label>
-                      <select
+                      <Select
                         value={emailVehicleId}
                         onChange={(e) => setEmailVehicleId(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                         aria-label="Vehicle for email block"
                       >
                         <option value="">Choose vehicle...</option>
                         {vehicles.map((v) => (
                           <option key={v.id} value={v.id}>{getVehicleDisplayName(v)}</option>
                         ))}
-                      </select>
+                      </Select>
                       <Button
                         onClick={handleConfirmEmailBlock}
                         disabled={!emailVehicleId || savingEmail}
@@ -422,17 +422,16 @@ export default function BlockedDatesPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
                 <div>
                   <label className="text-xs font-medium text-gray-700 mb-1 block">Vehicle</label>
-                  <select
+                  <Select
                     value={manualVehicleId}
                     onChange={(e) => setManualVehicleId(e.target.value)}
-                    className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
                     aria-label="Vehicle for manual block"
                   >
                     <option value="">Choose vehicle...</option>
                     {vehicles.map((v) => (
                       <option key={v.id} value={v.id}>{getVehicleDisplayName(v)}</option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-700 mb-1 block">Start Date</label>
@@ -477,17 +476,16 @@ export default function BlockedDatesPage() {
         {/* Filter */}
         <div className="flex items-center gap-3 mb-4">
           <label className="text-sm font-medium text-gray-700">Filter by vehicle:</label>
-          <select
+          <Select
             value={filterVehicleId}
             onChange={(e) => setFilterVehicleId(e.target.value)}
-            className="rounded-lg border border-gray-300 px-3 py-1.5 text-sm"
             aria-label="Filter blocked dates by vehicle"
           >
             <option value="">All Vehicles</option>
             {vehicles.map((v) => (
               <option key={v.id} value={v.id}>{getVehicleDisplayName(v)}</option>
             ))}
-          </select>
+          </Select>
           <span className="text-xs text-gray-400">
             {filteredBlocks.length} blocked range{filteredBlocks.length !== 1 ? "s" : ""}
           </span>

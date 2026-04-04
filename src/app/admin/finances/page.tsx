@@ -38,6 +38,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate } from "@/lib/utils/date-helpers";
@@ -1719,15 +1720,14 @@ export default function AdminFinancesPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
                         <label className="text-xs font-medium text-gray-600 block mb-1">Category <span className="text-red-500">*</span></label>
-                        <select
+                        <Select
                           value={newExpense.category}
                           onChange={(e) => setNewExpense((p) => ({ ...p, category: e.target.value }))}
-                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         >
                           {CATEGORIES.map((c) => (
                             <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                           ))}
-                        </select>
+                        </Select>
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-600 block mb-1">Amount <span className="text-red-500">*</span></label>
@@ -1751,16 +1751,15 @@ export default function AdminFinancesPage() {
                       </div>
                       <div>
                         <label className="text-xs font-medium text-gray-600 block mb-1">Vehicle (optional)</label>
-                        <select
+                        <Select
                           value={newExpense.vehicleId}
                           onChange={(e) => setNewExpense((p) => ({ ...p, vehicleId: e.target.value }))}
-                          className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                         >
                           <option value="">General (no vehicle)</option>
                           {vehicles.map((v) => (
                             <option key={v.id} value={v.id}>{v.year} {v.make} {v.model}</option>
                           ))}
-                        </select>
+                        </Select>
                       </div>
                     </div>
                     <div>
@@ -1923,15 +1922,14 @@ export default function AdminFinancesPage() {
                               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                                 <div>
                                   <label className="text-xs font-medium text-gray-600 block mb-1">Category <span className="text-red-500">*</span></label>
-                                  <select
+                                  <Select
                                     value={editingExpense.category}
                                     onChange={(e) => setEditingExpense((p) => p ? { ...p, category: e.target.value } : p)}
-                                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                   >
                                     {CATEGORIES.map((c) => (
                                       <option key={c} value={c}>{c.charAt(0).toUpperCase() + c.slice(1)}</option>
                                     ))}
-                                  </select>
+                                  </Select>
                                 </div>
                                 <div>
                                   <label className="text-xs font-medium text-gray-600 block mb-1">Amount <span className="text-red-500">*</span></label>
@@ -1954,16 +1952,15 @@ export default function AdminFinancesPage() {
                                 </div>
                                 <div>
                                   <label className="text-xs font-medium text-gray-600 block mb-1">Vehicle</label>
-                                  <select
+                                  <Select
                                     value={editingExpense.vehicle_id || ""}
                                     onChange={(e) => setEditingExpense((p) => p ? { ...p, vehicle_id: e.target.value || null } : p)}
-                                    className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                                   >
                                     <option value="">General</option>
                                     {vehicles.map((v) => (
                                       <option key={v.id} value={v.id}>{v.year} {v.make} {v.model}</option>
                                     ))}
-                                  </select>
+                                  </Select>
                                 </div>
                               </div>
                               <Input

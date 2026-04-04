@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import { PageContainer } from "@/components/layout/page-container";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -195,10 +196,10 @@ export default function AdminPromoCodesPage() {
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Discount Type</label>
-                  <select value={newCode.discountType} onChange={(e) => setNewCode({ ...newCode, discountType: e.target.value as "percentage" | "fixed" })} className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                  <Select value={newCode.discountType} onChange={(e) => setNewCode({ ...newCode, discountType: e.target.value as "percentage" | "fixed" })}>
                     <option value="percentage">Percentage (%)</option>
                     <option value="fixed">Fixed Amount ($)</option>
-                  </select>
+                  </Select>
                 </div>
                 <div>
                   <label className="text-xs font-medium text-gray-500 mb-1 block">Discount Value</label>
@@ -267,10 +268,10 @@ export default function AdminPromoCodesPage() {
                           <td className="px-4 py-3"><Badge className="bg-purple-100 text-purple-700 font-mono">{c.code}</Badge></td>
                           <td className="px-4 py-3">
                             <div className="flex gap-1">
-                              <select value={editForm.discountType || c.discountType} onChange={(e) => setEditForm({ ...editForm, discountType: e.target.value as "percentage" | "fixed" })} className="rounded border px-1 py-1 text-xs h-8 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+                              <Select value={editForm.discountType || c.discountType} onChange={(e) => setEditForm({ ...editForm, discountType: e.target.value as "percentage" | "fixed" })} className="h-8 text-xs px-1 py-1">
                                 <option value="percentage">%</option>
                                 <option value="fixed">$</option>
-                              </select>
+                              </Select>
                               <Input type="number" value={editForm.discountValue ?? c.discountValue} onChange={(e) => setEditForm({ ...editForm, discountValue: Number(e.target.value) })} className="h-8 text-sm w-16 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
                             </div>
                           </td>

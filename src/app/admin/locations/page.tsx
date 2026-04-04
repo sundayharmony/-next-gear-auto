@@ -10,6 +10,8 @@ import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { Location } from "@/lib/types";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 
 /* ── Types ────────────────────────────────────── */
 
@@ -236,11 +238,10 @@ export default function AdminLocationsPage() {
             </div>
             <div>
               <label className="text-xs font-medium text-gray-700 mb-0.5 block">Status</label>
-              <select value={form.is_active ? "active" : "inactive"} onChange={(e) => setForm({ ...form, is_active: e.target.value === "active" })}
-                className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent">
+              <Select value={form.is_active ? "active" : "inactive"} onChange={(e) => setForm({ ...form, is_active: e.target.value === "active" })}>
                 <option value="active">Active</option>
                 <option value="inactive">Inactive</option>
-              </select>
+              </Select>
             </div>
           </div>
 
@@ -269,8 +270,7 @@ export default function AdminLocationsPage() {
           {/* Notes */}
           <div>
             <label className="text-xs font-medium text-gray-700 mb-0.5 block">Notes</label>
-            <textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="e.g. Business hours: 9AM-6PM" rows={2}
-              className="w-full rounded-md border border-gray-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent" />
+            <Textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} placeholder="e.g. Business hours: 9AM-6PM" />
           </div>
 
           {/* Buttons */}

@@ -43,6 +43,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select } from "@/components/ui/select";
 import { PageContainer } from "@/components/layout/page-container";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
@@ -1072,18 +1073,16 @@ export default function AdminCustomersPage() {
                           <p className="text-xs font-semibold text-gray-600 mb-2">Upload to Booking</p>
                           <div className="space-y-2">
                             <div className="flex gap-2 w-full min-w-0">
-                              <select
+                              <Select
                                 value={uploadDocType}
                                 onChange={(e) => setUploadDocType(e.target.value as "id_document" | "insurance_proof")}
-                                className="text-xs border rounded px-2 py-1 flex-1 min-w-0 truncate"
                               >
                                 <option value="id_document">ID Document</option>
                                 <option value="insurance_proof">Insurance Proof</option>
-                              </select>
-                              <select
+                              </Select>
+                              <Select
                                 value={selectedBookingForUpload || ""}
                                 onChange={(e) => setSelectedBookingForUpload(e.target.value)}
-                                className="text-xs border rounded px-2 py-1 flex-1 min-w-0 truncate"
                               >
                                 <option value="">Select Booking</option>
                                 {customerBookings.map((b) => (
@@ -1091,7 +1090,7 @@ export default function AdminCustomersPage() {
                                     {b.vehicleName || "Unknown"} - {formatDate(b.pickup_date)}
                                   </option>
                                 ))}
-                              </select>
+                              </Select>
                             </div>
                             {selectedBookingForUpload && (
                               <label className="block">

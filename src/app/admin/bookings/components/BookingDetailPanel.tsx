@@ -31,6 +31,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import {
   BookingRow,
   Vehicle,
@@ -931,12 +933,11 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           <div className="space-y-3">
             <h3 className="text-sm font-semibold">Vehicle</h3>
             {editMode ? (
-              <select
+              <Select
                 value={editData.vehicle_id || ""}
                 onChange={(e) =>
                   setEditData({ ...editData, vehicle_id: e.target.value })
                 }
-                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               >
                 <option value="">Select vehicle</option>
                 {vehicles.map((v) => (
@@ -944,7 +945,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     {v.year} {v.make} {v.model}
                   </option>
                 ))}
-              </select>
+              </Select>
             ) : (
               <p className="text-sm text-gray-700">{vehicleLabel}</p>
             )}
@@ -978,7 +979,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     <label className="text-xs font-medium text-gray-700 block mb-1">
                       Pickup Time
                     </label>
-                    <select
+                    <Select
                       value={editData.pickup_time || ""}
                       onChange={(e) =>
                         setEditData({
@@ -986,7 +987,6 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                           pickup_time: e.target.value,
                         })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     >
                       <option value="">Select time</option>
                       {TIME_SLOTS.map((slot) => (
@@ -994,7 +994,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                           {slot.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                   <div>
                     <label className="text-xs font-medium text-gray-700 block mb-1">
@@ -1015,7 +1015,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     <label className="text-xs font-medium text-gray-700 block mb-1">
                       Return Time
                     </label>
-                    <select
+                    <Select
                       value={editData.return_time || ""}
                       onChange={(e) =>
                         setEditData({
@@ -1023,7 +1023,6 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                           return_time: e.target.value,
                         })
                       }
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                     >
                       <option value="">Select time</option>
                       {TIME_SLOTS.map((slot) => (
@@ -1031,7 +1030,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                           {slot.label}
                         </option>
                       ))}
-                    </select>
+                    </Select>
                   </div>
                 </div>
                 {/* Location */}
@@ -1041,31 +1040,29 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
                         <MapPin className="w-3 h-3" /> Pickup Location
                       </label>
-                      <select
+                      <Select
                         value={editData.pickup_location_id || ""}
                         onChange={(e) => setEditData({ ...editData, pickup_location_id: e.target.value || undefined })}
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                       >
                         <option value="">None</option>
                         {locations.map(l => (
                           <option key={l.id} value={l.id}>{l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}</option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                     <div>
                       <label className="text-xs font-medium text-gray-700 mb-1 flex items-center gap-1">
                         <MapPin className="w-3 h-3" /> Dropoff Location
                       </label>
-                      <select
+                      <Select
                         value={editData.return_location_id || ""}
                         onChange={(e) => setEditData({ ...editData, return_location_id: e.target.value || undefined })}
-                        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm"
                       >
                         <option value="">Same as pickup</option>
                         {locations.map(l => (
                           <option key={l.id} value={l.id}>{l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}</option>
                         ))}
-                      </select>
+                      </Select>
                     </div>
                   </div>
                 )}
@@ -1242,7 +1239,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   <label className="text-xs font-medium text-gray-700 block mb-1">
                     Payment Method
                   </label>
-                  <select
+                  <Select
                     value={editData.payment_method || ""}
                     onChange={(e) =>
                       setEditData({
@@ -1250,7 +1247,6 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                         payment_method: e.target.value,
                       })
                     }
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                   >
                     <option value="">Select method</option>
                     {PAYMENT_METHODS.map((m) => (
@@ -1258,7 +1254,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                         {m.label}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 </div>
               </div>
             ) : (
@@ -1390,7 +1386,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                           })
                         }
                       />
-                      <select
+                      <Select
                         value={paymentForm.method}
                         onChange={(e) =>
                           setPaymentForm({
@@ -1398,14 +1394,13 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                             method: e.target.value,
                           })
                         }
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                       >
                         {PAYMENT_METHODS.map((m) => (
                           <option key={m.value} value={m.value}>
                             {m.label}
                           </option>
                         ))}
-                      </select>
+                      </Select>
                       <Input
                         placeholder="Note (optional)"
                         value={paymentForm.note}
@@ -1459,7 +1454,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             </button>
             {showNotes && (
               <div className="space-y-2 pl-2">
-                <textarea
+                <Textarea
                   value={editData.admin_notes || ""}
                   onChange={(e) => {
                     setEditData({
@@ -1469,7 +1464,6 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   }}
                   onBlur={handleNotesBlur}
                   placeholder="Add internal notes..."
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm resize-none"
                   rows={3}
                 />
                 {noteSaving && (
