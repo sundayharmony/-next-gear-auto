@@ -9,6 +9,7 @@ import {
 import { Instagram } from "@/components/icons/instagram";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/auth-context";
+import { ThemeProvider, useTheme } from "@/lib/context/theme-context";
 import { cn } from "@/lib/utils/cn";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
@@ -49,10 +50,11 @@ const PAGE_TITLES: Record<string, string> = {
   "/admin/instagram": "Instagram",
 };
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, logout } = useAuth();
+  const { isDark } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
@@ -140,7 +142,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const currentTitle = PAGE_TITLES[pathname] || Object.entries(PAGE_TITLES).find(([path]) => pathname.startsWith(path))?.[1] || "Admin";
 
   return (
-    <div className="flex min-h-[calc(100vh-64px)]">
+    <div className={cn("flex min-h-[calc(100vh-64px)]", isDark && "admin-dark")}>
       {/* ═══════ MOBILE STICKY HEADER BAR ═══════ */}
       <div className="fixed top-0 left-0 right-0 z-[45] lg:hidden">
         <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm pwa-safe-top">
@@ -342,5 +344,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       {/* ═══════ BOTTOM TAB BAR (mobile only, rendered in layout for persistence) ═══════ */}
       <BottomTabBar />
     </div>
+  );
+}
+
+export default function AdminLayout({ children }: { children: React.ReactNode }) {
+  return (
+    <ThemeProvider>
+      <AdminLayoutInner>{children}</AdminLayoutInner>
+    </ThemeProvider>
   );
 }

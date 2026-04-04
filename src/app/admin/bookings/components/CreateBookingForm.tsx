@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { X, Check, AlertTriangle, Calculator, MapPin } from "lucide-react";
+import { X, Check, AlertTriangle, Calculator, MapPin, Upload } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -70,6 +70,9 @@ export default function CreateBookingForm({
   const [differentDropoff, setDifferentDropoff] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [idDocument, setIdDocument] = useState<File | null>(null);
+  const [idDocumentPreview, setIdDocumentPreview] = useState<string | null>(null);
+  const idInputRef = useRef<HTMLInputElement>(null);
 
   // Prefill data if provided
   useEffect(() => {
@@ -154,6 +157,24 @@ export default function CreateBookingForm({
     }));
     setShowDropdown(false);
     setSearchValue("");
+  };
+
+  // Handle ID document file change
+  const handleIdFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 10 * 1024 * 1024) {
+      onError("File too large. Maximum size is 10MB.");
+      return;
+    }
+    setIdDocument(file);
+    if (file.type.startsWith("image/")) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setIdDocumentPreview(ev.target?.result as string);
+      reader.readAsDataURL(file);
+    } else {
+      setIdDocumentPreview(null);
+    }
   };
 
   // Calculate days
@@ -359,10 +380,32 @@ export default function CreateBookingForm({
         return;
       }
 
+      const data = await res.json();
+      const bookingId = data.data?.id || data.id;
+
+      // Upload ID document if provided
+      if (idDocument && bookingId) {
+        try {
+          const formData = new FormData();
+          formData.append("file", idDocument);
+          formData.append("bookingId", bookingId);
+          formData.append("type", "id_document");
+          await adminFetch("/api/bookings/upload", {
+            method: "POST",
+            body: formData,
+          });
+        } catch {
+          // Don't fail the whole booking if upload fails
+          onError("Booking created but ID upload failed. You can upload it later from the booking details.");
+        }
+      }
+
       onSuccess("Booking created successfully");
       setForm(emptyForm);
       setSearchValue("");
       setManualPriceOverride(false);
+      setIdDocument(null);
+      setIdDocumentPreview(null);
       onCreated();
     } catch (err) {
       onError(err instanceof Error ? err.message : "An error occurred");
@@ -447,6 +490,55 @@ export default function CreateBookingForm({
             placeholder="+1 (555) 123-4567"
             className="focus-visible:outline-2 focus-visible:outline-purple-600"
           />
+        </div>
+
+        {/* ID DOCUMENT UPLOAD */}
+        <div>
+          <label className="block text-sm font-medium mb-2">ID Document (optional)</label>
+          <input
+            ref={idInputRef}
+            type="file"
+            accept="image/*,.pdf"
+            onChange={handleIdFileChange}
+            className="hidden"
+          />
+          {idDocumentPreview ? (
+            <div className="relative inline-block">
+              <img
+                src={idDocumentPreview}
+                alt="ID preview"
+                className="h-32 w-auto rounded-lg border border-gray-200 object-cover"
+              />
+              <button
+                type="button"
+                onClick={() => { setIdDocument(null); setIdDocumentPreview(null); if (idInputRef.current) idInputRef.current.value = ""; }}
+                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"
+              >
+                <X className="w-3 h-3" />
+              </button>
+            </div>
+          ) : idDocument ? (
+            <div className="flex items-center gap-2 p-3 bg-gray-50 rounded-lg border border-gray-200">
+              <span className="text-sm text-gray-700 truncate flex-1">{idDocument.name}</span>
+              <button
+                type="button"
+                onClick={() => { setIdDocument(null); if (idInputRef.current) idInputRef.current.value = ""; }}
+                className="text-red-500 hover:text-red-700"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => idInputRef.current?.click()}
+              className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg text-sm text-gray-500 hover:border-purple-400 hover:text-purple-600 transition-colors w-full justify-center"
+            >
+              <Upload className="w-4 h-4" />
+              Upload ID Photo or PDF
+            </button>
+          )}
+          <p className="text-xs text-gray-400 mt-1">Driver&apos;s license, passport, or state ID. Max 10MB.</p>
         </div>
 
         {/* VEHICLE SELECT */}

@@ -6,9 +6,10 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Calendar, Car, Users, DollarSign,
   CalendarDays, Tag, Star, Wrench, Ticket, MapPin, ShieldBan,
-  MoreHorizontal, X,
+  MoreHorizontal, X, Moon, Sun,
 } from "lucide-react";
 import { Instagram } from "@/components/icons/instagram";
+import { useTheme } from "@/lib/context/theme-context";
 import { cn } from "@/lib/utils/cn";
 
 interface TabItem {
@@ -39,6 +40,7 @@ const MORE_ITEMS: TabItem[] = [
 export function BottomTabBar() {
   const pathname = usePathname();
   const [showMore, setShowMore] = useState(false);
+  const { isDark, toggleTheme } = useTheme();
 
   const isActive = (href: string) => {
     if (href === "/admin") return pathname === "/admin";
@@ -73,6 +75,30 @@ export function BottomTabBar() {
               <X className="h-4 w-4 text-gray-600" />
             </button>
           </div>
+
+          {/* Dark mode toggle */}
+          <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              {isDark ? <Moon className="h-4 w-4 text-purple-400" /> : <Sun className="h-4 w-4 text-yellow-500" />}
+              <span className="text-sm font-medium">{isDark ? "Dark Mode" : "Light Mode"}</span>
+            </div>
+            <button
+              onClick={toggleTheme}
+              className={cn(
+                "relative inline-flex h-7 w-12 items-center rounded-full transition-colors",
+                isDark ? "bg-purple-600" : "bg-gray-300"
+              )}
+              aria-label="Toggle dark mode"
+            >
+              <span
+                className={cn(
+                  "inline-block h-5 w-5 rounded-full bg-white shadow-sm transition-transform",
+                  isDark ? "translate-x-6" : "translate-x-1"
+                )}
+              />
+            </button>
+          </div>
+
           <div className="grid grid-cols-3 gap-0.5 p-3">
             {MORE_ITEMS.map((item) => {
               const active = isActive(item.href);

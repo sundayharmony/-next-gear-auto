@@ -161,3 +161,108 @@ body {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }
+
+/* ═══ Admin Dark Mode ═══ */
+
+.admin-dark {
+  background-color: #0f172a !important;
+  color: #e2e8f0;
+}
+
+/* Backgrounds */
+.admin-dark .bg-white { background-color: #1e293b !important; }
+.admin-dark .bg-gray-50 { background-color: #0f172a !important; }
+.admin-dark .bg-gray-100 { background-color: #1e293b !important; }
+.admin-dark .bg-gray-200 { background-color: #334155 !important; }
+
+/* Text colors */
+.admin-dark .text-gray-900 { color: #f1f5f9 !important; }
+.admin-dark .text-gray-800 { color: #e2e8f0 !important; }
+.admin-dark .text-gray-700 { color: #cbd5e1 !important; }
+.admin-dark .text-gray-600 { color: #94a3b8 !important; }
+.admin-dark .text-gray-500 { color: #64748b !important; }
+.admin-dark .text-gray-400 { color: #64748b !important; }
+
+/* Borders */
+.admin-dark .border-gray-200 { border-color: #334155 !important; }
+.admin-dark .border-gray-100 { border-color: #1e293b !important; }
+.admin-dark .border-gray-300 { border-color: #475569 !important; }
+
+/* Divide */
+.admin-dark .divide-gray-200 > :not(:last-child) { border-color: #334155 !important; }
+.admin-dark .divide-gray-100 > :not(:last-child) { border-color: #1e293b !important; }
+
+/* Form inputs */
+.admin-dark input,
+.admin-dark textarea,
+.admin-dark select {
+  background-color: #1e293b !important;
+  color: #e2e8f0 !important;
+  border-color: #475569 !important;
+}
+.admin-dark input::placeholder,
+.admin-dark textarea::placeholder {
+  color: #64748b !important;
+}
+
+/* Cards and panels */
+.admin-dark .bg-white\/80 { background-color: rgba(30, 41, 59, 0.8) !important; }
+.admin-dark .bg-white\/95 { background-color: rgba(30, 41, 59, 0.95) !important; }
+.admin-dark .bg-gray-50\/80 { background-color: rgba(15, 23, 42, 0.8) !important; }
+
+/* Shadow adjustments */
+.admin-dark .shadow-sm,
+.admin-dark .shadow,
+.admin-dark .shadow-md,
+.admin-dark .shadow-lg,
+.admin-dark .shadow-xl,
+.admin-dark .shadow-2xl {
+  --tw-shadow-color: rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Ring colors */
+.admin-dark .ring-white { --tw-ring-color: #1e293b !important; }
+
+/* Hover states */
+.admin-dark .hover\:bg-gray-50:hover { background-color: #334155 !important; }
+.admin-dark .hover\:bg-gray-100:hover { background-color: #334155 !important; }
+.admin-dark .hover\:bg-gray-200:hover { background-color: #475569 !important; }
+
+/* Purple tints in dark mode */
+.admin-dark .bg-purple-50 { background-color: rgba(124, 58, 237, 0.15) !important; }
+.admin-dark .bg-purple-100 { background-color: rgba(124, 58, 237, 0.25) !important; }
+.admin-dark .hover\:bg-purple-50:hover { background-color: rgba(124, 58, 237, 0.2) !important; }
+.admin-dark .border-purple-200 { border-color: rgba(124, 58, 237, 0.3) !important; }
+
+/* Yellow/warning tints */
+.admin-dark .bg-yellow-50 { background-color: rgba(234, 179, 8, 0.15) !important; }
+.admin-dark .border-yellow-200 { border-color: rgba(234, 179, 8, 0.3) !important; }
+
+/* Green tints */
+.admin-dark .bg-green-50 { background-color: rgba(34, 197, 94, 0.15) !important; }
+.admin-dark .border-green-200 { border-color: rgba(34, 197, 94, 0.3) !important; }
+
+/* Red tints */
+.admin-dark .bg-red-50 { background-color: rgba(239, 68, 68, 0.15) !important; }
+.admin-dark .border-red-200 { border-color: rgba(239, 68, 68, 0.3) !important; }
+
+/* Blue tints */
+.admin-dark .bg-blue-50 { background-color: rgba(59, 130, 246, 0.15) !important; }
+.admin-dark .border-blue-200 { border-color: rgba(59, 130, 246, 0.3) !important; }
+
+/* Table striping */
+.admin-dark tr:nth-child(even) { background-color: rgba(30, 41, 59, 0.5); }
+.admin-dark thead { background-color: #1e293b !important; }
+
+/* Scrollbar in dark mode */
+.admin-dark ::-webkit-scrollbar-track { background: #1e293b; }
+.admin-dark ::-webkit-scrollbar-thumb { background: #475569; }
+.admin-dark ::-webkit-scrollbar-thumb:hover { background: #7c3aed; }
+
+/* Bottom tab bar & header glass effect */
+.admin-dark .bg-white\/80,
+.admin-dark [class*="bg-white/80"] { background-color: rgba(15, 23, 42, 0.85) !important; }
+
+/* Border opacity variants */
+.admin-dark .border-gray-200\/50 { border-color: rgba(51, 65, 85, 0.5) !important; }
+.admin-dark .border-gray-100\/50 { border-color: rgba(30, 41, 59, 0.5) !important; }
