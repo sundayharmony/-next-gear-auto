@@ -17,9 +17,9 @@ if (!supabaseAnonKey) {
 // ---------------------------------------------------------------------------
 /* eslint-disable @typescript-eslint/no-explicit-any */
 type GenericTable = {
-  Row: Record<string, any>;
-  Insert: Record<string, any>;
-  Update: Record<string, any>;
+  Row: any;
+  Insert: any;
+  Update: any;
   Relationships: any[];
 };
 
