@@ -232,6 +232,29 @@ body:has(.admin-dark) {
 .admin-dark textarea::placeholder {
   color: #4a4a4a !important;
 }
+/* Date picker icon — always visible & full-width click target */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.6;
+  padding: 4px;
+  margin: 0;
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
+}
+input[type="date"] {
+  position: relative;
+}
+.admin-dark input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.7;
+}
+.admin-dark input[type="date"]:hover::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
 /* Labels */
 .admin-dark label,
 .admin-dark .nga-label {
