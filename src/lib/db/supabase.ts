@@ -14,7 +14,12 @@ if (!supabaseAnonKey) {
 export const supabase = createClient(supabaseUrl as string, supabaseAnonKey as string);
 
 // Server-side Supabase client (uses service role key for admin operations)
+// Cached as singleton — safe in serverless because each cold start gets a fresh module scope
+let _serviceClient: ReturnType<typeof createClient> | null = null;
+
 export function getServiceSupabase() {
+  if (_serviceClient) return _serviceClient;
+
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
   if (!serviceKey) {
     // Require service key for all environments (admin operations must not use anon key)
@@ -23,7 +28,8 @@ export function getServiceSupabase() {
   if (!supabaseUrl) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL is required to create service client");
   }
-  return createClient(supabaseUrl, serviceKey);
+  _serviceClient = createClient(supabaseUrl, serviceKey);
+  return _serviceClient;
 }
 
 // Database types matching our schema

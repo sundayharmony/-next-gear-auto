@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { parseTuroEmail } from "@/lib/utils/turo-email-parser";
+import { logger } from "@/lib/utils/logger";
 
 /**
  * POST /api/admin/blocked-dates/parse-email
@@ -38,7 +39,8 @@ export async function POST(req: NextRequest) {
       success: true,
       data: result,
     });
-  } catch {
+  } catch (err) {
+    logger.error("Failed to parse Turo email:", err);
     return NextResponse.json(
       { success: false, error: "Failed to parse email" },
       { status: 500 }

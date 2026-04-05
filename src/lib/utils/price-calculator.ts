@@ -97,11 +97,11 @@ export function calculatePricing(
 ): PricingBreakdown {
   const base = calculateBaseRate(days, dailyRate);
   const extrasResult = calculateExtrasTotal(extras, days);
-  const extrasTotal = extrasResult.items.reduce((sum, e) => sum + e.total, 0);
+  const extrasTotal = roundCents(extrasResult.items.reduce((sum, e) => sum + e.total, 0));
   const setupFee = SETUP_FEE;
-  const subtotal = base.total + extrasTotal + setupFee;
+  const subtotal = roundCents(base.total + extrasTotal + setupFee);
   const tax = roundCents(subtotal * TAX_RATE);
-  const total = subtotal + tax;
+  const total = roundCents(subtotal + tax);
 
   return {
     baseDays: days,

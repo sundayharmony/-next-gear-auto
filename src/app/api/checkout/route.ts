@@ -250,7 +250,10 @@ export async function POST(request: NextRequest) {
     const safeExtras = Array.isArray(extras) ? extras : [];
     const validatedExtras: BookingExtra[] = safeExtras.map((clientExtra: { id: string; selected?: boolean }) => {
       const serverExtra = availableExtras.find((e) => e.id === clientExtra.id);
-      if (!serverExtra) return null;
+      if (!serverExtra) {
+        logger.warn(`Checkout: unknown extra ID "${clientExtra.id}" dropped (vehicle ${vehicleId})`);
+        return null;
+      }
       return { ...serverExtra, selected: clientExtra.selected ?? true };
     }).filter(Boolean) as BookingExtra[];
 

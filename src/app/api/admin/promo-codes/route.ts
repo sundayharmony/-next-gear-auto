@@ -108,7 +108,8 @@ export async function POST(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, data }, { status: 201 });
-  } catch {
+  } catch (err) {
+    logger.error("Promo code create error:", err);
     return NextResponse.json({ success: false, message: "Invalid request" }, { status: 400 });
   }
 }
@@ -172,7 +173,8 @@ export async function PUT(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, message: "Promo code updated" });
-  } catch {
+  } catch (err) {
+    logger.error("Promo code update error (outer):", err);
     return NextResponse.json({ success: false, message: "Invalid request" }, { status: 400 });
   }
 }
@@ -201,7 +203,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     return NextResponse.json({ success: true, message: "Code deleted" });
-  } catch {
+  } catch (err) {
+    logger.error("Promo code delete error (outer):", err);
     return NextResponse.json({ success: false, message: "Invalid request" }, { status: 400 });
   }
 }

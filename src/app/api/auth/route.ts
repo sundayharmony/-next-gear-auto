@@ -131,8 +131,7 @@ export async function POST(request: Request) {
           success: true,
         });
 
-        // Add rate limit info to response headers (remaining attempts)
-        const rateCheck = loginLimiter.check(ip);
+        // Add rate limit info to response headers (reuse initial check)
         response.headers.set("X-RateLimit-Remaining", String(rateCheck.remaining));
         response.headers.set("X-RateLimit-Reset", new Date(rateCheck.resetAt).toISOString());
 
@@ -199,8 +198,7 @@ export async function POST(request: Request) {
 
       const response = NextResponse.json({ data: mapped, success: true });
 
-      // Add rate limit info to response headers (remaining attempts)
-      const rateCheck = loginLimiter.check(ip);
+      // Add rate limit info to response headers (reuse initial check)
       response.headers.set("X-RateLimit-Remaining", String(rateCheck.remaining));
       response.headers.set("X-RateLimit-Reset", new Date(rateCheck.resetAt).toISOString());
 
