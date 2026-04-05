@@ -92,7 +92,7 @@ async function getAllVehicleIds(): Promise<string[]> {
       .select("id");
 
     if (error || !data) return [];
-    return data.map((v) => v.id);
+    return (data as { id: string }[]).map((v) => v.id);
   } catch {
     return [];
   }
