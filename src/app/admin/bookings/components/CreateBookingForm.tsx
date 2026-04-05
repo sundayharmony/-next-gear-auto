@@ -470,7 +470,7 @@ export default function CreateBookingForm({
   return (
     <Card className="border-purple-200">
       {/* ═══ Header with progress ═══ */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 rounded-t-xl">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 sm:px-6 py-4 rounded-t-xl">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-white font-semibold text-lg">New Booking</h2>
           <button type="button" onClick={onClose} className="text-white/70 hover:text-white transition-colors">
@@ -486,7 +486,7 @@ export default function CreateBookingForm({
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="p-6 space-y-8">
+      <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6 sm:space-y-8">
 
         {/* ═══ SECTION 1: Customer ═══ */}
         <section className="space-y-4">

@@ -806,7 +806,7 @@ export default function AdminVehiclesPage() {
               <p className="text-xs text-gray-400">Enable to track monthly payments and financing details.</p>
             )}
             {form.isFinanced && (
-              <div className="grid grid-cols-3 gap-2">
+              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                     Monthly Payment ($)
@@ -855,7 +855,7 @@ export default function AdminVehiclesPage() {
           </div>
 
           {/* Color, License, VIN, Mileage, Maintenance Row */}
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
             <div>
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Color
@@ -1497,7 +1497,7 @@ export default function AdminVehiclesPage() {
             )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {filteredVehicles.map((vehicle) => (
               <Card key={vehicle.id} className={`overflow-hidden hover:shadow-lg transition-shadow ${editingId === vehicle.id ? "ring-2 ring-purple-500 ring-offset-2" : ""}`}>
                 {/* Image */}

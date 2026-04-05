@@ -505,7 +505,7 @@ export default function AdminMaintenancePage() {
     return (
     <Card className="mb-6 border-purple-200" ref={addFormRef}>
       {/* Header with gradient */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 rounded-t-xl">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 sm:px-6 py-4 rounded-t-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
@@ -529,7 +529,7 @@ export default function AdminMaintenancePage() {
         </div>
       </div>
 
-      <CardContent className="p-6 space-y-6">
+      <CardContent className="p-4 sm:p-6 space-y-5 sm:space-y-6">
 
         {/* ── Vehicle & Title ── */}
         <div>

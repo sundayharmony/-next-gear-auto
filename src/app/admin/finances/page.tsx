@@ -972,8 +972,8 @@ export default function AdminFinancesPage() {
           </div>
 
           {/* Financing header */}
-          <div className="bg-gradient-to-br from-gray-900 to-purple-900 rounded-xl p-6 text-white">
-            <div className={`grid grid-cols-1 sm:grid-cols-2 ${financingInfo ? "md:grid-cols-4" : "md:grid-cols-3"} gap-6`}>
+          <div className="bg-gradient-to-br from-gray-900 to-purple-900 rounded-xl p-4 sm:p-6 text-white">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${financingInfo ? "md:grid-cols-4" : "md:grid-cols-3"} gap-4 sm:gap-6`}>
               <div>
                 <p className="text-gray-300 text-xs font-medium uppercase tracking-wider">
                   {vehicle.isFinanced ? "Vehicle Price" : "Purchase Price"}
@@ -1175,33 +1175,35 @@ export default function AdminFinancesPage() {
           <div className="flex flex-col sm:flex-row sm:items-end gap-3">
             <div className="flex flex-col gap-1.5">
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Range</p>
-              <div className="flex items-center gap-2">
-                <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
-                <DatePicker
-                  value={draftDateRange.from}
-                  onChange={(newFrom) => {
-                    setDraftDateRange((p) => {
-                      const newTo = newFrom > p.to ? newFrom : p.to;
-                      return { from: newFrom, to: newTo };
-                    });
-                  }}
-                  placeholder="Start date"
-                />
-                <span className="text-gray-400 font-medium">—</span>
-                <DatePicker
-                  value={draftDateRange.to}
-                  onChange={(newTo) => {
-                    setDraftDateRange((p) => {
-                      const newFrom = newTo < p.from ? newTo : p.from;
-                      return { from: newFrom, to: newTo };
-                    });
-                  }}
-                  placeholder="End date"
-                />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <Calendar className="h-4 w-4 text-gray-400 shrink-0 hidden sm:block" />
+                  <DatePicker
+                    value={draftDateRange.from}
+                    onChange={(newFrom) => {
+                      setDraftDateRange((p) => {
+                        const newTo = newFrom > p.to ? newFrom : p.to;
+                        return { from: newFrom, to: newTo };
+                      });
+                    }}
+                    placeholder="Start date"
+                  />
+                  <span className="text-gray-400 font-medium shrink-0">—</span>
+                  <DatePicker
+                    value={draftDateRange.to}
+                    onChange={(newTo) => {
+                      setDraftDateRange((p) => {
+                        const newFrom = newTo < p.from ? newTo : p.from;
+                        return { from: newFrom, to: newTo };
+                      });
+                    }}
+                    placeholder="End date"
+                  />
+                </div>
                 {draftDirty && (
                   <button
                     onClick={() => setDateRange({ ...draftDateRange })}
-                    className="ml-1 px-4 py-1.5 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors shrink-0"
+                    className="px-4 py-1.5 text-xs font-semibold bg-purple-600 hover:bg-purple-500 text-white rounded-lg transition-colors shrink-0 w-full sm:w-auto"
                   >
                     Apply
                   </button>

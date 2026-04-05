@@ -168,15 +168,15 @@ export default function BookingTable({
                     <span>{formatTime(booking.pickup_time)}{booking.return_time ? ` – ${formatTime(booking.return_time)}` : ""}</span>
                   )}
                   {booking.pickup_location_name && (
-                    <span className="flex items-center gap-0.5 truncate max-w-[180px]">
-                      <MapPin className="h-3 w-3 shrink-0" /> {booking.pickup_location_name}
+                    <span className="flex items-center gap-0.5 min-w-0 flex-1">
+                      <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{booking.pickup_location_name}</span>
                     </span>
                   )}
                 </div>
               )}
 
               {/* Bottom row: price + balance + doc icons + actions */}
-              <div className="flex items-center justify-between gap-2 pt-2 border-t border-gray-100">
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
                 <div className="flex items-center gap-3">
                   <span className="font-semibold text-gray-900 text-sm">${(booking.total_price ?? 0).toFixed(2)}</span>
                   <span className={`text-xs font-medium ${balanceColor}`}>
@@ -196,7 +196,7 @@ export default function BookingTable({
 
                   {/* Quick action buttons */}
                   {statusActions.length > 0 && (
-                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
                       {statusActions.map((action) => (
                         <Button
                           key={action}

@@ -161,7 +161,7 @@ export default function AdminDashboardPage() {
 
             {/* Management Quick Links */}
             <h2 className="text-xl font-semibold text-gray-900 mb-4">Manage</h2>
-            <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-4 mb-8">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 mb-8">
               {[
                 { label: "Bookings", desc: "All reservations", icon: ClipboardList, href: "/admin/bookings", color: "bg-purple-100 text-purple-700" },
                 { label: "Calendar", desc: "Trip timeline", icon: CalendarDays, href: "/admin/calendar", color: "bg-indigo-100 text-indigo-700" },
@@ -174,12 +174,12 @@ export default function AdminDashboardPage() {
               ].map((item) => (
                 <Link key={item.href} href={item.href}>
                   <Card className="group h-full cursor-pointer transition-all hover:shadow-md hover:border-purple-200 focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 admin-card-press">
-                    <CardContent className="p-4 sm:p-5">
-                      <div className={`inline-flex rounded-lg p-2.5 mb-3 ${item.color}`}>
-                        <item.icon className="h-5 w-5" />
+                    <CardContent className="p-3 sm:p-5">
+                      <div className={`inline-flex rounded-lg p-2 sm:p-2.5 mb-2 sm:mb-3 ${item.color}`}>
+                        <item.icon className="h-4 w-4 sm:h-5 sm:w-5" />
                       </div>
-                      <h3 className="font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{item.label}</h3>
-                      <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
+                      <h3 className="text-sm sm:text-base font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{item.label}</h3>
+                      <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">{item.desc}</p>
                     </CardContent>
                   </Card>
                 </Link>
@@ -268,7 +268,7 @@ export default function AdminDashboardPage() {
                         </div>
 
                         {/* Bottom row: Dates */}
-                        <div className="mt-2.5 flex items-center gap-2 text-xs">
+                        <div className="mt-2.5 flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
                           <div className="flex items-center gap-1 bg-gray-50 rounded-md px-2 py-1">
                             <Calendar className="h-3 w-3 text-gray-400" />
                             <span className="text-gray-700 font-medium">{formatDate(booking.pickup_date)}</span>

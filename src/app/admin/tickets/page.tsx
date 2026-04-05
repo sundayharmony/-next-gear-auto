@@ -404,8 +404,8 @@ export default function AdminTicketsPage() {
           </div>
 
           {/* Status + Amount header */}
-          <div className="bg-gradient-to-br from-gray-900 to-red-900 rounded-xl p-6 text-white">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+          <div className="bg-gradient-to-br from-gray-900 to-red-900 rounded-xl p-4 sm:p-6 text-white">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
               <div>
                 <p className="text-gray-300 text-xs font-medium uppercase tracking-wider">Amount Due</p>
                 <p className="text-3xl font-bold mt-1">${selectedTicket.amountDue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
