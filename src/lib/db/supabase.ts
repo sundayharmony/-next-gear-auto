@@ -10,12 +10,52 @@ if (!supabaseAnonKey) {
   throw new Error("Missing required environment variable: NEXT_PUBLIC_SUPABASE_ANON_KEY");
 }
 
+// ---------------------------------------------------------------------------
+// Minimal Database type so Supabase returns real row types instead of `never`.
+// Keys match the Postgres table names used across the app.  Every table that
+// appears in a `.from("…")` call MUST be listed here.
+// ---------------------------------------------------------------------------
+/* eslint-disable @typescript-eslint/no-explicit-any */
+type GenericTable = {
+  Row: Record<string, any>;
+  Insert: Record<string, any>;
+  Update: Record<string, any>;
+  Relationships: any[];
+};
+
+type Database = {
+  public: {
+    Tables: {
+      admins: GenericTable;
+      customers: GenericTable;
+      vehicles: GenericTable;
+      bookings: GenericTable;
+      blocked_dates: GenericTable;
+      payment_records: GenericTable;
+      booking_payments: GenericTable;
+      promo_codes: GenericTable;
+      reviews: GenericTable;
+      tickets: GenericTable;
+      expenses: GenericTable;
+      maintenance_records: GenericTable;
+      instagram_posts: GenericTable;
+      locations: GenericTable;
+      booking_activity: GenericTable;
+    };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
+  };
+};
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 // Client-side Supabase client (uses anon key)
-export const supabase = createClient(supabaseUrl as string, supabaseAnonKey as string);
+export const supabase = createClient<Database>(supabaseUrl as string, supabaseAnonKey as string);
 
 // Server-side Supabase client (uses service role key for admin operations)
 // Cached as singleton — safe in serverless because each cold start gets a fresh module scope
-let _serviceClient: ReturnType<typeof createClient> | null = null;
+let _serviceClient: ReturnType<typeof createClient<Database>> | null = null;
 
 export function getServiceSupabase() {
   if (_serviceClient) return _serviceClient;
@@ -28,7 +68,7 @@ export function getServiceSupabase() {
   if (!supabaseUrl) {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL is required to create service client");
   }
-  _serviceClient = createClient(supabaseUrl, serviceKey);
+  _serviceClient = createClient<Database>(supabaseUrl, serviceKey);
   return _serviceClient;
 }
 
