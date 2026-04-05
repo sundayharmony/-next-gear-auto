@@ -23,6 +23,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -643,20 +644,16 @@ export default function AdminMaintenancePage() {
             </div>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 block">Start Date</label>
-              <Input
-                type="date"
+              <DatePicker
                 value={newRecord.startedDate || ""}
-                onChange={(e) => setNewRecord({ ...newRecord, startedDate: e.target.value })}
-                className="focus-visible:outline-2 focus-visible:outline-purple-600"
+                onChange={(val) => setNewRecord({ ...newRecord, startedDate: val })}
               />
             </div>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 block">Completed Date</label>
-              <Input
-                type="date"
+              <DatePicker
                 value={newRecord.completedDate || ""}
-                onChange={(e) => setNewRecord({ ...newRecord, completedDate: e.target.value })}
-                className="focus-visible:outline-2 focus-visible:outline-purple-600"
+                onChange={(val) => setNewRecord({ ...newRecord, completedDate: val })}
               />
             </div>
           </div>
@@ -1114,18 +1111,16 @@ export default function AdminMaintenancePage() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Start Date</label>
-                      <Input
-                        type="date"
+                      <DatePicker
                         value={detailEditData.startedDate || ""}
-                        onChange={(e) => setDetailEditData({ ...detailEditData, startedDate: e.target.value })}
+                        onChange={(val) => setDetailEditData({ ...detailEditData, startedDate: val })}
                       />
                     </div>
                     <div>
                       <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1">Completed Date</label>
-                      <Input
-                        type="date"
+                      <DatePicker
                         value={detailEditData.completedDate || ""}
-                        onChange={(e) => setDetailEditData({ ...detailEditData, completedDate: e.target.value })}
+                        onChange={(val) => setDetailEditData({ ...detailEditData, completedDate: val })}
                       />
                     </div>
                   </div>

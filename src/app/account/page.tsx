@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { PageContainer } from "@/components/layout/page-container";
 import { ReviewForm } from "@/components/review-form";
 import { useVehicles } from "@/lib/hooks/useVehicles";
@@ -565,10 +566,9 @@ export default function AccountPage() {
                       </div>
                       <div>
                         <label className="mb-1.5 block text-sm font-medium text-gray-700">Date of Birth</label>
-                        <Input
-                          type="date"
+                        <DatePicker
                           value={profileForm.dob}
-                          onChange={(e) => setProfileForm((p) => ({ ...p, dob: e.target.value }))}
+                          onChange={(val) => setProfileForm((p) => ({ ...p, dob: val }))}
                           disabled={profileSaving}
                         />
                       </div>

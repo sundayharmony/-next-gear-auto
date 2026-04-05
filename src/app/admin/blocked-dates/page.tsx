@@ -6,6 +6,7 @@ import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Vehicle, getVehicleDisplayName } from "@/lib/types";
@@ -435,20 +436,18 @@ export default function BlockedDatesPage() {
                 </div>
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Start Date</label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={manualStartDate}
                     min={today}
-                    onChange={(e) => setManualStartDate(e.target.value)}
+                    onChange={(val) => setManualStartDate(val)}
                   />
                 </div>
                 <div>
                   <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">End Date</label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={manualEndDate}
                     min={manualStartDate || today}
-                    onChange={(e) => setManualEndDate(e.target.value)}
+                    onChange={(val) => setManualEndDate(val)}
                   />
                 </div>
                 <div>

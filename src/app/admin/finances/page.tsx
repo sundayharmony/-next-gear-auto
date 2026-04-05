@@ -38,6 +38,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
@@ -1176,32 +1177,26 @@ export default function AdminFinancesPage() {
               <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date Range</p>
               <div className="flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-gray-400 shrink-0" />
-                <input
-                  type="date"
+                <DatePicker
                   value={draftDateRange.from}
-                  onChange={(e) => {
-                    const newFrom = e.target.value;
+                  onChange={(newFrom) => {
                     setDraftDateRange((p) => {
                       const newTo = newFrom > p.to ? newFrom : p.to;
                       return { from: newFrom, to: newTo };
                     });
                   }}
-                  aria-label="Start date"
-                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 min-w-0"
+                  placeholder="Start date"
                 />
                 <span className="text-gray-400 font-medium">—</span>
-                <input
-                  type="date"
+                <DatePicker
                   value={draftDateRange.to}
-                  onChange={(e) => {
-                    const newTo = e.target.value;
+                  onChange={(newTo) => {
                     setDraftDateRange((p) => {
                       const newFrom = newTo < p.from ? newTo : p.from;
                       return { from: newFrom, to: newTo };
                     });
                   }}
-                  aria-label="End date"
-                  className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 min-w-0"
+                  placeholder="End date"
                 />
                 {draftDirty && (
                   <button
@@ -1742,11 +1737,9 @@ export default function AdminFinancesPage() {
                       </div>
                       <div>
                         <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Date <span className="text-red-500">*</span></label>
-                        <Input
-                          type="date"
+                        <DatePicker
                           value={newExpense.date}
-                          onChange={(e) => setNewExpense((p) => ({ ...p, date: e.target.value }))}
-                          className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                          onChange={(val) => setNewExpense((p) => ({ ...p, date: val }))}
                         />
                       </div>
                       <div>
@@ -1943,11 +1936,9 @@ export default function AdminFinancesPage() {
                                 </div>
                                 <div>
                                   <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Date <span className="text-red-500">*</span></label>
-                                  <Input
-                                    type="date"
+                                  <DatePicker
                                     value={editingExpense.date}
-                                    onChange={(e) => setEditingExpense((p) => p ? { ...p, date: e.target.value } : p)}
-                                    className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    onChange={(val) => setEditingExpense((p) => p ? { ...p, date: val } : p)}
                                   />
                                 </div>
                                 <div>

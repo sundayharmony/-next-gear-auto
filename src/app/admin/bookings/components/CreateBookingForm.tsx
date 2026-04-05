@@ -5,6 +5,7 @@ import { X, Check, AlertTriangle, Calculator, MapPin, Upload, User, Car, Calenda
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
@@ -658,12 +659,10 @@ export default function CreateBookingForm({
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Pickup Date <span className="text-red-500">*</span></label>
-              <Input
-                type="date"
+              <DatePicker
                 min={new Date().toISOString().split("T")[0]}
                 value={form.pickupDate}
-                onChange={(e) => setForm({ ...form, pickupDate: e.target.value })}
-                className="focus-visible:outline-2 focus-visible:outline-purple-600 text-sm"
+                onChange={(val) => setForm({ ...form, pickupDate: val })}
               />
             </div>
             <div>
@@ -679,11 +678,9 @@ export default function CreateBookingForm({
             </div>
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Return Date <span className="text-red-500">*</span></label>
-              <Input
-                type="date"
+              <DatePicker
                 value={form.returnDate}
-                onChange={(e) => setForm({ ...form, returnDate: e.target.value })}
-                className="focus-visible:outline-2 focus-visible:outline-purple-600 text-sm"
+                onChange={(val) => setForm({ ...form, returnDate: val })}
               />
             </div>
             <div>

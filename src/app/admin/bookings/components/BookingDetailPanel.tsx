@@ -31,6 +31,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -964,13 +965,12 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
                       Pickup Date
                     </label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={editData.pickup_date || ""}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      onChange={(val) =>
                         setEditData({
                           ...editData,
-                          pickup_date: e.target.value,
+                          pickup_date: val,
                         })
                       }
                     />
@@ -1000,13 +1000,12 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
                       Return Date
                     </label>
-                    <Input
-                      type="date"
+                    <DatePicker
                       value={editData.return_date || ""}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      onChange={(val) =>
                         setEditData({
                           ...editData,
-                          return_date: e.target.value,
+                          return_date: val,
                         })
                       }
                     />

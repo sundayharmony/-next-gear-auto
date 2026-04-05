@@ -29,6 +29,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -842,11 +843,10 @@ export default function AdminVehiclesPage() {
                   <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                     Financing Start
                   </label>
-                  <Input
-                    type="date"
+                  <DatePicker
                     value={form.financingStartDate || ""}
-                    onChange={(e) =>
-                      setForm({ ...form, financingStartDate: e.target.value })
+                    onChange={(val) =>
+                      setForm({ ...form, financingStartDate: val })
                     }
                   />
                 </div>

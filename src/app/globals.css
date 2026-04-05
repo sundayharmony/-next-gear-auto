@@ -232,20 +232,6 @@ body:has(.admin-dark) {
 .admin-dark textarea::placeholder {
   color: #4a4a4a !important;
 }
-/* Date picker — hide icon, full-width click target opens calendar */
-input[type="date"]::-webkit-calendar-picker-indicator {
-  cursor: pointer;
-  opacity: 0;
-  position: absolute;
-  right: 0;
-  top: 0;
-  width: 100%;
-  height: 100%;
-}
-input[type="date"] {
-  position: relative;
-  cursor: pointer;
-}
 /* Labels */
 .admin-dark label,
 .admin-dark .nga-label {
