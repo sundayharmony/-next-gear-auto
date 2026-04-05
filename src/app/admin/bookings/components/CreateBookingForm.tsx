@@ -467,9 +467,9 @@ export default function CreateBookingForm({
   const progressPercent = Math.round((completedSteps / 4) * 100);
 
   return (
-    <Card className="border-purple-200 overflow-hidden">
+    <Card className="border-purple-200">
       {/* ═══ Header with progress ═══ */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 rounded-t-xl">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-white font-semibold text-lg">New Booking</h2>
           <button type="button" onClick={onClose} className="text-white/70 hover:text-white transition-colors">

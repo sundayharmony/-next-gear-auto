@@ -502,9 +502,9 @@ export default function AdminMaintenancePage() {
     };
 
     return (
-    <Card className="mb-6 border-purple-200 overflow-hidden" ref={addFormRef}>
+    <Card className="mb-6 border-purple-200" ref={addFormRef}>
       {/* Header with gradient */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4">
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-6 py-4 rounded-t-xl">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center">
