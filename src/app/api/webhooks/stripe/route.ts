@@ -33,19 +33,8 @@ export async function POST(request: Request) {
   }
 
   try {
-    // Check for idempotency: if this event has already been processed, return 200 early
-    if (event.id) {
-      const { data: existingPayment } = await supabase
-        .from("payment_records")
-        .select("id")
-        .eq("stripe_session_id", event.id)
-        .maybeSingle();
-
-      if (existingPayment) {
-        logger.info("Webhook event already processed:", event.id);
-        return NextResponse.json({ received: true });
-      }
-    }
+    // Idempotency is checked per-event-type below using session.id (not event.id).
+    // event.id is the webhook event ID, but payment_records are keyed by session.id.
 
     switch (event.type) {
       case "checkout.session.completed": {
@@ -53,6 +42,18 @@ export async function POST(request: Request) {
         const bookingId = session.metadata?.booking_id;
 
         if (bookingId) {
+          // Idempotency: skip if this session was already processed
+          const { data: alreadyProcessed } = await supabase
+            .from("payment_records")
+            .select("id")
+            .eq("stripe_session_id", session.id)
+            .maybeSingle();
+
+          if (alreadyProcessed) {
+            logger.info("Webhook already processed for session:", session.id);
+            return NextResponse.json({ received: true });
+          }
+
           // Atomically confirm booking — only update if not already confirmed.
           // The .neq("status", "confirmed") guard makes this idempotent even under
           // concurrent webhook deliveries without a separate read-then-write.

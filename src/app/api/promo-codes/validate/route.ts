@@ -39,74 +39,10 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (error || !promo) {
-      // Fall back to JSON file for legacy codes
-      interface LegacyPromo {
-        code: string;
-        discountType: string;
-        discountValue: number;
-        minBookingAmount: number;
-        maxUses: number;
-        usedCount: number;
-        expiryDate: string;
-        description: string;
-      }
-      let promoCodes: LegacyPromo[] = [];
-      try {
-        const jsonModule = await import("@/data/promo-codes.json");
-        promoCodes = jsonModule.default || [];
-      } catch {
-        // No JSON file available
-      }
-
-      const jsonPromo = promoCodes.find(
-        (p) => p.code.toUpperCase() === safeCode.toUpperCase()
+      return NextResponse.json(
+        { success: false, error: "Invalid promo code" },
+        { status: 404 }
       );
-
-      if (!jsonPromo) {
-        return NextResponse.json(
-          { success: false, error: "Invalid promo code" },
-          { status: 404 }
-        );
-      }
-
-      // Validate JSON promo code
-      if (new Date(jsonPromo.expiryDate.includes("T") ? jsonPromo.expiryDate : jsonPromo.expiryDate + "T23:59:59") < new Date()) {
-        return NextResponse.json(
-          { success: false, error: "This promo code has expired" },
-          { status: 400 }
-        );
-      }
-      if (jsonPromo.usedCount >= jsonPromo.maxUses) {
-        return NextResponse.json(
-          { success: false, error: "This promo code has reached its usage limit" },
-          { status: 400 }
-        );
-      }
-      if (bookingAmount && bookingAmount < jsonPromo.minBookingAmount) {
-        return NextResponse.json(
-          { success: false, error: `Minimum booking amount of $${jsonPromo.minBookingAmount} required` },
-          { status: 400 }
-        );
-      }
-
-      let discountAmount = 0;
-      if (jsonPromo.discountType === "percentage") {
-        discountAmount = (bookingAmount && Number.isFinite(bookingAmount)) ? Math.round(bookingAmount * (jsonPromo.discountValue / 100) * 100) / 100 : 0;
-      } else {
-        discountAmount = jsonPromo.discountValue;
-      }
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          code: jsonPromo.code,
-          discountType: jsonPromo.discountType,
-          discountValue: jsonPromo.discountValue,
-          discountAmount,
-          description: jsonPromo.description,
-          warning: "This promo code is sourced from legacy data and usage limits will not be enforced.",
-        },
-      });
     }
 
     // Database promo code validation

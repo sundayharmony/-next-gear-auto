@@ -47,6 +47,7 @@ export function getTransporter() {
       },
       connectionTimeout: 10000,
       greetingTimeout: 10000,
+      socketTimeout: 30000, // 30s timeout for the actual send operation
     });
   }
   return _transporter;

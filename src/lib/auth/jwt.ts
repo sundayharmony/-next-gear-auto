@@ -26,13 +26,20 @@ const TOKEN_EXPIRY = "1h";           // access token lifetime
 const REFRESH_COOKIE = "nga_refresh";
 const REFRESH_EXPIRY = "48h";        // refresh token lifetime
 
+// Cache the encoded secret to avoid re-encoding and re-validating entropy on every call
+let _cachedSecret: Uint8Array | null = null;
+let _cachedSecretRaw: string | null = null;
+
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
   if (!secret || secret.length < 32) {
     throw new Error("JWT_SECRET must be set and at least 32 characters.");
   }
+  // Return cached value if the env var hasn't changed
+  if (_cachedSecret && _cachedSecretRaw === secret) {
+    return _cachedSecret;
+  }
   // Entropy validation: ensure the secret has sufficient character variety
-  // to prevent weak secrets like "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
   const hasLower = /[a-z]/.test(secret);
   const hasUpper = /[A-Z]/.test(secret);
   const hasDigits = /\d/.test(secret);
@@ -41,7 +48,9 @@ function getSecret(): Uint8Array {
   if (entropyScore < 3) {
     throw new Error("JWT_SECRET lacks sufficient entropy. Use at least 3 of: lowercase, uppercase, digits, special characters.");
   }
-  return new TextEncoder().encode(secret);
+  _cachedSecret = new TextEncoder().encode(secret);
+  _cachedSecretRaw = secret;
+  return _cachedSecret;
 }
 
 // ─── Token Creation ──────────────────────────────────────────────────

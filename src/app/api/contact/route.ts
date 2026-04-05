@@ -3,6 +3,11 @@ import { getTransporter } from "@/lib/email/mailer";
 import { contactLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/utils/logger";
 
+// Module-scoped sanitizers — avoid re-creating function objects on every request
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const clean = (s: string) => escapeHtml(s.replace(/[\r\n]/g, " ").trim());
+
 export async function POST(request: Request) {
   try {
     // Rate limit contact form submissions
@@ -38,10 +43,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Sanitize inputs for email: escape HTML entities and strip CRLF for SMTP header injection prevention
-    const escapeHtml = (s: string) =>
-      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-    const clean = (s: string) => escapeHtml(s.replace(/[\r\n]/g, " ").trim());
+    // Sanitize inputs for email
     const safeName = clean(name);
     const safeEmail = clean(email);
     const safePhone = clean(phone || "Not provided");

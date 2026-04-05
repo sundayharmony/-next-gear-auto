@@ -4,6 +4,10 @@ import { verifyAdmin } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { reviewLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 
+// Module-scoped sanitizer — avoids re-creating on every request
+const escapeHtml = (s: string) =>
+  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+
 // GET: Return reviews — verified admins see all statuses, public only sees approved
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
@@ -90,7 +94,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (typeof rating !== "number" || !Number.isInteger(rating) || rating < 1 || rating > 5) {
+    if (typeof rating !== "number" || !Number.isFinite(rating) || !Number.isInteger(rating) || rating < 1 || rating > 5) {
       return NextResponse.json(
         { success: false, error: "Rating must be an integer between 1 and 5" },
         { status: 400 }
@@ -104,9 +108,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Sanitize customer name - escape HTML entities
-    const escapeHtml = (s: string) =>
-      s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+    // Sanitize customer name
     const safeName = escapeHtml(customerName.trim());
 
     // Sanitize review text - escape HTML entities and prevent CSV/formula injection
