@@ -181,6 +181,7 @@ body:has(.admin-dark) {
 .admin-dark .bg-gray-200 { background-color: #222222 !important; }
 
 /* Text colors */
+.admin-dark .text-black { color: #f1f5f9 !important; }
 .admin-dark .text-gray-900 { color: #f1f5f9 !important; }
 .admin-dark .text-gray-800 { color: #e2e8f0 !important; }
 .admin-dark .text-gray-700 { color: #cbd5e1 !important; }
