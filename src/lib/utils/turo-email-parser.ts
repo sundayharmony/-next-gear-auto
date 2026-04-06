@@ -17,6 +17,9 @@ export interface TuroEmailParseResult {
   vehicleDescription: string | null;
   startDate: string | null;  // YYYY-MM-DD
   endDate: string | null;    // YYYY-MM-DD
+  pickupTime: string | null; // e.g. "8:00 AM"
+  returnTime: string | null; // e.g. "10:00 AM"
+  location: string | null;   // e.g. "Newark, NJ Newark Liberty International Airport"
   earnings: number | null;
   confidence: "high" | "medium" | "low";
   rawMatches: string[];      // Debug info showing what was matched
@@ -28,6 +31,61 @@ export interface TuroEmailParseResult {
 export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   const text = stripHtml(emailText);
   const rawMatches: string[] = [];
+
+  // ── Extract pickup/return times ──
+  let pickupTime: string | null = null;
+  let returnTime: string | null = null;
+
+  // Extract times from "booked from <day>, <date>, <time> to <day>, <date>, <time>"
+  const timeFromBooked = text.match(
+    /booked\s+from\s+.+?,\s+\d{1,2}:\d{2}\s*(AM|PM)\s+to\s+.+?,\s+(\d{1,2}:\d{2}\s*(?:AM|PM))/i
+  );
+  if (timeFromBooked) {
+    // Extract both times from the full booked string
+    const fullBooked = text.match(
+      /booked\s+from\s+\w+day,\s+\w+\s+\d{1,2},\s+\d{4},?\s+(\d{1,2}:\d{2}\s*(?:AM|PM))\s+to\s+\w+day,\s+\w+\s+\d{1,2},\s+\d{4},?\s+(\d{1,2}:\d{2}\s*(?:AM|PM))/i
+    );
+    if (fullBooked) {
+      pickupTime = fullBooked[1].trim().toUpperCase();
+      returnTime = fullBooked[2].trim().toUpperCase();
+      rawMatches.push(`Pickup time: "${pickupTime}"`, `Return time: "${returnTime}"`);
+    }
+  }
+
+  // Also try "Trip start 4/9/26 8:00 am" / "Trip end 4/10/26 10:00 am"
+  if (!pickupTime) {
+    const tripStartTime = text.match(/trip\s+start\s+\S+\s+(\d{1,2}:\d{2}\s*(?:am|pm))/i);
+    if (tripStartTime) {
+      pickupTime = tripStartTime[1].trim().toUpperCase();
+      rawMatches.push(`Pickup time: "${pickupTime}"`);
+    }
+  }
+  if (!returnTime) {
+    const tripEndTime = text.match(/trip\s+end\s+\S+\s+(\d{1,2}:\d{2}\s*(?:am|pm))/i);
+    if (tripEndTime) {
+      returnTime = tripEndTime[1].trim().toUpperCase();
+      rawMatches.push(`Return time: "${returnTime}"`);
+    }
+  }
+
+  // ── Extract location ──
+  let location: string | null = null;
+
+  // "Delivery Newark, NJ Newark Liberty International Airport"
+  const deliveryMatch = text.match(/delivery\s+(.+?)(?:\n|Guests|Special|$)/i);
+  if (deliveryMatch) {
+    location = deliveryMatch[1].trim();
+    rawMatches.push(`Location: "${location}"`);
+  }
+
+  // Fallback: "Pickup location: ..." or "Location: ..."
+  if (!location) {
+    const locMatch = text.match(/(?:pickup\s+location|drop[\s-]?off\s+location|location)\s*[:–—-]\s*(.+?)(?:\n|$)/i);
+    if (locMatch) {
+      location = locMatch[1].trim();
+      rawMatches.push(`Location: "${location}"`);
+    }
+  }
 
   // ── Extract dates ──
   // Look for patterns like:
@@ -211,6 +269,9 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
     vehicleDescription,
     startDate,
     endDate,
+    pickupTime,
+    returnTime,
+    location,
     earnings,
     confidence,
     rawMatches,

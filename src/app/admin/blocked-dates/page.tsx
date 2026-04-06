@@ -33,6 +33,10 @@ interface BlockedDate {
   vehicle_id: string;
   start_date: string;
   end_date: string;
+  pickup_time: string | null;
+  return_time: string | null;
+  location: string | null;
+  earnings: number | null;
   source: string;
   reason: string | null;
   created_at: string;
@@ -82,6 +86,10 @@ export default function BlockedDatesPage() {
   const [editStartDate, setEditStartDate] = useState("");
   const [editEndDate, setEditEndDate] = useState("");
   const [editReason, setEditReason] = useState("");
+  const [editPickupTime, setEditPickupTime] = useState("");
+  const [editReturnTime, setEditReturnTime] = useState("");
+  const [editLocation, setEditLocation] = useState("");
+  const [editEarnings, setEditEarnings] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchData = useCallback(async () => {
@@ -266,6 +274,10 @@ export default function BlockedDatesPage() {
     setEditStartDate(block.start_date);
     setEditEndDate(block.end_date);
     setEditReason(block.reason || "");
+    setEditPickupTime(block.pickup_time || "");
+    setEditReturnTime(block.return_time || "");
+    setEditLocation(block.location || "");
+    setEditEarnings(block.earnings != null ? String(block.earnings) : "");
   };
 
   const cancelEditing = () => {
@@ -293,6 +305,10 @@ export default function BlockedDatesPage() {
           startDate: editStartDate,
           endDate: editEndDate,
           reason: editReason.trim() || null,
+          pickupTime: editPickupTime.trim() || null,
+          returnTime: editReturnTime.trim() || null,
+          location: editLocation.trim() || null,
+          earnings: editEarnings ? parseFloat(editEarnings) : null,
         }),
       });
       const data = await res.json();
@@ -580,7 +596,7 @@ export default function BlockedDatesPage() {
               if (isEditing) {
                 return (
                   <div key={block.id} className="rounded-lg border-2 border-purple-300 bg-purple-50/30 p-4">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
                         <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Vehicle</label>
                         <Select
@@ -617,18 +633,52 @@ export default function BlockedDatesPage() {
                           placeholder="e.g. Turo booking, personal use"
                         />
                       </div>
-                      <div className="flex items-end gap-2">
-                        <Button onClick={handleSaveEdit} disabled={savingEdit} size="sm" className="flex-1">
-                          {savingEdit ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <><Save className="h-4 w-4 mr-1" /> Save</>
-                          )}
-                        </Button>
-                        <Button onClick={cancelEditing} variant="outline" size="sm" disabled={savingEdit}>
-                          <X className="h-4 w-4" />
-                        </Button>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Pickup Time</label>
+                        <Input
+                          value={editPickupTime}
+                          onChange={(e) => setEditPickupTime(e.target.value)}
+                          placeholder="e.g. 8:00 AM"
+                        />
                       </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Return Time</label>
+                        <Input
+                          value={editReturnTime}
+                          onChange={(e) => setEditReturnTime(e.target.value)}
+                          placeholder="e.g. 10:00 AM"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Location</label>
+                        <Input
+                          value={editLocation}
+                          onChange={(e) => setEditLocation(e.target.value)}
+                          placeholder="e.g. Newark, NJ"
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Earnings ($)</label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={editEarnings}
+                          onChange={(e) => setEditEarnings(e.target.value)}
+                          placeholder="0.00"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-3">
+                      <Button onClick={handleSaveEdit} disabled={savingEdit} size="sm">
+                        {savingEdit ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <><Save className="h-4 w-4 mr-1" /> Save</>
+                        )}
+                      </Button>
+                      <Button onClick={cancelEditing} variant="outline" size="sm" disabled={savingEdit}>
+                        <X className="h-4 w-4 mr-1" /> Cancel
+                      </Button>
                     </div>
                   </div>
                 );
@@ -651,10 +701,21 @@ export default function BlockedDatesPage() {
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {new Date(block.start_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {block.pickup_time ? ` ${block.pickup_time}` : ""}
                         {" → "}
                         {new Date(block.end_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {block.return_time ? ` ${block.return_time}` : ""}
                         <span className="text-gray-400 ml-1">({dayCount} day{dayCount !== 1 ? "s" : ""})</span>
                       </p>
+                      {(block.location || block.earnings != null) && (
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {block.location && <span>{block.location}</span>}
+                          {block.location && block.earnings != null && <span className="mx-1">·</span>}
+                          {block.earnings != null && (
+                            <span className="text-green-600 font-medium">${Number(block.earnings).toFixed(2)}</span>
+                          )}
+                        </p>
+                      )}
                     </div>
                   </div>
 

@@ -171,10 +171,14 @@ export async function POST(req: NextRequest) {
         vehicle_id: matchedVehicle.id,
         start_date: parsed.startDate,
         end_date: parsed.endDate,
+        pickup_time: parsed.pickupTime || null,
+        return_time: parsed.returnTime || null,
+        location: parsed.location || null,
+        earnings: parsed.earnings || null,
         source: "turo-email",
         reason,
       })
-      .select("id, vehicle_id, start_date, end_date, source, reason")
+      .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason")
       .maybeSingle();
 
     if (error) {

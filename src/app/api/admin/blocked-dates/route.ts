@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("blocked_dates")
-      .select("id, vehicle_id, start_date, end_date, source, reason, created_at")
+      .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, created_at")
       .gte("end_date", new Date().toISOString().split("T")[0])
       .order("start_date", { ascending: true });
 
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = getServiceSupabase();
     const body = await req.json();
-    const { vehicleId, startDate, endDate, source, reason } = body;
+    const { vehicleId, startDate, endDate, source, reason, pickupTime, returnTime, location, earnings } = body;
 
     if (!vehicleId || !startDate || !endDate) {
       return NextResponse.json({ success: false, message: "vehicleId, startDate, and endDate are required" }, { status: 400 });
@@ -106,6 +106,10 @@ export async function POST(req: NextRequest) {
         vehicle_id: vehicleId,
         start_date: startDate,
         end_date: endDate,
+        pickup_time: pickupTime || null,
+        return_time: returnTime || null,
+        location: location || null,
+        earnings: earnings || null,
         source: safeSource,
         reason: reason || null,
       })
@@ -136,7 +140,7 @@ export async function PUT(req: NextRequest) {
   try {
     const supabase = getServiceSupabase();
     const body = await req.json();
-    const { id, vehicleId, startDate, endDate, reason } = body;
+    const { id, vehicleId, startDate, endDate, reason, pickupTime, returnTime, location, earnings } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, message: "id is required" }, { status: 400 });
@@ -173,6 +177,22 @@ export async function PUT(req: NextRequest) {
 
     if (reason !== undefined) {
       updates.reason = reason || null;
+    }
+
+    if (pickupTime !== undefined) {
+      updates.pickup_time = pickupTime || null;
+    }
+
+    if (returnTime !== undefined) {
+      updates.return_time = returnTime || null;
+    }
+
+    if (location !== undefined) {
+      updates.location = location || null;
+    }
+
+    if (earnings !== undefined) {
+      (updates as Record<string, string | number | null>).earnings = earnings || null;
     }
 
     if (Object.keys(updates).length === 0) {
