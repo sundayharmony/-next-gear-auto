@@ -16,7 +16,8 @@ type AuthAction =
   | { type: "LOGIN_FAILURE"; payload: string }
   | { type: "LOGOUT" }
   | { type: "UPDATE_PROFILE"; payload: Partial<Customer> }
-  | { type: "SET_LOADING"; payload: boolean };
+  | { type: "SET_LOADING"; payload: boolean }
+  | { type: "RESTORE_CACHE"; payload: Customer };
 
 const initialState: AuthState = {
   user: null,
@@ -34,7 +35,11 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
     case "LOGIN_FAILURE":
       return { ...state, user: null, isAuthenticated: false, isLoading: false, error: action.payload };
     case "LOGOUT":
-      return { ...initialState };
+      return { user: null, isAuthenticated: false, isLoading: false, error: null };
+    case "RESTORE_CACHE":
+      // Restore user from localStorage for instant UI, but keep isLoading true
+      // until the server validates the JWT — prevents flash of unauthenticated content
+      return { ...state, user: action.payload, isAuthenticated: true };
     case "UPDATE_PROFILE":
       return state.user ? { ...state, user: { ...state.user, ...action.payload } } : state;
     case "SET_LOADING":
@@ -70,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (user && typeof user === 'object' && user.id && user.email && user.role) {
           // Additional validation: ensure role is one of the expected values
           if (user.role === 'admin' || user.role === 'customer') {
-            dispatch({ type: "LOGIN_SUCCESS", payload: user });
+            dispatch({ type: "RESTORE_CACHE", payload: user });
           } else {
             localStorage.removeItem("nga_user");
           }
