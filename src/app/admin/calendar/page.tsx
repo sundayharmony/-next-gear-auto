@@ -336,8 +336,8 @@ export default function AdminCalendarPage() {
           <div className="flex-1 bg-black/50" onClick={closeBookingDetail} />
           {/* Panel */}
           <div className="w-full max-w-[calc(100vw-1rem)] sm:max-w-lg bg-white shadow-xl overflow-y-auto" tabIndex={0} autoFocus role="dialog" aria-modal="true" aria-label="Booking details">
-            <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
-              <h2 className="text-lg font-semibold">Booking Details</h2>
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
+              <h2 className="text-lg font-semibold text-gray-900">Booking Details</h2>
               <button onClick={closeBookingDetail} aria-label="Close booking details" className="p-2 text-gray-400 hover:text-gray-600 -mr-2">
                 <X className="h-5 w-5" />
               </button>
@@ -395,13 +395,13 @@ export default function AdminCalendarPage() {
                   <p className="text-xs text-gray-500">Pickup Date</p>
                   <p className="text-lg font-bold text-gray-900">{formatDate(selectedBooking.pickup_date)}</p>
                   <p className="text-xs text-gray-500 mt-1">Time</p>
-                  <p className="text-xl font-bold text-purple-600">{formatTime(selectedBooking.pickup_time)}</p>
+                  <p className="text-xl font-bold text-purple-500">{formatTime(selectedBooking.pickup_time)}</p>
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Return Date</p>
                   <p className="text-lg font-bold text-gray-900">{formatDate(selectedBooking.return_date)}</p>
                   <p className="text-xs text-gray-500 mt-1">Time</p>
-                  <p className="text-xl font-bold text-purple-600">{formatTime(selectedBooking.return_time)}</p>
+                  <p className="text-xl font-bold text-purple-500">{formatTime(selectedBooking.return_time)}</p>
                 </div>
               </div>
 
@@ -436,11 +436,11 @@ export default function AdminCalendarPage() {
               {/* Payment */}
               <div>
                 <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Payment</h3>
-                <div className="flex justify-between py-2 border-b">
+                <div className="flex justify-between py-2 border-b border-gray-200">
                   <span className="text-gray-500">Total</span>
-                  <span className="font-bold text-lg">${(selectedBooking.total_price ?? 0).toFixed(2)}</span>
+                  <span className="font-bold text-lg text-gray-900">${(selectedBooking.total_price ?? 0).toFixed(2)}</span>
                 </div>
-                <div className="flex justify-between py-2 border-b">
+                <div className="flex justify-between py-2 border-b border-gray-200">
                   <span className="text-gray-500">Paid</span>
                   <span className="text-green-600 font-semibold">${(selectedBooking.deposit ?? 0).toFixed(2)}</span>
                 </div>
@@ -476,7 +476,7 @@ export default function AdminCalendarPage() {
               </div>
 
               {/* Created at */}
-              <div className="pt-4 border-t">
+              <div className="pt-4 border-t border-gray-200">
                 <p className="text-xs text-gray-400">
                   Created {new Date(selectedBooking.created_at).toLocaleDateString()}
                 </p>
@@ -634,13 +634,13 @@ function TimelineView({
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-              <Button onClick={onPrevious} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white">
+              <Button onClick={onPrevious} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-200">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <Button onClick={onToday} variant="ghost" size="sm" className="h-8 px-3 hover:bg-white text-xs font-semibold">
+              <Button onClick={onToday} variant="ghost" size="sm" className="h-8 px-3 hover:bg-gray-200 text-xs font-semibold">
                 Today
               </Button>
-              <Button onClick={onNext} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-white">
+              <Button onClick={onNext} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-200">
                 <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
@@ -668,7 +668,7 @@ function TimelineView({
         </div>
 
         {/* Timeline Table */}
-        <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm">
+        <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm overflow-hidden">
           <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
             <colgroup>
               <col style={{ width: "170px", minWidth: "170px" }} />
@@ -794,16 +794,16 @@ function TimelineView({
                                 {extendsLeft && (
                                   <ChevronLeft className="w-3 h-3 text-gray-500 flex-shrink-0 -ml-1" />
                                 )}
-                                <span className="text-xs font-bold text-gray-800 truncate">
+                                <span className="text-xs font-bold text-gray-900 truncate">
                                   {(booking.customer_name || "Unknown").split(" ")[0]}
                                 </span>
                                 {fullDaySpan >= 2 && (
-                                  <span className="text-[10px] text-gray-600 truncate hidden sm:inline">
+                                  <span className="text-[10px] text-gray-700 truncate hidden sm:inline">
                                     {daysTotal}d
                                   </span>
                                 )}
                                 {fullDaySpan >= 3 && (
-                                  <span className="text-[10px] font-semibold text-gray-700 truncate hidden md:inline">
+                                  <span className="text-[10px] font-semibold text-gray-800 truncate hidden md:inline">
                                     ${(booking.total_price ?? 0).toFixed(0)}
                                   </span>
                                 )}
@@ -964,7 +964,7 @@ function CalendarView({
           <Button onClick={onPreviousMonth} variant="outline" size="sm">
             <ChevronLeft className="w-4 h-4" />
           </Button>
-          <h2 className="text-lg font-semibold text-gray-900 min-w-48 text-center">
+          <h2 className="text-lg font-semibold text-gray-900 min-w-48 text-center select-none">
             {currentMonth.toLocaleDateString("en-US", {
               month: "long",
               year: "numeric",
@@ -1096,13 +1096,13 @@ function CalendarView({
                     <div>
                       <span className="text-gray-600">Pickup:</span>
                       <div>
-                        <span className="text-base font-bold text-black">{formatDate(booking.pickup_date)}</span> at <span className="text-lg font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
+                        <span className="text-base font-bold text-gray-900">{formatDate(booking.pickup_date)}</span> at <span className="text-lg font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
                       </div>
                     </div>
                     <div>
                       <span className="text-gray-600">Return:</span>
                       <div>
-                        <span className="text-base font-bold text-black">{formatDate(booking.return_date)}</span> at <span className="text-lg font-bold text-purple-600">{formatTime(booking.return_time)}</span>
+                        <span className="text-base font-bold text-gray-900">{formatDate(booking.return_date)}</span> at <span className="text-lg font-bold text-purple-600">{formatTime(booking.return_time)}</span>
                       </div>
                     </div>
                   </div>

@@ -434,3 +434,69 @@ body:has(.admin-dark) {
 .admin-dark .border-purple-200 { border-color: rgba(124, 58, 237, 0.3) !important; }
 .admin-dark .border-gray-200 { border-color: #222222 !important; }
 .admin-dark .divide-gray-100 > :not(:first-child) { border-color: #1a1a1a !important; }
+
+/* ═══ Calendar / Timeline dark mode ═══ */
+
+/* Fractional opacity backgrounds that CSS class selectors miss */
+.admin-dark .bg-gray-50\/30 { background-color: rgba(255, 255, 255, 0.03) !important; }
+.admin-dark .bg-gray-50\/60 { background-color: rgba(255, 255, 255, 0.04) !important; }
+.admin-dark .bg-purple-50\/40 { background-color: rgba(124, 58, 237, 0.1) !important; }
+.admin-dark .bg-purple-50\/50 { background-color: rgba(124, 58, 237, 0.08) !important; }
+.admin-dark .group:hover .group-hover\:bg-purple-50\/50 { background-color: rgba(124, 58, 237, 0.1) !important; }
+
+/* Timeline table grid — stronger borders for readability */
+.admin-dark table { border-color: #2a2a2a !important; }
+.admin-dark th { background-color: #0d0d0d !important; border-color: #2a2a2a !important; }
+.admin-dark td { border-color: #1e1e1e !important; }
+
+/* Sticky vehicle name column */
+.admin-dark td.sticky { background-color: #111111 !important; }
+.admin-dark .group:hover td.sticky { background-color: rgba(124, 58, 237, 0.08) !important; }
+
+/* Timeline nav button group */
+.admin-dark .bg-gray-100.rounded-lg { background-color: #1a1a1a !important; }
+.admin-dark .hover\:bg-white:hover { background-color: #2a2a2a !important; }
+
+/* Today column header */
+.admin-dark th.bg-purple-100 { background-color: rgba(124, 58, 237, 0.25) !important; }
+.admin-dark .text-purple-900 { color: #c084fc !important; }
+
+/* Weekend column headers */
+.admin-dark th.bg-gray-100 { background-color: #111111 !important; }
+
+/* Booking bars — boost contrast on dark backgrounds */
+.admin-dark .bg-yellow-100 { background-color: rgba(234, 179, 8, 0.2) !important; }
+.admin-dark .bg-green-100 { background-color: rgba(34, 197, 94, 0.2) !important; }
+.admin-dark .bg-blue-100 { background-color: rgba(59, 130, 246, 0.2) !important; }
+.admin-dark .bg-orange-100 { background-color: rgba(249, 115, 22, 0.2) !important; }
+.admin-dark .border-yellow-400 { border-color: rgba(234, 179, 8, 0.5) !important; }
+.admin-dark .border-green-400 { border-color: rgba(34, 197, 94, 0.5) !important; }
+.admin-dark .border-blue-400 { border-color: rgba(59, 130, 246, 0.5) !important; }
+.admin-dark .border-orange-400 { border-color: rgba(249, 115, 22, 0.5) !important; }
+.admin-dark .border-gray-400 { border-color: rgba(156, 163, 175, 0.4) !important; }
+.admin-dark .border-red-400 { border-color: rgba(239, 68, 68, 0.5) !important; }
+.admin-dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.2) !important; }
+
+/* Booking bar text */
+.admin-dark .text-gray-800.truncate { color: #e2e8f0 !important; }
+
+/* Blocked date bars */
+.admin-dark .bg-gray-300\/50 { background-color: rgba(100, 100, 100, 0.2) !important; }
+.admin-dark .border-dashed.border-gray-400 { border-color: rgba(156, 163, 175, 0.35) !important; }
+
+/* Legend border */
+.admin-dark .border-gray-100 { border-color: #1a1a1a !important; }
+
+/* Calendar view (monthly grid) */
+.admin-dark .gap-px.bg-gray-200 { background-color: #222222 !important; }
+.admin-dark .hover\:bg-gray-50:hover { background-color: #1a1a1a !important; }
+.admin-dark .border-2.border-purple-600 { border-color: #8b5cf6 !important; }
+
+/* Booking detail slide panel */
+.admin-dark .bg-white.shadow-xl { background-color: #111111 !important; }
+.admin-dark .bg-white.shadow-xl .border-b { border-color: #222222 !important; }
+.admin-dark .bg-gray-50.cursor-pointer { background-color: #0d0d0d !important; }
+.admin-dark .hover\:bg-gray-100.hover\:border-purple-300:hover { background-color: #1a1a1a !important; border-color: rgba(124, 58, 237, 0.4) !important; }
+
+/* Purple booking count badge */
+.admin-dark .bg-purple-100.text-purple-700 { background-color: rgba(124, 58, 237, 0.25) !important; color: #c084fc !important; }
