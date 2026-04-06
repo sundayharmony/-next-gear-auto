@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("customers")
-      .select("*", { count: "exact" })
+      .select("id, name, email, phone, role, profile_picture_url, id_document_url, created_at", { count: "exact" })
       .order("created_at", { ascending: false });
 
     if (search) {
@@ -41,7 +41,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       logger.error("Customers fetch error:", error);
-      return NextResponse.json({ success: false, error: "Failed to fetch customers" }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to fetch customers" }, { status: 500 });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     logger.error("Customers GET error:", err);
-    return NextResponse.json({ success: false, error: "Failed to fetch customers" }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Failed to fetch customers" }, { status: 500 });
   }
 }
 
@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
     // Validate required fields
     if (!name || !email) {
       return NextResponse.json(
-        { success: false, error: "Name and email are required" },
+        { success: false, message: "Name and email are required" },
         { status: 400 }
       );
     }
@@ -88,14 +88,14 @@ export async function POST(req: NextRequest) {
     // Validate and sanitize input lengths
     if (typeof name !== "string" || name.length > 100) {
       return NextResponse.json(
-        { success: false, error: "Name must be a string with max 100 characters" },
+        { success: false, message: "Name must be a string with max 100 characters" },
         { status: 400 }
       );
     }
 
     if (typeof email !== "string" || email.length > 255) {
       return NextResponse.json(
-        { success: false, error: "Email must be a string with max 255 characters" },
+        { success: false, message: "Email must be a string with max 255 characters" },
         { status: 400 }
       );
     }
@@ -104,14 +104,14 @@ export async function POST(req: NextRequest) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       return NextResponse.json(
-        { success: false, error: "Invalid email format" },
+        { success: false, message: "Invalid email format" },
         { status: 400 }
       );
     }
 
     if (phone && typeof phone !== "string" || phone?.length > 20) {
       return NextResponse.json(
-        { success: false, error: "Phone must be a string with max 20 characters" },
+        { success: false, message: "Phone must be a string with max 20 characters" },
         { status: 400 }
       );
     }
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       logger.error("Customer creation error:", error);
-      return NextResponse.json({ success: false, error: "Failed to create customer" }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to create customer" }, { status: 500 });
     }
 
     const customer = (data && data.length > 0) ? {
@@ -154,7 +154,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: customer }, { status: 201 });
   } catch (err) {
     logger.error("Customers POST error:", err);
-    return NextResponse.json({ success: false, error: "Failed to create customer" }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Failed to create customer" }, { status: 500 });
   }
 }
 
@@ -170,7 +170,7 @@ export async function PATCH(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { success: false, error: "Customer ID is required" },
+        { success: false, message: "Customer ID is required" },
         { status: 400 }
       );
     }
@@ -182,7 +182,7 @@ export async function PATCH(req: NextRequest) {
     if (name !== undefined) {
       if (typeof name !== "string" || name.length > 100) {
         return NextResponse.json(
-          { success: false, error: "Name must be a string with max 100 characters" },
+          { success: false, message: "Name must be a string with max 100 characters" },
           { status: 400 }
         );
       }
@@ -192,14 +192,14 @@ export async function PATCH(req: NextRequest) {
     if (email !== undefined) {
       if (typeof email !== "string" || email.length > 255) {
         return NextResponse.json(
-          { success: false, error: "Email must be a string with max 255 characters" },
+          { success: false, message: "Email must be a string with max 255 characters" },
           { status: 400 }
         );
       }
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return NextResponse.json(
-          { success: false, error: "Invalid email format" },
+          { success: false, message: "Invalid email format" },
           { status: 400 }
         );
       }
@@ -209,7 +209,7 @@ export async function PATCH(req: NextRequest) {
     if (phone !== undefined && phone !== null) {
       if (typeof phone !== "string" || phone.length > 20) {
         return NextResponse.json(
-          { success: false, error: "Phone must be a string with max 20 characters" },
+          { success: false, message: "Phone must be a string with max 20 characters" },
           { status: 400 }
         );
       }
@@ -223,7 +223,7 @@ export async function PATCH(req: NextRequest) {
 
     if (Object.keys(updateData).length === 0) {
       return NextResponse.json(
-        { success: false, error: "No fields to update" },
+        { success: false, message: "No fields to update" },
         { status: 400 }
       );
     }
@@ -232,11 +232,11 @@ export async function PATCH(req: NextRequest) {
       .from("customers")
       .update(updateData)
       .eq("id", id)
-      .select("*");
+      .select("id, name, email, phone, role, profile_picture_url, id_document_url, created_at");
 
     if (error) {
       logger.error("Customer update error:", error);
-      return NextResponse.json({ success: false, error: "Failed to update customer" }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to update customer" }, { status: 500 });
     }
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -255,7 +255,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ success: true, data: customer });
   } catch (err) {
     logger.error("Customers PATCH error:", err);
-    return NextResponse.json({ success: false, error: "Failed to update customer" }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Failed to update customer" }, { status: 500 });
   }
 }
 
@@ -271,7 +271,7 @@ export async function DELETE(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { success: false, error: "Customer ID is required" },
+        { success: false, message: "Customer ID is required" },
         { status: 400 }
       );
     }
@@ -284,7 +284,7 @@ export async function DELETE(req: NextRequest) {
 
     if (updateError) {
       logger.error("Error updating bookings during customer deletion:", updateError);
-      return NextResponse.json({ success: false, error: "Failed to update bookings" }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to update bookings" }, { status: 500 });
     }
 
     const { error } = await supabase
@@ -294,12 +294,12 @@ export async function DELETE(req: NextRequest) {
 
     if (error) {
       logger.error("Customer deletion error:", error);
-      return NextResponse.json({ success: false, error: "Failed to delete customer" }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to delete customer" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, message: "Customer deleted successfully" });
   } catch (err) {
     logger.error("Customers DELETE error:", err);
-    return NextResponse.json({ success: false, error: "Failed to delete customer" }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Failed to delete customer" }, { status: 500 });
   }
 }

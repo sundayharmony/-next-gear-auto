@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
 
     if (!bookingId) {
       return NextResponse.json(
-        { success: false, error: "booking_id query parameter is required" },
+        { success: false, message: "booking_id query parameter is required" },
         { status: 400 }
       );
     }
@@ -23,14 +23,14 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await supabase
       .from("booking_payments")
-      .select("*")
+      .select("id, booking_id, amount, method, note, received_at")
       .eq("booking_id", bookingId)
       .order("received_at", { ascending: false });
 
     if (error) {
       logger.error("Error fetching booking payments:", error);
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, message: error.message },
         { status: 500 }
       );
     }
@@ -46,7 +46,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logger.error("Unexpected error in GET /api/admin/booking-payments:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     // Validation
     if (!booking_id) {
       return NextResponse.json(
-        { success: false, error: "booking_id is required" },
+        { success: false, message: "booking_id is required" },
         { status: 400 }
       );
     }
@@ -72,14 +72,14 @@ export async function POST(request: NextRequest) {
     const parsedAmount = parseFloat(amount);
     if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
       return NextResponse.json(
-        { success: false, error: "amount must be a positive number" },
+        { success: false, message: "amount must be a positive number" },
         { status: 400 }
       );
     }
 
     if (!method) {
       return NextResponse.json(
-        { success: false, error: "method is required" },
+        { success: false, message: "method is required" },
         { status: 400 }
       );
     }
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
 
     if (bookingError || !bookingExists) {
       return NextResponse.json(
-        { success: false, error: "Booking not found" },
+        { success: false, message: "Booking not found" },
         { status: 404 }
       );
     }
@@ -117,7 +117,7 @@ export async function POST(request: NextRequest) {
     if (paymentError) {
       logger.error("Error creating booking payment: " + paymentError.message + " | code: " + paymentError.code + " | details: " + paymentError.details);
       return NextResponse.json(
-        { success: false, error: paymentError.message },
+        { success: false, message: paymentError.message },
         { status: 500 }
       );
     }
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     if (sumError) {
       logger.error("Error calculating total payments:", sumError);
       return NextResponse.json(
-        { success: false, error: sumError.message },
+        { success: false, message: sumError.message },
         { status: 500 }
       );
     }
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     if (updateError) {
       logger.error("Error updating booking deposit:", updateError);
       return NextResponse.json(
-        { success: false, error: updateError.message },
+        { success: false, message: updateError.message },
         { status: 500 }
       );
     }
@@ -168,7 +168,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error("Unexpected error in POST /api/admin/booking-payments:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }
@@ -185,7 +185,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!paymentId) {
       return NextResponse.json(
-        { success: false, error: "id query parameter is required" },
+        { success: false, message: "id query parameter is required" },
         { status: 400 }
       );
     }
@@ -201,7 +201,7 @@ export async function DELETE(request: NextRequest) {
 
     if (fetchError || !payment) {
       return NextResponse.json(
-        { success: false, error: "Payment not found" },
+        { success: false, message: "Payment not found" },
         { status: 404 }
       );
     }
@@ -217,7 +217,7 @@ export async function DELETE(request: NextRequest) {
     if (deleteError) {
       logger.error("Error deleting booking payment: " + deleteError.message);
       return NextResponse.json(
-        { success: false, error: deleteError.message },
+        { success: false, message: deleteError.message },
         { status: 500 }
       );
     }
@@ -231,7 +231,7 @@ export async function DELETE(request: NextRequest) {
     if (sumError) {
       logger.error("Error recalculating payments after delete:", sumError);
       return NextResponse.json(
-        { success: false, error: sumError.message },
+        { success: false, message: sumError.message },
         { status: 500 }
       );
     }
@@ -250,7 +250,7 @@ export async function DELETE(request: NextRequest) {
     if (updateError) {
       logger.error("Error updating booking deposit after payment delete:", updateError);
       return NextResponse.json(
-        { success: false, error: updateError.message },
+        { success: false, message: updateError.message },
         { status: 500 }
       );
     }
@@ -262,7 +262,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     logger.error("Unexpected error in DELETE /api/admin/booking-payments:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }

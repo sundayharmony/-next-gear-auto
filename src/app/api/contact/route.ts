@@ -79,8 +79,8 @@ export async function POST(request: Request) {
       `,
     });
 
-    // Send auto-reply to customer
-    await transporter.sendMail({
+    // Send auto-reply to customer (fire-and-forget — don't block the response)
+    transporter.sendMail({
       from: `"NextGearAuto" <${SMTP_USER}>`,
       to: email.toLowerCase().trim(),
       subject: "We received your message — NextGearAuto",
@@ -98,7 +98,7 @@ export async function POST(request: Request) {
           </div>
         </div>
       `,
-    });
+    }).catch((err: unknown) => logger.error("Auto-reply email failed:", err));
 
     return NextResponse.json({ success: true, message: "Message sent successfully." });
   } catch (error) {

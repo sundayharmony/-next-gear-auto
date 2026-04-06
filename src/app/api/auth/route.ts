@@ -21,7 +21,7 @@ export async function GET(request: NextRequest) {
 
     // Look up the user in the appropriate table based on role
     if (auth.role === "admin") {
-      const { data: admin } = await supabase.from("admins").select("*").eq("id", auth.sub).maybeSingle();
+      const { data: admin } = await supabase.from("admins").select("id, name, email, phone, created_at").eq("id", auth.sub).maybeSingle();
       if (!admin) {
         return NextResponse.json({ success: false, message: "Admin not found" }, { status: 404 });
       }
@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { data: customer } = await supabase.from("customers").select("*").eq("id", auth.sub).maybeSingle();
+    const { data: customer } = await supabase.from("customers").select("id, name, email, phone, dob, driver_license, created_at, role").eq("id", auth.sub).maybeSingle();
     if (!customer) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
     }
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
       // Check admins table first
       const { data: admin } = await adminDb
         .from("admins")
-        .select("*")
+        .select("id, name, email, phone, created_at, password_hash")
         .eq("email", normalizedEmail)
         .maybeSingle();
 
@@ -141,7 +141,7 @@ export async function POST(request: Request) {
       // Then check customers table
       const { data: customer, error } = await adminDb
         .from("customers")
-        .select("*")
+        .select("id, name, email, phone, dob, driver_license, created_at, role, password_hash")
         .eq("email", normalizedEmail)
         .maybeSingle();
 
@@ -253,7 +253,7 @@ export async function POST(request: Request) {
 
           const { data: updated } = await adminDb
             .from("customers")
-            .select("*")
+            .select("id, name, email, phone, dob, created_at, role")
             .eq("id", existing.id)
             .maybeSingle();
 
@@ -307,7 +307,7 @@ export async function POST(request: Request) {
           password_hash: passwordHash,
           role: "customer",
         })
-        .select("*")
+        .select("id, name, email, phone, dob, created_at, role")
         .maybeSingle();
 
       if (error) {

@@ -22,7 +22,7 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com";
 // Warn if SMTP variables are missing in development
 if (process.env.NODE_ENV !== "production") {
   if (!process.env.SMTP_HOST || !process.env.SMTP_PORT || !process.env.SMTP_USER || !process.env.SMTP_PASS) {
-    console.warn("SMTP environment variables not configured — emails may fail");
+    logger.warn("SMTP environment variables not configured — emails may fail");
   }
 }
 

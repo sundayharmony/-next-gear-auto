@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("blocked_dates")
-      .select("*")
+      .select("id, vehicle_id, start_date, end_date, source, reason, created_at")
       .gte("end_date", new Date().toISOString().split("T")[0])
       .order("start_date", { ascending: true });
 
@@ -29,7 +29,7 @@ export async function GET(req: NextRequest) {
     const { data, error } = await query;
     if (error) {
       logger.error("Blocked dates GET error:", error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data: data || [] }, {
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     logger.error("Blocked dates GET error:", err);
-    return NextResponse.json({ success: false, error: "Failed to fetch blocked dates" }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Failed to fetch blocked dates" }, { status: 500 });
   }
 }
 
@@ -58,16 +58,16 @@ export async function POST(req: NextRequest) {
     const { vehicleId, startDate, endDate, source, reason } = body;
 
     if (!vehicleId || !startDate || !endDate) {
-      return NextResponse.json({ success: false, error: "vehicleId, startDate, and endDate are required" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "vehicleId, startDate, and endDate are required" }, { status: 400 });
     }
 
     // Validate date format
     if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
-      return NextResponse.json({ success: false, error: "Dates must be YYYY-MM-DD format" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Dates must be YYYY-MM-DD format" }, { status: 400 });
     }
 
     if (endDate < startDate) {
-      return NextResponse.json({ success: false, error: "End date must be on or after start date" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "End date must be on or after start date" }, { status: 400 });
     }
 
     // Validate source
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (!vehicle) {
-      return NextResponse.json({ success: false, error: "Vehicle not found" }, { status: 404 });
+      return NextResponse.json({ success: false, message: "Vehicle not found" }, { status: 404 });
     }
 
     // Check for overlapping blocked dates
@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
 
     if (existing && existing.length > 0) {
       return NextResponse.json(
-        { success: false, error: `Overlapping blocked dates already exist (${existing[0].start_date} to ${existing[0].end_date})` },
+        { success: false, message: `Overlapping blocked dates already exist (${existing[0].start_date} to ${existing[0].end_date})` },
         { status: 409 }
       );
     }
@@ -114,13 +114,13 @@ export async function POST(req: NextRequest) {
 
     if (error) {
       logger.error("Blocked dates POST error:", error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (err) {
     logger.error("Blocked dates POST error:", err);
-    return NextResponse.json({ success: false, error: "Failed to create blocked date" }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Failed to create blocked date" }, { status: 500 });
   }
 }
 
@@ -138,7 +138,7 @@ export async function DELETE(req: NextRequest) {
     const id = searchParams.get("id");
 
     if (!id) {
-      return NextResponse.json({ success: false, error: "id param is required" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "id param is required" }, { status: 400 });
     }
 
     const { data: deleted, error } = await supabase
@@ -149,16 +149,16 @@ export async function DELETE(req: NextRequest) {
 
     if (error) {
       logger.error("Blocked dates DELETE error:", error);
-      return NextResponse.json({ success: false, error: error.message }, { status: 500 });
+      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 
     if (!deleted || deleted.length === 0) {
-      return NextResponse.json({ success: false, error: "Blocked date not found" }, { status: 404 });
+      return NextResponse.json({ success: false, message: "Blocked date not found" }, { status: 404 });
     }
 
     return NextResponse.json({ success: true, message: "Blocked date removed" });
   } catch (err) {
     logger.error("Blocked dates DELETE error:", err);
-    return NextResponse.json({ success: false, error: "Failed to delete blocked date" }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Failed to delete blocked date" }, { status: 500 });
   }
 }

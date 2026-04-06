@@ -79,13 +79,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (err) {
-      console.warn("Failed to parse stored user data:", err);
+      // Corrupted stored data — silently clear it
       localStorage.removeItem("nga_user");
     }
 
     // Then validate the JWT cookie against the server
+    const controller = new AbortController();
     async function validateSession() {
-      const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 10000);
       try {
         const res = await fetch("/api/auth", { credentials: "same-origin", signal: controller.signal });
@@ -106,7 +106,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     validateSession();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; controller.abort(); };
   }, []);
 
   // Persist user to localStorage on changes

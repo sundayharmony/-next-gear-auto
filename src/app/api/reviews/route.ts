@@ -42,7 +42,7 @@ export async function GET(req: NextRequest) {
 
     if (error) {
       logger.error("Reviews fetch error:", error);
-      return NextResponse.json({ data: [], success: false, error: "Failed to fetch reviews" }, { status: 500 });
+      return NextResponse.json({ data: [], success: false, message: "Failed to fetch reviews" }, { status: 500 });
     }
 
     // Map Supabase reviews to frontend format
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (err) {
     logger.error("Reviews GET error:", err);
-    return NextResponse.json({ data: [], success: false, error: "Failed to fetch reviews" }, { status: 500 });
+    return NextResponse.json({ data: [], success: false, message: "Failed to fetch reviews" }, { status: 500 });
   }
 }
 
@@ -86,21 +86,21 @@ export async function POST(req: NextRequest) {
     // Validation
     if (!customerName || !vehicleId || !rating || !text) {
       return NextResponse.json(
-        { success: false, error: "customerName, vehicleId, rating, and text are required" },
+        { success: false, message: "customerName, vehicleId, rating, and text are required" },
         { status: 400 }
       );
     }
 
     if (typeof rating !== "number" || !Number.isFinite(rating) || !Number.isInteger(rating) || rating < 1 || rating > 5) {
       return NextResponse.json(
-        { success: false, error: "Rating must be an integer between 1 and 5" },
+        { success: false, message: "Rating must be an integer between 1 and 5" },
         { status: 400 }
       );
     }
 
     if (typeof text !== "string" || text.trim().length === 0 || text.length > 500) {
       return NextResponse.json(
-        { success: false, error: "Review text must be between 1 and 500 characters" },
+        { success: false, message: "Review text must be between 1 and 500 characters" },
         { status: 400 }
       );
     }
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest) {
     if (error) {
       logger.error("Review insert error:", error);
       return NextResponse.json(
-        { success: false, error: "Failed to submit review. Please try again." },
+        { success: false, message: "Failed to submit review. Please try again." },
         { status: 500 }
       );
     }
@@ -143,7 +143,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     logger.error("Review POST error:", err);
     return NextResponse.json(
-      { success: false, error: "Failed to submit review" },
+      { success: false, message: "Failed to submit review" },
       { status: 500 }
     );
   }
@@ -159,11 +159,11 @@ export async function PATCH(req: NextRequest) {
     const { id, status } = body;
 
     if (!id || !status) {
-      return NextResponse.json({ success: false, error: "id and status are required" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "id and status are required" }, { status: 400 });
     }
 
     if (!["approved", "rejected", "pending"].includes(status)) {
-      return NextResponse.json({ success: false, error: "Invalid status" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "Invalid status" }, { status: 400 });
     }
 
     const { error } = await supabase
@@ -173,13 +173,13 @@ export async function PATCH(req: NextRequest) {
 
     if (error) {
       logger.error("Review PATCH error:", error);
-      return NextResponse.json({ success: false, error: "Failed to update review" }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to update review" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
     logger.error("Review PATCH error:", err);
-    return NextResponse.json({ success: false, error: "Failed to update review" }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Failed to update review" }, { status: 500 });
   }
 }
 
@@ -192,7 +192,7 @@ export async function DELETE(req: NextRequest) {
   const id = searchParams.get("id");
 
   if (!id) {
-    return NextResponse.json({ success: false, error: "id is required" }, { status: 400 });
+    return NextResponse.json({ success: false, message: "id is required" }, { status: 400 });
   }
 
   try {
@@ -200,12 +200,12 @@ export async function DELETE(req: NextRequest) {
 
     if (error) {
       logger.error("Review DELETE error:", error);
-      return NextResponse.json({ success: false, error: "Failed to delete review" }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to delete review" }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch (err) {
     logger.error("Review DELETE error:", err);
-    return NextResponse.json({ success: false, error: "Failed to delete review" }, { status: 500 });
+    return NextResponse.json({ success: false, message: "Failed to delete review" }, { status: 500 });
   }
 }

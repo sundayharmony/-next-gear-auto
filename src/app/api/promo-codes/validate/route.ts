@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
 
     if (!code) {
       return NextResponse.json(
-        { success: false, error: "Promo code is required" },
+        { success: false, message: "Promo code is required" },
         { status: 400 }
       );
     }
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
 
     if (error || !promo) {
       return NextResponse.json(
-        { success: false, error: "Invalid promo code" },
+        { success: false, message: "Invalid promo code" },
         { status: 404 }
       );
     }
@@ -48,28 +48,28 @@ export async function POST(req: NextRequest) {
     // Database promo code validation
     if (!promo.is_active) {
       return NextResponse.json(
-        { success: false, error: "This promo code is no longer active" },
+        { success: false, message: "This promo code is no longer active" },
         { status: 400 }
       );
     }
 
     if (promo.expires_at && new Date(promo.expires_at.includes("T") ? promo.expires_at : promo.expires_at + "T23:59:59") < new Date()) {
       return NextResponse.json(
-        { success: false, error: "This promo code has expired" },
+        { success: false, message: "This promo code has expired" },
         { status: 400 }
       );
     }
 
     if (promo.max_uses && promo.used_count >= promo.max_uses) {
       return NextResponse.json(
-        { success: false, error: "This promo code has reached its usage limit" },
+        { success: false, message: "This promo code has reached its usage limit" },
         { status: 400 }
       );
     }
 
     if (bookingAmount && promo.min_booking_amount && bookingAmount < promo.min_booking_amount) {
       return NextResponse.json(
-        { success: false, error: `Minimum booking amount of $${promo.min_booking_amount} required` },
+        { success: false, message: `Minimum booking amount of $${promo.min_booking_amount} required` },
         { status: 400 }
       );
     }
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
   } catch (err) {
     logger.error("Promo validation error:", err);
     return NextResponse.json(
-      { success: false, error: "Failed to validate promo code" },
+      { success: false, message: "Failed to validate promo code" },
       { status: 500 }
     );
   }

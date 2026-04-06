@@ -255,21 +255,21 @@ export async function POST(request: Request) {
 
     // Validate required fields
     if (!body.vehicleId || !body.pickupDate || !body.returnDate) {
-      return NextResponse.json({ success: false, error: "vehicleId, pickupDate, and returnDate are required" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "vehicleId, pickupDate, and returnDate are required" }, { status: 400 });
     }
 
     // Validate totalPrice is numeric if provided
     if (body.totalPrice !== undefined && (typeof body.totalPrice !== "number" || !Number.isFinite(body.totalPrice) || body.totalPrice < 0)) {
-      return NextResponse.json({ success: false, error: "totalPrice must be a non-negative number" }, { status: 400 });
+      return NextResponse.json({ success: false, message: "totalPrice must be a non-negative number" }, { status: 400 });
     }
 
     // Validate extras is an array of valid strings
     if (body.extras !== undefined) {
       if (!Array.isArray(body.extras)) {
-        return NextResponse.json({ success: false, error: "extras must be an array" }, { status: 400 });
+        return NextResponse.json({ success: false, message: "extras must be an array" }, { status: 400 });
       }
       if (!body.extras.every((extra: any) => typeof extra === "string")) {
-        return NextResponse.json({ success: false, error: "all extras must be strings" }, { status: 400 });
+        return NextResponse.json({ success: false, message: "all extras must be strings" }, { status: 400 });
       }
     }
 

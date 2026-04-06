@@ -56,7 +56,7 @@ export async function GET(request: NextRequest) {
     const fromDate = searchParams.get("from");
     const toDate = searchParams.get("to");
 
-    let query = supabase.from("expenses").select("*");
+    let query = supabase.from("expenses").select("id, vehicle_id, category, amount, description, date, created_at");
 
     if (vehicleId) {
       query = query.eq("vehicle_id", vehicleId);
@@ -79,7 +79,7 @@ export async function GET(request: NextRequest) {
     if (error) {
       logger.error("Error fetching expenses:", error);
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, message: error.message },
         { status: 500 }
       );
     }
@@ -91,7 +91,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     logger.error("Unexpected error in GET /api/admin/expenses:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }
@@ -108,7 +108,7 @@ export async function POST(request: NextRequest) {
     const validation = validateExpenseInput(category, amount);
     if (!validation.valid) {
       return NextResponse.json(
-        { success: false, error: validation.error },
+        { success: false, message: validation.error },
         { status: 400 }
       );
     }
@@ -118,7 +118,7 @@ export async function POST(request: NextRequest) {
 
     if (!date) {
       return NextResponse.json(
-        { success: false, error: "Date is required" },
+        { success: false, message: "Date is required" },
         { status: 400 }
       );
     }
@@ -145,7 +145,7 @@ export async function POST(request: NextRequest) {
     if (error) {
       logger.error("Error creating expense:", error);
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, message: error.message },
         { status: 500 }
       );
     }
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     logger.error("Unexpected error in POST /api/admin/expenses:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }
@@ -175,7 +175,7 @@ export async function PUT(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { success: false, error: "ID is required" },
+        { success: false, message: "ID is required" },
         { status: 400 }
       );
     }
@@ -189,7 +189,7 @@ export async function PUT(request: NextRequest) {
       // For PUT, only validate the fields that were actually provided
       if (category && !VALID_CATEGORIES.includes(category)) {
         return NextResponse.json(
-          { success: false, error: "Invalid category" },
+          { success: false, message: "Invalid category" },
           { status: 400 }
         );
       }
@@ -197,13 +197,13 @@ export async function PUT(request: NextRequest) {
         const parsedCheck = parseFloat(amount as any);
         if (!Number.isFinite(parsedCheck) || parsedCheck <= 0) {
           return NextResponse.json(
-            { success: false, error: "Invalid amount" },
+            { success: false, message: "Invalid amount" },
             { status: 400 }
           );
         }
         if (parsedCheck > MAX_EXPENSE_AMOUNT) {
           return NextResponse.json(
-            { success: false, error: `Amount cannot exceed $${MAX_EXPENSE_AMOUNT.toLocaleString()}` },
+            { success: false, message: `Amount cannot exceed $${MAX_EXPENSE_AMOUNT.toLocaleString()}` },
             { status: 400 }
           );
         }
@@ -218,7 +218,7 @@ export async function PUT(request: NextRequest) {
     if (amount !== undefined) {
       const parsed = parseFloat(amount);
       if (isNaN(parsed) || !Number.isFinite(parsed)) {
-        return NextResponse.json({ success: false, error: "Amount must be a valid number" }, { status: 400 });
+        return NextResponse.json({ success: false, message: "Amount must be a valid number" }, { status: 400 });
       }
       updates.amount = parsed;
     }
@@ -235,7 +235,7 @@ export async function PUT(request: NextRequest) {
     if (error) {
       logger.error("Error updating expense:", error);
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, message: error.message },
         { status: 500 }
       );
     }
@@ -247,7 +247,7 @@ export async function PUT(request: NextRequest) {
   } catch (error) {
     logger.error("Unexpected error in PUT /api/admin/expenses:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }
@@ -262,7 +262,7 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json(
-        { success: false, error: "ID is required" },
+        { success: false, message: "ID is required" },
         { status: 400 }
       );
     }
@@ -274,7 +274,7 @@ export async function DELETE(request: NextRequest) {
     if (error) {
       logger.error("Error deleting expense:", error);
       return NextResponse.json(
-        { success: false, error: error.message },
+        { success: false, message: error.message },
         { status: 500 }
       );
     }
@@ -286,7 +286,7 @@ export async function DELETE(request: NextRequest) {
   } catch (error) {
     logger.error("Unexpected error in DELETE /api/admin/expenses:", error);
     return NextResponse.json(
-      { success: false, error: "Internal server error" },
+      { success: false, message: "Internal server error" },
       { status: 500 }
     );
   }
