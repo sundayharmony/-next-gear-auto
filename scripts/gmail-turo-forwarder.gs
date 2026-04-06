@@ -28,7 +28,7 @@ const WEBHOOK_SECRET = "PASTE_YOUR_SECRET_HERE"; // Must match TURO_WEBHOOK_SECR
 
 // Gmail search query for Turo booking emails
 // Adjust if Turo uses a different sender address for your account
-const TURO_SEARCH_QUERY = 'from:(no-reply@turo.com OR noreply@turo.com OR support@turo.com) subject:(trip OR booking OR reservation OR confirmed) -label:NGA-Processed';
+const TURO_SEARCH_QUERY = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) subject:(trip OR booking OR reservation OR confirmed) -label:NGA-Processed';
 
 // Label applied to processed emails so they're not sent again
 const PROCESSED_LABEL_NAME = "NGA-Processed";

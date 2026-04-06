@@ -84,7 +84,35 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
     }
   }
 
-  // Pattern 4: Date range like "Apr 5 – Apr 8, 2026" or "04/05/2026 - 04/08/2026"
+  // Pattern 4: Turo "booked from <date> to <date>" format
+  // e.g. "is booked from Thursday, April 9, 2026, 8:00 AM to Friday, April 10, 2026, 10:00 AM"
+  if (!startDate || !endDate) {
+    const bookedFromTo = text.match(
+      /booked\s+from\s+(.+?)\s+to\s+(.+?)(?:\.|You|$)/i
+    );
+    if (bookedFromTo) {
+      const s = parseFlexibleDate(bookedFromTo[1]);
+      const e = parseFlexibleDate(bookedFromTo[2]);
+      if (s && !startDate) { startDate = s; rawMatches.push(`Booked from: "${bookedFromTo[1].trim()}"`); }
+      if (e && !endDate) { endDate = e; rawMatches.push(`Booked to: "${bookedFromTo[2].trim()}"`); }
+    }
+  }
+
+  // Pattern 4b: Turo "cancelled" emails — "Trip start: <date>" style but with "cancelled"
+  // Also handle "from <date> to <date>" without "booked"
+  if (!startDate || !endDate) {
+    const fromToMatch = text.match(
+      /from\s+(\w+day,\s+\w+\s+\d{1,2},\s+\d{4},?\s+\d{1,2}:\d{2}\s*(?:AM|PM)?)\s+to\s+(\w+day,\s+\w+\s+\d{1,2},\s+\d{4},?\s+\d{1,2}:\d{2}\s*(?:AM|PM)?)/i
+    );
+    if (fromToMatch) {
+      const s = parseFlexibleDate(fromToMatch[1]);
+      const e = parseFlexibleDate(fromToMatch[2]);
+      if (s && !startDate) { startDate = s; rawMatches.push(`From: "${fromToMatch[1].trim()}"`); }
+      if (e && !endDate) { endDate = e; rawMatches.push(`To: "${fromToMatch[2].trim()}"`); }
+    }
+  }
+
+  // Pattern 5: Date range like "Apr 5 – Apr 8, 2026" or "04/05/2026 - 04/08/2026"
   if (!startDate || !endDate) {
     const rangeMatch = text.match(
       /(\w+\.?\s+\d{1,2}(?:,?\s+\d{4})?)\s*[–—-]+\s*(\w+\.?\s+\d{1,2}(?:,?\s+\d{4})?)/
@@ -111,6 +139,8 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   // ── Extract guest name ──
   let guestName: string | null = null;
   const guestPatterns = [
+    // "Bob's trip is booked" / "Kati's trip with your..."
+    /([A-Z][a-z]+(?:\s+[A-Z][a-z.]+)?)'s\s+trip/i,
     /(?:guest|booked by|renter|driver)\s*[:–—-]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z.]+)?)/i,
     /([A-Z][a-z]+(?:\s+[A-Z]\.?))\s+(?:booked|has booked|reserved|wants to book)/i,
     /trip\s+with\s+([A-Z][a-z]+(?:\s+[A-Z][a-z.]+)?)/i,
@@ -129,14 +159,23 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   let vehicleDescription: string | null = null;
   // Look for year + make + model patterns
   const vehiclePatterns = [
-    /(\d{4})\s+(Toyota|Honda|Nissan|BMW|Mercedes|Audi|Ford|Chevrolet|Chevy|Hyundai|Kia|Jeep|Tesla|Volkswagen|VW|Ram|RAM|Dodge|Subaru|Mazda|Lexus|Acura|Infiniti|Volvo|Porsche|Cadillac|Lincoln|Buick|GMC|Chrysler)[- ](\w+(?:\s+\w+)?)/i,
+    /(\d{4})\s+(Toyota|Honda|Nissan|BMW|Mercedes|Audi|Ford|Chevrolet|Chevy|Hyundai|Kia|Jeep|Tesla|Volkswagen|VW|Ram|RAM|Dodge|Subaru|Mazda|Lexus|Acura|Infiniti|Volvo|Porsche|Cadillac|Lincoln|Buick|GMC|Chrysler|Highland)[- ](\w+(?:\s+\w+)?)/i,
+    // "your Tesla Model 3" / "your Volkswagen Jetta" — Turo email format
+    /your\s+(Toyota|Honda|Nissan|BMW|Mercedes|Audi|Ford|Chevrolet|Chevy|Hyundai|Kia|Jeep|Tesla|Volkswagen|VW|Ram|RAM|Dodge|Subaru|Mazda|Lexus|Acura|Infiniti|Volvo|Porsche|Cadillac|Lincoln|Buick|GMC|Chrysler|Highland)\w*\s+(\w+(?:\s+\w+)?)/i,
     /vehicle\s*[:–—-]\s*(.+?)(?:\n|$)/i,
     /car\s*[:–—-]\s*(.+?)(?:\n|$)/i,
   ];
   for (const pattern of vehiclePatterns) {
     const match = text.match(pattern);
     if (match) {
-      vehicleDescription = match[0].includes(":") ? match[1].trim() : `${match[1]} ${match[2]} ${match[3] || ""}`.trim();
+      if (match[0].includes(":")) {
+        vehicleDescription = match[1].trim();
+      } else if (match[0].toLowerCase().startsWith("your")) {
+        // "your Tesla Model 3" → "Tesla Model 3"
+        vehicleDescription = `${match[1]} ${match[2] || ""}`.trim();
+      } else {
+        vehicleDescription = `${match[1]} ${match[2]} ${match[3] || ""}`.trim();
+      }
       rawMatches.push(`Vehicle: "${vehicleDescription}"`);
       break;
     }
@@ -201,7 +240,11 @@ function stripHtml(text: string): string {
  * Parse a wide variety of date formats into YYYY-MM-DD.
  */
 function parseFlexibleDate(dateStr: string): string | null {
-  const s = dateStr.trim().replace(/\s+at\s+.*/i, "").replace(/\s+\d{1,2}:\d{2}\s*(AM|PM)?/i, "").trim();
+  const s = dateStr.trim()
+    .replace(/\s+at\s+.*/i, "")
+    .replace(/,?\s+\d{1,2}:\d{2}\s*(AM|PM)?/i, "")
+    .replace(/,\s*$/, "")
+    .trim();
 
   // ISO format: 2026-04-05
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
