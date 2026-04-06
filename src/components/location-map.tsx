@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { escapeHtml } from "@/lib/utils/validation";
 
 interface LocationMapProps {
   locations: Array<{
@@ -22,18 +23,6 @@ interface LocationMapProps {
 // Load the Google Maps script once
 let mapsLoaded = false;
 let mapsLoadPromise: Promise<void> | null = null;
-
-// Helper to escape HTML entities and prevent XSS
-function escapeHtml(text: string): string {
-  const map: { [key: string]: string } = {
-    "&": "&amp;",
-    "<": "&lt;",
-    ">": "&gt;",
-    '"': "&quot;",
-    "'": "&#039;",
-  };
-  return text.replace(/[&<>"']/g, (char) => map[char]);
-}
 
 function loadGoogleMaps(): Promise<void> {
   if (mapsLoaded) return Promise.resolve();

@@ -1,5 +1,6 @@
 import nodemailer from "nodemailer";
 import { logger } from "@/lib/utils/logger";
+import { escapeHtml } from "@/lib/utils/validation";
 import {
   bookingConfirmationTemplate,
   bookingPendingTemplate,
@@ -257,14 +258,10 @@ export async function sendAgreementEmail(data: BookingEmailData & { pdfBytes: Ui
   }
 }
 
-function escHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
 function agreementEmailTemplate(data: BookingEmailData): string {
-  const name = escHtml(data.customerName);
-  const vehicle = escHtml(data.vehicleName);
-  const bId = escHtml(data.bookingId);
+  const name = escapeHtml(data.customerName);
+  const vehicle = escapeHtml(data.vehicleName);
+  const bId = escapeHtml(data.bookingId);
   const fmtTimeAt = (t?: string) => {
     const formatted = fmtTime(t);
     return formatted ? ` at ${formatted}` : "";

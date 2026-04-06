@@ -5,6 +5,8 @@ import { sendBookingConfirmation, sendBookingPendingEmail, sendAdminNewBooking }
 import { logger } from "@/lib/utils/logger";
 import { calculateRentalDays, calculatePricing, applyDiscount } from "@/lib/utils/price-calculator";
 import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
+import { escapeHtml } from "@/lib/utils/validation";
+import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
@@ -173,13 +175,7 @@ export async function POST(request: NextRequest) {
 
     // Sanitize customer name
     // Fix 8: Check for empty string after sanitization
-    const safeName = (customerDetails.name || "")
-      .replace(/<[^>]*>/g, "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .trim()
-      .slice(0, 100);
+    const safeName = escapeHtml((customerDetails.name || "").replace(/<[^>]*>/g, "").trim()).slice(0, 100);
 
     // Ensure name is not empty after sanitization
     if (!safeName) {
@@ -190,34 +186,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Double-booking check — allow same-day turnovers with 60-minute gap
-    const { data: conflicting } = await supabase
-      .from("bookings")
-      .select("id, pickup_date, return_date, pickup_time, return_time")
-      .eq("vehicle_id", vehicleId)
-      .in("status", ["confirmed", "active", "pending"])
-      .lte("pickup_date", returnDate)
-      .gte("return_date", pickupDate);
-
-    if (conflicting && conflicting.length > 0) {
-      // Fix 6: Use nullish coalescing (??) instead of || for default time values
-      const newPickupDt = new Date(`${pickupDate}T${pickupTime ?? "00:00"}`);
-      const newReturnDt = new Date(`${returnDate}T${returnTime ?? "23:59"}`);
-
-      const hasRealConflict = conflicting.some((existing) => {
-        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time ?? "00:00"}`);
-        const existReturn = new Date(`${existing.return_date}T${existing.return_time ?? "23:59"}`);
-        const gapAfterExisting = (newPickupDt.getTime() - existReturn.getTime()) / 60000;
-        const gapAfterNew = (existPickup.getTime() - newReturnDt.getTime()) / 60000;
-        return gapAfterExisting < 60 && gapAfterNew < 60;
-      });
-
-      if (hasRealConflict) {
-        return NextResponse.json(
-          { success: false, message: "This vehicle is already booked for the selected dates. Bookings on the same day must be at least 60 minutes apart." },
-          { status: 409 }
-        );
-      }
-    }
+    const overlap = await checkBookingOverlap(supabase, vehicleId, pickupDate, returnDate, pickupTime ?? null, returnTime ?? null);
+    if (overlap) return overlap;
 
     // ── Server-side price recalculation ──────────────────────────────
     // Never trust client-supplied totalPrice. Recalculate from vehicle rate,
@@ -418,34 +388,8 @@ export async function POST(request: NextRequest) {
     }
 
     // Re-check vehicle availability immediately before insert to prevent race condition
-    const { data: finalConflictCheck } = await supabase
-      .from("bookings")
-      .select("id, pickup_date, return_date, pickup_time, return_time")
-      .eq("vehicle_id", vehicleId)
-      .in("status", ["confirmed", "active", "pending"])
-      .lte("pickup_date", returnDate)
-      .gte("return_date", pickupDate);
-
-    if (finalConflictCheck && finalConflictCheck.length > 0) {
-      // Use nullish coalescing (??) instead of || for default time values
-      const newPickupDt = new Date(`${pickupDate}T${pickupTime ?? "00:00"}`);
-      const newReturnDt = new Date(`${returnDate}T${returnTime ?? "23:59"}`);
-
-      const hasRealConflict = finalConflictCheck.some((existing) => {
-        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time ?? "00:00"}`);
-        const existReturn = new Date(`${existing.return_date}T${existing.return_time ?? "23:59"}`);
-        const gapAfterExisting = (newPickupDt.getTime() - existReturn.getTime()) / 60000;
-        const gapAfterNew = (existPickup.getTime() - newReturnDt.getTime()) / 60000;
-        return gapAfterExisting < 60 && gapAfterNew < 60;
-      });
-
-      if (hasRealConflict) {
-        return NextResponse.json(
-          { success: false, message: "This vehicle is already booked for the selected dates. Bookings on the same day must be at least 60 minutes apart." },
-          { status: 409 }
-        );
-      }
-    }
+    const finalOverlap = await checkBookingOverlap(supabase, vehicleId, pickupDate, returnDate, pickupTime ?? null, returnTime ?? null);
+    if (finalOverlap) return finalOverlap;
 
     // 2. Create booking in Supabase (status: pending)
     // Use crypto for better collision prevention

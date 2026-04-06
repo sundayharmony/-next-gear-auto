@@ -3,10 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { reviewLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
-
-// Module-scoped sanitizer — avoids re-creating on every request
-const escapeHtml = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+import { escapeHtml } from "@/lib/utils/validation";
 
 // GET: Return reviews — verified admins see all statuses, public only sees approved
 export async function GET(req: NextRequest) {

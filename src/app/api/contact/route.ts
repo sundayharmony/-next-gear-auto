@@ -2,11 +2,10 @@ import { NextResponse } from "next/server";
 import { getTransporter } from "@/lib/email/mailer";
 import { contactLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/utils/logger";
+import { cleanInput } from "@/lib/utils/validation";
 
-// Module-scoped sanitizers — avoid re-creating function objects on every request
-const escapeHtml = (s: string) =>
-  s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-const clean = (s: string) => escapeHtml(s.replace(/[\r\n]/g, " ").trim());
+const SMTP_USER = process.env.SMTP_USER || "contact@rentnextgearauto.com";
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com";
 
 export async function POST(request: Request) {
   try {
@@ -44,17 +43,17 @@ export async function POST(request: Request) {
     }
 
     // Sanitize inputs for email
-    const safeName = clean(name);
-    const safeEmail = clean(email);
-    const safePhone = clean(phone || "Not provided");
-    const safeMessage = clean(message);
+    const safeName = cleanInput(name);
+    const safeEmail = cleanInput(email);
+    const safePhone = cleanInput(phone || "Not provided");
+    const safeMessage = cleanInput(message);
 
     const transporter = getTransporter();
 
     // Send to admin
     await transporter.sendMail({
-      from: `"NextGearAuto Website" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
-      to: process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com",
+      from: `"NextGearAuto Website" <${SMTP_USER}>`,
+      to: ADMIN_EMAIL,
       replyTo: email.toLowerCase().trim(),
       subject: `Website Inquiry from ${safeName}`,
       html: `
@@ -82,7 +81,7 @@ export async function POST(request: Request) {
 
     // Send auto-reply to customer
     await transporter.sendMail({
-      from: `"NextGearAuto" <${process.env.SMTP_USER || "contact@rentnextgearauto.com"}>`,
+      from: `"NextGearAuto" <${SMTP_USER}>`,
       to: email.toLowerCase().trim(),
       subject: "We received your message — NextGearAuto",
       html: `

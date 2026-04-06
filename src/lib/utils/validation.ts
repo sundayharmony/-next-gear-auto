@@ -50,12 +50,27 @@ export const nameRule: ValidationRule = {
   message: "Please enter your full name",
 };
 
-export function sanitizeInput(input: string): string {
-  return input
+/** Escape HTML special characters to prevent XSS injection */
+export function escapeHtml(s: string): string {
+  return s
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#x27;")
-    .replace(/\//g, "&#x2F;");
+    .replace(/'/g, "&#39;");
+}
+
+/** Escape HTML entities and strip CRLF (for SMTP header injection prevention) */
+export function cleanInput(s: string): string {
+  return escapeHtml(s.replace(/[\r\n]/g, " ").trim());
+}
+
+/** Parse a date string safely, appending T00:00:00 if no time component present */
+export function parseLocalDate(dateStr: string): Date {
+  return new Date(dateStr.includes("T") ? dateStr : dateStr + "T00:00:00");
+}
+
+/** Get today's date as YYYY-MM-DD string */
+export function todayDateString(): string {
+  return new Date().toISOString().split("T")[0];
 }

@@ -9,6 +9,7 @@ import {
 import { logger } from "@/lib/utils/logger";
 import { getAuthFromRequest, type TokenPayload } from "@/lib/auth/jwt";
 import { getVehicleDisplayName } from "@/lib/types";
+import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -245,45 +246,6 @@ export async function GET(request: NextRequest) {
       { status: 400 }
     );
   }
-}
-
-/** Check for booking overlap; returns a 409 response if conflict found, or null if clear. */
-async function checkBookingOverlap(
-  supabase: ReturnType<typeof getServiceSupabase>,
-  vehicleId: string,
-  pickupDate: string,
-  returnDate: string,
-  pickupTime: string | null,
-  returnTime: string | null,
-): Promise<NextResponse | null> {
-  const { data: conflicting } = await supabase
-    .from("bookings")
-    .select("id, pickup_date, return_date, pickup_time, return_time")
-    .eq("vehicle_id", vehicleId)
-    .in("status", ["confirmed", "active", "pending"])
-    .lte("pickup_date", returnDate)
-    .gte("return_date", pickupDate);
-
-  if (conflicting && conflicting.length > 0) {
-    const newPickup = new Date(`${pickupDate}T${pickupTime || "00:00"}`);
-    const newReturn = new Date(`${returnDate}T${returnTime || "23:59"}`);
-
-    const hasRealConflict = conflicting.some((existing) => {
-      const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time || "00:00"}`);
-      const existReturn = new Date(`${existing.return_date}T${existing.return_time || "23:59"}`);
-      const gapAfterExisting = (newPickup.getTime() - existReturn.getTime()) / 60000;
-      const gapAfterNew = (existPickup.getTime() - newReturn.getTime()) / 60000;
-      return gapAfterExisting < 60 && gapAfterNew < 60;
-    });
-
-    if (hasRealConflict) {
-      return NextResponse.json(
-        { success: false, message: "This vehicle is already booked for the selected dates. Bookings on the same day must be at least 60 minutes apart." },
-        { status: 409 }
-      );
-    }
-  }
-  return null;
 }
 
 export async function POST(request: Request) {

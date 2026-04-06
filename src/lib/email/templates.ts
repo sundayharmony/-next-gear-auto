@@ -1,3 +1,5 @@
+import { escapeHtml } from "@/lib/utils/validation";
+
 const COMPANY_ADDRESS = "92 Forrest Street, Jersey City, NJ 07304";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://rentnextgearauto.com";
 
@@ -15,11 +17,6 @@ interface EmailData {
   needsPassword?: boolean;
   pickupLocationName?: string;
   returnLocationName?: string;
-}
-
-/** Escape HTML special characters to prevent injection */
-function escHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
 
 /** Sanitize CSS color values to prevent injection */
@@ -89,8 +86,8 @@ function headerBlock(title: string, subtitle: string, bgColor = '#7C3AED', bgEnd
   <tr>
     <td style="background: linear-gradient(135deg, ${safeCssColor(bgColor)}, ${safeCssColor(bgEnd)}); padding: 40px 32px; text-align: center;">
       <p style="margin: 0 0 12px; color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
-      <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 26px; font-weight: 800; line-height: 1.2;">${escHtml(title)}</h1>
-      <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 14px;">${escHtml(subtitle)}</p>
+      <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 26px; font-weight: 800; line-height: 1.2;">${escapeHtml(title)}</h1>
+      <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 14px;">${escapeHtml(subtitle)}</p>
     </td>
   </tr>`;
 }
@@ -113,8 +110,8 @@ function bookingIdBlock(id: string, color = '#7C3AED', bg = '#F5F3FF'): string {
 
 function detailRow(label: string, value: string, bold = false): string {
   return `<tr>
-    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">${escHtml(label)}</td>
-    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #111827; font-size: 14px; font-weight: ${bold ? '700' : '600'}; text-align: right;">${escHtml(value)}</td>
+    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">${escapeHtml(label)}</td>
+    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #111827; font-size: 14px; font-weight: ${bold ? '700' : '600'}; text-align: right;">${escapeHtml(value)}</td>
   </tr>`;
 }
 
@@ -138,14 +135,14 @@ function ctaButton(text: string, url: string, color = '#7C3AED'): string {
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0 8px;">
     <tr>
       <td align="center">
-        <a href="${escHtml(url)}" style="display: inline-block; background: ${safeCssColor(color)}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; letter-spacing: 0.3px;">${text}</a>
+        <a href="${escapeHtml(url)}" style="display: inline-block; background: ${safeCssColor(color)}; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 700; font-size: 15px; letter-spacing: 0.3px;">${text}</a>
       </td>
     </tr>
   </table>`;
 }
 
 function outlineButton(text: string, url: string, color = '#7C3AED'): string {
-  return `<a href="${escHtml(url)}" style="display: inline-block; background: #ffffff; color: ${safeCssColor(color)}; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; border: 2px solid ${safeCssColor(color)}; margin-left: 8px;">${text}</a>`;
+  return `<a href="${escapeHtml(url)}" style="display: inline-block; background: #ffffff; color: ${safeCssColor(color)}; text-decoration: none; padding: 12px 24px; border-radius: 10px; font-weight: 700; font-size: 14px; border: 2px solid ${safeCssColor(color)}; margin-left: 8px;">${text}</a>`;
 }
 
 function infoBox(title: string, text: string, color: string, bg: string): string {
@@ -202,17 +199,17 @@ function bookingEmailTemplate(
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escHtml(data.customerName)}, ${opts.message}</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escapeHtml(data.customerName)}, ${opts.message}</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
           <tr>
             <td style="padding: 20px 24px;">
               <p style="margin: 0 0 4px; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Booking ID</p>
               <p style="margin: 0 0 16px; color: #111827; font-size: 14px; font-weight: 600; font-family: monospace;">${data.bookingId}</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
+                ${detailRow('Vehicle', escapeHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
                 ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
-                ${data.pickupLocationName ? `${detailRow('Pickup Location', escHtml(data.pickupLocationName) + (data.returnLocationName && data.returnLocationName !== data.pickupLocationName ? `<br/><span style="color:#6b7280;font-weight:400;">Return: ${escHtml(data.returnLocationName)}</span>` : ''))}` : ''}
+                ${data.pickupLocationName ? `${detailRow('Pickup Location', escapeHtml(data.pickupLocationName) + (data.returnLocationName && data.returnLocationName !== data.pickupLocationName ? `<br/><span style="color:#6b7280;font-weight:400;">Return: ${escapeHtml(data.returnLocationName)}</span>` : ''))}` : ''}
                 ${detailRow('Total', '$' + (data.totalPrice ?? 0).toFixed(2), true)}
               </table>
             </td>
@@ -299,16 +296,16 @@ export function adminNewBookingTemplate(data: EmailData): string {
     <tr>
       <td style="padding: 0 32px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          ${detailRow('Customer', escHtml(data.customerName), true)}
-          ${detailRow('Email', escHtml(data.customerEmail))}
-          ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
+          ${detailRow('Customer', escapeHtml(data.customerName), true)}
+          ${detailRow('Email', escapeHtml(data.customerEmail))}
+          ${detailRow('Vehicle', escapeHtml(data.vehicleName), true)}
         </table>
         ${dateTimeBlock('Pick-up', data.pickupDate, data.pickupTime, '#059669', 'linear-gradient(135deg, #ecfdf5, #d1fae5)')}
         ${dateTimeBlock('Return', data.returnDate, data.returnTime, '#d97706', 'linear-gradient(135deg, #fffbeb, #fef3c7)')}
         ${data.pickupLocationName ? `
 <tr>
   <td style="padding:8px 12px;color:#6b7280;font-size:14px;">Pickup Location</td>
-  <td style="padding:8px 12px;font-weight:600;color:#111827;font-size:14px;">${escHtml(data.pickupLocationName)}${data.returnLocationName && data.returnLocationName !== data.pickupLocationName ? `<br/><span style="color:#6b7280;font-weight:400;">Return: ${escHtml(data.returnLocationName)}</span>` : ''}</td>
+  <td style="padding:8px 12px;font-weight:600;color:#111827;font-size:14px;">${escapeHtml(data.pickupLocationName)}${data.returnLocationName && data.returnLocationName !== data.pickupLocationName ? `<br/><span style="color:#6b7280;font-weight:400;">Return: ${escapeHtml(data.returnLocationName)}</span>` : ''}</td>
 </tr>` : ''}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
           <tr>
@@ -330,8 +327,8 @@ export function cancellationTemplate(data: EmailData): string {
     ${headerBlock('Booking Cancelled', 'Your reservation has been cancelled', '#DC2626', '#B91C1C')}
     <tr>
       <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escHtml(data.customerName)},</p>
-        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Your booking <strong style="color: #111827;">${escHtml(data.bookingId)}</strong> for the <strong>${escHtml(data.vehicleName)}</strong> has been cancelled.</p>
+        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escapeHtml(data.customerName)},</p>
+        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Your booking <strong style="color: #111827;">${escapeHtml(data.bookingId)}</strong> for the <strong>${escapeHtml(data.vehicleName)}</strong> has been cancelled.</p>
       </td>
     </tr>
     <tr>
@@ -379,14 +376,14 @@ function reminderTemplate(
     : 'linear-gradient(135deg, #fffbeb, #fef3c7)';
 
   const message = isPickup
-    ? `Just a reminder that your <strong style="color: #111827;">${escHtml(data.vehicleName)}</strong> is ready for pickup tomorrow.`
-    : `This is a friendly reminder that your <strong style="color: #111827;">${escHtml(data.vehicleName)}</strong> (Booking ${escHtml(data.bookingId)}) is due for return today.`;
+    ? `Just a reminder that your <strong style="color: #111827;">${escapeHtml(data.vehicleName)}</strong> is ready for pickup tomorrow.`
+    : `This is a friendly reminder that your <strong style="color: #111827;">${escapeHtml(data.vehicleName)}</strong> (Booking ${escapeHtml(data.bookingId)}) is due for return today.`;
 
   const html = wrapEmail(`
     ${headerBlock(headerTitle, headerSubtitle, headerBgColor, headerBgEnd)}
     <tr>
       <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escHtml(data.customerName)},</p>
+        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escapeHtml(data.customerName)},</p>
         <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">${message}</p>
       </td>
     </tr>
@@ -474,14 +471,14 @@ export function bookingSignAgreementTemplate(data: EmailData): string {
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escHtml(data.customerName)}, please review your details and sign the rental agreement before pickup.</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escapeHtml(data.customerName)}, please review your details and sign the rental agreement before pickup.</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
           <tr>
             <td style="padding: 20px 24px;">
               <p style="margin: 0 0 4px; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Booking ID</p>
               <p style="margin: 0 0 16px; color: #111827; font-size: 14px; font-weight: 600; font-family: monospace;">${data.bookingId}</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-                ${detailRow('Vehicle', escHtml(data.vehicleName), true)}
+                ${detailRow('Vehicle', escapeHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
                 ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
                 ${detailRow('Total', '$' + (data.totalPrice ?? 0).toFixed(2), true)}
@@ -523,7 +520,7 @@ export function passwordResetTemplate(data: { customerName: string; customerEmai
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escHtml(data.customerName)}, use the button below to set up your password for your NextGearAuto account.</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escapeHtml(data.customerName)}, use the button below to set up your password for your NextGearAuto account.</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 20px;">
           <tr>
             <td align="center">
