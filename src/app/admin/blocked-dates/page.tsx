@@ -274,8 +274,8 @@ export default function BlockedDatesPage() {
     setEditStartDate(block.start_date);
     setEditEndDate(block.end_date);
     setEditReason(block.reason || "");
-    setEditPickupTime(block.pickup_time || "");
-    setEditReturnTime(block.return_time || "");
+    setEditPickupTime(toTimeInput(block.pickup_time));
+    setEditReturnTime(toTimeInput(block.return_time));
     setEditLocation(block.location || "");
     setEditEarnings(block.earnings != null ? String(block.earnings) : "");
   };
@@ -326,6 +326,24 @@ export default function BlockedDatesPage() {
     } finally {
       setSavingEdit(false);
     }
+  };
+
+  /** Format "HH:MM:SS" or "HH:MM" TIME value to "8:00 AM" display string */
+  const formatTime = (t: string | null): string => {
+    if (!t) return "";
+    const [hStr, mStr] = t.split(":");
+    let h = parseInt(hStr, 10);
+    const m = mStr || "00";
+    const ampm = h >= 12 ? "PM" : "AM";
+    if (h === 0) h = 12;
+    else if (h > 12) h -= 12;
+    return `${h}:${m} ${ampm}`;
+  };
+
+  /** Strip seconds from "HH:MM:SS" for <input type="time"> which expects "HH:MM" */
+  const toTimeInput = (t: string | null): string => {
+    if (!t) return "";
+    return t.substring(0, 5); // "08:00:00" → "08:00"
   };
 
   const filteredBlocks = filterVehicleId
@@ -636,17 +654,17 @@ export default function BlockedDatesPage() {
                       <div>
                         <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Pickup Time</label>
                         <Input
+                          type="time"
                           value={editPickupTime}
                           onChange={(e) => setEditPickupTime(e.target.value)}
-                          placeholder="e.g. 8:00 AM"
                         />
                       </div>
                       <div>
                         <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Return Time</label>
                         <Input
+                          type="time"
                           value={editReturnTime}
                           onChange={(e) => setEditReturnTime(e.target.value)}
-                          placeholder="e.g. 10:00 AM"
                         />
                       </div>
                       <div>
@@ -701,10 +719,10 @@ export default function BlockedDatesPage() {
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {new Date(block.start_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-                        {block.pickup_time ? ` ${block.pickup_time}` : ""}
+                        {block.pickup_time ? ` ${formatTime(block.pickup_time)}` : ""}
                         {" → "}
                         {new Date(block.end_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
-                        {block.return_time ? ` ${block.return_time}` : ""}
+                        {block.return_time ? ` ${formatTime(block.return_time)}` : ""}
                         <span className="text-gray-400 ml-1">({dayCount} day{dayCount !== 1 ? "s" : ""})</span>
                       </p>
                       {(block.location || block.earnings != null) && (

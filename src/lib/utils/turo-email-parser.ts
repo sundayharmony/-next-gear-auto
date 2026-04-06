@@ -17,8 +17,8 @@ export interface TuroEmailParseResult {
   vehicleDescription: string | null;
   startDate: string | null;  // YYYY-MM-DD
   endDate: string | null;    // YYYY-MM-DD
-  pickupTime: string | null; // e.g. "8:00 AM"
-  returnTime: string | null; // e.g. "10:00 AM"
+  pickupTime: string | null; // HH:MM 24-hour format, e.g. "08:00"
+  returnTime: string | null; // HH:MM 24-hour format, e.g. "22:00"
   location: string | null;   // e.g. "Newark, NJ Newark Liberty International Airport"
   earnings: number | null;
   confidence: "high" | "medium" | "low";
@@ -46,8 +46,8 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
       /booked\s+from\s+\w+day,\s+\w+\s+\d{1,2},\s+\d{4},?\s+(\d{1,2}:\d{2}\s*(?:AM|PM))\s+to\s+\w+day,\s+\w+\s+\d{1,2},\s+\d{4},?\s+(\d{1,2}:\d{2}\s*(?:AM|PM))/i
     );
     if (fullBooked) {
-      pickupTime = fullBooked[1].trim().toUpperCase();
-      returnTime = fullBooked[2].trim().toUpperCase();
+      pickupTime = to24Hour(fullBooked[1].trim());
+      returnTime = to24Hour(fullBooked[2].trim());
       rawMatches.push(`Pickup time: "${pickupTime}"`, `Return time: "${returnTime}"`);
     }
   }
@@ -56,14 +56,14 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   if (!pickupTime) {
     const tripStartTime = text.match(/trip\s+start\s+\S+\s+(\d{1,2}:\d{2}\s*(?:am|pm))/i);
     if (tripStartTime) {
-      pickupTime = tripStartTime[1].trim().toUpperCase();
+      pickupTime = to24Hour(tripStartTime[1].trim());
       rawMatches.push(`Pickup time: "${pickupTime}"`);
     }
   }
   if (!returnTime) {
     const tripEndTime = text.match(/trip\s+end\s+\S+\s+(\d{1,2}:\d{2}\s*(?:am|pm))/i);
     if (tripEndTime) {
-      returnTime = tripEndTime[1].trim().toUpperCase();
+      returnTime = to24Hour(tripEndTime[1].trim());
       rawMatches.push(`Return time: "${returnTime}"`);
     }
   }
@@ -72,10 +72,15 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   let location: string | null = null;
 
   // "Delivery Newark, NJ Newark Liberty International Airport"
-  const deliveryMatch = text.match(/delivery\s+(.+?)(?:\n|Guests|Special|$)/i);
+  const deliveryMatch = text.match(/delivery\s+(.+?)(?:\n|Guests|Special|To help|Review|Use the|$)/i);
   if (deliveryMatch) {
-    location = deliveryMatch[1].trim();
-    rawMatches.push(`Location: "${location}"`);
+    // Clean up: strip trailing "method, and contact..." text
+    location = deliveryMatch[1].trim()
+      .replace(/\s*method,?\s+and\s+contact\s+.*/i, "")
+      .replace(/\s*,?\s+and\s+contact\s+.*/i, "")
+      .trim();
+    if (location) rawMatches.push(`Location: "${location}"`);
+    else location = null;
   }
 
   // Fallback: "Pickup location: ..." or "Location: ..."
@@ -276,6 +281,20 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
     confidence,
     rawMatches,
   };
+}
+
+/**
+ * Convert "8:00 AM" / "10:00 PM" to 24-hour "HH:MM" format.
+ */
+function to24Hour(timeStr: string): string {
+  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
+  if (!match) return timeStr;
+  let hours = parseInt(match[1], 10);
+  const minutes = match[2];
+  const period = match[3].toUpperCase();
+  if (period === "PM" && hours !== 12) hours += 12;
+  if (period === "AM" && hours === 12) hours = 0;
+  return `${String(hours).padStart(2, "0")}:${minutes}`;
 }
 
 /**
