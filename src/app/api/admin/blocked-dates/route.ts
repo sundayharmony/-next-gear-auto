@@ -125,6 +125,128 @@ export async function POST(req: NextRequest) {
 }
 
 /**
+ * PUT /api/admin/blocked-dates
+ * Update an existing blocked date range.
+ * Body: { id, vehicleId?, startDate?, endDate?, reason? }
+ */
+export async function PUT(req: NextRequest) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const supabase = getServiceSupabase();
+    const body = await req.json();
+    const { id, vehicleId, startDate, endDate, reason } = body;
+
+    if (!id) {
+      return NextResponse.json({ success: false, message: "id is required" }, { status: 400 });
+    }
+
+    // Build update object with only provided fields
+    const updates: Record<string, string | null> = {};
+
+    if (startDate !== undefined) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+        return NextResponse.json({ success: false, message: "startDate must be YYYY-MM-DD format" }, { status: 400 });
+      }
+      updates.start_date = startDate;
+    }
+
+    if (endDate !== undefined) {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(endDate)) {
+        return NextResponse.json({ success: false, message: "endDate must be YYYY-MM-DD format" }, { status: 400 });
+      }
+      updates.end_date = endDate;
+    }
+
+    if (vehicleId !== undefined) {
+      const { data: vehicle } = await supabase
+        .from("vehicles")
+        .select("id")
+        .eq("id", vehicleId)
+        .maybeSingle();
+      if (!vehicle) {
+        return NextResponse.json({ success: false, message: "Vehicle not found" }, { status: 404 });
+      }
+      updates.vehicle_id = vehicleId;
+    }
+
+    if (reason !== undefined) {
+      updates.reason = reason || null;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return NextResponse.json({ success: false, message: "No fields to update" }, { status: 400 });
+    }
+
+    // Validate date ordering if both dates are being set or one is being changed
+    const finalStart = updates.start_date;
+    const finalEnd = updates.end_date;
+    if (finalStart && finalEnd && finalEnd < finalStart) {
+      return NextResponse.json({ success: false, message: "End date must be on or after start date" }, { status: 400 });
+    }
+
+    // Check for overlapping blocked dates (exclude self)
+    if (updates.start_date || updates.end_date || updates.vehicle_id) {
+      // Fetch current record to fill in unchanged fields
+      const { data: current } = await supabase
+        .from("blocked_dates")
+        .select("vehicle_id, start_date, end_date")
+        .eq("id", id)
+        .maybeSingle();
+
+      if (!current) {
+        return NextResponse.json({ success: false, message: "Blocked date not found" }, { status: 404 });
+      }
+
+      const checkVehicle = updates.vehicle_id || current.vehicle_id;
+      const checkStart = updates.start_date || current.start_date;
+      const checkEnd = updates.end_date || current.end_date;
+
+      if (checkEnd < checkStart) {
+        return NextResponse.json({ success: false, message: "End date must be on or after start date" }, { status: 400 });
+      }
+
+      const { data: existing } = await supabase
+        .from("blocked_dates")
+        .select("id, start_date, end_date")
+        .eq("vehicle_id", checkVehicle)
+        .neq("id", id)
+        .lte("start_date", checkEnd)
+        .gte("end_date", checkStart);
+
+      if (existing && existing.length > 0) {
+        return NextResponse.json(
+          { success: false, message: `Overlapping blocked dates already exist (${existing[0].start_date} to ${existing[0].end_date})` },
+          { status: 409 }
+        );
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("blocked_dates")
+      .update(updates)
+      .eq("id", id)
+      .select()
+      .maybeSingle();
+
+    if (error) {
+      logger.error("Blocked dates PUT error:", error);
+      return NextResponse.json({ success: false, message: error.message }, { status: 500 });
+    }
+
+    if (!data) {
+      return NextResponse.json({ success: false, message: "Blocked date not found" }, { status: 404 });
+    }
+
+    return NextResponse.json({ success: true, data });
+  } catch (err) {
+    logger.error("Blocked dates PUT error:", err);
+    return NextResponse.json({ success: false, message: "Failed to update blocked date" }, { status: 500 });
+  }
+}
+
+/**
  * DELETE /api/admin/blocked-dates?id=...
  * Remove a blocked date range.
  */

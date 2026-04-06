@@ -22,6 +22,8 @@ import {
   AlertTriangle,
   Calendar,
   Car,
+  Pencil,
+  Save,
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -73,6 +75,14 @@ export default function BlockedDatesPage() {
 
   // Deleting
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  // Editing
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editVehicleId, setEditVehicleId] = useState("");
+  const [editStartDate, setEditStartDate] = useState("");
+  const [editEndDate, setEditEndDate] = useState("");
+  const [editReason, setEditReason] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -246,6 +256,59 @@ export default function BlockedDatesPage() {
       setError("Network error — could not remove block");
     } finally {
       setDeletingId(null);
+    }
+  };
+
+  // ── Edit ──
+  const startEditing = (block: BlockedDate) => {
+    setEditingId(block.id);
+    setEditVehicleId(block.vehicle_id);
+    setEditStartDate(block.start_date);
+    setEditEndDate(block.end_date);
+    setEditReason(block.reason || "");
+  };
+
+  const cancelEditing = () => {
+    setEditingId(null);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editingId || !editVehicleId || !editStartDate || !editEndDate) {
+      setError("Please fill in all required fields");
+      return;
+    }
+    if (editEndDate < editStartDate) {
+      setError("End date must be on or after start date");
+      return;
+    }
+
+    setSavingEdit(true);
+    try {
+      const res = await adminFetch("/api/admin/blocked-dates", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editingId,
+          vehicleId: editVehicleId,
+          startDate: editStartDate,
+          endDate: editEndDate,
+          reason: editReason.trim() || null,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setBlockedDates((prev) =>
+          prev.map((b) => (b.id === editingId ? data.data : b))
+        );
+        setSuccess("Blocked date updated");
+        setEditingId(null);
+      } else {
+        setError(data.message || "Failed to update blocked date");
+      }
+    } catch {
+      setError("Network error — could not update blocked date");
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -507,12 +570,69 @@ export default function BlockedDatesPage() {
         ) : (
           <div className="space-y-2">
             {filteredBlocks.map((block) => {
+              const isEditing = editingId === block.id;
               const dayCount =
                 Math.ceil(
                   (new Date(block.end_date + "T00:00:00").getTime() - new Date(block.start_date + "T00:00:00").getTime()) / 86400000
                 ) + 1;
-              // Note: API currently only returns future blocks; isPast check retained for when history view is added
               const isPast = block.end_date < today;
+
+              if (isEditing) {
+                return (
+                  <div key={block.id} className="rounded-lg border-2 border-purple-300 bg-purple-50/30 p-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Vehicle</label>
+                        <Select
+                          value={editVehicleId}
+                          onChange={(e) => setEditVehicleId(e.target.value)}
+                          aria-label="Edit vehicle"
+                        >
+                          <option value="">Choose vehicle...</option>
+                          {vehicles.map((v) => (
+                            <option key={v.id} value={v.id}>{getVehicleDisplayName(v)}</option>
+                          ))}
+                        </Select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Start Date</label>
+                        <DatePicker
+                          value={editStartDate}
+                          onChange={(val) => setEditStartDate(val)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">End Date</label>
+                        <DatePicker
+                          value={editEndDate}
+                          min={editStartDate}
+                          onChange={(val) => setEditEndDate(val)}
+                        />
+                      </div>
+                      <div>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Reason</label>
+                        <Input
+                          value={editReason}
+                          onChange={(e) => setEditReason(e.target.value)}
+                          placeholder="e.g. Turo booking, personal use"
+                        />
+                      </div>
+                      <div className="flex items-end gap-2">
+                        <Button onClick={handleSaveEdit} disabled={savingEdit} size="sm" className="flex-1">
+                          {savingEdit ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <><Save className="h-4 w-4 mr-1" /> Save</>
+                          )}
+                        </Button>
+                        <Button onClick={cancelEditing} variant="outline" size="sm" disabled={savingEdit}>
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              }
 
               return (
                 <div
@@ -554,6 +674,14 @@ export default function BlockedDatesPage() {
                     >
                       {block.source === "turo-email" ? "Turo" : "Manual"}
                     </Badge>
+                    <button
+                      onClick={() => startEditing(block)}
+                      disabled={!!editingId}
+                      className="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors disabled:opacity-50"
+                      aria-label="Edit block"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
                     <button
                       onClick={() => handleDelete(block.id)}
                       disabled={deletingId === block.id}

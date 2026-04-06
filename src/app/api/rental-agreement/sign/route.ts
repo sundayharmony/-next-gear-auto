@@ -264,10 +264,11 @@ export async function POST(req: NextRequest) {
     setText("t45", booking.customer_name || "");
     setText("t53", "NextGear Auto");
 
-    // Fill date/time fields with current signing date/time
+    // Fill date/time fields with current signing date/time (Eastern Time)
     const now = new Date();
-    const signDate = now.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
-    const signTime = now.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit", hour12: true });
+    const etOptions = { timeZone: "America/New_York" } as const;
+    const signDate = now.toLocaleDateString("en-US", { ...etOptions, month: "2-digit", day: "2-digit", year: "numeric" });
+    const signTime = now.toLocaleTimeString("en-US", { ...etOptions, hour: "2-digit", minute: "2-digit", hour12: true });
 
     setText("t36", signDate); // Page 1 date
     setText("t44", signDate); // Page 2 date
