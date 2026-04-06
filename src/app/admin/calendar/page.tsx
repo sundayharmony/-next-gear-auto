@@ -189,7 +189,8 @@ export default function AdminCalendarPage() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
+      {/* Desktop header */}
+      <section className="hidden sm:block bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
@@ -211,54 +212,62 @@ export default function AdminCalendarPage() {
         </div>
       </section>
 
-      <PageContainer className="py-8">
+      <PageContainer className="py-4 sm:py-8">
         <div className="mb-8">
 
           {/* Controls */}
-          <div className="flex flex-col gap-4 mb-6">
-            {/* View Toggle */}
-            <div className="flex gap-2">
-              <Button
-                onClick={() => setView("timeline")}
-                variant={view === "timeline" ? "default" : "outline"}
-                size="sm"
-                className="gap-2"
+          <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
+            {/* View Toggle + Refresh (mobile) */}
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex gap-1.5">
+                <Button
+                  onClick={() => setView("timeline")}
+                  variant={view === "timeline" ? "default" : "outline"}
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs sm:text-sm sm:h-9"
+                >
+                  <LayoutList className="w-3.5 h-3.5" />
+                  Timeline
+                </Button>
+                <Button
+                  onClick={() => setView("calendar")}
+                  variant={view === "calendar" ? "default" : "outline"}
+                  size="sm"
+                  className="gap-1.5 h-8 text-xs sm:text-sm sm:h-9"
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  Calendar
+                </Button>
+              </div>
+              <button
+                onClick={handleRefresh}
+                disabled={loading}
+                aria-label="Refresh calendar"
+                className="sm:hidden p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 disabled:opacity-50 transition-colors"
               >
-                <LayoutList className="w-4 h-4" />
-                Timeline
-              </Button>
-              <Button
-                onClick={() => setView("calendar")}
-                variant={view === "calendar" ? "default" : "outline"}
-                size="sm"
-                className="gap-2"
-              >
-                <Calendar className="w-4 h-4" />
-                Calendar
-              </Button>
+                <RefreshCw className={`w-4 h-4 text-gray-500 ${loading ? "animate-spin" : ""}`} />
+              </button>
             </div>
 
-            {/* Filters */}
-            <div className="flex flex-wrap gap-2 items-center">
-              <span className="text-sm font-medium text-gray-700">Status:</span>
-              <div className="flex flex-wrap gap-2">
-                {["all", "pending", "confirmed", "active", "completed"].map((status) => (
-                  <Button
-                    key={status}
-                    onClick={() => setStatusFilter(status)}
-                    variant={statusFilter === status ? "default" : "outline"}
-                    size="sm"
-                    className="capitalize"
-                  >
-                    {status === "all" ? "All" : status}
-                  </Button>
-                ))}
-              </div>
+            {/* Filters — horizontal scroll on mobile */}
+            <div className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:flex-wrap scrollbar-hide">
+              <span className="text-xs sm:text-sm font-medium text-gray-700 shrink-0">Status:</span>
+              {["all", "pending", "confirmed", "active", "completed"].map((status) => (
+                <Button
+                  key={status}
+                  onClick={() => setStatusFilter(status)}
+                  variant={statusFilter === status ? "default" : "outline"}
+                  size="sm"
+                  className="capitalize h-7 text-[11px] sm:text-sm sm:h-9 shrink-0 px-2.5 sm:px-3"
+                >
+                  {status === "all" ? "All" : status}
+                </Button>
+              ))}
             </div>
 
             {/* Vehicle Filter */}
             <div className="flex gap-2 items-center">
-              <span className="text-sm font-medium text-gray-700">Vehicle:</span>
+              <span className="text-xs sm:text-sm font-medium text-gray-700 shrink-0">Vehicle:</span>
               <Select
                 value={vehicleFilter}
                 onChange={(e) => setVehicleFilter(e.target.value)}
@@ -281,28 +290,58 @@ export default function AdminCalendarPage() {
           )}
 
           {!loading && view === "timeline" && (
-            <TimelineView
-              bookings={filteredBookings}
-              vehicles={vehicles}
-              blockedDates={blockedDates}
-              start={timelineStart}
-              onPrevious={() => {
-                const newStart = new Date(timelineStart);
-                newStart.setDate(newStart.getDate() - 9);
-                setTimelineStart(newStart);
-              }}
-              onNext={() => {
-                const newStart = new Date(timelineStart);
-                newStart.setDate(newStart.getDate() + 9);
-                setTimelineStart(newStart);
-              }}
-              onToday={() => {
-                const today = new Date();
-                today.setHours(0, 0, 0, 0);
-                setTimelineStart(today);
-              }}
-              onBookingClick={openBookingDetail}
-            />
+            <>
+              {/* Mobile: Agenda-style day view */}
+              <div className="sm:hidden">
+                <MobileAgendaView
+                  bookings={filteredBookings}
+                  vehicles={vehicles}
+                  blockedDates={blockedDates}
+                  start={timelineStart}
+                  onPrevious={() => {
+                    const newStart = new Date(timelineStart);
+                    newStart.setDate(newStart.getDate() - 7);
+                    setTimelineStart(newStart);
+                  }}
+                  onNext={() => {
+                    const newStart = new Date(timelineStart);
+                    newStart.setDate(newStart.getDate() + 7);
+                    setTimelineStart(newStart);
+                  }}
+                  onToday={() => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    setTimelineStart(today);
+                  }}
+                  onBookingClick={openBookingDetail}
+                />
+              </div>
+              {/* Desktop: Timeline table */}
+              <div className="hidden sm:block">
+                <TimelineView
+                  bookings={filteredBookings}
+                  vehicles={vehicles}
+                  blockedDates={blockedDates}
+                  start={timelineStart}
+                  onPrevious={() => {
+                    const newStart = new Date(timelineStart);
+                    newStart.setDate(newStart.getDate() - 9);
+                    setTimelineStart(newStart);
+                  }}
+                  onNext={() => {
+                    const newStart = new Date(timelineStart);
+                    newStart.setDate(newStart.getDate() + 9);
+                    setTimelineStart(newStart);
+                  }}
+                  onToday={() => {
+                    const today = new Date();
+                    today.setHours(0, 0, 0, 0);
+                    setTimelineStart(today);
+                  }}
+                  onBookingClick={openBookingDetail}
+                />
+              </div>
+            </>
           )}
 
           {!loading && view === "calendar" && (
@@ -497,6 +536,304 @@ interface BlockedDateEntry {
   source: string;
   reason: string | null;
 }
+
+/* ═══════════════════════════════════════════════════
+   MOBILE AGENDA VIEW — day-by-day card layout
+   ═══════════════════════════════════════════════════ */
+
+interface MobileAgendaViewProps {
+  bookings: BookingRow[];
+  vehicles: Vehicle[];
+  blockedDates: BlockedDateEntry[];
+  start: Date;
+  onPrevious: () => void;
+  onNext: () => void;
+  onToday: () => void;
+  onBookingClick: (booking: BookingRow) => void;
+}
+
+function MobileAgendaView({
+  bookings,
+  vehicles,
+  blockedDates,
+  start,
+  onPrevious,
+  onNext,
+  onToday,
+  onBookingClick,
+}: MobileAgendaViewProps) {
+  const [selectedDateKey, setSelectedDateKey] = useState<string>(() => {
+    const t = new Date();
+    return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, "0")}-${String(t.getDate()).padStart(2, "0")}`;
+  });
+
+  const days = 7;
+  const dateRange = useMemo(
+    () =>
+      Array.from({ length: days }, (_, i) => {
+        const d = new Date(start);
+        d.setDate(d.getDate() + i);
+        return d;
+      }),
+    [start]
+  );
+
+  const toKey = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${dd}`;
+  };
+
+  const todayKey = useMemo(() => toKey(new Date()), []);
+
+  // Build a vehicle lookup
+  const vehicleMap = useMemo(() => {
+    const m: Record<string, Vehicle> = {};
+    vehicles.forEach((v) => { m[v.id] = v; });
+    return m;
+  }, [vehicles]);
+
+  // Bookings active on a specific date
+  const bookingsForDate = useMemo(() => {
+    return bookings.filter((b) => {
+      const pk = (b.pickup_date || "").split("T")[0];
+      const rk = (b.return_date || "").split("T")[0];
+      return pk <= selectedDateKey && rk >= selectedDateKey;
+    });
+  }, [bookings, selectedDateKey]);
+
+  // Blocked dates for selected day
+  const blockedForDate = useMemo(() => {
+    return blockedDates.filter((bd) => bd.start_date <= selectedDateKey && bd.end_date >= selectedDateKey);
+  }, [blockedDates, selectedDateKey]);
+
+  // Count bookings touching each date in the strip
+  const bookingCountByDate = useMemo(() => {
+    const counts: Record<string, number> = {};
+    dateRange.forEach((d) => {
+      const k = toKey(d);
+      counts[k] = bookings.filter((b) => {
+        const pk = (b.pickup_date || "").split("T")[0];
+        const rk = (b.return_date || "").split("T")[0];
+        return pk <= k && rk >= k;
+      }).length;
+    });
+    return counts;
+  }, [bookings, dateRange]);
+
+  // Ensure selected date stays within range when navigating
+  useEffect(() => {
+    const keys = dateRange.map(toKey);
+    if (!keys.includes(selectedDateKey)) {
+      setSelectedDateKey(keys.includes(todayKey) ? todayKey : keys[0]);
+    }
+  }, [dateRange, selectedDateKey, todayKey]);
+
+  const selectedDate = new Date(selectedDateKey + "T00:00:00");
+
+  return (
+    <div>
+      {/* Date navigation + date strip */}
+      <div className="bg-white rounded-2xl border border-gray-200/60 shadow-sm overflow-hidden mb-4">
+        {/* Nav row */}
+        <div className="flex items-center justify-between px-3 py-2.5 border-b border-gray-100">
+          <button
+            onClick={onPrevious}
+            className="p-1.5 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            aria-label="Previous week"
+          >
+            <ChevronLeft className="w-5 h-5 text-gray-600" />
+          </button>
+          <button
+            onClick={onToday}
+            className="text-xs font-semibold text-purple-600 px-3 py-1 rounded-full bg-purple-50 active:bg-purple-100 transition-colors"
+          >
+            Today
+          </button>
+          <button
+            onClick={onNext}
+            className="p-1.5 rounded-lg hover:bg-gray-100 active:bg-gray-200 transition-colors"
+            aria-label="Next week"
+          >
+            <ChevronRight className="w-5 h-5 text-gray-600" />
+          </button>
+        </div>
+
+        {/* Scrollable date strip */}
+        <div className="flex items-stretch px-1.5 py-2 gap-1 overflow-x-auto scrollbar-hide">
+          {dateRange.map((date) => {
+            const key = toKey(date);
+            const isToday = key === todayKey;
+            const isSelected = key === selectedDateKey;
+            const count = bookingCountByDate[key] || 0;
+
+            return (
+              <button
+                key={key}
+                onClick={() => setSelectedDateKey(key)}
+                className={`flex flex-col items-center min-w-[46px] flex-1 py-2 px-1 rounded-xl transition-all active:scale-95 ${
+                  isSelected
+                    ? "bg-purple-600 text-white shadow-md shadow-purple-200"
+                    : isToday
+                    ? "bg-purple-50 text-purple-700"
+                    : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <span className={`text-[10px] font-medium uppercase leading-none ${isSelected ? "text-purple-200" : isToday ? "text-purple-500" : "text-gray-400"}`}>
+                  {date.toLocaleDateString("en-US", { weekday: "short" })}
+                </span>
+                <span className={`text-lg font-bold leading-tight mt-0.5 ${isSelected ? "text-white" : ""}`}>
+                  {date.getDate()}
+                </span>
+                {count > 0 && (
+                  <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? "bg-white" : "bg-purple-400"}`} />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Selected date label */}
+      <div className="flex items-center justify-between mb-3 px-1">
+        <h3 className="text-sm font-semibold text-gray-900">
+          {selectedDate.toLocaleDateString("en-US", { weekday: "long", month: "short", day: "numeric" })}
+        </h3>
+        <span className="text-xs text-gray-400 font-medium">
+          {bookingsForDate.length} booking{bookingsForDate.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* Booking cards */}
+      {bookingsForDate.length === 0 && blockedForDate.length === 0 && (
+        <div className="bg-white rounded-2xl border border-gray-200/60 px-6 py-10 text-center">
+          <Calendar className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+          <p className="text-sm text-gray-500 font-medium">No bookings</p>
+          <p className="text-xs text-gray-400 mt-0.5">This day is free</p>
+        </div>
+      )}
+
+      <div className="space-y-2.5">
+        {bookingsForDate.map((booking) => {
+          const vehicle = vehicleMap[booking.vehicle_id];
+          const pickupKey = (booking.pickup_date || "").split("T")[0];
+          const returnKey = (booking.return_date || "").split("T")[0];
+          const totalDays = pickupKey && returnKey
+            ? Math.ceil((new Date(returnKey).getTime() - new Date(pickupKey).getTime()) / 86400000) + 1
+            : 1;
+          const isPickupDay = pickupKey === selectedDateKey;
+          const isReturnDay = returnKey === selectedDateKey;
+
+          return (
+            <button
+              key={booking.id}
+              onClick={() => onBookingClick(booking)}
+              className={`w-full text-left rounded-2xl border ${statusBorderColors[booking.status] || "border-gray-200"} ${statusBgColors[booking.status] || "bg-white"} p-4 active:scale-[0.98] transition-all`}
+            >
+              <div className="flex items-start gap-3">
+                {/* Status bar */}
+                <div className={`w-1 self-stretch rounded-full shrink-0 ${
+                  booking.status === "pending" ? "bg-yellow-400" :
+                  booking.status === "confirmed" ? "bg-green-400" :
+                  booking.status === "active" ? "bg-blue-400" :
+                  booking.status === "completed" ? "bg-gray-400" :
+                  booking.status === "no-show" ? "bg-orange-400" : "bg-gray-300"
+                }`} />
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <p className="text-[15px] font-semibold text-gray-900 truncate">
+                      {booking.customer_name || "Unknown"}
+                    </p>
+                    <span className="text-sm font-bold text-gray-900 shrink-0">
+                      ${(booking.total_price ?? 0).toFixed(0)}
+                    </span>
+                  </div>
+
+                  <p className="text-xs text-gray-500 truncate mb-2">
+                    {vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : booking.vehicleName || "Unknown Vehicle"}
+                  </p>
+
+                  <div className="flex items-center gap-3 text-xs">
+                    {/* Time info */}
+                    <div className="flex items-center gap-1.5 text-gray-600">
+                      {isPickupDay && booking.pickup_time && (
+                        <span className="font-semibold text-green-700">
+                          Pickup {formatTime(booking.pickup_time)}
+                        </span>
+                      )}
+                      {isReturnDay && !isPickupDay && booking.return_time && (
+                        <span className="font-semibold text-blue-700">
+                          Return {formatTime(booking.return_time)}
+                        </span>
+                      )}
+                      {isPickupDay && isReturnDay && booking.return_time && (
+                        <>
+                          <span className="text-gray-400 mx-0.5">→</span>
+                          <span className="font-semibold text-blue-700">
+                            {formatTime(booking.return_time)}
+                          </span>
+                        </>
+                      )}
+                      {!isPickupDay && !isReturnDay && (
+                        <span className="text-gray-500">In rental</span>
+                      )}
+                    </div>
+
+                    <span className="text-gray-300">·</span>
+                    <span className="text-gray-500">{totalDays}d</span>
+
+                    {/* Status badge */}
+                    <span className={`ml-auto capitalize text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      booking.status === "pending" ? "bg-yellow-100 text-yellow-700" :
+                      booking.status === "confirmed" ? "bg-green-100 text-green-700" :
+                      booking.status === "active" ? "bg-blue-100 text-blue-700" :
+                      booking.status === "completed" ? "bg-gray-100 text-gray-600" :
+                      booking.status === "no-show" ? "bg-orange-100 text-orange-700" :
+                      "bg-gray-100 text-gray-600"
+                    }`}>
+                      {booking.status}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </button>
+          );
+        })}
+
+        {/* Blocked date indicators */}
+        {blockedForDate.map((bd) => {
+          const vehicle = vehicleMap[bd.vehicle_id];
+          return (
+            <div
+              key={bd.id}
+              className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-1 self-stretch rounded-full bg-gray-300 shrink-0" />
+                <div className="min-w-0">
+                  <p className="text-sm font-medium text-gray-500">
+                    {bd.source === "turo-email" ? "Turo Block" : "Blocked"}
+                    {bd.reason ? ` — ${bd.reason}` : ""}
+                  </p>
+                  <p className="text-xs text-gray-400 truncate">
+                    {vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Unknown vehicle"}
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ═══════════════════════════════════════════════════
+   DESKTOP TIMELINE VIEW — horizontal table
+   ═══════════════════════════════════════════════════ */
 
 interface TimelineViewProps {
   bookings: BookingRow[];
@@ -979,12 +1316,13 @@ function CalendarView({
         <div className="mb-6">
           {/* Day Headers */}
           <div className="grid grid-cols-7 gap-px mb-px bg-gray-200 rounded-lg overflow-hidden">
-            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day) => (
+            {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((day, i) => (
               <div
                 key={day}
-                className="bg-purple-50 p-3 text-center font-semibold text-xs text-gray-700"
+                className="bg-purple-50 p-1.5 sm:p-3 text-center font-semibold text-[10px] sm:text-xs text-gray-700"
               >
-                {day}
+                <span className="sm:hidden">{["S","M","T","W","T","F","S"][i]}</span>
+                <span className="hidden sm:inline">{day}</span>
               </div>
             ))}
           </div>
@@ -996,12 +1334,13 @@ function CalendarView({
                 day && new Date(year, month, day).toISOString().split("T")[0];
               const dayBookings = dateKey ? (bookingsByDay[dateKey] || []) : [];
               const isSelected = dateKey === selectedDay;
+              const isToday = dateKey === new Date().toISOString().split("T")[0];
 
               return (
                 <div
                   key={index}
                   onClick={() => dateKey && onSelectDay(isSelected ? null : dateKey)}
-                  className={`min-h-24 p-2 cursor-pointer transition-colors ${
+                  className={`min-h-11 sm:min-h-24 p-1 sm:p-2 cursor-pointer transition-colors ${
                     day
                       ? isSelected
                         ? "bg-purple-100 border-2 border-purple-600"
@@ -1011,10 +1350,32 @@ function CalendarView({
                 >
                   {day && (
                     <>
-                      <div className="font-semibold text-gray-900 text-sm mb-1">
+                      <div className={`font-semibold text-xs sm:text-sm mb-0.5 sm:mb-1 text-center sm:text-left ${isToday ? "text-purple-600" : "text-gray-900"}`}>
                         {day}
                       </div>
-                      <div className="space-y-1">
+                      {/* Mobile: dot indicators */}
+                      {dayBookings.length > 0 && (
+                        <div className="flex items-center justify-center gap-0.5 sm:hidden">
+                          {dayBookings.length <= 3 ? (
+                            dayBookings.map((b) => (
+                              <div key={b.id} className={`w-1.5 h-1.5 rounded-full ${
+                                b.status === "pending" ? "bg-yellow-400" :
+                                b.status === "confirmed" ? "bg-green-400" :
+                                b.status === "active" ? "bg-blue-400" :
+                                b.status === "completed" ? "bg-gray-400" :
+                                "bg-orange-400"
+                              }`} />
+                            ))
+                          ) : (
+                            <>
+                              <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
+                              <span className="text-[9px] text-purple-600 font-bold ml-0.5">{dayBookings.length}</span>
+                            </>
+                          )}
+                        </div>
+                      )}
+                      {/* Desktop: booking previews */}
+                      <div className="hidden sm:block space-y-1">
                         {dayBookings.slice(0, 2).map((booking) => (
                           <div
                             key={booking.id}
@@ -1060,53 +1421,39 @@ function CalendarView({
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {selectedDayBookings.map((booking) => (
-                <div
+                <button
                   key={booking.id}
                   onClick={() => onBookingClick(booking)}
-                  className="border border-gray-200 rounded-lg p-4 bg-gray-50 cursor-pointer hover:bg-gray-100 hover:border-purple-300 transition-colors"
+                  className={`w-full text-left rounded-2xl sm:rounded-lg border ${statusBorderColors[booking.status] || "border-gray-200"} ${statusBgColors[booking.status] || "bg-gray-50"} p-4 hover:shadow-sm active:scale-[0.98] transition-all`}
                 >
                   <div className="flex items-start justify-between mb-2">
-                    <div>
-                      <div className="font-semibold text-gray-900">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-gray-900 truncate">
                         {booking.customer_name || "Unknown"}
                       </div>
-                      <div className="text-sm text-gray-600">
-                        {booking.customer_email || "No email"}
-                      </div>
-                    </div>
-                    <Badge className={statusColors[booking.status || "pending"]}>
-                      {booking.status || "pending"}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 text-sm mt-3">
-                    <div>
-                      <span className="text-gray-600">Vehicle:</span>
-                      <div className="font-medium text-gray-900">
+                      <div className="text-xs sm:text-sm text-gray-500 truncate">
                         {booking.vehicleName || "Unknown Vehicle"}
                       </div>
                     </div>
-                    <div>
-                      <span className="text-gray-600">Price:</span>
-                      <div className="font-medium text-gray-900">
-                        ${(booking.total_price ?? 0).toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Pickup:</span>
-                      <div>
-                        <span className="text-base font-bold text-gray-900">{formatDate(booking.pickup_date)}</span> at <span className="text-lg font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-gray-600">Return:</span>
-                      <div>
-                        <span className="text-base font-bold text-gray-900">{formatDate(booking.return_date)}</span> at <span className="text-lg font-bold text-purple-600">{formatTime(booking.return_time)}</span>
-                      </div>
+                    <div className="flex flex-col items-end gap-1 shrink-0 ml-3">
+                      <span className="text-sm font-bold text-gray-900">
+                        ${(booking.total_price ?? 0).toFixed(0)}
+                      </span>
+                      <Badge className={statusColors[booking.status || "pending"]}>
+                        {booking.status || "pending"}
+                      </Badge>
                     </div>
                   </div>
-                </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
+                    <span>{formatDate(booking.pickup_date)}</span>
+                    <span className="font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
+                    <span className="text-gray-400">→</span>
+                    <span>{formatDate(booking.return_date)}</span>
+                    <span className="font-bold text-purple-600">{formatTime(booking.return_time)}</span>
+                  </div>
+                </button>
               ))}
             </div>
           </div>

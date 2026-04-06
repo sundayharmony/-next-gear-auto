@@ -144,12 +144,9 @@ body {
   }
 }
 
-/* Rubber-band overscroll indicator */
-@supports (-webkit-overflow-scrolling: touch) {
-  .native-scroll {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
-  }
+/* Overscroll containment for admin main scroll area */
+.overscroll-contain {
+  overscroll-behavior-y: contain;
 }
 
 /* iOS standalone mode: extra padding on notch devices */
@@ -500,3 +497,28 @@ body:has(.admin-dark) {
 
 /* Purple booking count badge */
 .admin-dark .bg-purple-100.text-purple-700 { background-color: rgba(124, 58, 237, 0.25) !important; color: #c084fc !important; }
+
+/* ═══ Mobile Agenda View (dark mode) ═══ */
+
+/* Date strip container */
+.admin-dark .bg-white.rounded-2xl { background-color: #111111 !important; }
+.admin-dark .border-gray-200\/60 { border-color: rgba(34, 34, 34, 0.8) !important; }
+
+/* Date strip unselected + today highlight */
+.admin-dark .hover\:bg-gray-50:hover { background-color: #1a1a1a !important; }
+.admin-dark .bg-purple-50.text-purple-700 { background-color: rgba(124, 58, 237, 0.12) !important; }
+
+/* Selected date button — keep purple-600 as-is */
+.admin-dark .shadow-purple-200 { --tw-shadow-color: rgba(124, 58, 237, 0.15) !important; }
+
+/* Booking card backgrounds — status colors already covered above */
+/* Blocked date card */
+.admin-dark .bg-gray-50.rounded-2xl { background-color: #0d0d0d !important; }
+.admin-dark .border-dashed.border-gray-300 { border-color: #333333 !important; }
+
+/* Calendar mobile dot colors inherit from bg utility — no override needed */
+/* Status badge pills in agenda cards */
+.admin-dark .bg-yellow-100.text-yellow-700 { background-color: rgba(234, 179, 8, 0.15) !important; color: #facc15 !important; }
+.admin-dark .bg-green-100.text-green-700 { background-color: rgba(34, 197, 94, 0.15) !important; color: #4ade80 !important; }
+.admin-dark .bg-blue-100.text-blue-700 { background-color: rgba(59, 130, 246, 0.15) !important; color: #60a5fa !important; }
+.admin-dark .bg-orange-100.text-orange-700 { background-color: rgba(249, 115, 22, 0.15) !important; color: #fb923c !important; }

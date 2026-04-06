@@ -127,7 +127,7 @@ export function BottomTabBar() {
 
       {/* Bottom tab bar */}
       <nav
-        className="fixed bottom-0 left-0 right-0 z-[91] lg:hidden"
+        className="shrink-0 z-[91] lg:hidden"
         role="tablist"
         aria-label="Admin navigation"
       >

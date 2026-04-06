@@ -151,9 +151,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const currentTitle = PAGE_TITLES[pathname] || Object.entries(PAGE_TITLES).find(([path]) => pathname.startsWith(path))?.[1] || "Admin";
 
   return (
-    <div className={cn("flex min-h-screen", isDark && "admin-dark")}>
+    <div className={cn("flex flex-col h-dvh lg:flex-row lg:h-auto lg:min-h-screen", isDark && "admin-dark")}>
       {/* ═══════ MOBILE STICKY HEADER BAR ═══════ */}
-      <div className="fixed top-0 left-0 right-0 z-[45] lg:hidden">
+      <div className="relative z-[45] shrink-0 lg:hidden">
         <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm pwa-safe-top">
           <div className="flex items-center justify-between px-4 h-14">
             {/* Page title */}
@@ -373,7 +373,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ═══════ MAIN CONTENT ═══════ */}
-      <main className="flex-1 min-w-0 pt-14 pb-20 lg:pt-0 lg:pb-0 native-scroll">
+      <main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
         <SwipeBack>
           {children}
         </SwipeBack>
