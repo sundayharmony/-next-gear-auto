@@ -53,7 +53,7 @@ const PAGE_TITLES: Record<string, string> = {
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
@@ -122,6 +122,15 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       }
     };
   }, [fetchPendingBookings]);
+
+  if (authLoading) {
+    return (
+      <PageContainer className="py-16 text-center">
+        <Loader2 className="mx-auto h-10 w-10 animate-spin text-purple-600 mb-4" />
+        <p className="text-gray-500">Verifying access…</p>
+      </PageContainer>
+    );
+  }
 
   if (!isAuthenticated || user?.role !== "admin") {
     return (

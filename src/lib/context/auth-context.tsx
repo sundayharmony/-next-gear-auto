@@ -21,7 +21,7 @@ type AuthAction =
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  isLoading: false,
+  isLoading: true,   // true until session validation completes
   error: null,
 };
 
@@ -102,6 +102,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       } catch {
         clearTimeout(timeoutId);
         // Network error — keep cached user (offline-friendly)
+      } finally {
+        if (!cancelled) dispatch({ type: "SET_LOADING", payload: false });
       }
     }
 

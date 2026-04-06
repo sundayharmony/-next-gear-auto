@@ -13,7 +13,7 @@ export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated, logout } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
   // Close mobile menu when pathname changes (Bug 37)
@@ -90,7 +90,7 @@ export function Header() {
             <Link href="/booking" className="hidden sm:block">
               <Button size="sm">Book Now</Button>
             </Link>
-            {isAuthenticated && user ? (
+            {!authLoading && (isAuthenticated && user ? (
               <div className="hidden sm:flex items-center gap-2">
                 {user.role === "admin" ? (
                   <Link href="/admin">
@@ -113,7 +113,7 @@ export function Header() {
               <Link href="/login" className="hidden sm:block">
                 <Button variant="outline" size="sm">Sign In</Button>
               </Link>
-            )}
+            ))}
             <button
               ref={menuButtonRef}
               className="rounded-lg p-3 text-gray-600 hover:bg-gray-100 md:hidden"
@@ -159,7 +159,7 @@ export function Header() {
               <Link href="/booking" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
                 <Button className="w-full" size="sm">Book Now</Button>
               </Link>
-              {isAuthenticated && user ? (
+              {!authLoading && (isAuthenticated && user ? (
                 <>
                   {user.role === "admin" ? (
                     <Link href="/admin" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
@@ -179,7 +179,7 @@ export function Header() {
                 <Link href="/login" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
                   <Button variant="outline" className="w-full" size="sm">Sign In</Button>
                 </Link>
-              )}
+              ))}
             </div>
           </div>
         </div>

@@ -55,7 +55,7 @@ const statusColors: Record<string, string> = {
 };
 
 export default function AccountPage() {
-  const { user, isAuthenticated, logout, updateProfile } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading, logout, updateProfile } = useAuth();
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [bookings, setBookings] = useState<BookingData[]>([]);
@@ -201,6 +201,18 @@ export default function AccountPage() {
   if (isAuthenticated && user?.role === "admin") {
     router.push("/admin");
     return null;
+  }
+
+  // Wait for auth to finish initialising before deciding what to show
+  if (authLoading) {
+    return (
+      <PageContainer className="py-20">
+        <div className="mx-auto max-w-md text-center">
+          <Loader2 className="mx-auto h-10 w-10 animate-spin text-purple-600 mb-4" />
+          <p className="text-gray-500">Loading your account…</p>
+        </div>
+      </PageContainer>
+    );
   }
 
   if (!isAuthenticated || !user) {
