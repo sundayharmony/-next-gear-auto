@@ -41,7 +41,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
   const timerMapRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
 
   const showToast = useCallback((type: ToastType, title: string, message?: string) => {
-    const id = Date.now().toString() + Math.random().toString(36).slice(2);
+    const id = crypto.randomUUID();
     dispatch({ type: "ADD_TOAST", payload: { id, type, title, message } });
     // Auto-dismiss after 6 seconds; store timer so manual dismiss can clear it
     const timer = setTimeout(() => {

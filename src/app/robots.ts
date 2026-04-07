@@ -1,12 +1,13 @@
 import type { MetadataRoute } from "next";
 
 export default function robots(): MetadataRoute.Robots {
+  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://rentnextgearauto.com";
   return {
     rules: {
       userAgent: "*",
       allow: "/",
       disallow: ["/admin", "/account", "/api"],
     },
-    sitemap: "https://rentnextgearauto.com/sitemap.xml",
+    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }

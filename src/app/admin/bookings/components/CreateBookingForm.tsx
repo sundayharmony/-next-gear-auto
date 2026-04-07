@@ -82,6 +82,7 @@ export default function CreateBookingForm({
   const [manualPriceOverride, setManualPriceOverride] = useState(false);
   const [locations, setLocationsState] = useState<Location[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(true);
+  const [locationsError, setLocationsError] = useState<string | null>(null);
   const [pickupLocationId, setPickupLocationId] = useState("");
   const [returnLocationId, setReturnLocationId] = useState("");
   const [differentDropoff, setDifferentDropoff] = useState(false);
@@ -122,6 +123,7 @@ export default function CreateBookingForm({
       .then(data => {
         if (data.success && !cancelled) {
           setLocationsState(data.data);
+          setLocationsError(null);
           const def = (data.data || []).find((l: Location) => l.is_default);
           if (def) {
             setPickupLocationId(def.id);
@@ -129,14 +131,20 @@ export default function CreateBookingForm({
           }
         }
       })
-      .catch((err) => console.warn("Failed to load locations:", err))
+      .catch((err) => {
+        if (!cancelled) {
+          logger.error("Failed to load locations:", err);
+          setLocationsError("Failed to load locations");
+          onError("Could not load pickup/dropoff locations");
+        }
+      })
       .finally(() => {
         if (!cancelled) setLocationsLoading(false);
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [onError]);
 
   // Handle customer search with debounce
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);

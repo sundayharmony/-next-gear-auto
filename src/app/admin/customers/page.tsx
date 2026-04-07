@@ -86,6 +86,7 @@ export default function AdminCustomersPage() {
   const [uploadDocType, setUploadDocType] = useState<"id_document" | "insurance_proof">("id_document");
   const [deletingCustomer, setDeletingCustomer] = useState(false);
   const [sendingPasswordLink, setSendingPasswordLink] = useState(false);
+  const openCustomerRequestIdRef = useRef<number | null>(null);
 
   // Profile picture crop state
   const [showCropModal, setShowCropModal] = useState(false);
@@ -142,6 +143,10 @@ export default function AdminCustomersPage() {
   const router = useRouter();
 
   const openCustomer = async (customer: CustomerRow) => {
+    // Track this request with a unique ID to detect stale responses
+    const requestId = Math.random();
+    openCustomerRequestIdRef.current = requestId;
+
     setSelectedCustomer(customer);
     setLoadingBookings(true);
     try {
@@ -150,10 +155,17 @@ export default function AdminCustomersPage() {
         adminFetch(`/api/bookings?customer_id=${encodeURIComponent(customer.id)}`),
         adminFetch(`/api/bookings?customer_email=${encodeURIComponent(customer.email)}`),
       ]);
+
+      // Skip if this request is stale
+      if (requestId !== openCustomerRequestIdRef.current) return;
+
       if (!byIdRes.ok) throw new Error(`HTTP ${byIdRes.status}`);
       if (!byEmailRes.ok) throw new Error(`HTTP ${byEmailRes.status}`);
       const byIdData = await byIdRes.json();
       const byEmailData = await byEmailRes.json();
+
+      // Skip if this request is stale
+      if (requestId !== openCustomerRequestIdRef.current) return;
 
       const byId: BookingRow[] = byIdData.success ? (byIdData.data || []) : [];
       const byEmail: BookingRow[] = byEmailData.success ? (byEmailData.data || []) : [];
@@ -175,17 +187,26 @@ export default function AdminCustomersPage() {
         const ticketsRes = await adminFetch(`/api/admin/tickets?customer_id=${encodeURIComponent(customer.id)}`);
         if (ticketsRes.ok) {
           const ticketsData = await ticketsRes.json();
-          setCustomerTickets(ticketsData.data || []);
+          // Skip if this request is stale
+          if (requestId === openCustomerRequestIdRef.current) {
+            setCustomerTickets(ticketsData.data || []);
+          }
         } else {
-          setCustomerTickets([]);
+          if (requestId === openCustomerRequestIdRef.current) {
+            setCustomerTickets([]);
+          }
         }
       } catch {
-        setCustomerTickets([]);
+        if (requestId === openCustomerRequestIdRef.current) {
+          setCustomerTickets([]);
+        }
       }
     } catch (err) {
       logger.error("Failed to fetch customer bookings:", err);
     }
-    setLoadingBookings(false);
+    if (requestId === openCustomerRequestIdRef.current) {
+      setLoadingBookings(false);
+    }
   };
 
   const closeCustomer = () => {

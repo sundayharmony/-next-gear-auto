@@ -109,12 +109,13 @@ export default function AdminInstagramPage() {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
       if (data.success) {
-        setPosts((prev) => prev.filter((p) => p.id !== id));
+        setSuccess("Post deleted successfully!");
+        fetchPosts();
       } else {
         setError(data.error || "Failed to delete post");
       }
-    } catch {
-      setError("Network error — could not delete post");
+    } catch (err) {
+      setError(`Failed to delete post: ${err instanceof Error ? err.message : "Network error"}`);
     }
   };
 

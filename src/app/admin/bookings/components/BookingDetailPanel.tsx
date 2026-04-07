@@ -95,6 +95,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const [activityLog, setActivityLog] = useState<ActivityRecord[]>([]);
   const [payments, setPayments] = useState<PaymentRecord[]>([]);
   const [locations, setLocationsState] = useState<Location[]>([]);
+  const [locationsError, setLocationsError] = useState<string | null>(null);
 
   // Email sending
   const [sendingEmail, setSendingEmail] = useState(false);
@@ -205,10 +206,17 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     adminFetch("/api/admin/locations?active=true")
       .then(r => r.json())
       .then(data => {
-        if (data.success) setLocationsState(data.data);
+        if (data.success) {
+          setLocationsState(data.data);
+          setLocationsError(null);
+        }
       })
-      .catch((err) => console.warn("Failed to load locations:", err));
-  }, []);
+      .catch((err) => {
+        logger.error("Failed to load locations:", err);
+        setLocationsError("Failed to load locations");
+        onError("Could not load pickup/dropoff locations");
+      });
+  }, [onError]);
 
   // Calculate current status index
   const currentStatusIndex = STATUS_STEPS.indexOf(

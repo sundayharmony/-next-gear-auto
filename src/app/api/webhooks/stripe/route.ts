@@ -5,7 +5,11 @@ import { sendBookingConfirmation, sendAdminNewBooking } from "@/lib/email/mailer
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeKey) {
+  throw new Error("Missing STRIPE_SECRET_KEY environment variable");
+}
+const stripe = new Stripe(stripeKey);
 
 export async function POST(request: Request) {
   const supabase = getServiceSupabase();
