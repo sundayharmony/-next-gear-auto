@@ -282,7 +282,7 @@ export default function AgreementSigningPage() {
           )}
 
           {/* Inline Rental Agreement */}
-          {booking && (
+          {booking && vehicle && (
             <Card className="mb-6">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between mb-3">

@@ -153,7 +153,7 @@ export default async function HomePage() {
                 <Link key={vehicle.id} href={`/fleet/${vehicle.id}`}>
                   <Card className="group h-full card-hover transition-shadow">
                     <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100">
-                      {vehicle.images && vehicle.images.length > 0 ? (
+                      {vehicle.images?.[0] ? (
                         <img
                           src={vehicle.images[0]}
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}

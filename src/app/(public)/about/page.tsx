@@ -148,18 +148,21 @@ export default async function AboutPage() {
           <p className="mt-2 text-gray-500">The people behind NextGearAuto</p>
         </div>
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-3 max-w-4xl mx-auto">
-          {team.map((member) => (
+          {team.map((member) => {
+            const initials = (member.name || "").split(" ").filter(Boolean).map((n: string) => n[0]).join("");
+            return (
             <Card key={member.name} className="p-6 text-center card-hover overflow-hidden relative">
               <div className={`mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full bg-gradient-to-br ${member.gradient} shadow-lg`}>
                 <span className="text-3xl font-bold text-white">
-                  {(member.name || "").split(" ").filter(Boolean).map((n) => n[0]).join("")}
+                  {initials || "?"}
                 </span>
               </div>
               <h3 className="text-lg font-semibold text-gray-900">{member.name}</h3>
               <p className="text-sm font-medium text-purple-600 mb-3">{member.role}</p>
               <p className="text-sm text-gray-500 leading-relaxed">{member.bio}</p>
             </Card>
-          ))}
+            );
+          })}
         </div>
       </PageContainer>
 

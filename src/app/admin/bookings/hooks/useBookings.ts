@@ -97,8 +97,9 @@ export function useBookings(): UseBookingsReturn {
       if (data.success) setVehicles(data.data || []);
     } catch (err) {
       logger.error("Failed to fetch vehicles:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch vehicles");
     }
-  }, []);
+  }, [setError]);
 
   const fetchCustomers = useCallback(async () => {
     try {
@@ -117,8 +118,9 @@ export function useBookings(): UseBookingsReturn {
       }
     } catch (err) {
       logger.error("Failed to fetch customers:", err);
+      setError(err instanceof Error ? err.message : "Failed to fetch customers");
     }
-  }, []);
+  }, [setError]);
 
   // Fetch bookings when filters change
   useEffect(() => {

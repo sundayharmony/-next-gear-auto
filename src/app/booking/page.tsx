@@ -1831,57 +1831,59 @@ function BookingPageInner() {
                   </div>
 
                   {/* Current Signature Field */}
-                  <div className="rounded-lg border border-purple-200 bg-purple-50/30 p-4 mb-4">
-                    <div className="mb-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        {agreementSignatures[currentAgreementField.id] ? (
-                          <CheckCircle2 className="h-5 w-5 text-green-500" />
-                        ) : (
-                          <PenLine className="h-5 w-5 text-purple-500" />
-                        )}
-                        <h4 className="text-sm font-semibold text-gray-900">
-                          {currentAgreementField.label}
-                        </h4>
+                  {currentAgreementField && (
+                    <div className="rounded-lg border border-purple-200 bg-purple-50/30 p-4 mb-4">
+                      <div className="mb-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          {agreementSignatures[currentAgreementField.id] ? (
+                            <CheckCircle2 className="h-5 w-5 text-green-500" />
+                          ) : (
+                            <PenLine className="h-5 w-5 text-purple-500" />
+                          )}
+                          <h4 className="text-sm font-semibold text-gray-900">
+                            {currentAgreementField.label}
+                          </h4>
+                        </div>
+                        <p className="text-xs text-gray-500 ml-7">
+                          {currentAgreementField.description}
+                        </p>
                       </div>
-                      <p className="text-xs text-gray-500 ml-7">
-                        {currentAgreementField.description}
-                      </p>
-                    </div>
 
-                    <div className="flex justify-center">
-                      <SignaturePad
-                        key={currentAgreementField.id}
-                        onSignatureChange={(data) =>
-                          handleAgreementSignatureChange(currentAgreementField.id, data)
-                        }
-                        isInitials={currentAgreementField.isInitials}
-                        label={currentAgreementField.isInitials ? "Initial here" : "Sign here"}
-                        width={currentAgreementField.isInitials ? 200 : 400}
-                        height={currentAgreementField.isInitials ? 80 : 150}
-                      />
-                    </div>
+                      <div className="flex justify-center">
+                        <SignaturePad
+                          key={currentAgreementField.id}
+                          onSignatureChange={(data) =>
+                            handleAgreementSignatureChange(currentAgreementField.id, data)
+                          }
+                          isInitials={currentAgreementField.isInitials}
+                          label={currentAgreementField.isInitials ? "Initial here" : "Sign here"}
+                          width={currentAgreementField.isInitials ? 200 : 400}
+                          height={currentAgreementField.isInitials ? 80 : 150}
+                        />
+                      </div>
 
-                    {/* Signature Navigation */}
-                    <div className="flex items-center justify-between mt-4 pt-3 border-t border-purple-100">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setAgreementStep((s) => Math.max(0, s - 1))}
-                        disabled={agreementStep === 0}
-                      >
-                        <ArrowLeft className="h-3 w-3 mr-1" /> Previous
-                      </Button>
-                      {agreementStep < AGREEMENT_SIGNATURE_FIELDS.length - 1 && (
+                      {/* Signature Navigation */}
+                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-purple-100">
                         <Button
+                          variant="outline"
                           size="sm"
-                          onClick={() => setAgreementStep((s) => s + 1)}
-                          disabled={!agreementSignatures[currentAgreementField.id]}
+                          onClick={() => setAgreementStep((s) => Math.max(0, s - 1))}
+                          disabled={agreementStep === 0}
                         >
-                          Next <ArrowRight className="h-3 w-3 ml-1" />
+                          <ArrowLeft className="h-3 w-3 mr-1" /> Previous
                         </Button>
-                      )}
+                        {agreementStep < AGREEMENT_SIGNATURE_FIELDS.length - 1 && (
+                          <Button
+                            size="sm"
+                            onClick={() => setAgreementStep((s) => s + 1)}
+                            disabled={!agreementSignatures[currentAgreementField.id]}
+                          >
+                            Next <ArrowRight className="h-3 w-3 ml-1" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* All Signatures Summary */}
                   <div className="space-y-1.5 mb-4">

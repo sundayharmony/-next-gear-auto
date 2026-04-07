@@ -51,7 +51,7 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
   return (
     <div className="divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white" role="region" aria-label="Frequently asked questions">
       {items.map((item, index) => (
-        <div key={index}>
+        <div key={item.question || index}>
           <button
             ref={(el) => {
               buttonRefs.current[index] = el;

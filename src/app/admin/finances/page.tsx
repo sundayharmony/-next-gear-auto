@@ -2255,7 +2255,7 @@ export default function AdminFinancesPage() {
                       <div className="flex items-center justify-between mb-2">
                         <p className="font-semibold text-gray-900 text-sm">{month.month}</p>
                         <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${month.revenue > 0 && month.profit >= 0 ? "bg-green-100 text-green-700" : month.revenue > 0 ? "bg-red-100 text-red-700" : "bg-gray-100 text-gray-500"}`}>
-                          {month.revenue > 0 ? ((month.profit / month.revenue) * 100).toFixed(1) : "0"}%
+                          {month.revenue > 0 ? (Number.isFinite(month.profit / month.revenue) ? ((month.profit / month.revenue) * 100).toFixed(1) : "0") : "0"}%
                         </span>
                       </div>
                       <div className="grid grid-cols-3 gap-2 text-center">
@@ -2331,7 +2331,7 @@ export default function AdminFinancesPage() {
                                 : "text-gray-500"
                             }`}
                           >
-                            {month.revenue > 0 ? ((month.profit / month.revenue) * 100).toFixed(1) : "0"}%
+                            {month.revenue > 0 ? (Number.isFinite(month.profit / month.revenue) ? ((month.profit / month.revenue) * 100).toFixed(1) : "0") : "0"}%
                           </td>
                         </tr>
                       ))}

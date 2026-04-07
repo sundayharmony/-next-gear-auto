@@ -78,6 +78,10 @@ export default function AdminPromoCodesPage() {
       setError("Max uses must be greater than 0 if set");
       return;
     }
+    if (newCode.minBookingAmount !== undefined && newCode.minBookingAmount < 0) {
+      setError("Minimum booking amount cannot be negative");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -116,6 +120,10 @@ export default function AdminPromoCodesPage() {
     }
     if (editForm.maxUses !== undefined && editForm.maxUses !== null && editForm.maxUses <= 0) {
       setError("Max uses must be greater than 0 if set");
+      return;
+    }
+    if (editForm.minBookingAmount !== undefined && editForm.minBookingAmount < 0) {
+      setError("Minimum booking amount cannot be negative");
       return;
     }
 

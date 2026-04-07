@@ -19,13 +19,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const limit = Math.min(parseInt(searchParams.get("limit") || "50", 10), 500);
+    const offset = Math.max(0, parseInt(searchParams.get("offset") || "0", 10));
+
     const supabase = getServiceSupabase();
 
     const { data, error } = await supabase
       .from("booking_payments")
       .select("id, booking_id, amount, method, note, received_at")
       .eq("booking_id", bookingId)
-      .order("received_at", { ascending: false });
+      .order("received_at", { ascending: false })
+      .range(offset, offset + limit - 1);
 
     if (error) {
       logger.error("Error fetching booking payments:", error);
@@ -70,7 +74,7 @@ export async function POST(request: NextRequest) {
     }
 
     const parsedAmount = parseFloat(amount);
-    if (!amount || isNaN(parsedAmount) || parsedAmount <= 0) {
+    if (isNaN(parsedAmount) || parsedAmount <= 0) {
       return NextResponse.json(
         { success: false, message: "amount must be a positive number" },
         { status: 400 }

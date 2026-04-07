@@ -210,6 +210,10 @@ export default function AdminMaintenancePage() {
 
   const saveDetailEdit = async () => {
     if (!selectedRecord) return;
+    if (!detailEditData.title?.trim()) {
+      setError("Title is required");
+      return;
+    }
     if (detailEditData.cost !== null && detailEditData.cost !== undefined && detailEditData.cost < 0) {
       setError("Cost cannot be negative");
       return;

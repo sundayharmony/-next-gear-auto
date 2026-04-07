@@ -49,16 +49,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate latitude range
+    let latNum: number | null = null;
     if (lat !== undefined && lat !== null) {
-      const latNum = parseFloat(lat);
+      latNum = parseFloat(lat);
       if (isNaN(latNum) || latNum < -90 || latNum > 90) {
         return NextResponse.json({ success: false, message: "Latitude must be between -90 and 90" }, { status: 400 });
       }
     }
 
     // Validate longitude range
+    let lngNum: number | null = null;
     if (lng !== undefined && lng !== null) {
-      const lngNum = parseFloat(lng);
+      lngNum = parseFloat(lng);
       if (isNaN(lngNum) || lngNum < -180 || lngNum > 180) {
         return NextResponse.json({ success: false, message: "Longitude must be between -180 and 180" }, { status: 400 });
       }
@@ -83,8 +85,8 @@ export async function POST(request: NextRequest) {
       is_default: is_default || false,
       is_active: true,
       notes: (notes || "").trim().slice(0, 500),
-      lat: lat !== undefined && lat !== null ? parseFloat(lat) : null,
-      lng: lng !== undefined && lng !== null ? parseFloat(lng) : null,
+      lat: latNum,
+      lng: lngNum,
     }).select("*").maybeSingle();
 
     if (error) {
