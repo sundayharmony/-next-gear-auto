@@ -12,7 +12,14 @@ export async function POST(req: NextRequest) {
       return rateLimitResponse(rateCheck.resetAt);
     }
 
-    const { code, bookingAmount } = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ success: false, message: "Invalid JSON body" }, { status: 400 });
+    }
+
+    const { code, bookingAmount } = body;
 
     if (!code) {
       return NextResponse.json(

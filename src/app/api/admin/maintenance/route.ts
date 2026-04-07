@@ -106,7 +106,12 @@ export async function POST(req: NextRequest) {
   const supabase = getServiceSupabase();
 
   try {
-    const body = await req.json();
+    let body;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ success: false, message: "Invalid JSON body" }, { status: 400 });
+    }
     const { vehicleId, title, description, cost, scheduledDate, status, startedDate, completedDate, notes } = body;
 
     if (!vehicleId || !title) {

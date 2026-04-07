@@ -9,13 +9,18 @@ export async function compressImage(
   maxWidthOrHeight = 2048,
   quality = 0.8
 ): Promise<File> {
+  // Validate parameters with safe ranges
+  const safeQuality = Math.max(0.1, Math.min(1, quality));
+  const safeMaxSize = Math.max(0.1, maxSizeMB);
+  const safeMaxDim = Math.max(100, maxWidthOrHeight);
+
   // Skip non-image files (PDFs, SVGs)
   if (!file.type.startsWith("image/") || file.type === "image/svg+xml") {
     return file;
   }
 
   // If already small enough, return as-is
-  if (file.size <= maxSizeMB * 1024 * 1024) {
+  if (file.size <= safeMaxSize * 1024 * 1024) {
     return file;
   }
 
@@ -32,13 +37,13 @@ export async function compressImage(
         resolve(file); // Broken image — return original
         return;
       }
-      if (width > maxWidthOrHeight || height > maxWidthOrHeight) {
+      if (width > safeMaxDim || height > safeMaxDim) {
         if (width > height) {
-          height = Math.round((height * maxWidthOrHeight) / width);
-          width = maxWidthOrHeight;
+          height = Math.round((height * safeMaxDim) / width);
+          width = safeMaxDim;
         } else {
-          width = Math.round((width * maxWidthOrHeight) / height);
-          height = maxWidthOrHeight;
+          width = Math.round((width * safeMaxDim) / height);
+          height = safeMaxDim;
         }
       }
 
@@ -64,10 +69,10 @@ export async function compressImage(
           }
 
           // If compression didn't help, try with lower quality
-          if (blob.size > maxSizeMB * 1024 * 1024 && quality > 0.3) {
+          if (blob.size > safeMaxSize * 1024 * 1024 && safeQuality > 0.3) {
             canvas.toBlob(
               (blob2) => {
-                if (!blob2 || blob2.size > maxSizeMB * 1024 * 1024) {
+                if (!blob2 || blob2.size > safeMaxSize * 1024 * 1024) {
                   resolve(file); // Give up, return original
                   return;
                 }
@@ -88,7 +93,7 @@ export async function compressImage(
           resolve(new File([blob], newName, { type: outputType }));
         },
         outputType,
-        quality
+        safeQuality
       );
     };
 

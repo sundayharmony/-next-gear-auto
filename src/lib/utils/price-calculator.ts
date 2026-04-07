@@ -136,6 +136,11 @@ export function applyDiscount(
   pricing: PricingBreakdown,
   discount: PromoDiscount
 ): PricingBreakdown & { discount: PromoDiscount } {
+  // Guard against NaN and Infinity values
+  if (!Number.isFinite(discount.discountValue) || discount.discountValue < 0) {
+    return { ...pricing, discount: undefined };
+  }
+
   const discountAmount = discount.discountType === "percentage"
     ? roundCents(pricing.subtotal * (discount.discountValue / 100))
     : Math.min(discount.discountValue, pricing.subtotal);

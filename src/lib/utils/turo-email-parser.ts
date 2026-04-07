@@ -52,7 +52,8 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   for (const pattern of extensionPatterns) {
     if (pattern.test(text)) {
       isExtension = true;
-      rawMatches.push(`Extension detected: "${text.match(pattern)?.[0]}"`);
+      const m = text.match(pattern);
+      if (m) rawMatches.push(`Extension detected: "${m[0]}"`);
       break;
     }
   }
@@ -378,6 +379,7 @@ function stripHtml(text: string): string {
  * Parse a wide variety of date formats into YYYY-MM-DD.
  */
 function parseFlexibleDate(dateStr: string): string | null {
+  if (!dateStr || typeof dateStr !== "string") return null;
   const s = dateStr.trim()
     .replace(/\s+at\s+.*/i, "")
     .replace(/,?\s+\d{1,2}:\d{2}\s*(AM|PM)?/i, "")

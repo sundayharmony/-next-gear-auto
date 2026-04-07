@@ -40,6 +40,11 @@ export function arrayToCSV<T extends Record<string, unknown>>(data: T[], columns
     return "";
   }
 
+  // Validate columns array
+  if (columns && columns.length === 0) {
+    return "";
+  }
+
   // Use provided columns or extract from first object
   const csvColumns = columns || (Object.keys(data[0]) as (keyof T)[]);
 

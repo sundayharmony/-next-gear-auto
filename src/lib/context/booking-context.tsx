@@ -122,7 +122,13 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
       return { ...state, currentStep: Math.max(state.currentStep - 1, 1) as BookingStep };
     case "CALCULATE_PRICING": {
       if (!state.selectedVehicle || !state.pickupDate || !state.returnDate) return state;
-      const days = calculateRentalDays(state.pickupDate, state.returnDate);
+      let days = 0;
+      try {
+        days = calculateRentalDays(state.pickupDate, state.returnDate);
+      } catch (error) {
+        logger.error("Error calculating rental days:", error);
+        days = 0;
+      }
       let pricing: PricingBreakdown & { discount?: PromoDiscount } = calculatePricing(
         days,
         state.selectedVehicle.dailyRate,

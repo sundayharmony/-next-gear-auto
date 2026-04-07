@@ -53,9 +53,14 @@ export function createRateLimiter(options: RateLimiterOptions) {
     check(identifier: string): RateLimitResult {
       cleanup();
 
-      // Prevent memory leaks: if store exceeds 10000 entries, clear it
+      // Prevent memory leaks: if store exceeds 10000 entries, evict oldest half
       if (store.size > 10000) {
-        store.clear();
+        const entries = Array.from(store.entries());
+        entries.sort((a, b) => a[1].resetAt - b[1].resetAt);
+        const toRemove = entries.slice(0, Math.floor(entries.length / 2));
+        for (const [key] of toRemove) {
+          store.delete(key);
+        }
       }
 
       const now = Date.now();

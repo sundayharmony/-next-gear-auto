@@ -102,6 +102,7 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
       if (res.status === 401) {
         localStorage.removeItem("nga_user");
         window.location.href = "/admin";
+        return res;
       }
     }
 

@@ -89,6 +89,13 @@ export async function GET(req: NextRequest) {
           .select("*")
           .eq("id", booking.vehicle_id)
           .maybeSingle();
+
+        if (!v) {
+          return NextResponse.json(
+            { success: false, error: "Vehicle not found" },
+            { status: 404 }
+          );
+        }
         vehicle = v;
       }
     } else {

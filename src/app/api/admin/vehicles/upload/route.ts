@@ -104,7 +104,7 @@ export async function POST(request: NextRequest) {
         .eq("id", vehicleId)
         .maybeSingle();
 
-      if (fetchError) {
+      if (fetchError || !vehicle) {
         logger.error("Error fetching vehicle:", fetchError);
         return NextResponse.json({
           success: true,

@@ -25,7 +25,7 @@ export function MaintenancePhotoGallery({
 
   const openLightbox = (index: number) => {
     if (isPdf(photos[index])) {
-      window.open(photos[index], "_blank");
+      window.open(photos[index], "_blank", "noopener,noreferrer");
       return;
     }
     setActiveIndex(index);
@@ -211,7 +211,7 @@ export function MaintenancePhotoGallery({
                   onClick={(e) => {
                     e.stopPropagation();
                     if (isPdf(photo)) {
-                      window.open(photo, "_blank");
+                      window.open(photo, "_blank", "noopener,noreferrer");
                     } else {
                       setActiveIndex(i);
                     }

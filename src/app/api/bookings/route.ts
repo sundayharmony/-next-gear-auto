@@ -251,7 +251,12 @@ export async function GET(request: NextRequest) {
 export async function POST(request: Request) {
   const supabase = getServiceSupabase();
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ success: false, message: "Invalid JSON body" }, { status: 400 });
+    }
 
     // Validate required fields
     if (!body.vehicleId || !body.pickupDate || !body.returnDate) {
@@ -440,6 +445,13 @@ export async function POST(request: Request) {
         : Promise.resolve(null as { password_hash: string } | null);
 
       const [vehicle, cust] = await Promise.all([vehiclePromise, custPromise]);
+
+      if (!vehicle) {
+        return NextResponse.json(
+          { success: false, message: "Vehicle not found" },
+          { status: 404 }
+        );
+      }
 
       if (vehicle) vehicleName = getVehicleDisplayName(vehicle);
       needsPassword = !cust?.password_hash;
