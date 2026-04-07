@@ -152,13 +152,15 @@ export default function BlockedDatesPage() {
       const data = await res.json();
       if (data.success) {
         setSuccess(`Dates blocked for ${getVehicleName(manualVehicleId)}`);
-        setBlockedDates((prev) => [...prev, data.data]);
+        setBlockedDates((prev) =>
+          [...prev, data.data].sort((a, b) => a.start_date.localeCompare(b.start_date))
+        );
         setManualStartDate("");
         setManualEndDate("");
         setManualReason("");
         setShowManualForm(false);
       } else {
-        setError(data.error || "Failed to block dates");
+        setError(data.message || "Failed to block dates");
       }
     } catch {
       setError("Network error — could not block dates");
@@ -196,7 +198,7 @@ export default function BlockedDatesPage() {
           if (match) setEmailVehicleId(match.id);
         }
       } else {
-        setError(data.error || "Failed to parse email");
+        setError(data.message || "Failed to parse email");
       }
     } catch {
       setError("Network error — could not parse email");
@@ -231,13 +233,15 @@ export default function BlockedDatesPage() {
       const data = await res.json();
       if (data.success) {
         setSuccess(`Turo dates blocked for ${getVehicleName(emailVehicleId)}`);
-        setBlockedDates((prev) => [...prev, data.data]);
+        setBlockedDates((prev) =>
+          [...prev, data.data].sort((a, b) => a.start_date.localeCompare(b.start_date))
+        );
         setEmailText("");
         setParseResult(null);
         setEmailVehicleId("");
         setShowEmailForm(false);
       } else {
-        setError(data.error || "Failed to block dates");
+        setError(data.message || "Failed to block dates");
       }
     } catch {
       setError("Network error — could not block dates");
@@ -258,7 +262,7 @@ export default function BlockedDatesPage() {
         setBlockedDates((prev) => prev.filter((b) => b.id !== id));
         setSuccess("Block removed");
       } else {
-        setError(data.error || "Failed to remove block");
+        setError(data.message || "Failed to remove block");
       }
     } catch {
       setError("Network error — could not remove block");
@@ -331,9 +335,10 @@ export default function BlockedDatesPage() {
   /** Format "HH:MM:SS" or "HH:MM" TIME value to "8:00 AM" display string */
   const formatTime = (t: string | null): string => {
     if (!t) return "";
-    const [hStr, mStr] = t.split(":");
-    let h = parseInt(hStr, 10);
-    const m = mStr || "00";
+    const parts = t.split(":");
+    let h = parseInt(parts[0], 10);
+    const m = parts[1] || "00";
+    if (isNaN(h)) return "";
     const ampm = h >= 12 ? "PM" : "AM";
     if (h === 0) h = 12;
     else if (h > 12) h -= 12;

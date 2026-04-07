@@ -192,7 +192,7 @@ export async function PUT(req: NextRequest) {
     }
 
     if (earnings !== undefined) {
-      (updates as Record<string, string | number | null>).earnings = earnings || null;
+      (updates as Record<string, string | number | null>).earnings = earnings ?? null;
     }
 
     if (Object.keys(updates).length === 0) {

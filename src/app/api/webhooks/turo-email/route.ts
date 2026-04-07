@@ -92,6 +92,9 @@ export async function POST(req: NextRequest) {
     let matchedVehicle = vehicles[0]; // fallback to first vehicle
     let matchScore = 0;
 
+    // Escape special regex characters in a string
+    const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
     if (parsed.vehicleDescription) {
       const desc = parsed.vehicleDescription.toLowerCase();
       const fullText = emailText.toLowerCase();
@@ -118,10 +121,11 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Model match
-        if (model && desc.includes(model)) score += 4;
-        // Partial model match (e.g. "Highlander" in "Toyota Highlander")
-        if (model && model.length > 3) {
+        // Model match (full match is mutually exclusive with partial word match)
+        if (model && desc.includes(model)) {
+          score += 4;
+        } else if (model && model.length > 3) {
+          // Partial model match (e.g. "Highlander" in "Toyota Highlander XLE")
           const modelWords = model.split(/\s+/);
           for (const w of modelWords) {
             if (w.length > 2 && desc.includes(w.toLowerCase())) score += 2;
@@ -133,12 +137,17 @@ export async function POST(req: NextRequest) {
           score += 3;
         } else if (year) {
           // Search full email text for year near make/model (e.g. "2018 Volkswagen Jetta")
-          // Build a regex: year within ~30 chars of the make or model name
           const makeOrModel = make || model;
           if (makeOrModel) {
+            // Build regex-safe alternatives
+            const alts = [make, model].filter(Boolean).map(escapeRegex);
+            if (aliases[make]) {
+              alts.push(...aliases[make].map(escapeRegex));
+            }
+            const altsPattern = alts.join("|");
             // Check for "2018 Volkswagen", "2018 VW", "Volkswagen Jetta 2018", etc.
             const yearNearVehicle = new RegExp(
-              `${year}\\s{1,5}(?:${make}|${model}${aliases[make] ? "|" + aliases[make].join("|") : ""})|(?:${make}|${model})\\s{1,5}${year}`,
+              `${escapeRegex(year)}\\s{1,5}(?:${altsPattern})|(?:${altsPattern})\\s{1,5}${escapeRegex(year)}`,
               "i"
             );
             if (yearNearVehicle.test(fullText)) {
@@ -188,10 +197,10 @@ export async function POST(req: NextRequest) {
         vehicle_id: matchedVehicle.id,
         start_date: parsed.startDate,
         end_date: parsed.endDate,
-        pickup_time: parsed.pickupTime || null,
-        return_time: parsed.returnTime || null,
-        location: parsed.location || null,
-        earnings: parsed.earnings || null,
+        pickup_time: parsed.pickupTime ?? null,
+        return_time: parsed.returnTime ?? null,
+        location: parsed.location ?? null,
+        earnings: parsed.earnings ?? null,
         source: "turo-email",
         reason,
       })

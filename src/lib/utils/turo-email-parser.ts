@@ -341,9 +341,13 @@ function parseFlexibleDate(dateStr: string): string | null {
   if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
 
   // US format: 04/05/2026 or 4/5/2026
-  const usMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const usMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
   if (usMatch) {
-    return `${usMatch[3]}-${usMatch[1].padStart(2, "0")}-${usMatch[2].padStart(2, "0")}`;
+    let year = usMatch[3];
+    if (year.length === 2) {
+      year = (parseInt(year, 10) >= 70 ? "19" : "20") + year;
+    }
+    return `${year}-${usMatch[1].padStart(2, "0")}-${usMatch[2].padStart(2, "0")}`;
   }
 
   // Named month: "Apr 5, 2026", "April 5 2026", "5 Apr 2026"
