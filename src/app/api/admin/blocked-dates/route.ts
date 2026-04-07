@@ -106,12 +106,12 @@ export async function POST(req: NextRequest) {
         vehicle_id: vehicleId,
         start_date: startDate,
         end_date: endDate,
-        pickup_time: pickupTime || null,
-        return_time: returnTime || null,
-        location: location || null,
-        earnings: earnings || null,
+        pickup_time: pickupTime ?? null,
+        return_time: returnTime ?? null,
+        location: location ?? null,
+        earnings: earnings ?? null,
         source: safeSource,
-        reason: reason || null,
+        reason: reason ?? null,
       })
       .select()
       .maybeSingle();

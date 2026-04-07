@@ -10,7 +10,6 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Vehicle, getVehicleDisplayName } from "@/lib/types";
-import { logger } from "@/lib/utils/logger";
 import {
   ShieldBan,
   Plus,
@@ -305,12 +304,22 @@ export default function BlockedDatesPage() {
     setForceOverride(false);
   };
 
-  const isExtending = editEndDate > editOriginalEndDate;
+  const isExtending = editingId !== null && editEndDate > editOriginalEndDate;
   const extensionDays = isExtending
     ? Math.ceil(
         (new Date(editEndDate + "T00:00:00").getTime() - new Date(editOriginalEndDate + "T00:00:00").getTime()) / 86400000
       )
     : 0;
+
+  /** Format YYYY-MM-DD to human-readable "Apr 6, 2026" */
+  const formatDate = (d: string): string => {
+    return new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+  };
+
+  /** Format YYYY-MM-DD to short "Apr 6" */
+  const formatDateShort = (d: string): string => {
+    return new Date(d + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
 
   const handleSaveEdit = async () => {
     if (!editingId || !editVehicleId || !editStartDate || !editEndDate) {
@@ -653,15 +662,32 @@ export default function BlockedDatesPage() {
                   <div key={block.id} className="rounded-lg border-2 border-purple-300 bg-purple-50/30 p-4">
                     {/* Extension indicator */}
                     {isExtending && (
-                      <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-sm text-blue-700">
-                        <Calendar className="h-4 w-4 shrink-0" />
-                        <span>
-                          <strong>Extending trip</strong> — end date moves from{" "}
-                          <span className="line-through">{new Date(editOriginalEndDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
-                          {" → "}
-                          <strong>{new Date(editEndDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>
-                          {" "}(+{extensionDays} day{extensionDays !== 1 ? "s" : ""})
-                        </span>
+                      <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div className="flex items-center gap-2 text-sm text-blue-700">
+                          <Calendar className="h-4 w-4 shrink-0" />
+                          <span>
+                            <strong>Extending trip</strong> — end date moves from{" "}
+                            <span className="line-through">{formatDateShort(editOriginalEndDate)}</span>
+                            {" → "}
+                            <strong>{formatDate(editEndDate)}</strong>
+                            {" "}
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded-full bg-blue-100 text-blue-800 text-xs font-semibold">
+                              +{extensionDays} day{extensionDays !== 1 ? "s" : ""}
+                            </span>
+                          </span>
+                        </div>
+                        {block.is_extension && block.original_end_date && (
+                          <p className="text-xs text-blue-500 mt-1 ml-6">
+                            Note: This trip was previously extended from {formatDate(block.original_end_date)}
+                          </p>
+                        )}
+                      </div>
+                    )}
+                    {/* Show previous extension info when not currently extending */}
+                    {!isExtending && block.is_extension && block.original_end_date && (
+                      <div className="mb-3 p-2 bg-blue-50/50 border border-blue-100 rounded-lg flex items-center gap-2 text-xs text-blue-600">
+                        <Calendar className="h-3.5 w-3.5 shrink-0" />
+                        <span>Previously extended — originally ended {formatDate(block.original_end_date)}</span>
                       </div>
                     )}
 
@@ -675,7 +701,7 @@ export default function BlockedDatesPage() {
                             <ul className="mt-1 space-y-1">
                               {overlapConflicts.map((c) => (
                                 <li key={c.id} className="text-xs">
-                                  {c.start_date} → {c.end_date}{c.reason ? ` (${c.reason})` : ""}
+                                  {formatDate(c.start_date)} → {formatDate(c.end_date)}{c.reason ? ` (${c.reason})` : ""}
                                 </li>
                               ))}
                             </ul>
@@ -790,25 +816,34 @@ export default function BlockedDatesPage() {
                 <div
                   key={block.id}
                   className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
-                    isPast ? "bg-gray-50 border-gray-200 opacity-60" : "bg-white border-gray-200 hover:border-purple-200"
+                    isPast
+                      ? "bg-gray-50 border-gray-200 opacity-60"
+                      : block.is_extension
+                      ? "bg-blue-50/40 border-blue-200 hover:border-blue-300"
+                      : "bg-white border-gray-200 hover:border-purple-200"
                   }`}
                 >
                   <div className="flex items-center gap-4 min-w-0 flex-1">
                     <div className="flex-shrink-0">
-                      <Car className="h-5 w-5 text-gray-400" />
+                      <Car className={`h-5 w-5 ${block.is_extension ? "text-blue-400" : "text-gray-400"}`} />
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
                         {getVehicleName(block.vehicle_id)}
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
-                        {new Date(block.start_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}
+                        {formatDateShort(block.start_date)}
                         {block.pickup_time ? ` ${formatTime(block.pickup_time)}` : ""}
                         {" → "}
-                        {new Date(block.end_date + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                        {formatDate(block.end_date)}
                         {block.return_time ? ` ${formatTime(block.return_time)}` : ""}
                         <span className="text-gray-400 ml-1">({dayCount} day{dayCount !== 1 ? "s" : ""})</span>
                       </p>
+                      {block.is_extension && block.original_end_date && (
+                        <p className="text-xs text-blue-500 mt-0.5">
+                          Originally ended {formatDate(block.original_end_date)}
+                        </p>
+                      )}
                       {(block.location || block.earnings != null) && (
                         <p className="text-xs text-gray-400 mt-0.5">
                           {block.location && <span>{block.location}</span>}
