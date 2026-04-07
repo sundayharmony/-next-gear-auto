@@ -77,7 +77,13 @@ export default function AdminReviewsPage() {
     try {
       const res = await adminFetch(`/api/reviews?id=${id}`, { method: "DELETE" });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      let data;
+      try {
+        data = await res.json();
+      } catch {
+        setError("Invalid response from server");
+        return;
+      }
       if (data.success) {
         setReviews((prev) => prev.filter((r) => r.id !== id));
       } else {

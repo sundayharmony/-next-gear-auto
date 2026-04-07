@@ -17,6 +17,7 @@ export interface TokenPayload extends JWTPayload {
   sub: string;       // user ID
   role: "admin" | "customer";
   email: string;
+  type?: string;
 }
 
 // ─── Config ──────────────────────────────────────────────────────────

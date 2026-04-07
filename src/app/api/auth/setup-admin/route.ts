@@ -21,7 +21,12 @@ export async function POST(request: Request) {
   }
 
   try {
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ success: false, message: "Invalid request body" }, { status: 400 });
+    }
 
     // Simple security: require a secret to run this
     const serviceKey = process.env.SUPABASE_SERVICE_KEY || "";

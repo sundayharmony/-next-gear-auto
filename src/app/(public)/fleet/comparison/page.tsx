@@ -66,12 +66,12 @@ function ComparisonContent() {
 
   const specRows = [
     { label: "Category", icon: Car, getValue: (v: Vehicle) => v.category },
-    { label: "Passengers", icon: Users, getValue: (v: Vehicle) => `${v.specs.passengers} seats` },
-    { label: "Luggage", icon: Briefcase, getValue: (v: Vehicle) => `${v.specs.luggage} bags` },
-    { label: "Transmission", icon: Settings, getValue: (v: Vehicle) => v.specs.transmission },
-    { label: "Fuel Type", icon: Fuel, getValue: (v: Vehicle) => v.specs.fuelType },
-    { label: "Fuel Economy", icon: Gauge, getValue: (v: Vehicle) => `${v.specs.mpg} MPG` },
-    { label: "Doors", icon: DoorOpen, getValue: (v: Vehicle) => `${v.specs.doors}` },
+    { label: "Passengers", icon: Users, getValue: (v: Vehicle) => `${v.specs?.passengers ?? "N/A"} seats` },
+    { label: "Luggage", icon: Briefcase, getValue: (v: Vehicle) => `${v.specs?.luggage ?? "N/A"} bags` },
+    { label: "Transmission", icon: Settings, getValue: (v: Vehicle) => v.specs?.transmission ?? "N/A" },
+    { label: "Fuel Type", icon: Fuel, getValue: (v: Vehicle) => v.specs?.fuelType ?? "N/A" },
+    { label: "Fuel Economy", icon: Gauge, getValue: (v: Vehicle) => `${v.specs?.mpg ?? "N/A"} MPG` },
+    { label: "Doors", icon: DoorOpen, getValue: (v: Vehicle) => `${v.specs?.doors ?? "N/A"}` },
   ];
 
   const priceRows = [

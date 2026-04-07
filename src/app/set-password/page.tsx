@@ -47,6 +47,10 @@ function SetPasswordForm() {
       setError("Email address is missing. Please use the link from your confirmation email.");
       return;
     }
+    if (!token) {
+      setError("Invalid or missing reset token. Please use the link from your email.");
+      return;
+    }
     if (password.length < 12) {
       setError("Password must be at least 12 characters.");
       return;

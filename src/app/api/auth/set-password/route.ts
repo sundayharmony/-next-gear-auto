@@ -16,7 +16,12 @@ export async function POST(request: Request) {
       return rateLimitResponse(rateCheck.resetAt);
     }
 
-    const body = await request.json();
+    let body;
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ success: false, message: "Invalid request body" }, { status: 400 });
+    }
     const { email, password, token } = body;
 
     if (!email || !password) {
