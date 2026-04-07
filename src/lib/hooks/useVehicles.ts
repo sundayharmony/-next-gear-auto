@@ -21,10 +21,10 @@ export function useVehicles(enabled = true) {
     if (!enabled) return;
 
     let cancelled = false;
+    const controller = new AbortController();
     const fetchVehicles = async () => {
       setLoading(true);
       setError(null); // Clear previous error state
-      const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 15000); // 15-second timeout
 
       try {
@@ -40,15 +40,20 @@ export function useVehicles(enabled = true) {
         }
       } catch (err) {
         clearTimeout(timeoutId);
-        logger.error("Failed to fetch vehicles:", err);
-        if (!cancelled) setError("Failed to load vehicles");
+        if (!cancelled) {
+          logger.error("Failed to fetch vehicles:", err);
+          setError("Failed to load vehicles");
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
 
     fetchVehicles();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+      controller.abort();
+    };
   }, [enabled, refetchCount]);
 
   const retry = () => setRefetchCount(c => c + 1);

@@ -14,7 +14,12 @@ export function getCsrfToken(): string {
   const match = document.cookie.match(/(?:^|;\s*)nga_csrf=([^;]*)/);
   if (!match || !match[1]) return "";
   try {
-    return decodeURIComponent(match[1]);
+    const decoded = decodeURIComponent(match[1]);
+    // Validate token format: alphanumeric, not too long (max 256 chars)
+    if (!/^[a-zA-Z0-9\-_.]+$/.test(decoded) || decoded.length > 256) {
+      return "";
+    }
+    return decoded;
   } catch {
     return "";
   }

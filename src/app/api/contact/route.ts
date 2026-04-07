@@ -34,8 +34,8 @@ export async function POST(request: Request) {
       );
     }
 
-    // Basic email format check
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    // Email format validation: requires at least 2 characters in TLD
+    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email)) {
       return NextResponse.json(
         { success: false, message: "Invalid email address." },
         { status: 400 }

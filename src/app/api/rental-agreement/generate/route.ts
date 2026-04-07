@@ -293,7 +293,7 @@ export async function GET(req: NextRequest) {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="rental-agreement-${bookingId}.pdf"`,
+        "Content-Disposition": `inline; filename="rental-agreement.pdf"`,
       },
     });
   } catch (error) {

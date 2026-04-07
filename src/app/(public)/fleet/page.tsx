@@ -100,8 +100,8 @@ function FleetContent() {
 
         {/* Loading state */}
         {loading && (
-          <div className="flex items-center justify-center py-16" role="status" aria-live="polite" aria-label="Loading vehicles">
-            <div className="flex flex-col items-center gap-4">
+          <div className="flex items-center justify-center py-16" role="status" aria-live="polite">
+            <div className="flex flex-col items-center gap-4" aria-label="Loading vehicles" role="status">
               <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" aria-hidden="true" />
               <p className="text-gray-500">Loading vehicles...</p>
             </div>

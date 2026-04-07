@@ -64,6 +64,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   // Track abort controller for fetch cancellation
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const bellButtonRef = React.useRef<HTMLButtonElement>(null);
+  const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Handle Escape key to close notifications dropdown
   useEffect(() => {
@@ -114,9 +115,32 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     fetchPendingBookings();
     const jitter = 45000 + Math.random() * 30000;
-    const interval = setInterval(fetchPendingBookings, jitter);
+
+    // Handle visibility change to pause/resume polling
+    const handleVisibilityChange = () => {
+      if (document.hidden) {
+        // Tab is hidden - pause polling
+        if (pollingIntervalRef.current) {
+          clearInterval(pollingIntervalRef.current);
+          pollingIntervalRef.current = null;
+        }
+      } else {
+        // Tab is visible again - resume polling
+        if (!pollingIntervalRef.current) {
+          fetchPendingBookings();
+          pollingIntervalRef.current = setInterval(fetchPendingBookings, jitter);
+        }
+      }
+    };
+
+    pollingIntervalRef.current = setInterval(fetchPendingBookings, jitter);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
     return () => {
-      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current);
+      }
       if (abortControllerRef.current) {
         abortControllerRef.current.abort();
       }

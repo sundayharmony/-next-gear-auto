@@ -123,7 +123,7 @@ export function ReviewForm({
               <button
                 key={star}
                 type="button"
-                onClick={() => setRating(star)}
+                onClick={() => { setRating(star); setError(""); }}
                 onMouseEnter={() => setHoveredRating(star)}
                 onMouseLeave={() => setHoveredRating(0)}
                 aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
@@ -155,7 +155,7 @@ export function ReviewForm({
               id="reviewer-name"
               type="text"
               value={customerName}
-              onChange={(e) => setCustomerName(e.target.value)}
+              onChange={(e) => { setCustomerName(e.target.value); setError(""); }}
               placeholder="John Doe"
               maxLength={100}
               className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
@@ -174,7 +174,7 @@ export function ReviewForm({
           <textarea
             id="review-text"
             value={text}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => { setText(e.target.value); setError(""); }}
             placeholder="Share your experience..."
             maxLength={500}
             rows={4}

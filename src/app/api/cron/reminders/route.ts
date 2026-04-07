@@ -20,8 +20,8 @@ export async function GET(request: Request) {
   }
 
   try {
-    // Use timezone-aware date calculation
-    const tz = process.env.BUSINESS_TIMEZONE || "America/New_York";
+    // Use explicit timezone for date comparisons (America/New_York)
+    const tz = "America/New_York";
     const now = new Date();
     const todayStr = now.toLocaleDateString("en-CA", { timeZone: tz });
     const tomorrow = new Date(now);

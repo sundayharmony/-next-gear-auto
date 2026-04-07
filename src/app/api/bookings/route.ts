@@ -312,33 +312,49 @@ export async function POST(request: Request) {
           .eq("id", existingCustomer.id);
         if (updateErr) logger.warn("Failed to update existing customer info:", updateErr);
       } else {
-        // Create new customer (with ON CONFLICT handling for race conditions)
+        // Create new customer (with try-catch for race condition handling)
         const newCustId = "c_" + crypto.randomUUID();
-        const { data: newCustomer, error: insertErr } = await supabase
-          .from("customers")
-          .upsert(
-            {
+        try {
+          const { data: newCustomer, error: insertErr } = await supabase
+            .from("customers")
+            .insert({
               id: newCustId,
               name: customerName,
               email: customerEmail,
               phone: customerPhone,
               role: "customer",
-            },
-            { onConflict: "email", ignoreDuplicates: false }
-          )
-          .select("id")
-          .maybeSingle();
-
-        if (insertErr && insertErr.code === "23505") {
-          // Unique constraint violation on email — fetch the existing customer
-          const { data: existingCust } = await supabase
-            .from("customers")
+            })
             .select("id")
-            .eq("email", customerEmail)
             .maybeSingle();
-          customerId = existingCust?.id || newCustId;
-        } else if (newCustomer) {
-          customerId = newCustomer.id;
+
+          if (insertErr) {
+            if (insertErr.code === "23505") {
+              // Unique constraint violation on email — fetch the existing customer
+              const { data: existingCust } = await supabase
+                .from("customers")
+                .select("id")
+                .eq("email", customerEmail)
+                .maybeSingle();
+              customerId = existingCust?.id || newCustId;
+            } else {
+              logger.error("Customer insert error:", insertErr);
+              throw insertErr;
+            }
+          } else if (newCustomer) {
+            customerId = newCustomer.id;
+          }
+        } catch (err) {
+          if (err && typeof err === 'object' && 'code' in err && (err as any).code === "23505") {
+            // Race condition: another request inserted the same email, fetch it
+            const { data: existingCust } = await supabase
+              .from("customers")
+              .select("id")
+              .eq("email", customerEmail)
+              .maybeSingle();
+            customerId = existingCust?.id || newCustId;
+          } else {
+            throw err;
+          }
         }
       }
     }
@@ -543,7 +559,17 @@ export async function PATCH(request: NextRequest) {
     if (body.status !== undefined) updateFields.status = body.status;
     if (body.customer_id !== undefined) updateFields.customer_id = body.customer_id;
     if (body.customer_name !== undefined) updateFields.customer_name = body.customer_name;
-    if (body.customer_email !== undefined) updateFields.customer_email = body.customer_email;
+    if (body.customer_email !== undefined) {
+      // Validate email format before updating
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(body.customer_email)) {
+        return NextResponse.json(
+          { success: false, message: "Invalid email format" },
+          { status: 400 }
+        );
+      }
+      updateFields.customer_email = body.customer_email;
+    }
     if (body.customer_phone !== undefined) updateFields.customer_phone = body.customer_phone;
     if (body.vehicle_id !== undefined) updateFields.vehicle_id = body.vehicle_id;
     if (body.pickup_date !== undefined) updateFields.pickup_date = body.pickup_date;

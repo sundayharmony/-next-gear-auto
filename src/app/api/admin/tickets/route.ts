@@ -221,6 +221,14 @@ export async function PUT(req: NextRequest) {
       );
     }
 
+    // Validate UUID format (tickets use tkt_ prefix, so check the part after prefix)
+    if (!id.startsWith("tkt_")) {
+      return NextResponse.json(
+        { success: false, message: "Invalid ticket ID format" },
+        { status: 400 }
+      );
+    }
+
     const dbUpdates: Record<string, unknown> = {};
     if (updates.bookingId !== undefined) dbUpdates.booking_id = updates.bookingId;
     if (updates.customerId !== undefined) dbUpdates.customer_id = updates.customerId;
@@ -282,6 +290,14 @@ export async function DELETE(req: NextRequest) {
     if (!id) {
       return NextResponse.json(
         { success: false, message: "Ticket ID required" },
+        { status: 400 }
+      );
+    }
+
+    // Validate ID format (tickets use tkt_ prefix)
+    if (!id.startsWith("tkt_")) {
+      return NextResponse.json(
+        { success: false, message: "Invalid ticket ID format" },
         { status: 400 }
       );
     }

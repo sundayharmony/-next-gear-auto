@@ -49,6 +49,15 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Code is required" }, { status: 400 });
     }
 
+    // Validate code format: alphanumeric, hyphens, underscores, 1-50 chars
+    const codeRegex = /^[a-zA-Z0-9_-]{1,50}$/;
+    if (!codeRegex.test(body.code)) {
+      return NextResponse.json(
+        { success: false, message: "Code must be 1-50 characters and contain only letters, numbers, hyphens, and underscores" },
+        { status: 400 }
+      );
+    }
+
     // Validate discount value is between 0-100
     const discountValue = body.discountValue !== undefined ? body.discountValue : 10;
     if (typeof discountValue !== "number" || discountValue < 0 || discountValue > 100) {

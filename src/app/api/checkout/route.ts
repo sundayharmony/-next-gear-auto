@@ -231,6 +231,14 @@ export async function POST(request: NextRequest) {
 
     // Apply promo code discount if provided (re-validate server-side)
     if (promoCode && discountAmount && discountAmount > 0) {
+      // Validate promo code format before querying database
+      if (!/^[a-zA-Z0-9_-]{1,50}$/.test(promoCode)) {
+        return NextResponse.json(
+          { success: false, message: "Invalid promo code format" },
+          { status: 400 }
+        );
+      }
+
       // Look up the promo code to get its actual discount value
       const { data: promo, error: promoError } = await supabase
         .from("promo_codes")

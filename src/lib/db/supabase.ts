@@ -56,11 +56,22 @@ export const supabase = createClient<Database>(supabaseUrl as string, supabaseAn
 // Server-side Supabase client (uses service role key for admin operations)
 // Cached as singleton — safe in serverless because each cold start gets a fresh module scope
 let _serviceClient: ReturnType<typeof createClient<Database>> | null = null;
+let _cachedServiceKey: string | undefined = undefined;
+let _cachedSupabaseUrl: string | undefined = undefined;
 
 export function getServiceSupabase() {
-  if (_serviceClient) return _serviceClient;
-
   const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  const currentSupabaseUrl = supabaseUrl;
+
+  // Detect stale singleton: if environment variables have changed, create a new client
+  if (
+    _serviceClient &&
+    _cachedServiceKey === serviceKey &&
+    _cachedSupabaseUrl === currentSupabaseUrl
+  ) {
+    return _serviceClient;
+  }
+
   if (!serviceKey) {
     // Require service key for all environments (admin operations must not use anon key)
     throw new Error("SUPABASE_SERVICE_KEY environment variable is required for admin operations");
@@ -69,6 +80,8 @@ export function getServiceSupabase() {
     throw new Error("NEXT_PUBLIC_SUPABASE_URL is required to create service client");
   }
   _serviceClient = createClient<Database>(supabaseUrl, serviceKey);
+  _cachedServiceKey = serviceKey;
+  _cachedSupabaseUrl = currentSupabaseUrl;
   return _serviceClient;
 }
 

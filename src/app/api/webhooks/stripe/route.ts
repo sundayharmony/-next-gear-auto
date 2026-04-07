@@ -50,7 +50,7 @@ export async function POST(request: Request) {
             .maybeSingle();
 
           if (alreadyProcessed) {
-            logger.info("Webhook already processed for session:", session.id);
+            logger.info(`Webhook duplicate skipped for session: ${session.id}`);
             return NextResponse.json({ received: true });
           }
 

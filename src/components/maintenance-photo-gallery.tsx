@@ -36,6 +36,8 @@ export function MaintenancePhotoGallery({
 
   const goNext = () => {
     // Skip PDFs in lightbox navigation
+    const imagePhotos = photos.filter((p) => !isPdf(p));
+    if (imagePhotos.length === 0) return; // Don't navigate if no non-PDF items
     let next = (activeIndex + 1) % photos.length;
     let attempts = 0;
     while (isPdf(photos[next]) && attempts < photos.length) {
@@ -46,6 +48,9 @@ export function MaintenancePhotoGallery({
   };
 
   const goPrev = () => {
+    // Skip PDFs in lightbox navigation
+    const imagePhotos = photos.filter((p) => !isPdf(p));
+    if (imagePhotos.length === 0) return; // Don't navigate if no non-PDF items
     let prev = (activeIndex - 1 + photos.length) % photos.length;
     let attempts = 0;
     while (isPdf(photos[prev]) && attempts < photos.length) {

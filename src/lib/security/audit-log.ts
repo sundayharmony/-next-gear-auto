@@ -78,5 +78,15 @@ export function auditLog(
   }
 
   // Output as structured JSON for Vercel log ingestion
-  console.log(`[SECURITY_AUDIT] ${JSON.stringify(entry)}`);
+  try {
+    console.log(`[SECURITY_AUDIT] ${JSON.stringify(entry)}`);
+  } catch (error) {
+    // Handle circular references or other serialization errors
+    if (error instanceof TypeError && error.message.includes("circular")) {
+      console.log(`[SECURITY_AUDIT] [Unable to serialize entry due to circular reference]`);
+    } else {
+      // Fallback: log event type and timestamp only
+      console.log(`[SECURITY_AUDIT] ${JSON.stringify({ event, timestamp: entry.timestamp, error: "Serialization failed" })}`);
+    }
+  }
 }

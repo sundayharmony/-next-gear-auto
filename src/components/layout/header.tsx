@@ -11,6 +11,7 @@ import { useAuth } from "@/lib/context/auth-context";
 
 export function Header() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
@@ -105,7 +106,7 @@ export function Header() {
                     </Button>
                   </Link>
                 )}
-                <Button variant="outline" size="sm" onClick={async () => { await logout(); router.push("/"); }} aria-label="Sign out">
+                <Button variant="outline" size="sm" onClick={async () => { setLoggingOut(true); await logout(); router.push("/"); }} disabled={loggingOut} aria-label="Sign out">
                   <LogOut className="h-3.5 w-3.5" />
                 </Button>
               </div>

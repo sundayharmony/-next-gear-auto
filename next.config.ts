@@ -8,6 +8,7 @@ const nextConfig: NextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
+  poweredByHeader: false,
   experimental: {
     // Allow larger multipart payloads in local/proxied requests (e.g. image uploads)
     proxyClientMaxBodySize: 10 * 1024 * 1024,
@@ -97,6 +98,9 @@ const nextConfig: NextConfig = {
 
           // ── Prevent DNS prefetch to external domains (privacy) ──
           { key: "X-DNS-Prefetch-Control", value: "on" },
+
+          // ── Remove X-Powered-By header (security) ──
+          { key: "X-Powered-By", value: "" },
 
           // ── Cross-Origin Policies ──
           // Allow cross-origin images (needed for Supabase, Unsplash, etc.)

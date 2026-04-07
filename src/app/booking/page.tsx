@@ -521,6 +521,15 @@ function BookingPageInner() {
     }
 
     if (booking.currentStep === 1) {
+      // Validate pickup date < return date
+      const pickupDate = new Date(searchDates.pickup);
+      const returnDate = new Date(searchDates.return);
+      if (pickupDate >= returnDate) {
+        setDateValidationError("Pickup date must be before return date");
+        return;
+      }
+      setDateValidationError("");
+
       booking.setDates(searchDates.pickup, searchDates.return, searchDates.pickupTime, searchDates.returnTime);
       // Save selected locations to booking context
       const pickupLoc = locations.find(l => l.id === selectedPickupLocation);

@@ -116,11 +116,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate cost field if provided
+    // Validate cost field if provided (must be >= 0)
     if (cost !== undefined && cost !== null) {
       if (typeof cost !== "number" || !Number.isFinite(cost) || cost < 0) {
         return NextResponse.json(
-          { success: false, message: "Cost must be a non-negative number" },
+          { success: false, message: "Cost must be a non-negative number (>= 0)" },
           { status: 400 }
         );
       }
@@ -245,11 +245,11 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // Validate cost field if being updated
+    // Validate cost field if being updated (must be >= 0)
     if (updates.cost !== undefined && updates.cost !== null) {
       if (typeof updates.cost !== "number" || !Number.isFinite(updates.cost) || updates.cost < 0) {
         return NextResponse.json(
-          { success: false, message: "Cost must be a non-negative number" },
+          { success: false, message: "Cost must be a non-negative number (>= 0)" },
           { status: 400 }
         );
       }

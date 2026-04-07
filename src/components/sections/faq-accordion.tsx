@@ -21,7 +21,7 @@ export function FAQAccordion({ items }: FAQAccordionProps) {
   const handleKeyDown = (e: React.KeyboardEvent, index: number) => {
     switch (e.key) {
       case "Enter":
-      case " ":
+      case " ": // Space key toggles the accordion
         e.preventDefault();
         setOpenIndex(openIndex === index ? null : index);
         break;

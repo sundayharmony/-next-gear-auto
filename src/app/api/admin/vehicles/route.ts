@@ -67,11 +67,11 @@ export async function POST(request: NextRequest) {
     if (!body.make?.trim() || !body.model?.trim()) {
       return NextResponse.json({ success: false, message: "Make and Model are required" }, { status: 400 });
     }
-    if (body.dailyRate !== undefined && (typeof body.dailyRate !== "number" || body.dailyRate < 0 || !Number.isFinite(body.dailyRate))) {
-      return NextResponse.json({ success: false, message: "Daily rate must be a non-negative number" }, { status: 400 });
+    if (body.dailyRate !== undefined && (typeof body.dailyRate !== "number" || body.dailyRate <= 0 || !Number.isFinite(body.dailyRate))) {
+      return NextResponse.json({ success: false, message: "Daily rate must be a positive number" }, { status: 400 });
     }
-    if (body.year !== undefined && (typeof body.year !== "number" || body.year < 1900 || body.year > new Date().getFullYear() + 1)) {
-      return NextResponse.json({ success: false, message: "Invalid vehicle year" }, { status: 400 });
+    if (body.year !== undefined && (typeof body.year !== "number" || body.year <= 0 || body.year < 1900 || body.year > new Date().getFullYear() + 1)) {
+      return NextResponse.json({ success: false, message: "Year must be a positive number between 1900 and next year" }, { status: 400 });
     }
     if (body.purchasePrice !== undefined && (typeof body.purchasePrice !== "number" || body.purchasePrice < 0 || !Number.isFinite(body.purchasePrice))) {
       return NextResponse.json({ success: false, message: "Purchase price must be a non-negative number" }, { status: 400 });
@@ -141,6 +141,12 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Vehicle ID required" }, { status: 400 });
     }
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json({ success: false, message: "Invalid vehicle ID format" }, { status: 400 });
+    }
+
     // Server-side validation for updates
     if (updates.make !== undefined && !updates.make?.trim()) {
       return NextResponse.json({ success: false, message: "Make cannot be empty" }, { status: 400 });
@@ -148,11 +154,11 @@ export async function PUT(request: NextRequest) {
     if (updates.model !== undefined && !updates.model?.trim()) {
       return NextResponse.json({ success: false, message: "Model cannot be empty" }, { status: 400 });
     }
-    if (updates.dailyRate !== undefined && (typeof updates.dailyRate !== "number" || updates.dailyRate < 0 || !Number.isFinite(updates.dailyRate))) {
-      return NextResponse.json({ success: false, message: "Daily rate must be a non-negative number" }, { status: 400 });
+    if (updates.dailyRate !== undefined && (typeof updates.dailyRate !== "number" || updates.dailyRate <= 0 || !Number.isFinite(updates.dailyRate))) {
+      return NextResponse.json({ success: false, message: "Daily rate must be a positive number" }, { status: 400 });
     }
-    if (updates.year !== undefined && (typeof updates.year !== "number" || updates.year < 1900 || updates.year > new Date().getFullYear() + 1)) {
-      return NextResponse.json({ success: false, message: "Invalid vehicle year" }, { status: 400 });
+    if (updates.year !== undefined && (typeof updates.year !== "number" || updates.year <= 0 || updates.year < 1900 || updates.year > new Date().getFullYear() + 1)) {
+      return NextResponse.json({ success: false, message: "Year must be a positive number between 1900 and next year" }, { status: 400 });
     }
     if (updates.purchasePrice !== undefined && (typeof updates.purchasePrice !== "number" || updates.purchasePrice < 0 || !Number.isFinite(updates.purchasePrice))) {
       return NextResponse.json({ success: false, message: "Purchase price must be a non-negative number" }, { status: 400 });
@@ -217,6 +223,12 @@ export async function DELETE(request: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ success: false, message: "Vehicle ID required" }, { status: 400 });
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json({ success: false, message: "Invalid vehicle ID format" }, { status: 400 });
     }
 
     // Fetch vehicle first to get image URLs for storage cleanup

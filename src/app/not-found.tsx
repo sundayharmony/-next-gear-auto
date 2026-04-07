@@ -48,7 +48,7 @@ export default function NotFound() {
             <span className="text-sm font-medium text-gray-700">Book a Car</span>
           </Link>
           <Link
-            href="/blog"
+            href="/instagram"
             className="flex flex-col items-center gap-2 rounded-xl border border-gray-200 p-4 transition-all hover:border-purple-300 hover:bg-purple-50"
           >
             <Instagram className="h-6 w-6 text-purple-600" />

@@ -33,6 +33,7 @@ export function ContactForm() {
       setIsSubmitting(true);
       setSubmitError("");
       try {
+        setSubmitError("");
         const res = await csrfFetch("/api/contact", {
           method: "POST",
           headers: { "Content-Type": "application/json" },

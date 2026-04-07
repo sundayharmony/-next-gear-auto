@@ -146,6 +146,12 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: "id is required" }, { status: 400 });
     }
 
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json({ success: false, message: "Invalid id format" }, { status: 400 });
+    }
+
     // Build update object with only provided fields
     const updates: Record<string, string | number | boolean | null> = {};
 
@@ -296,6 +302,12 @@ export async function DELETE(req: NextRequest) {
 
     if (!id) {
       return NextResponse.json({ success: false, message: "id param is required" }, { status: 400 });
+    }
+
+    // Validate UUID format
+    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    if (!uuidRegex.test(id)) {
+      return NextResponse.json({ success: false, message: "Invalid id format" }, { status: 400 });
     }
 
     const { data: deleted, error } = await supabase

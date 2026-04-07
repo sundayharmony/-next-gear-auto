@@ -25,8 +25,10 @@ export function useForm<T extends Record<string, string>>({
       setValues((prev) => ({ ...prev, [field]: value }));
       setIsDirty(true);
       // Real-time validation on touched fields
-      if (touched[field] && validationRules[field as string]) {
-        const error = validate(value, validationRules[field as string]);
+      if (touched[field]) {
+        const rule = validationRules[field as string];
+        if (!rule) return;
+        const error = validate(value, rule);
         setErrors((prev) => ({ ...prev, [field]: error || undefined }));
       }
     },
@@ -37,10 +39,10 @@ export function useForm<T extends Record<string, string>>({
     (field: keyof T) => {
       setTouched((prev) => ({ ...prev, [field]: true }));
       // Validate on blur
-      if (validationRules[field as string]) {
-        const error = validate(values[field], validationRules[field as string]);
-        setErrors((prev) => ({ ...prev, [field]: error || undefined }));
-      }
+      const rule = validationRules[field as string];
+      if (!rule) return;
+      const error = validate(values[field], rule);
+      setErrors((prev) => ({ ...prev, [field]: error || undefined }));
     },
     [values, validationRules]
   );

@@ -74,16 +74,16 @@ export async function POST(req: NextRequest) {
     for (const [key, value] of Object.entries(signatures)) {
       if (value && typeof value === "string") {
         const cleaned = (value as string).replace(/^data:image\/png;base64,/, "");
-        // Check it's valid base64 and not excessively large (max 100KB per signature)
-        if (cleaned.length > 100 * 1024) {
+        // Check base64 length - limit to 500KB to prevent DoS
+        if (cleaned.length > 500 * 1024) {
           return NextResponse.json(
-            { success: false, error: `Signature ${key} exceeds maximum size` },
+            { success: false, error: `Signature ${key} exceeds maximum size (500KB limit)` },
             { status: 400 }
           );
         }
         try {
           const imgBuffer = Buffer.from(cleaned, "base64");
-          // Verify PNG magic number (Bug 30)
+          // Verify PNG magic number
           if (imgBuffer.length < 8 || !imgBuffer.subarray(0, 8).equals(PNG_MAGIC)) {
             return NextResponse.json(
               { success: false, error: `Signature ${key} is not a valid PNG image` },

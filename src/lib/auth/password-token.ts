@@ -1,10 +1,10 @@
 /**
  * HMAC-based token generation and validation for the set-password flow.
  *
- * Tokens encode: email + timestamp, signed with JWT_SECRET.
+ * Tokens encode: email + timestamp + random bytes, signed with JWT_SECRET.
  * They expire after TOKEN_EXPIRY_HOURS (default: 48h).
  */
-import { createHmac, timingSafeEqual } from "crypto";
+import { createHmac, timingSafeEqual, randomBytes } from "crypto";
 
 const TOKEN_EXPIRY_HOURS = 48;
 
@@ -20,7 +20,9 @@ function getSecret(): string {
 export function generatePasswordToken(email: string): string {
   const normalizedEmail = email.toLowerCase().trim();
   const timestamp = Date.now();
-  const payload = `${normalizedEmail}:${timestamp}`;
+  // Add random bytes to make the token unpredictable even if attacker knows the generation time
+  const randomNonce = randomBytes(16).toString("hex");
+  const payload = `${normalizedEmail}:${timestamp}:${randomNonce}`;
   const hmac = createHmac("sha256", getSecret()).update(payload).digest("hex");
   // Encode as base64url: payload.hmac
   const token = Buffer.from(`${payload}:${hmac}`).toString("base64url");
@@ -33,18 +35,19 @@ export function validatePasswordToken(token: string): string | null {
     const decoded = Buffer.from(token, "base64url").toString("utf-8");
     if (!decoded || decoded.length === 0) return null;
     const parts = decoded.split(":");
-    if (parts.length < 3) return null;
+    if (parts.length < 4) return null; // email:timestamp:nonce:hmac
 
     const hmac = parts.pop();
+    const nonce = parts.pop();
     const timestampStr = parts.pop();
-    if (!hmac || !timestampStr) return null;
+    if (!hmac || !timestampStr || !nonce) return null;
     const timestamp = parseInt(timestampStr, 10);
     const email = parts.join(":"); // handles emails with colons (rare but safe)
 
     if (!email || isNaN(timestamp)) return null;
 
-    // Verify HMAC signature
-    const expectedPayload = `${email}:${timestamp}`;
+    // Verify HMAC signature (now includes nonce)
+    const expectedPayload = `${email}:${timestamp}:${nonce}`;
     const expectedHmac = createHmac("sha256", getSecret()).update(expectedPayload).digest("hex");
 
     // Timing-safe comparison using Node.js built-in
