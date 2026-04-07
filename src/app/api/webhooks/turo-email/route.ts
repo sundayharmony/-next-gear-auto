@@ -94,6 +94,7 @@ export async function POST(req: NextRequest) {
 
     if (parsed.vehicleDescription) {
       const desc = parsed.vehicleDescription.toLowerCase();
+      const fullText = emailText.toLowerCase();
 
       for (const v of vehicles) {
         let score = 0;
@@ -127,8 +128,24 @@ export async function POST(req: NextRequest) {
           }
         }
 
-        // Year match
-        if (year && desc.includes(year)) score += 2;
+        // Year match — check parsed description first, then full email text
+        if (year && desc.includes(year)) {
+          score += 3;
+        } else if (year) {
+          // Search full email text for year near make/model (e.g. "2018 Volkswagen Jetta")
+          // Build a regex: year within ~30 chars of the make or model name
+          const makeOrModel = make || model;
+          if (makeOrModel) {
+            // Check for "2018 Volkswagen", "2018 VW", "Volkswagen Jetta 2018", etc.
+            const yearNearVehicle = new RegExp(
+              `${year}\\s{1,5}(?:${make}|${model}${aliases[make] ? "|" + aliases[make].join("|") : ""})|(?:${make}|${model})\\s{1,5}${year}`,
+              "i"
+            );
+            if (yearNearVehicle.test(fullText)) {
+              score += 2;
+            }
+          }
+        }
 
         if (score > matchScore) {
           matchScore = score;

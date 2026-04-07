@@ -220,11 +220,18 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
 
   // ── Extract vehicle description ──
   let vehicleDescription: string | null = null;
+
+  // Common make names for matching
+  const makeNames = "Toyota|Honda|Nissan|BMW|Mercedes|Audi|Ford|Chevrolet|Chevy|Hyundai|Kia|Jeep|Tesla|Volkswagen|VW|Ram|RAM|Dodge|Subaru|Mazda|Lexus|Acura|Infiniti|Volvo|Porsche|Cadillac|Lincoln|Buick|GMC|Chrysler|Highland";
+
   // Look for year + make + model patterns
   const vehiclePatterns = [
-    /(\d{4})\s+(Toyota|Honda|Nissan|BMW|Mercedes|Audi|Ford|Chevrolet|Chevy|Hyundai|Kia|Jeep|Tesla|Volkswagen|VW|Ram|RAM|Dodge|Subaru|Mazda|Lexus|Acura|Infiniti|Volvo|Porsche|Cadillac|Lincoln|Buick|GMC|Chrysler|Highland)[- ](\w+(?:\s+\w+)?)/i,
-    // "your Tesla Model 3" / "your Volkswagen Jetta" — Turo email format
-    /your\s+(Toyota|Honda|Nissan|BMW|Mercedes|Audi|Ford|Chevrolet|Chevy|Hyundai|Kia|Jeep|Tesla|Volkswagen|VW|Ram|RAM|Dodge|Subaru|Mazda|Lexus|Acura|Infiniti|Volvo|Porsche|Cadillac|Lincoln|Buick|GMC|Chrysler|Highland)\w*\s+(\w+(?:\s+\w+)?)/i,
+    // "2018 Volkswagen Jetta" — year before make
+    new RegExp(`(\\d{4})\\s+(${makeNames})[- ](\\w+(?:\\s+\\w+)?)`, "i"),
+    // "Volkswagen Jetta 2018" — Turo "Booked trip" section puts year after model
+    new RegExp(`(${makeNames})\\s+(\\w+(?:\\s+\\w+)?)\\s+(\\d{4})`, "i"),
+    // "your Tesla Model 3" / "your Volkswagen Jetta" — Turo email subject/body
+    new RegExp(`your\\s+(${makeNames})\\w*\\s+(\\w+(?:\\s+\\w+)?)`, "i"),
     /vehicle\s*[:–—-]\s*(.+?)(?:\n|$)/i,
     /car\s*[:–—-]\s*(.+?)(?:\n|$)/i,
   ];
@@ -236,7 +243,11 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
       } else if (match[0].toLowerCase().startsWith("your")) {
         // "your Tesla Model 3" → "Tesla Model 3"
         vehicleDescription = `${match[1]} ${match[2] || ""}`.trim();
+      } else if (/^\d{4}/.test(match[1])) {
+        // Year before make: "2018 Volkswagen Jetta" → "2018 Volkswagen Jetta"
+        vehicleDescription = `${match[1]} ${match[2]} ${match[3] || ""}`.trim();
       } else {
+        // Make Model Year: "Volkswagen Jetta 2018" → "Volkswagen Jetta 2018"
         vehicleDescription = `${match[1]} ${match[2]} ${match[3] || ""}`.trim();
       }
       rawMatches.push(`Vehicle: "${vehicleDescription}"`);
