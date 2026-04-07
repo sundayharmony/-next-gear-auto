@@ -18,7 +18,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("blocked_dates")
-      .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, created_at")
+      .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date, created_at")
       .gte("end_date", new Date().toISOString().split("T")[0])
       .order("start_date", { ascending: true });
 
@@ -140,14 +140,14 @@ export async function PUT(req: NextRequest) {
   try {
     const supabase = getServiceSupabase();
     const body = await req.json();
-    const { id, vehicleId, startDate, endDate, reason, pickupTime, returnTime, location, earnings } = body;
+    const { id, vehicleId, startDate, endDate, reason, pickupTime, returnTime, location, earnings, forceOverride } = body;
 
     if (!id) {
       return NextResponse.json({ success: false, message: "id is required" }, { status: 400 });
     }
 
     // Build update object with only provided fields
-    const updates: Record<string, string | null> = {};
+    const updates: Record<string, string | number | boolean | null> = {};
 
     if (startDate !== undefined) {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
@@ -192,7 +192,7 @@ export async function PUT(req: NextRequest) {
     }
 
     if (earnings !== undefined) {
-      (updates as Record<string, string | number | null>).earnings = earnings ?? null;
+      updates.earnings = earnings ?? null;
     }
 
     if (Object.keys(updates).length === 0) {
@@ -200,44 +200,59 @@ export async function PUT(req: NextRequest) {
     }
 
     // Validate date ordering if both dates are being set or one is being changed
-    const finalStart = updates.start_date;
-    const finalEnd = updates.end_date;
+    const finalStart = updates.start_date as string | undefined;
+    const finalEnd = updates.end_date as string | undefined;
     if (finalStart && finalEnd && finalEnd < finalStart) {
       return NextResponse.json({ success: false, message: "End date must be on or after start date" }, { status: 400 });
     }
 
+    // Fetch current record (needed for overlap check and extension detection)
+    const { data: current } = await supabase
+      .from("blocked_dates")
+      .select("vehicle_id, start_date, end_date")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!current) {
+      return NextResponse.json({ success: false, message: "Blocked date not found" }, { status: 404 });
+    }
+
+    const checkVehicle = (updates.vehicle_id as string) || current.vehicle_id;
+    const checkStart = (updates.start_date as string) || current.start_date;
+    const checkEnd = (updates.end_date as string) || current.end_date;
+
+    if (checkEnd < checkStart) {
+      return NextResponse.json({ success: false, message: "End date must be on or after start date" }, { status: 400 });
+    }
+
+    // Detect if this is an extension (end date pushed later)
+    if (updates.end_date && current.end_date && (updates.end_date as string) > current.end_date) {
+      updates.is_extension = true;
+      updates.original_end_date = current.end_date;
+    }
+
     // Check for overlapping blocked dates (exclude self)
     if (updates.start_date || updates.end_date || updates.vehicle_id) {
-      // Fetch current record to fill in unchanged fields
-      const { data: current } = await supabase
-        .from("blocked_dates")
-        .select("vehicle_id, start_date, end_date")
-        .eq("id", id)
-        .maybeSingle();
-
-      if (!current) {
-        return NextResponse.json({ success: false, message: "Blocked date not found" }, { status: 404 });
-      }
-
-      const checkVehicle = updates.vehicle_id || current.vehicle_id;
-      const checkStart = updates.start_date || current.start_date;
-      const checkEnd = updates.end_date || current.end_date;
-
-      if (checkEnd < checkStart) {
-        return NextResponse.json({ success: false, message: "End date must be on or after start date" }, { status: 400 });
-      }
-
       const { data: existing } = await supabase
         .from("blocked_dates")
-        .select("id, start_date, end_date")
+        .select("id, start_date, end_date, reason")
         .eq("vehicle_id", checkVehicle)
         .neq("id", id)
         .lte("start_date", checkEnd)
         .gte("end_date", checkStart);
 
-      if (existing && existing.length > 0) {
+      if (existing && existing.length > 0 && !forceOverride) {
         return NextResponse.json(
-          { success: false, message: `Overlapping blocked dates already exist (${existing[0].start_date} to ${existing[0].end_date})` },
+          {
+            success: false,
+            message: `Overlapping blocked dates exist (${existing[0].start_date} to ${existing[0].end_date})`,
+            overlapping: existing.map((e) => ({
+              id: e.id,
+              start_date: e.start_date,
+              end_date: e.end_date,
+              reason: e.reason,
+            })),
+          },
           { status: 409 }
         );
       }

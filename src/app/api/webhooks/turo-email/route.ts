@@ -165,6 +165,94 @@ export async function POST(req: NextRequest) {
 
     const vehicleLabel = `${matchedVehicle.year} ${matchedVehicle.make} ${matchedVehicle.model}`;
 
+    // ── Handle extension emails ──
+    if (parsed.isExtension) {
+      // Find existing blocked date for this vehicle with matching start date
+      const { data: existingBlocks } = await supabase
+        .from("blocked_dates")
+        .select("id, start_date, end_date, earnings, reason")
+        .eq("vehicle_id", matchedVehicle.id)
+        .eq("start_date", parsed.startDate)
+        .order("created_at", { ascending: false })
+        .limit(5);
+
+      // Also try finding by overlapping date range if exact start match fails
+      let matchedBlock = existingBlocks?.[0] ?? null;
+      if (!matchedBlock) {
+        const { data: overlapBlocks } = await supabase
+          .from("blocked_dates")
+          .select("id, start_date, end_date, earnings, reason")
+          .eq("vehicle_id", matchedVehicle.id)
+          .lte("start_date", parsed.startDate)
+          .gte("end_date", parsed.startDate)
+          .order("created_at", { ascending: false })
+          .limit(5);
+        matchedBlock = overlapBlocks?.[0] ?? null;
+      }
+
+      if (matchedBlock) {
+        // Update existing record in-place
+        const updateFields: Record<string, string | number | boolean | null> = {
+          end_date: parsed.endDate,
+          is_extension: true,
+          original_end_date: matchedBlock.end_date,
+        };
+        if (parsed.earnings != null) updateFields.earnings = parsed.earnings;
+        if (parsed.returnTime) updateFields.return_time = parsed.returnTime;
+        if (parsed.location) updateFields.location = parsed.location;
+
+        // Update reason to reflect extension
+        const guestNote = parsed.guestName ? `: ${parsed.guestName}` : "";
+        const earningsNote = parsed.earnings ? ` — $${parsed.earnings}` : "";
+        updateFields.reason = `Turo (extended)${guestNote}${earningsNote}`;
+
+        const { data: updated, error: updateError } = await supabase
+          .from("blocked_dates")
+          .update(updateFields)
+          .eq("id", matchedBlock.id)
+          .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date")
+          .maybeSingle();
+
+        if (updateError) {
+          logger.error("Turo webhook: extension update error", updateError);
+          return NextResponse.json(
+            { success: false, message: updateError.message },
+            { status: 500 }
+          );
+        }
+
+        logger.info("Turo webhook: trip extended", {
+          id: matchedBlock.id,
+          vehicle: vehicleLabel,
+          previousEnd: matchedBlock.end_date,
+          newEnd: parsed.endDate,
+          guest: parsed.guestName,
+        });
+
+        return NextResponse.json({
+          success: true,
+          action: "extended",
+          message: `Extended ${vehicleLabel} from ${matchedBlock.end_date} to ${parsed.endDate}`,
+          data: updated,
+          parsed: {
+            confidence: parsed.confidence,
+            guestName: parsed.guestName,
+            vehicleDescription: parsed.vehicleDescription,
+            vehicleMatched: vehicleLabel,
+            vehicleMatchScore: matchScore,
+            isExtension: true,
+            previousEndDate: matchedBlock.end_date,
+          },
+        });
+      } else {
+        // No matching block found — fall through to create new one
+        logger.warn("Turo webhook: extension email but no matching block found, creating new", {
+          vehicle: vehicleLabel,
+          startDate: parsed.startDate,
+        });
+      }
+    }
+
     // ── Check for existing overlapping blocks ──
     const { data: existing } = await supabase
       .from("blocked_dates")
@@ -181,6 +269,7 @@ export async function POST(req: NextRequest) {
       });
       return NextResponse.json({
         success: true,
+        action: "skipped",
         skipped: true,
         message: `Dates already blocked for ${vehicleLabel} (${existing[0].start_date} to ${existing[0].end_date})`,
       });
@@ -227,6 +316,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: true,
+        action: "created",
         message: `Blocked ${vehicleLabel} from ${parsed.startDate} to ${parsed.endDate}`,
         data: created,
         parsed: {

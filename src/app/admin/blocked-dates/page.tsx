@@ -39,7 +39,16 @@ interface BlockedDate {
   earnings: number | null;
   source: string;
   reason: string | null;
+  is_extension: boolean | null;
+  original_end_date: string | null;
   created_at: string;
+}
+
+interface OverlapConflict {
+  id: string;
+  start_date: string;
+  end_date: string;
+  reason: string | null;
 }
 
 interface ParseResult {
@@ -91,6 +100,9 @@ export default function BlockedDatesPage() {
   const [editLocation, setEditLocation] = useState("");
   const [editEarnings, setEditEarnings] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const [editOriginalEndDate, setEditOriginalEndDate] = useState("");
+  const [overlapConflicts, setOverlapConflicts] = useState<OverlapConflict[]>([]);
+  const [forceOverride, setForceOverride] = useState(false);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -282,11 +294,23 @@ export default function BlockedDatesPage() {
     setEditReturnTime(toTimeInput(block.return_time));
     setEditLocation(block.location || "");
     setEditEarnings(block.earnings != null ? String(block.earnings) : "");
+    setEditOriginalEndDate(block.end_date);
+    setOverlapConflicts([]);
+    setForceOverride(false);
   };
 
   const cancelEditing = () => {
     setEditingId(null);
+    setOverlapConflicts([]);
+    setForceOverride(false);
   };
+
+  const isExtending = editEndDate > editOriginalEndDate;
+  const extensionDays = isExtending
+    ? Math.ceil(
+        (new Date(editEndDate + "T00:00:00").getTime() - new Date(editOriginalEndDate + "T00:00:00").getTime()) / 86400000
+      )
+    : 0;
 
   const handleSaveEdit = async () => {
     if (!editingId || !editVehicleId || !editStartDate || !editEndDate) {
@@ -313,15 +337,23 @@ export default function BlockedDatesPage() {
           returnTime: editReturnTime.trim() || null,
           location: editLocation.trim() || null,
           earnings: editEarnings ? parseFloat(editEarnings) : null,
+          forceOverride: forceOverride,
         }),
       });
       const data = await res.json();
       if (data.success) {
         setBlockedDates((prev) =>
           prev.map((b) => (b.id === editingId ? data.data : b))
+            .sort((a, b) => a.start_date.localeCompare(b.start_date))
         );
-        setSuccess("Blocked date updated");
+        setSuccess(isExtending ? `Trip extended by ${extensionDays} day${extensionDays !== 1 ? "s" : ""}` : "Blocked date updated");
         setEditingId(null);
+        setOverlapConflicts([]);
+        setForceOverride(false);
+      } else if (res.status === 409 && data.overlapping) {
+        // Overlap conflict — show warning and let admin force
+        setOverlapConflicts(data.overlapping);
+        setError(data.message);
       } else {
         setError(data.message || "Failed to update blocked date");
       }
@@ -619,6 +651,48 @@ export default function BlockedDatesPage() {
               if (isEditing) {
                 return (
                   <div key={block.id} className="rounded-lg border-2 border-purple-300 bg-purple-50/30 p-4">
+                    {/* Extension indicator */}
+                    {isExtending && (
+                      <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded-lg flex items-center gap-2 text-sm text-blue-700">
+                        <Calendar className="h-4 w-4 shrink-0" />
+                        <span>
+                          <strong>Extending trip</strong> — end date moves from{" "}
+                          <span className="line-through">{new Date(editOriginalEndDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric" })}</span>
+                          {" → "}
+                          <strong>{new Date(editEndDate + "T12:00:00").toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</strong>
+                          {" "}(+{extensionDays} day{extensionDays !== 1 ? "s" : ""})
+                        </span>
+                      </div>
+                    )}
+
+                    {/* Overlap warning */}
+                    {overlapConflicts.length > 0 && (
+                      <div className="mb-3 p-3 bg-amber-50 border border-amber-300 rounded-lg">
+                        <div className="flex items-start gap-2 text-sm text-amber-800">
+                          <AlertTriangle className="h-4 w-4 shrink-0 mt-0.5" />
+                          <div>
+                            <strong>Overlap conflict{overlapConflicts.length > 1 ? "s" : ""} detected:</strong>
+                            <ul className="mt-1 space-y-1">
+                              {overlapConflicts.map((c) => (
+                                <li key={c.id} className="text-xs">
+                                  {c.start_date} → {c.end_date}{c.reason ? ` (${c.reason})` : ""}
+                                </li>
+                              ))}
+                            </ul>
+                            <label className="flex items-center gap-2 mt-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={forceOverride}
+                                onChange={(e) => setForceOverride(e.target.checked)}
+                                className="rounded border-amber-400"
+                              />
+                              <span className="text-xs font-medium">Force override — save anyway</span>
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
                         <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">Vehicle</label>
@@ -641,11 +715,14 @@ export default function BlockedDatesPage() {
                         />
                       </div>
                       <div>
-                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">End Date</label>
+                        <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">
+                          End Date
+                          {isExtending && <span className="ml-1 text-blue-600 normal-case font-normal">(extending)</span>}
+                        </label>
                         <DatePicker
                           value={editEndDate}
                           min={editStartDate}
-                          onChange={(val) => setEditEndDate(val)}
+                          onChange={(val) => { setEditEndDate(val); setOverlapConflicts([]); setForceOverride(false); }}
                         />
                       </div>
                       <div>
@@ -692,9 +769,11 @@ export default function BlockedDatesPage() {
                       </div>
                     </div>
                     <div className="flex items-center gap-2 mt-3">
-                      <Button onClick={handleSaveEdit} disabled={savingEdit} size="sm">
+                      <Button onClick={handleSaveEdit} disabled={savingEdit || (overlapConflicts.length > 0 && !forceOverride)} size="sm">
                         {savingEdit ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : isExtending ? (
+                          <><Calendar className="h-4 w-4 mr-1" /> Extend Trip</>
                         ) : (
                           <><Save className="h-4 w-4 mr-1" /> Save</>
                         )}
@@ -747,6 +826,15 @@ export default function BlockedDatesPage() {
                       <span className="text-xs text-gray-500 max-w-[200px] truncate hidden sm:inline" title={block.reason}>
                         {block.reason}
                       </span>
+                    )}
+                    {block.is_extension && (
+                      <Badge
+                        variant="outline"
+                        className="text-blue-700 border-blue-300 bg-blue-50 text-[10px]"
+                        title={block.original_end_date ? `Originally ended ${block.original_end_date}` : "Trip was extended"}
+                      >
+                        Extended
+                      </Badge>
                     )}
                     <Badge
                       variant="outline"

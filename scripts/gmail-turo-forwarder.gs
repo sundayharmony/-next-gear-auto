@@ -28,7 +28,7 @@ const WEBHOOK_SECRET = "PASTE_YOUR_SECRET_HERE"; // Must match TURO_WEBHOOK_SECR
 
 // Gmail search query for Turo booking emails
 // Adjust if Turo uses a different sender address for your account
-const TURO_SEARCH_QUERY = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) subject:(trip OR booking OR reservation OR confirmed) -label:NGA-Processed';
+const TURO_SEARCH_QUERY = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) subject:(trip OR booking OR reservation OR confirmed OR extended OR modified OR extension OR updated) -label:NGA-Processed';
 
 // Label applied to processed emails so they're not sent again
 const PROCESSED_LABEL_NAME = "NGA-Processed";
@@ -83,7 +83,17 @@ function processNewTuroEmails() {
         if (code === 201) {
           Logger.log("SUCCESS — Blocked dates created: " + result);
         } else if (code === 200) {
-          Logger.log("SKIPPED — Already blocked: " + result);
+          // Check if it was an extension or a skip
+          try {
+            var parsed = JSON.parse(result);
+            if (parsed.action === "extended") {
+              Logger.log("EXTENDED — Trip extended: " + result);
+            } else {
+              Logger.log("SKIPPED — Already blocked: " + result);
+            }
+          } catch (e) {
+            Logger.log("SKIPPED — Already blocked: " + result);
+          }
         } else {
           Logger.log("RESPONSE " + code + ": " + result);
         }

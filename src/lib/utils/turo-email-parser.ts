@@ -21,6 +21,8 @@ export interface TuroEmailParseResult {
   returnTime: string | null; // HH:MM 24-hour format, e.g. "22:00"
   location: string | null;   // e.g. "Newark, NJ Newark Liberty International Airport"
   earnings: number | null;
+  isExtension: boolean;           // true if this is a trip extension/modification email
+  originalEndDate: string | null; // previous end date before extension, if extractable
   confidence: "high" | "medium" | "low";
   rawMatches: string[];      // Debug info showing what was matched
 }
@@ -31,6 +33,49 @@ export interface TuroEmailParseResult {
 export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   const text = stripHtml(emailText);
   const rawMatches: string[] = [];
+
+  // ── Detect extension / modification emails ──
+  let isExtension = false;
+  let originalEndDate: string | null = null;
+
+  const extensionPatterns = [
+    /trip\s+(?:has\s+been\s+)?(?:extended|modified|changed|updated)/i,
+    /(?:extended|modified|changed|updated)\s+(?:your\s+)?trip/i,
+    /extension\s+(?:confirmed|approved|accepted)/i,
+    /checkout\s+(?:date|time)\s+(?:has\s+been\s+)?(?:changed|updated|extended)/i,
+    /return\s+(?:date|time)\s+(?:has\s+been\s+)?(?:changed|updated|extended)/i,
+    /trip\s+modification/i,
+    /booking\s+(?:has\s+been\s+)?(?:modified|updated|changed)/i,
+    /new\s+(?:checkout|return|end)\s+date/i,
+  ];
+
+  for (const pattern of extensionPatterns) {
+    if (pattern.test(text)) {
+      isExtension = true;
+      rawMatches.push(`Extension detected: "${text.match(pattern)?.[0]}"`);
+      break;
+    }
+  }
+
+  // Try to extract the original end date from extension emails
+  if (isExtension) {
+    const originalDatePatterns = [
+      /(?:originally|previously)\s+(?:scheduled\s+)?(?:to\s+)?(?:end|return|checkout)\s+(?:on\s+)?(.+?)(?:\.|,|\n|$)/i,
+      /(?:original|previous)\s+(?:end|return|checkout)\s+date\s*[:–—-]\s*(.+?)(?:\n|$)/i,
+      /(?:was|were)\s+(?:scheduled\s+)?(?:from\s+.+?\s+)?(?:to|until|through)\s+(.+?)(?:\.|,|\n|Now|$)/i,
+      /(?:changed|extended|moved)\s+from\s+.+?\s+to\s+(.+?)(?:\s+to\s+|\.|,|\n|$)/i,
+    ];
+    for (const pattern of originalDatePatterns) {
+      const match = text.match(pattern);
+      if (match) {
+        originalEndDate = parseFlexibleDate(match[1]);
+        if (originalEndDate) {
+          rawMatches.push(`Original end date: "${originalEndDate}"`);
+          break;
+        }
+      }
+    }
+  }
 
   // ── Extract pickup/return times ──
   let pickupTime: string | null = null;
@@ -289,6 +334,8 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
     returnTime,
     location,
     earnings,
+    isExtension,
+    originalEndDate,
     confidence,
     rawMatches,
   };
