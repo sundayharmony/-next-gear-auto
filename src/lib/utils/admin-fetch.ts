@@ -13,6 +13,11 @@ import { getCsrfToken } from "./csrf-fetch";
 const MAX_RETRIES = 1; // Maximum retry attempts to prevent infinite loops
 
 export async function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
+  // Validate URL to prevent open redirect/SSRF: must start with "/"
+  if (!url.startsWith("/")) {
+    throw new Error("Invalid URL: must be a relative path starting with /");
+  }
+
   const headers = new Headers(options.headers || {});
 
   // Add timeout to fetch if not already provided

@@ -57,7 +57,8 @@ export function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+    .replace(/'/g, "&#39;")
+    .replace(/`/g, "&#96;");
 }
 
 /** Escape HTML entities and strip CRLF (for SMTP header injection prevention) */

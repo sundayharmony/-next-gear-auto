@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 /**
  * Shared hook for auto-dismissing error/success toast state.
@@ -12,18 +12,24 @@ import { useState, useEffect } from "react";
 export function useAutoToast(errorTimeout = 5000, successTimeout = 3000) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const errorTimeoutRef = useRef<NodeJS.Timeout>();
+  const successTimeoutRef = useRef<NodeJS.Timeout>();
 
   useEffect(() => {
     if (error) {
-      const t = setTimeout(() => setError(null), errorTimeout);
-      return () => clearTimeout(t);
+      errorTimeoutRef.current = setTimeout(() => setError(null), errorTimeout);
+      return () => {
+        if (errorTimeoutRef.current) clearTimeout(errorTimeoutRef.current);
+      };
     }
   }, [error, errorTimeout]);
 
   useEffect(() => {
     if (success) {
-      const t = setTimeout(() => setSuccess(null), successTimeout);
-      return () => clearTimeout(t);
+      successTimeoutRef.current = setTimeout(() => setSuccess(null), successTimeout);
+      return () => {
+        if (successTimeoutRef.current) clearTimeout(successTimeoutRef.current);
+      };
     }
   }, [success, successTimeout]);
 

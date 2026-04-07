@@ -68,7 +68,7 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
   const [error, setError] = useState<string | null>(null);
 
   // Filter to locations with coordinates and valid ranges
-  const mappableLocations = locations.filter(l => l.lat != null && l.lng != null && l.lat >= -90 && l.lat <= 90 && l.lng >= -180 && l.lng <= 180);
+  const mappableLocations = locations.filter(l => l.lat != null && l.lng != null && !isNaN(l.lat) && !isNaN(l.lng) && l.lat >= -90 && l.lat <= 90 && l.lng >= -180 && l.lng <= 180);
 
   // Initialize map
   useEffect(() => {

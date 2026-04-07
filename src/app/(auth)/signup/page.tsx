@@ -34,7 +34,7 @@ export default function SignupPage() {
     const hasUpper = /[A-Z]/.test(pw);
     const hasLower = /[a-z]/.test(pw);
     const hasNum = /[0-9]/.test(pw);
-    const hasSpecial = /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(pw);
+    const hasSpecial = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?`~]/.test(pw);
     if (hasUpper && hasLower && hasNum && hasSpecial)
       return { label: "Strong", color: "bg-green-500", width: "w-full" };
     return { label: "Good", color: "bg-blue-500", width: "w-3/4" };
@@ -50,7 +50,7 @@ export default function SignupPage() {
     if (!formData.email.trim()) { setLocalError("Please enter your email"); return; }
     if (!formData.phone.trim()) { setLocalError("Please enter your phone number"); return; }
     if (formData.password.length < 12) { setLocalError("Password must be at least 12 characters"); return; }
-    if (!/[A-Z]/.test(formData.password) || !/[a-z]/.test(formData.password) || !/[0-9]/.test(formData.password) || !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?`~]/.test(formData.password)) {
+    if (!/[A-Z]/.test(formData.password) || !/[a-z]/.test(formData.password) || !/[0-9]/.test(formData.password) || !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>/?`~]/.test(formData.password)) {
       setLocalError("Password must contain uppercase, lowercase, number, and special character");
       return;
     }

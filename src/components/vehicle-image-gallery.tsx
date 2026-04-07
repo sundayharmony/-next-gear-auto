@@ -38,10 +38,12 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
   }, [lightboxOpen]);
 
   const goNext = () => {
+    if (images.length <= 1) return;
     setActiveIndex((prev) => (prev + 1) % images.length);
   };
 
   const goPrev = () => {
+    if (images.length <= 1) return;
     setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
   };
 

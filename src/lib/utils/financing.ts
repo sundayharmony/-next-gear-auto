@@ -64,7 +64,11 @@ export function calculateFinancing(
 
   const monthlyPayment = vehicle.monthlyPayment;
   const rawDay = Number(vehicle.paymentDayOfMonth) || 1;
-  const paymentDay = Math.min(Math.max(rawDay, 1), 31);
+  // Validate rawDay is between 1-31, throw error if outside range
+  if (rawDay < 1 || rawDay > 31) {
+    throw new Error(`Invalid payment day: ${rawDay}. Must be between 1 and 31.`);
+  }
+  const paymentDay = rawDay;
   const purchasePrice = vehicle.purchasePrice ?? 0;
   if (purchasePrice < 0) return null;
 

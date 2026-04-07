@@ -38,7 +38,11 @@ function serializeContext(context: unknown): string {
   }
   try {
     return JSON.stringify(context);
-  } catch {
+  } catch (e) {
+    // Handle circular references and other serialization errors
+    if (e instanceof TypeError && e.message.includes("circular")) {
+      return "[Circular]";
+    }
     return String(context);
   }
 }

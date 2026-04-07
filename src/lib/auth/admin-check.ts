@@ -55,6 +55,19 @@ export async function verifyAdmin(
     };
   }
 
+  // Validate adminId format: UUID or email
+  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
+  if (!uuidRegex.test(adminId) && !emailRegex.test(adminId)) {
+    return {
+      authorized: false,
+      response: NextResponse.json(
+        { success: false, message: "Unauthorized" },
+        { status: 403 }
+      ),
+    };
+  }
+
   try {
     const supabase = getServiceSupabase();
     const { data: admin, error } = await supabase

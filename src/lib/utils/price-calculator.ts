@@ -38,6 +38,9 @@ export function calculateRentalDays(pickupDate: string, returnDate: string): num
  *   Total: $135.98  (vs $147 without discount)
  */
 export function calculateBaseRate(days: number, dailyRate: number): { total: number; discount: number } {
+  if (dailyRate <= 0) {
+    throw new Error("dailyRate must be greater than 0");
+  }
   if (days <= 1) {
     return { total: dailyRate, discount: 0 };
   }
@@ -137,7 +140,7 @@ export function applyDiscount(
     ? roundCents(pricing.subtotal * (discount.discountValue / 100))
     : Math.min(discount.discountValue, pricing.subtotal);
 
-  const discountedSubtotal = pricing.subtotal - discountAmount;
+  const discountedSubtotal = Math.max(0, pricing.subtotal - discountAmount);
   const tax = roundCents(discountedSubtotal * TAX_RATE);
   const total = discountedSubtotal + tax;
 

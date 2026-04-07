@@ -41,6 +41,7 @@ function FleetContent() {
   }, [categoryParam]);
 
   const filteredVehicles = useMemo(() => {
+    // Filter first
     let result = vehicles;
 
     if (activeCategory !== "all") {
@@ -61,15 +62,16 @@ function FleetContent() {
       );
     }
 
+    // Then sort
     switch (sortBy) {
       case "price-low":
-        result = [...result].sort((a, b) => a.dailyRate - b.dailyRate);
+        result.sort((a, b) => a.dailyRate - b.dailyRate);
         break;
       case "price-high":
-        result = [...result].sort((a, b) => b.dailyRate - a.dailyRate);
+        result.sort((a, b) => b.dailyRate - a.dailyRate);
         break;
       case "name":
-        result = [...result].sort((a, b) => getVehicleDisplayName(a).localeCompare(getVehicleDisplayName(b)));
+        result.sort((a, b) => getVehicleDisplayName(a).localeCompare(getVehicleDisplayName(b)));
         break;
     }
 

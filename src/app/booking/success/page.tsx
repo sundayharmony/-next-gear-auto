@@ -40,6 +40,8 @@ function SuccessContent() {
     if (!bookingId) {
       setLoading(false);
       setFetchError(true);
+    } else {
+      setLoading(false);
     }
   }, [bookingId]);
 

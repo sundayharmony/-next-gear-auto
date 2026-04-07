@@ -97,7 +97,12 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
     const { payload } = await jwtVerify(token, getSecret(), {
       issuer: "nextgearauto",
     });
-    return payload as TokenPayload;
+    const typed = payload as TokenPayload;
+    // Validate role is one of the expected values
+    if (typed.role !== "admin" && typed.role !== "customer") {
+      return null;
+    }
+    return typed;
   } catch {
     return null;
   }

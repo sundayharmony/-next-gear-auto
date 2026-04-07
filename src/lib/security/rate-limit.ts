@@ -53,6 +53,11 @@ export function createRateLimiter(options: RateLimiterOptions) {
     check(identifier: string): RateLimitResult {
       cleanup();
 
+      // Prevent memory leaks: if store exceeds 10000 entries, clear it
+      if (store.size > 10000) {
+        store.clear();
+      }
+
       const now = Date.now();
       const entry = store.get(identifier);
 
@@ -149,8 +154,14 @@ export function getClientIp(req: Request): string {
     const forwarded = headers.get("x-forwarded-for");
     if (forwarded) {
       const ip = forwarded.split(",")[0].trim();
-      // Basic validation: should look like an IP address
-      if (/^[\d.]+$/.test(ip) || /^[a-f0-9:]+$/.test(ip)) {
+      // Strict IPv4 validation: each octet must be 0-255
+      const ipv4Regex = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/;
+      const ipv6Regex = /^[a-f0-9:]+$/i;
+      const ipv4Match = ipv4Regex.exec(ip);
+      if (ipv4Match && ipv4Match.slice(1).every(octet => parseInt(octet, 10) <= 255)) {
+        return ip;
+      }
+      if (ipv6Regex.test(ip)) {
         return ip;
       }
     }

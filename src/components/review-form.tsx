@@ -189,7 +189,7 @@ export function ReviewForm({
 
         <Button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !rating || !text.trim() || !customerName.trim()}
           className="w-full gap-2"
         >
           {submitting ? (

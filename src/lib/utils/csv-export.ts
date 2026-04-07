@@ -15,8 +15,8 @@ function escapeCSVValue(value: unknown): string {
 
   const stringValue = String(value);
 
-  // Prevent formula injection: prefix with single quote if value starts with =, +, -, or @
-  if (stringValue.startsWith("=") || stringValue.startsWith("+") || stringValue.startsWith("-") || stringValue.startsWith("@")) {
+  // Prevent formula injection: prefix with single quote if value starts with =, +, -, @, or tab
+  if (stringValue.startsWith("=") || stringValue.startsWith("+") || stringValue.startsWith("-") || stringValue.startsWith("@") || stringValue.startsWith("\t")) {
     return `'${stringValue}`;
   }
 
@@ -80,7 +80,9 @@ export function downloadCSV(csvContent: string, filename: string): void {
 
   // Cleanup
   document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 0);
 }
 
 /**

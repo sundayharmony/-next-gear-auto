@@ -10,7 +10,12 @@ function parseLocalDate(dateStr: string): Date {
   if (parts.length !== 3) return new Date(NaN);
   const [y, m, d] = parts.map(Number);
   // Use local time constructor so "2026-04-03" displays as Apr 3 in the user's timezone
-  return new Date(y, m - 1, d, 0, 0, 0, 0);
+  const date = new Date(y, m - 1, d, 0, 0, 0, 0);
+  // Validate that the resulting date's month matches the input (catches invalid dates like Feb 30 wrapping to Mar 2)
+  if (date.getMonth() !== m - 1) {
+    return new Date(NaN);
+  }
+  return date;
 }
 
 export function formatDate(dateStr: string | null | undefined): string {

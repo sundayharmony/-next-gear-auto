@@ -81,13 +81,14 @@ async function sendMailWithRetry(
       return;
     } catch (error) {
       lastError = error instanceof Error ? error : new Error(String(error));
+      const errorCode = (error as any)?.code || lastError.message;
       const isTransient =
-        lastError.message.includes("ECONNREFUSED") ||
-        lastError.message.includes("ETIMEDOUT") ||
-        lastError.message.includes("EHOSTUNREACH") ||
-        lastError.message.includes("421") ||
-        lastError.message.includes("450") ||
-        lastError.message.includes("451");
+        errorCode === "ECONNREFUSED" ||
+        errorCode === "ETIMEDOUT" ||
+        errorCode === "EHOSTUNREACH" ||
+        errorCode === "421" ||
+        errorCode === "450" ||
+        errorCode === "451";
       if (!isTransient || attempt === maxRetries) {
         throw lastError;
       }
@@ -269,7 +270,7 @@ function agreementEmailTemplate(data: BookingEmailData): string {
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta http-equiv="Content-Language" content="en"></head>
 <body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;">
 <tr><td align="center" style="padding:40px 16px;">

@@ -82,7 +82,10 @@ export default function LoginPage() {
                     type="email"
                     placeholder="you@example.com"
                     value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      setLocalError("");
+                    }}
                     className="pl-10"
                     autoComplete="email"
                   />
@@ -101,7 +104,10 @@ export default function LoginPage() {
                     type={showPassword ? "text" : "password"}
                     placeholder="Enter your password"
                     value={password}
-                    onChange={(e) => setPassword(e.target.value)}
+                    onChange={(e) => {
+                      setPassword(e.target.value);
+                      setLocalError("");
+                    }}
                     className="pl-10 pr-10"
                     autoComplete="current-password"
                   />

@@ -72,7 +72,7 @@ export async function compressImage(
                   return;
                 }
                 const ext = outputType === "image/png" ? ".png" : ".jpg";
-                const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_\-. ]/g, "_").replace(/_{2,}/g, "_").trim();
+                const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[\/\\]/g, "_").replace(/[^a-zA-Z0-9_\-. ]/g, "_").replace(/_{2,}/g, "_").trim();
                 const newName = (baseName || "image") + ext;
                 resolve(new File([blob2], newName, { type: outputType }));
               },
@@ -83,8 +83,8 @@ export async function compressImage(
           }
 
           const ext = outputType === "image/png" ? ".png" : ".jpg";
-          const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[^a-zA-Z0-9_\-. ]/g, "_").replace(/_{2,}/g, "_").trim();
-                const newName = (baseName || "image") + ext;
+          const baseName = file.name.replace(/\.[^.]+$/, "").replace(/[\/\\]/g, "_").replace(/[^a-zA-Z0-9_\-. ]/g, "_").replace(/_{2,}/g, "_").trim();
+          const newName = (baseName || "image") + ext;
           resolve(new File([blob], newName, { type: outputType }));
         },
         outputType,

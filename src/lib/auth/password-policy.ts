@@ -11,7 +11,7 @@ export interface PasswordValidationResult {
 const MIN_LENGTH = 12;
 
 export function validatePassword(password: string): PasswordValidationResult {
-  if (!password || password.length < MIN_LENGTH) {
+  if (!password || password == null || password.length < MIN_LENGTH) {
     return {
       valid: false,
       message: `Password must be at least ${MIN_LENGTH} characters long.`,

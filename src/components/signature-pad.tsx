@@ -107,7 +107,9 @@ export function SignaturePad({
   };
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
-    e.preventDefault();
+    if ("touches" in e) {
+      e.preventDefault();
+    }
     const pos = getPosition(e);
     lastPointRef.current = pos;
     setIsDrawing(true);
@@ -142,7 +144,10 @@ export function SignaturePad({
     if (!hasContent) setHasContent(true);
   };
 
-  const stopDrawing = () => {
+  const stopDrawing = (e?: React.MouseEvent | React.TouchEvent) => {
+    if ("touches" in e || e instanceof TouchEvent) {
+      e?.preventDefault();
+    }
     if (isDrawing && hasContent) {
       const canvas = canvasRef.current;
       if (canvas) {

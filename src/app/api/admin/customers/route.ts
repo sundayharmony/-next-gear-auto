@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (phone && typeof phone !== "string" || phone?.length > 20) {
+    if (phone && (typeof phone !== "string" || phone.length > 20)) {
       return NextResponse.json(
         { success: false, message: "Phone must be a string with max 20 characters" },
         { status: 400 }

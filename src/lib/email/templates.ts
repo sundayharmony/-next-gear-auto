@@ -30,7 +30,10 @@ function safeCssColor(value: string): string {
 /** Format "2026-03-06" → "Fri, Mar 6, 2026" */
 export function fmtDate(dateStr: string): string {
   const date = new Date(dateStr + (dateStr.includes("T") ? "" : "T00:00:00"));
-  if (isNaN(date.getTime())) return dateStr;
+  if (isNaN(date.getTime())) {
+    // Return "Invalid Date" string to indicate a problem
+    return "Invalid Date";
+  }
   return date.toLocaleDateString("en-US", {
     weekday: "short",
     year: "numeric",
@@ -43,7 +46,7 @@ export function fmtDate(dateStr: string): string {
 export function fmtTime(timeStr: string | undefined | null): string {
   if (!timeStr) return "";
   const [h, m] = timeStr.split(":").map(Number);
-  if (isNaN(h) || isNaN(m) || h < 0 || h > 23) return timeStr;
+  if (isNaN(h) || isNaN(m) || h < 0 || h > 23 || m < 0 || m > 59) return timeStr;
   const ampm = h >= 12 ? "PM" : "AM";
   return `${h % 12 || 12}:${String(m).padStart(2, "0")} ${ampm}`;
 }

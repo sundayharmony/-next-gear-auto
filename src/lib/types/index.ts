@@ -41,10 +41,10 @@ export interface Vehicle {
  */
 export function getVehicleDisplayName(v: { year?: number | string; make?: string; model?: string } | null | undefined): string {
   if (!v) return "Unknown Vehicle";
-  const year = v.year ? String(v.year).trim() : "";
+  const year = v.year !== undefined && v.year !== null ? String(v.year).trim() : "";
   const make = v.make ? String(v.make).trim() : "";
   const model = v.model ? String(v.model).trim() : "";
-  const parts = [year, make, model].filter(Boolean);
+  const parts = [year, make, model].filter(s => s !== "");
   return parts.length > 0 ? parts.join(" ") : "Unknown Vehicle";
 }
 

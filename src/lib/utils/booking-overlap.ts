@@ -29,7 +29,7 @@ export async function checkBookingOverlap(
       const existReturn = new Date(`${existing.return_date}T${existing.return_time ?? "23:59"}`);
       const gapAfterExisting = (newPickup.getTime() - existReturn.getTime()) / 60000;
       const gapAfterNew = (existPickup.getTime() - newReturn.getTime()) / 60000;
-      return gapAfterExisting < 60 && gapAfterNew < 60;
+      return gapAfterExisting < 60 || gapAfterNew < 60;
     });
 
     if (hasRealConflict) {
