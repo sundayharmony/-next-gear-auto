@@ -27,6 +27,7 @@ import {
   Calculator,
   MapPin,
   Trash2,
+  CalendarPlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,14 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     method: "stripe",
     note: "",
   });
+
+  // Extension state
+  const [showExtend, setShowExtend] = useState(false);
+  const [extendDate, setExtendDate] = useState("");
+  const [extendTime, setExtendTime] = useState("");
+  const [extendAmount, setExtendAmount] = useState("");
+  const [extending, setExtending] = useState(false);
+  const [extendResult, setExtendResult] = useState<{ paymentUrl?: string; message?: string } | null>(null);
 
   const notesTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -683,6 +692,62 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       deposit: pricing.total,
     }));
     onSuccess(`Recalculated: ${days} day${days > 1 ? "s" : ""} × $${v.dailyRate}/day = $${pricing.total.toFixed(2)}`);
+  };
+
+  // Handle extend booking
+  const handleExtendBooking = async () => {
+    if (!extendDate) {
+      onError("Please select a new return date");
+      return;
+    }
+    const amount = parseFloat(extendAmount);
+    if (isNaN(amount) || amount < 0) {
+      onError("Please enter a valid extension amount (0 or more)");
+      return;
+    }
+
+    // Validate new date is after current return date
+    if (extendDate <= booking.return_date) {
+      onError("New return date must be after the current return date");
+      return;
+    }
+
+    setExtending(true);
+    setExtendResult(null);
+    try {
+      const res = await adminFetch("/api/bookings/extend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: booking.id,
+          newReturnDate: extendDate,
+          newReturnTime: extendTime || undefined,
+          extensionAmount: amount,
+        }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onSuccess(data.message || "Booking extended successfully");
+        setExtendResult({
+          paymentUrl: data.data?.paymentUrl || undefined,
+          message: data.message,
+        });
+        // Update the booking in parent
+        onUpdateBooking({
+          ...booking,
+          return_date: extendDate,
+          return_time: extendTime || booking.return_time,
+          total_price: data.data?.newTotalPrice ?? booking.total_price,
+        });
+      } else {
+        onError(data.message || "Failed to extend booking");
+      }
+    } catch (err) {
+      onError("Failed to extend booking");
+      logger.error("Extend booking error:", err);
+    } finally {
+      setExtending(false);
+    }
   };
 
   return (
@@ -1442,6 +1507,112 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
               </div>
             )}
           </div>
+
+          {/* Extend Booking */}
+          {["confirmed", "active"].includes(booking.status) && !editMode && (
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+              <button
+                onClick={() => setShowExtend(!showExtend)}
+                className="flex items-center gap-2 text-sm font-medium text-violet-600 hover:text-violet-700"
+              >
+                <CalendarPlus className="h-4 w-4" />
+                Extend Booking
+                {showExtend ? <ChevronUp className="h-3 w-3" /> : <ChevronDown className="h-3 w-3" />}
+              </button>
+
+              {showExtend && (
+                <div className="mt-3 space-y-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg p-4">
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    Current return: <span className="font-medium text-gray-700 dark:text-gray-200">{formatDate(booking.return_date)}</span>
+                    {booking.return_time && ` at ${formatTime(booking.return_time)}`}
+                  </p>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">New Return Date</label>
+                    <input
+                      type="date"
+                      value={extendDate}
+                      min={booking.return_date}
+                      onChange={(e) => setExtendDate(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">New Return Time (optional)</label>
+                    <input
+                      type="time"
+                      value={extendTime}
+                      onChange={(e) => setExtendTime(e.target.value)}
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Extension Charge ($)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={extendAmount}
+                      onChange={(e) => setExtendAmount(e.target.value)}
+                      placeholder="0.00"
+                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm"
+                    />
+                    <p className="text-xs text-gray-400 mt-1">Enter 0 for a free extension</p>
+                  </div>
+
+                  {extendDate && extendDate > booking.return_date && (
+                    <div className="bg-white dark:bg-gray-800 rounded-md p-3 text-xs space-y-1">
+                      <p className="text-gray-600 dark:text-gray-300">
+                        Extension: <span className="font-medium">{Math.ceil((new Date(extendDate + "T00:00:00").getTime() - new Date(booking.return_date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))} day(s)</span>
+                      </p>
+                      <p className="text-gray-600 dark:text-gray-300">
+                        Additional charge: <span className="font-medium text-violet-600">${parseFloat(extendAmount || "0").toFixed(2)}</span>
+                      </p>
+                      <p className="text-gray-600 dark:text-gray-300">
+                        New total: <span className="font-medium">${(Number(booking.total_price) + parseFloat(extendAmount || "0")).toFixed(2)}</span>
+                      </p>
+                    </div>
+                  )}
+
+                  <div className="flex gap-2">
+                    <button
+                      onClick={handleExtendBooking}
+                      disabled={extending || !extendDate}
+                      className="flex-1 rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {extending ? "Extending..." : "Extend & Send Payment Link"}
+                    </button>
+                    <button
+                      onClick={() => { setShowExtend(false); setExtendResult(null); }}
+                      className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+
+                  {extendResult && (
+                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3">
+                      <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                        {extendResult.message || "Booking extended!"}
+                      </p>
+                      {extendResult.paymentUrl && (
+                        <a
+                          href={extendResult.paymentUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="mt-2 inline-block text-xs text-violet-600 hover:text-violet-700 underline"
+                        >
+                          View payment link →
+                        </a>
+                      )}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Admin Notes */}
           <div className="space-y-2">

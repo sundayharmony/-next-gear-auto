@@ -19,6 +19,20 @@ interface EmailData {
   returnLocationName?: string;
 }
 
+interface ExtensionEmailData {
+  bookingId: string;
+  customerName: string;
+  vehicleName: string;
+  pickupDate: string;
+  originalReturnDate: string;
+  newReturnDate: string;
+  newReturnTime?: string;
+  extensionDays: number;
+  extensionAmount: number;
+  newTotalPrice: number;
+  paymentLink?: string;
+}
+
 /** Sanitize CSS color values to prevent injection */
 function safeCssColor(value: string): string {
   // Allow hex colors, named colors, rgb/rgba/hsl, and linear-gradient
@@ -532,6 +546,56 @@ export function passwordResetTemplate(data: { customerName: string; customerEmai
           </tr>
         </table>
         <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">This link expires in 48 hours. If you didn't request this, you can safely ignore this email.</p>
+      </td>
+    </tr>
+  `);
+}
+
+export function bookingExtendedTemplate(data: ExtensionEmailData): string {
+  if (!data || !data.customerName || !data.bookingId || !data.vehicleName) {
+    throw new Error("Invalid email data: missing required fields");
+  }
+  const paymentRequired = data.extensionAmount > 0;
+  const dayLabel = data.extensionDays === 1 ? "day" : "days";
+
+  return wrapEmail(`
+    ${headerBlock('Trip Extended', 'Your rental has been extended', '#7C3AED', '#5B21B6')}
+    <tr>
+      <td style="padding: 32px 32px 0;">
+        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escapeHtml(data.customerName)},</p>
+        <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Great news! Your trip has been extended.</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 20px 32px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
+          <tr>
+            <td style="padding: 20px 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${detailRow('Vehicle', escapeHtml(data.vehicleName), true)}
+                ${detailRow('Pick-up', fmtDate(data.pickupDate))}
+                ${detailRow('Original Return', `<span style="text-decoration: line-through; color: #9ca3af;">${fmtDate(data.originalReturnDate)}</span>`, false)}
+                ${detailRow('New Return', `<span style="color: #7C3AED; font-weight: 700;">${fmtDate(data.newReturnDate)}${data.newReturnTime ? ' at ' + fmtTime(data.newReturnTime) : ''}</span>`, false)}
+                <tr style="border-bottom: 2px solid #e5e7eb;"><td colspan="2" style="height: 12px;"></td></tr>
+                ${detailRow('Extension', `${data.extensionDays} ${dayLabel}`, true)}
+                ${detailRow('Additional Charge', paymentRequired ? `$${data.extensionAmount.toFixed(2)}` : 'No additional charge', false)}
+                ${detailRow('Updated Total', `$${data.newTotalPrice.toFixed(2)}`, true)}
+              </table>
+            </td>
+          </tr>
+        </table>
+        ${paymentRequired && data.paymentLink ? `
+        ${ctaButton('Complete Payment', data.paymentLink, '#7C3AED')}
+        ` : !paymentRequired ? `
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 28px 0 8px;">
+          <tr>
+            <td align="center" style="padding: 16px 20px; background: #f0fdf4; border-radius: 10px; border: 1px solid #bbf7d0;">
+              <p style="margin: 0; color: #15803d; font-size: 14px; font-weight: 600;">No payment required</p>
+            </td>
+          </tr>
+        </table>
+        ` : ''}
+        <p style="margin: 20px 0 0; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">If you have any questions, contact us at (551) 429-3472</p>
       </td>
     </tr>
   `);

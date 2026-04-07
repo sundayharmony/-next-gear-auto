@@ -10,6 +10,7 @@ import {
   returnReminderTemplate,
   passwordResetTemplate,
   bookingSignAgreementTemplate,
+  bookingExtendedTemplate,
   fmtDate,
   fmtTime,
 } from "./templates";
@@ -365,6 +366,43 @@ export async function sendPasswordResetLink(data: { customerName: string; custom
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error("Failed to send password reset link:", errorMsg);
+    throw error;
+  }
+}
+
+interface ExtensionEmailData {
+  bookingId: string;
+  customerName: string;
+  vehicleName: string;
+  pickupDate: string;
+  originalReturnDate: string;
+  newReturnDate: string;
+  newReturnTime?: string;
+  extensionDays: number;
+  extensionAmount: number;
+  newTotalPrice: number;
+  paymentLink?: string;
+}
+
+export async function sendBookingExtended(data: ExtensionEmailData & { customerEmail: string }) {
+  try {
+    const transporter = getTransporter();
+    const html = bookingExtendedTemplate(data);
+    const subject = `Trip Extended – ${escapeHtml(data.vehicleName)} (${data.extensionDays} extra day${data.extensionDays > 1 ? "s" : ""})`;
+
+    await sendMailWithRetry(transporter, {
+      from: FROM_CUSTOMER,
+      to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
+      subject,
+      html,
+      text: stripHtmlTags(html),
+      headers: { "Content-Language": "en-US" },
+    });
+    logger.info("Booking extended email sent successfully");
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send booking extended email:", errorMsg);
     throw error;
   }
 }
