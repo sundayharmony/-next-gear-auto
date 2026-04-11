@@ -192,9 +192,9 @@ export async function PUT(request: NextRequest) {
     if (updates.maintenanceStatus !== undefined) dbUpdates.maintenance_status = updates.maintenanceStatus;
     if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;
     if (updates.isFinanced !== undefined) dbUpdates.is_financed = updates.isFinanced;
-    if (updates.monthlyPayment !== undefined) dbUpdates.monthly_payment = updates.monthlyPayment;
-    if (updates.paymentDayOfMonth !== undefined) dbUpdates.payment_day_of_month = updates.paymentDayOfMonth;
-    if (updates.financingStartDate !== undefined) dbUpdates.financing_start_date = updates.financingStartDate;
+    if (updates.monthlyPayment !== undefined) dbU_pricepdates.monthly_payment = updates.monthlyPayment;
+    if (updates.paymentDayOfMonth !== undefined)_financed dbUpdates.payment_day_of_month = updates.paymentDayOfMonth;
+    if (updates.financingStartDate !== undefined)_payment dbUpdates.financing_start_date = updates.financingStartDate;
 
     const { error } = await supabase
       .from("vehicles")
