@@ -3,6 +3,14 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 
+function isValidVehicleId(id: unknown): id is string {
+  if (typeof id !== "string") return false;
+  const trimmed = id.trim();
+  if (!trimmed) return false;
+  // Support both legacy IDs (e.g. "v1", "v177...") and UUID IDs.
+  return /^[A-Za-z0-9_-]{1,80}$/.test(trimmed);
+}
+
 // GET: List all vehicles from Supabase
 export async function GET(req: NextRequest) {
   const auth = await verifyAdmin(req);
@@ -141,10 +149,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Vehicle ID required" }, { status: 400 });
     }
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(id)) {
-      return NextResponse.json({ success: false, message: "Invalid vehicle ID format" }, { status: 400 });
+    if (!isValidVehicleId(id)) {
+      return NextResponse.json({ success: false, message: "Invalid vehicle ID" }, { status: 400 });
     }
 
     // Server-side validation for updates
@@ -225,10 +231,8 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Vehicle ID required" }, { status: 400 });
     }
 
-    // Validate UUID format
-    const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!uuidRegex.test(id)) {
-      return NextResponse.json({ success: false, message: "Invalid vehicle ID format" }, { status: 400 });
+    if (!isValidVehicleId(id)) {
+      return NextResponse.json({ success: false, message: "Invalid vehicle ID" }, { status: 400 });
     }
 
     // Fetch vehicle first to get image URLs for storage cleanup
