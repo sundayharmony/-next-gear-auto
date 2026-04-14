@@ -337,9 +337,29 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       const data = await res.json();
 
       if (data.success && data.data?.sessionUrl) {
-        // Validate Stripe URL before redirecting
-        const stripeUrl = data.data.sessionUrl;
-        if (!stripeUrl.startsWith("https://checkout.stripe.com")) {
+        const sessionUrl = String(data.data.sessionUrl);
+        let parsedUrl: URL;
+        try {
+          parsedUrl = new URL(sessionUrl);
+        } catch {
+          dispatch({
+            type: "SUBMIT_ERROR",
+            payload: "Invalid checkout URL. Please try again.",
+          });
+          return;
+        }
+
+        // Accept Stripe-hosted checkout URLs and same-origin success URLs
+        // (used for zero-dollar bookings that skip Stripe).
+        const isStripeCheckout =
+          parsedUrl.protocol === "https:" &&
+          (parsedUrl.hostname === "checkout.stripe.com" ||
+            parsedUrl.hostname === "pay.stripe.com");
+        const isSameOriginSuccess =
+          typeof window !== "undefined" &&
+          parsedUrl.origin === window.location.origin;
+
+        if (!isStripeCheckout && !isSameOriginSuccess) {
           dispatch({
             type: "SUBMIT_ERROR",
             payload: "Invalid checkout URL. Please try again.",
@@ -354,13 +374,13 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
               `nga_agreement_sigs_${data.data.bookingId}`,
               JSON.stringify(state.agreementSignatures)
             );
-          } catch (e) {
-            logger.warn("Failed to save agreement signatures to localStorage:", e);
+          } catch (error: unknown) {
+            logger.warn("Failed to save agreement signatures to localStorage:", error);
           }
         }
         // Redirect to Stripe Checkout hosted page
         dispatch({ type: "SUBMIT_SUCCESS", payload: data.data.bookingId });
-        window.location.href = stripeUrl;
+        window.location.href = sessionUrl;
       } else {
         dispatch({
           type: "SUBMIT_ERROR",

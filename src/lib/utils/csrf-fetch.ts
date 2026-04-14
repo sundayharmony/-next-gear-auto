@@ -44,9 +44,24 @@ export async function csrfFetch(url: string, options: RequestInit = {}): Promise
 
   // Retry with refreshed CSRF token on 403 (token might have expired)
   if (response.status === 403) {
-    const newCsrf = getCsrfToken();
-    if (newCsrf && newCsrf !== csrf) {
-      // Token was refreshed, retry the request
+    let newCsrf = getCsrfToken();
+
+    // Fresh mobile/webview sessions may have no CSRF cookie yet.
+    // Hit a lightweight API GET once to let proxy set the cookie, then retry.
+    if (!newCsrf || newCsrf === csrf) {
+      try {
+        await fetch("/api/vehicles?limit=1", {
+          method: "GET",
+          credentials: "same-origin",
+          cache: "no-store",
+        });
+      } catch {
+        // Ignore bootstrap failure; we'll still try with whatever token exists.
+      }
+      newCsrf = getCsrfToken();
+    }
+
+    if (newCsrf) {
       const retryHeaders = new Headers(options.headers || {});
       retryHeaders.set("x-csrf-token", newCsrf);
       response = await fetch(url, {
