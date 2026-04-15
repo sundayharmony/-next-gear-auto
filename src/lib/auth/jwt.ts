@@ -10,12 +10,13 @@
 
 import { SignJWT, jwtVerify, type JWTPayload } from "jose";
 import { NextRequest, NextResponse } from "next/server";
+import { isAppRole, type AppRole } from "@/lib/auth/roles";
 
 // ─── Types ───────────────────────────────────────────────────────────
 
 export interface TokenPayload extends JWTPayload {
   sub: string;       // user ID
-  role: "admin" | "customer";
+  role: AppRole;
   email: string;
   type?: string;
 }
@@ -58,7 +59,7 @@ function getSecret(): Uint8Array {
 
 export async function createAccessToken(payload: {
   userId: string;
-  role: "admin" | "customer";
+  role: AppRole;
   email: string;
 }): Promise<string> {
   return new SignJWT({
@@ -75,7 +76,7 @@ export async function createAccessToken(payload: {
 
 export async function createRefreshToken(payload: {
   userId: string;
-  role: "admin" | "customer";
+  role: AppRole;
   email: string;
 }): Promise<string> {
   return new SignJWT({
@@ -100,7 +101,7 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
     });
     const typed = payload as TokenPayload;
     // Validate role is one of the expected values
-    if (typed.role !== "admin" && typed.role !== "customer") {
+    if (!isAppRole(typed.role)) {
       return null;
     }
     return typed;

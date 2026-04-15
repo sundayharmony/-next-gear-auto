@@ -6,6 +6,7 @@ import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rat
 import { logger } from "@/lib/utils/logger";
 import { validatePasswordToken } from "@/lib/auth/password-token";
 import { createAccessToken, createRefreshToken, setAuthCookies } from "@/lib/auth/jwt";
+import { isAppRole } from "@/lib/auth/roles";
 
 export async function POST(request: Request) {
   try {
@@ -110,7 +111,7 @@ export async function POST(request: Request) {
     };
 
     // Issue JWT tokens so user is logged in automatically
-    const customerRole = (customer.role || "customer") as "admin" | "customer";
+    const customerRole = isAppRole(customer.role) ? customer.role : "customer";
     const accessToken = await createAccessToken({ userId: customer.id, role: customerRole, email: customer.email });
     const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
 

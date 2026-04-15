@@ -798,6 +798,9 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             <div>
               <p className="text-xs text-gray-500 font-mono mb-1">Booking ID</p>
               <p className="font-mono text-sm">{booking.id}</p>
+              <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-1">
+                Origin: {booking.origin_channel === "manager_panel" ? "Manager Panel" : booking.origin_channel === "admin_panel" ? "Admin Panel" : booking.origin_channel === "public_checkout" ? "Public Checkout" : "Unknown"}
+              </p>
             </div>
             <div>
               <Badge className={statusColors[booking.status] || ""}>

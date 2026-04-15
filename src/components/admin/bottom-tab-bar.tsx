@@ -11,6 +11,8 @@ import {
 import { Instagram } from "@/components/icons/instagram";
 import { useTheme } from "@/lib/context/theme-context";
 import { cn } from "@/lib/utils/cn";
+import { getAdminNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
+import { featureFlags } from "@/lib/config/feature-flags";
 
 interface TabItem {
   href: string;
@@ -18,24 +20,41 @@ interface TabItem {
   icon: React.ComponentType<{ className?: string }>;
 }
 
-const PRIMARY_TABS: TabItem[] = [
-  { href: "/admin", label: "Home", icon: LayoutDashboard },
-  { href: "/admin/bookings", label: "Bookings", icon: Calendar },
-  { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/admin/vehicles", label: "Fleet", icon: Car },
-];
+const iconComponentMap: Record<PanelIconKey, React.ComponentType<{ className?: string }>> = {
+  dashboard: LayoutDashboard,
+  calendarDays: CalendarDays,
+  calendar: Calendar,
+  car: Car,
+  shieldBan: ShieldBan,
+  wrench: Wrench,
+  mapPin: MapPin,
+  dollarSign: DollarSign,
+  ticket: Ticket,
+  users: Users,
+  tag: Tag,
+  star: Star,
+  instagram: Instagram,
+  clipboard: MoreHorizontal,
+};
 
-const MORE_ITEMS: TabItem[] = [
-  { href: "/admin/customers", label: "Customers", icon: Users },
-  { href: "/admin/finances", label: "Finances", icon: DollarSign },
-  { href: "/admin/maintenance", label: "Maintenance", icon: Wrench },
-  { href: "/admin/locations", label: "Locations", icon: MapPin },
-  { href: "/admin/tickets", label: "Tickets", icon: Ticket },
-  { href: "/admin/blocked-dates", label: "Blocked Dates", icon: ShieldBan },
-  { href: "/admin/promo-codes", label: "Promo Codes", icon: Tag },
-  { href: "/admin/reviews", label: "Reviews", icon: Star },
-  { href: "/admin/instagram", label: "Instagram", icon: Instagram },
-];
+const adminNavItems = getAdminNavItems().filter((item) => item.key !== "managers" || featureFlags.adminManagerAccessUi());
+
+const PRIMARY_TAB_KEYS = new Set(["dashboard", "bookings", "calendar", "vehicles"]);
+const PRIMARY_TABS: TabItem[] = adminNavItems
+  .filter((item) => PRIMARY_TAB_KEYS.has(item.key))
+  .map((item) => ({
+    href: item.href,
+    label: item.key === "dashboard" ? "Home" : item.label,
+    icon: iconComponentMap[item.iconKey],
+  }));
+
+const MORE_ITEMS: TabItem[] = adminNavItems
+  .filter((item) => !PRIMARY_TAB_KEYS.has(item.key))
+  .map((item) => ({
+    href: item.href,
+    label: item.label,
+    icon: iconComponentMap[item.iconKey],
+  }));
 
 export function BottomTabBar() {
   const pathname = usePathname();

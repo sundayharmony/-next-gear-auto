@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
-import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
+import { loginLimiter, getClientIp } from "@/lib/security/rate-limit";
+import { isAdminRole } from "@/lib/auth/roles";
 
 /**
  * Verify the request comes from an authenticated admin.
@@ -18,7 +19,7 @@ export async function verifyAdmin(
   // ── Method 1: JWT-based auth (preferred) ──────────────────────────
   const tokenPayload = await getAuthFromRequest(req);
   if (tokenPayload) {
-    if (tokenPayload.role !== "admin") {
+    if (!isAdminRole(tokenPayload.role)) {
       return {
         authorized: false,
         response: NextResponse.json(
@@ -96,4 +97,20 @@ export async function verifyAdmin(
       ),
     };
   }
+}
+
+export async function verifyAdminOrManager(
+  req: NextRequest
+): Promise<{ authorized: true; userId: string; role: "admin" | "manager" } | { authorized: false; response: NextResponse }> {
+  const tokenPayload = await getAuthFromRequest(req);
+  if (!tokenPayload || (tokenPayload.role !== "admin" && tokenPayload.role !== "manager")) {
+    return {
+      authorized: false,
+      response: NextResponse.json(
+        { success: false, message: "Staff access required" },
+        { status: 403 }
+      ),
+    };
+  }
+  return { authorized: true, userId: tokenPayload.sub, role: tokenPayload.role };
 }

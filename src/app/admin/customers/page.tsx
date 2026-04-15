@@ -789,8 +789,10 @@ export default function AdminCustomersPage() {
                 <div>
                   <h1 className="text-2xl font-bold flex items-center gap-2">
                     {selectedCustomer.name || "Unknown"}
-                    {selectedCustomer.role === "admin" && (
-                      <Badge className="bg-purple-500 text-white text-xs"><Shield className="h-3 w-3 mr-0.5" /> Admin</Badge>
+                    {(selectedCustomer.role === "admin" || selectedCustomer.role === "manager") && (
+                      <Badge className="bg-purple-500 text-white text-xs">
+                        <Shield className="h-3 w-3 mr-0.5" /> {selectedCustomer.role === "admin" ? "Admin" : "Manager"}
+                      </Badge>
                     )}
                   </h1>
                   <div className="flex items-center gap-4 text-sm text-purple-200 mt-0.5">
@@ -1795,8 +1797,8 @@ export default function AdminCustomersPage() {
                     {c.phone && (
                       <span className="text-xs text-gray-400">{c.phone}</span>
                     )}
-                    {c.role === "admin" && (
-                      <Badge className="bg-purple-100 text-purple-700 text-xs">Admin</Badge>
+                    {(c.role === "admin" || c.role === "manager") && (
+                      <Badge className="bg-purple-100 text-purple-700 text-xs">{c.role === "admin" ? "Admin" : "Manager"}</Badge>
                     )}
                   </div>
                 </CardContent>

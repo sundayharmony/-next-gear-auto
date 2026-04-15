@@ -7,7 +7,7 @@ import { Footer } from "./footer";
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname.startsWith("/admin");
+  const isPanelRoute = pathname.startsWith("/admin") || pathname.startsWith("/manager");
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
@@ -19,7 +19,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
     return () => mq.removeEventListener("change", handler);
   }, []);
 
-  if (isAdmin) {
+  if (isPanelRoute) {
     // In standalone PWA mode, admin gets no site header/footer at all
     return <div className={isStandalone ? "pwa-safe-top" : ""}>{children}</div>;
   }

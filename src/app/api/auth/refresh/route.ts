@@ -8,6 +8,7 @@ import {
   REFRESH_COOKIE,
 } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
+import { isAppRole } from "@/lib/auth/roles";
 
 /**
  * Token refresh endpoint.
@@ -38,7 +39,14 @@ export async function POST(req: NextRequest) {
     }
 
     // Issue new token pair (rotation)
-    const role = payload.role as "admin" | "customer";
+    if (!isAppRole(payload.role)) {
+      const response = NextResponse.json(
+        { success: false, message: "Invalid role in refresh token." },
+        { status: 401 }
+      );
+      return clearAuthCookies(response);
+    }
+    const role = payload.role;
     const accessToken = await createAccessToken({
       userId: payload.sub,
       role,

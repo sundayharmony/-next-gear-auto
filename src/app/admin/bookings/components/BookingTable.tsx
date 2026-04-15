@@ -35,6 +35,13 @@ export default function BookingTable({
   sortOrder,
   onSort,
 }: BookingTableProps) {
+  const getOriginLabel = (origin?: string) => {
+    if (origin === "manager_panel") return "Manager";
+    if (origin === "admin_panel") return "Admin";
+    if (origin === "public_checkout") return "Public";
+    return "Unknown";
+  };
+
   const allSelected = bookings.length > 0 && selectedIds.size === bookings.length;
   const someSelected = selectedIds.size > 0 && selectedIds.size < bookings.length;
 
@@ -144,6 +151,7 @@ export default function BookingTable({
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 text-sm truncate">{booking.customer_name || "Unknown"}</p>
                     <p className="text-xs text-gray-500 truncate">{booking.customer_email || "No email"}</p>
+                    <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-0.5">Origin: {getOriginLabel(booking.origin_channel)}</p>
                   </div>
                 </div>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${statusColors[booking.status || "pending"] || "bg-gray-200 text-gray-800"}`}>
@@ -282,6 +290,7 @@ export default function BookingTable({
                     <div className="max-w-xs">
                       <div className="font-semibold text-gray-900 truncate">{booking.customer_name || "Unknown"}</div>
                       <div className="text-xs text-gray-500 truncate">{booking.customer_email || "No email"}</div>
+                      <div className="text-[10px] text-gray-400 uppercase tracking-wide mt-0.5">Origin: {getOriginLabel(booking.origin_channel)}</div>
                     </div>
                   </td>
 

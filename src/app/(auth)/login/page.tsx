@@ -36,6 +36,8 @@ export default function LoginPage() {
       // Redirect admin users to admin dashboard, customers to account page
       if (user?.role === "admin") {
         router.push("/admin");
+      } else if (user?.role === "manager") {
+        router.push("/manager");
       } else {
         router.push("/account");
       }

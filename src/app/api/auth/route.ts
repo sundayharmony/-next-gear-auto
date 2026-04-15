@@ -6,6 +6,12 @@ import { createAccessToken, createRefreshToken, setAuthCookies, clearAuthCookies
 import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
+import { isAppRole, type AppRole } from "@/lib/auth/roles";
+
+function normalizeRole(role: unknown): AppRole {
+  if (isAppRole(role)) return role;
+  return "customer";
+}
 
 // GET: Validate current session and return user data from JWT
 export async function GET(request: NextRequest) {
@@ -194,10 +200,7 @@ export async function POST(request: Request) {
       // Issue JWT tokens
       // Validate role type before casting to prevent type errors
       const roleValue = customer.role || "customer";
-      if (roleValue !== "admin" && roleValue !== "customer") {
-        throw new Error(`Invalid role type in database: ${roleValue}`);
-      }
-      const customerRole = roleValue as "admin" | "customer";
+      const customerRole = normalizeRole(roleValue);
       const accessToken = await createAccessToken({ userId: customer.id, role: customerRole, email: customer.email });
       const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
 
@@ -265,10 +268,7 @@ export async function POST(request: Request) {
           if (updated) {
             // Validate role type before casting
             const roleValue = updated.role || "customer";
-            if (roleValue !== "admin" && roleValue !== "customer") {
-              throw new Error(`Invalid role type in database: ${roleValue}`);
-            }
-            const updatedRole = roleValue as "admin" | "customer";
+            const updatedRole = normalizeRole(roleValue);
             const accessToken = await createAccessToken({ userId: updated.id, role: updatedRole, email: updated.email });
             const refreshToken = await createRefreshToken({ userId: updated.id, role: updatedRole, email: updated.email });
 

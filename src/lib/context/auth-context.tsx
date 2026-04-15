@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from "react";
 import type { Customer } from "@/lib/types";
+import { isAppRole } from "@/lib/auth/roles";
 
 interface AuthState {
   user: Customer | null;
@@ -74,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // Validate parsed structure before using
         if (user && typeof user === 'object' && user.id && user.email && user.role) {
           // Additional validation: ensure role is one of the expected values
-          if (user.role === 'admin' || user.role === 'customer') {
+          if (isAppRole(user.role)) {
             dispatch({ type: "RESTORE_CACHE", payload: user });
           } else {
             localStorage.removeItem("nga_user");

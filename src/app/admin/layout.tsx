@@ -16,39 +16,36 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
 import { BottomTabBar } from "@/components/admin/bottom-tab-bar";
 import { SwipeBack } from "@/components/admin/swipe-back";
+import { buildPageTitleMap, getAdminNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
+import { featureFlags } from "@/lib/config/feature-flags";
 
-const NAV_ITEMS = [
-  { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/admin/calendar", label: "Calendar", icon: CalendarDays },
-  { href: "/admin/bookings", label: "Bookings", icon: Calendar },
-  { href: "/admin/vehicles", label: "Vehicles", icon: Car },
-  { href: "/admin/blocked-dates", label: "Blocked Dates", icon: ShieldBan },
-  { href: "/admin/maintenance", label: "Maintenance", icon: Wrench },
-  { href: "/admin/locations", label: "Locations", icon: MapPin },
-  { href: "/admin/finances", label: "Finances", icon: DollarSign },
-  { href: "/admin/tickets", label: "Tickets", icon: Ticket },
-  { href: "/admin/customers", label: "Customers", icon: Users },
-  { href: "/admin/promo-codes", label: "Promo Codes", icon: Tag },
-  { href: "/admin/reviews", label: "Reviews", icon: Star },
-  { href: "/admin/instagram", label: "Instagram", icon: Instagram },
-];
+const iconComponentMap: Record<PanelIconKey, React.ComponentType<{ className?: string }>> = {
+  dashboard: LayoutDashboard,
+  calendarDays: CalendarDays,
+  calendar: Calendar,
+  car: Car,
+  shieldBan: ShieldBan,
+  wrench: Wrench,
+  mapPin: MapPin,
+  dollarSign: DollarSign,
+  ticket: Ticket,
+  users: Users,
+  tag: Tag,
+  star: Star,
+  instagram: Instagram,
+  clipboard: Calendar,
+};
+
+const NAV_ITEMS = getAdminNavItems()
+  .filter((item) => item.key !== "managers" || featureFlags.adminManagerAccessUi())
+  .map((item) => ({
+    href: item.href,
+    label: item.label,
+    icon: iconComponentMap[item.iconKey],
+  }));
 
 // Map pathnames to short page titles for mobile header
-const PAGE_TITLES: Record<string, string> = {
-  "/admin": "Dashboard",
-  "/admin/calendar": "Calendar",
-  "/admin/bookings": "Bookings",
-  "/admin/vehicles": "Vehicles",
-  "/admin/blocked-dates": "Blocked Dates",
-  "/admin/maintenance": "Maintenance",
-  "/admin/locations": "Locations",
-  "/admin/finances": "Finances",
-  "/admin/tickets": "Tickets",
-  "/admin/customers": "Customers",
-  "/admin/promo-codes": "Promo Codes",
-  "/admin/reviews": "Reviews",
-  "/admin/instagram": "Instagram",
-};
+const PAGE_TITLES: Record<string, string> = buildPageTitleMap(getAdminNavItems());
 
 function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

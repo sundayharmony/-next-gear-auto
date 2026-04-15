@@ -425,6 +425,9 @@ export async function POST(request: NextRequest) {
       pickup_location_id: pickupLocationId || null,
       return_location_id: returnLocationId || null,
       location_surcharge: validatedSurcharge || 0,
+      origin_channel: "public_checkout",
+      created_by_role: "customer",
+      created_by_user_id: customerId,
     });
 
     if (bookingError) {

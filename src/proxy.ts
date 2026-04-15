@@ -105,11 +105,10 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  // ── Admin Page Protection ───────────────────────────────────────
-  // Protect /admin/* pages (except the login page itself at /admin)
+  // ── Staff Panel Protection ───────────────────────────────────────
+  // Protect /admin/* and /manager/* pages.
   if (
-    pathname.startsWith("/admin/") &&
-    !pathname.startsWith("/admin/login")
+    ((pathname.startsWith("/admin/") && !pathname.startsWith("/admin/login")) || pathname.startsWith("/manager"))
   ) {
     const token = req.cookies.get(COOKIE_NAME)?.value;
     const secret = getSecret();
@@ -160,6 +159,8 @@ export const config = {
   matcher: [
     // Admin pages
     "/admin/:path*",
+    // Manager pages
+    "/manager/:path*",
     // API routes (for CSRF)
     "/api/:path*",
   ],

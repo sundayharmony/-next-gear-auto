@@ -202,6 +202,10 @@ export default function AccountPage() {
     router.push("/admin");
     return null;
   }
+  if (isAuthenticated && user?.role === "manager") {
+    router.push("/manager");
+    return null;
+  }
 
   // Wait for auth to finish initialising before deciding what to show
   if (authLoading) {

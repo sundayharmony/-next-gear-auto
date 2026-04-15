@@ -93,10 +93,10 @@ export function Header() {
             </Link>
             {!authLoading && (isAuthenticated && user ? (
               <div className="hidden sm:flex items-center gap-2">
-                {user.role === "admin" ? (
-                  <Link href="/admin">
+                {user.role === "admin" || user.role === "manager" ? (
+                  <Link href={user.role === "admin" ? "/admin" : "/manager"}>
                     <Button variant="outline" size="sm">
-                      <Shield className="h-3.5 w-3.5 mr-1" /> Admin
+                      <Shield className="h-3.5 w-3.5 mr-1" /> {user.role === "admin" ? "Admin" : "Manager"}
                     </Button>
                   </Link>
                 ) : (
@@ -162,10 +162,10 @@ export function Header() {
               </Link>
               {!authLoading && (isAuthenticated && user ? (
                 <>
-                  {user.role === "admin" ? (
-                    <Link href="/admin" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
+                  {user.role === "admin" || user.role === "manager" ? (
+                    <Link href={user.role === "admin" ? "/admin" : "/manager"} className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
                       <Button variant="outline" className="w-full" size="sm">
-                        <Shield className="h-3.5 w-3.5 mr-1" /> Admin
+                        <Shield className="h-3.5 w-3.5 mr-1" /> {user.role === "admin" ? "Admin" : "Manager"}
                       </Button>
                     </Link>
                   ) : (

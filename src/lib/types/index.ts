@@ -96,7 +96,7 @@ export interface Customer {
   paymentMethods: PaymentMethod[];
   bookings: string[];
   createdAt: string;
-  role: "customer" | "admin";
+  role: "customer" | "admin" | "manager";
 }
 
 export interface DriverLicense {
@@ -310,6 +310,9 @@ export interface BookingDbRow {
   return_location_id?: string;
   return_location_name?: string;
   location_surcharge?: number;
+  origin_channel?: "public_checkout" | "admin_panel" | "manager_panel" | "unknown";
+  created_by_role?: "admin" | "manager" | "customer" | null;
+  created_by_user_id?: string | null;
 }
 
 /** Minimal vehicle info used in admin list views */

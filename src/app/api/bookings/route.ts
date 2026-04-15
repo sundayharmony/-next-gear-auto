@@ -10,6 +10,7 @@ import { logger } from "@/lib/utils/logger";
 import { getAuthFromRequest, type TokenPayload } from "@/lib/auth/jwt";
 import { getVehicleDisplayName } from "@/lib/types";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
+import { isManagerFeatureEnabled } from "@/lib/config/feature-flags";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -36,6 +37,7 @@ export async function GET(request: NextRequest) {
 
   // Legacy fallback: x-admin-id header (matches verifyAdmin behavior)
   let isAdmin = auth?.role === "admin";
+  const isManager = auth?.role === "manager";
   if (!auth) {
     const legacyAdminId = request.headers.get("x-admin-id");
     if (legacyAdminId) {
@@ -90,6 +92,7 @@ export async function GET(request: NextRequest) {
       const { vehicles: _v, ...rest } = booking;
 
       const isOwner = isAdmin ||
+        (isManager && booking.created_by_user_id === auth?.sub && booking.origin_channel === "manager_panel") ||
         (callerEmail && booking.customer_email?.toLowerCase().trim() === callerEmail);
 
       // Strip sensitive fields for non-owners (unauthenticated success/agreement page callers)
@@ -149,6 +152,8 @@ export async function GET(request: NextRequest) {
       } else if (customerEmail) {
         query = query.ilike("customer_email", customerEmail);
       }
+    } else if (isManager && auth?.sub) {
+      query = query.eq("origin_channel", "manager_panel").eq("created_by_user_id", auth.sub);
     } else if (callerEmail) {
       // Customers can only see their own bookings — enforce by caller's JWT email
       query = query.ilike("customer_email", callerEmail);
@@ -248,9 +253,20 @@ export async function GET(request: NextRequest) {
   }
 }
 
-export async function POST(request: Request) {
+export async function POST(request: NextRequest) {
   const supabase = getServiceSupabase();
   try {
+    const auth = await getAuthFromRequest(request);
+    const isAdminUser = auth?.role === "admin";
+    const isManagerUser = auth?.role === "manager";
+
+    if (isManagerUser && !isManagerFeatureEnabled("managerBookingWrite")) {
+      return NextResponse.json(
+        { success: false, message: "Manager booking write is currently disabled." },
+        { status: 403 }
+      );
+    }
+
     let body;
     try {
       body = await request.json();
@@ -279,7 +295,8 @@ export async function POST(request: Request) {
     }
 
     // Double-booking check — admins can always overlap; clients need 60min gap
-    if (!body.adminCreated && body.vehicleId && body.pickupDate && body.returnDate) {
+    const canBypassOverlap = isAdminUser;
+    if (!canBypassOverlap && body.vehicleId && body.pickupDate && body.returnDate) {
       const overlap = await checkBookingOverlap(supabase, body.vehicleId, body.pickupDate, body.returnDate, body.pickupTime || null, body.returnTime || null);
       if (overlap) return overlap;
     }
@@ -385,10 +402,18 @@ export async function POST(request: Request) {
     const bookingStatus = "pending";
 
     // Re-check for overlaps immediately before insert to minimize race condition window
-    if (!body.adminCreated && body.vehicleId && body.pickupDate && body.returnDate) {
+    if (!canBypassOverlap && body.vehicleId && body.pickupDate && body.returnDate) {
       const finalOverlap = await checkBookingOverlap(supabase, body.vehicleId, body.pickupDate, body.returnDate, body.pickupTime || null, body.returnTime || null);
       if (finalOverlap) return finalOverlap;
     }
+
+    const originChannel = isManagerUser
+      ? "manager_panel"
+      : isAdminUser
+        ? "admin_panel"
+        : "public_checkout";
+    const createdByRole = auth?.role || "customer";
+    const createdByUserId = auth?.sub || null;
 
     const { error } = await supabase.from("bookings").insert({
       id: bookingId,
@@ -412,6 +437,9 @@ export async function POST(request: Request) {
       pickup_location_id: body.pickup_location_id || body.pickupLocationId || null,
       return_location_id: body.return_location_id || body.returnLocationId || null,
       location_surcharge: body.location_surcharge || body.locationSurcharge || 0,
+      origin_channel: originChannel,
+      created_by_role: createdByRole,
+      created_by_user_id: createdByUserId,
     });
 
     if (error) {
@@ -515,9 +543,9 @@ export async function PATCH(request: NextRequest) {
     auth = null;
   }
 
-  if (!auth || auth.role !== "admin") {
+  if (!auth || (auth.role !== "admin" && auth.role !== "manager")) {
     return NextResponse.json(
-      { success: false, message: "Admin authorization required" },
+      { success: false, message: "Staff authorization required" },
       { status: 403 }
     );
   }
@@ -565,6 +593,16 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
+    const isManagerEditor = auth.role === "manager";
+    if (isManagerEditor) {
+      if (booking.origin_channel !== "manager_panel" || booking.created_by_user_id !== auth.sub) {
+        return NextResponse.json(
+          { success: false, message: "Managers can only update their own manager-panel bookings" },
+          { status: 403 }
+        );
+      }
+    }
+
     // Build update object — only include fields that were actually sent
     const updateFields: Record<string, any> = {};
 
@@ -592,7 +630,7 @@ export async function PATCH(request: NextRequest) {
     if (body.deposit !== undefined) updateFields.deposit = body.deposit;
     if (body.extras !== undefined) updateFields.extras = body.extras;
     if (body.insurance_opted_out !== undefined) updateFields.insurance_opted_out = body.insurance_opted_out;
-    if (body.admin_notes !== undefined) updateFields.admin_notes = body.admin_notes;
+    if (body.admin_notes !== undefined && !isManagerEditor) updateFields.admin_notes = body.admin_notes;
     if (body.payment_method !== undefined) updateFields.payment_method = body.payment_method;
     if (body.pickup_location_id !== undefined) updateFields.pickup_location_id = body.pickup_location_id;
     if (body.pickup_location_name !== undefined) updateFields.pickup_location_name = body.pickup_location_name;
@@ -605,6 +643,36 @@ export async function PATCH(request: NextRequest) {
         { success: false, message: "No fields to update" },
         { status: 400 }
       );
+    }
+
+    if (isManagerEditor) {
+      const allowedManagerFields = new Set([
+        "status",
+        "customer_name",
+        "customer_email",
+        "customer_phone",
+        "vehicle_id",
+        "pickup_date",
+        "return_date",
+        "pickup_time",
+        "return_time",
+        "total_price",
+        "deposit",
+        "extras",
+        "pickup_location_id",
+        "pickup_location_name",
+        "return_location_id",
+        "return_location_name",
+        "location_surcharge",
+      ]);
+      for (const key of Object.keys(updateFields)) {
+        if (!allowedManagerFields.has(key)) {
+          return NextResponse.json(
+            { success: false, message: `Managers cannot update ${key}` },
+            { status: 403 }
+          );
+        }
+      }
     }
 
     // Validate status transitions (Bug 17)

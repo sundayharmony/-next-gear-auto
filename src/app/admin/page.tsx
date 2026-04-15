@@ -16,6 +16,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
+import { featureFlags } from "@/lib/config/feature-flags";
 
 interface DashboardData {
   totalBookings: number;
@@ -171,6 +172,7 @@ export default function AdminDashboardPage() {
                 { label: "Maintenance", desc: "Service records", icon: Wrench, href: "/admin/maintenance", color: "bg-orange-100 text-orange-700" },
                 { label: "Promo Codes", desc: "Discounts & coupons", icon: Tag, href: "/admin/promo-codes", color: "bg-green-100 text-green-700" },
                 { label: "Reviews", desc: "Moderate feedback", icon: Star, href: "/admin/reviews", color: "bg-amber-100 text-amber-700" },
+                ...(featureFlags.adminManagerAccessUi() ? [{ label: "Managers", desc: "Grant/revoke manager access", icon: Settings, href: "/admin/managers", color: "bg-violet-100 text-violet-700" }] : []),
               ].map((item) => (
                 <Link key={item.href} href={item.href}>
                   <Card className="group h-full cursor-pointer transition-all hover:shadow-md hover:border-purple-200 focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 admin-card-press">

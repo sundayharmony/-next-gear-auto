@@ -93,7 +93,7 @@ export interface DbCustomer {
   phone: string | null;
   dob: string | null;
   password_hash: string | null;
-  role: "customer" | "admin";
+  role: "customer" | "admin" | "manager";
   driver_license: Record<string, unknown> | null;
   profile_picture_url: string | null;
   created_at: string;
@@ -149,6 +149,9 @@ export interface DbBooking {
   pickup_location_id: string | null;
   return_location_id: string | null;
   location_surcharge: number | null;
+  origin_channel: "public_checkout" | "admin_panel" | "manager_panel" | "unknown" | null;
+  created_by_role: "admin" | "manager" | "customer" | null;
+  created_by_user_id: string | null;
 }
 
 export interface DbPaymentRecord {
