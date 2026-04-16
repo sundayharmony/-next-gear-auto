@@ -5,6 +5,23 @@ import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
 import { sendPasswordResetLink } from "@/lib/email/mailer";
 
+function isRoleConstraintError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const candidate = error as { code?: string; message?: string };
+  return candidate.code === "23514" && (candidate.message || "").includes("customers_role_check");
+}
+
+function schemaMismatchResponse() {
+  return NextResponse.json(
+    {
+      success: false,
+      message:
+        "Database schema is outdated: customers_role_check does not allow manager role yet. Run the manager attribution migration in Supabase and try again.",
+    },
+    { status: 409 }
+  );
+}
+
 export async function GET(req: NextRequest) {
   const auth = await verifyAdmin(req);
   if (!auth.authorized) return auth.response;
@@ -106,6 +123,9 @@ export async function POST(req: NextRequest) {
 
     if (updateError) {
       logger.error("Failed to promote existing customer to manager:", updateError);
+      if (isRoleConstraintError(updateError)) {
+        return schemaMismatchResponse();
+      }
       return NextResponse.json({ success: false, message: "Failed to create manager" }, { status: 500 });
     }
     data = updated;
@@ -144,6 +164,9 @@ export async function POST(req: NextRequest) {
 
     if (insertError) {
       logger.error("Failed to create manager:", insertError);
+      if (isRoleConstraintError(insertError)) {
+        return schemaMismatchResponse();
+      }
       return NextResponse.json({ success: false, message: "Failed to create manager" }, { status: 500 });
     }
     data = inserted;
@@ -213,6 +236,9 @@ export async function PATCH(req: NextRequest) {
 
   if (error) {
     logger.error("Failed to update manager access:", error);
+    if (isRoleConstraintError(error)) {
+      return schemaMismatchResponse();
+    }
     return NextResponse.json({ success: false, message: "Failed to update manager access" }, { status: 500 });
   }
 
