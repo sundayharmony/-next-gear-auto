@@ -16,7 +16,15 @@ This project enforces a shared contract for Admin features that are marked as `s
 - Local: `npm run check:panel-sync`
 - CI-ready command: `npm test`
 
+## What the sync check enforces
+
+- Every `sharedWithManager: true` feature must declare a `managerPath`.
+- Every shared manager path must have a real page file under `src/app/manager/.../page.tsx`.
+- Manager-shared set cannot include finance or fleet (`finances`, `vehicles`).
+- Any `syncException` used for temporary desync must not be expired.
+
 ## Current safe defaults
 
 - Finance is admin-only and not shared with manager.
-- Manager analytics are operational-only (non-financial).
+- Fleet management is admin-only and not shared with manager.
+- Manager analytics are operational-only (non-financial) and intentionally manager-specific.

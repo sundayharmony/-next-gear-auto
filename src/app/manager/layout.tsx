@@ -3,20 +3,56 @@
 import React from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { LayoutDashboard, Calendar, BarChart3, LogOut, Loader2 } from "lucide-react";
+import {
+  LayoutDashboard,
+  CalendarDays,
+  Calendar,
+  Car,
+  ShieldBan,
+  Wrench,
+  MapPin,
+  DollarSign,
+  Ticket,
+  Users,
+  Tag,
+  Star,
+  ClipboardList,
+  LogOut,
+  Loader2,
+  type LucideIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout/page-container";
 import { SwipeBack } from "@/components/admin/swipe-back";
 import { ThemeProvider } from "@/lib/context/theme-context";
 import { useAuth } from "@/lib/context/auth-context";
 import { ManagerBottomTabBar } from "@/components/manager/bottom-tab-bar";
+import { getManagerNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
+import { Instagram } from "@/components/icons/instagram";
 import { cn } from "@/lib/utils/cn";
 
-const NAV_ITEMS = [
-  { href: "/manager", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/manager/bookings", label: "Bookings", icon: Calendar },
-  { href: "/manager/analytics", label: "Analytics", icon: BarChart3 },
-];
+const iconComponentMap: Record<PanelIconKey, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  calendarDays: CalendarDays,
+  calendar: Calendar,
+  car: Car,
+  shieldBan: ShieldBan,
+  wrench: Wrench,
+  mapPin: MapPin,
+  dollarSign: DollarSign,
+  ticket: Ticket,
+  users: Users,
+  tag: Tag,
+  star: Star,
+  instagram: Instagram,
+  clipboard: ClipboardList,
+};
+
+const NAV_ITEMS = getManagerNavItems().map((item) => ({
+  href: item.href,
+  label: item.label,
+  icon: iconComponentMap[item.iconKey] || LayoutDashboard,
+}));
 
 function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -34,9 +70,6 @@ function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
   }
 
   const hasManagerAccess = isAuthenticated && (user?.role === "manager" || user?.role === "admin");
-  // #region agent log
-  fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H4',location:'manager/layout.tsx:gate',message:'Manager layout gate evaluation',data:{authLoading,hasManagerAccess,isAuthenticated,userRole:user?.role||null,pathname},timestamp:Date.now()})}).catch(()=>{});
-  // #endregion
   if (!hasManagerAccess) {
     return (
       <PageContainer className="py-16 text-center">

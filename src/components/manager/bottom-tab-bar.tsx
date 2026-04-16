@@ -2,14 +2,48 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { LayoutDashboard, Calendar, BarChart3 } from "lucide-react";
+import {
+  LayoutDashboard,
+  CalendarDays,
+  Calendar,
+  Car,
+  ShieldBan,
+  Wrench,
+  MapPin,
+  DollarSign,
+  Ticket,
+  Users,
+  Tag,
+  Star,
+  ClipboardList,
+  type LucideIcon,
+} from "lucide-react";
+import { getManagerNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
+import { Instagram } from "@/components/icons/instagram";
 import { cn } from "@/lib/utils/cn";
 
-const TABS = [
-  { href: "/manager", label: "Home", icon: LayoutDashboard },
-  { href: "/manager/bookings", label: "Bookings", icon: Calendar },
-  { href: "/manager/analytics", label: "Analytics", icon: BarChart3 },
-];
+const iconComponentMap: Record<PanelIconKey, LucideIcon> = {
+  dashboard: LayoutDashboard,
+  calendarDays: CalendarDays,
+  calendar: Calendar,
+  car: Car,
+  shieldBan: ShieldBan,
+  wrench: Wrench,
+  mapPin: MapPin,
+  dollarSign: DollarSign,
+  ticket: Ticket,
+  users: Users,
+  tag: Tag,
+  star: Star,
+  instagram: Instagram,
+  clipboard: ClipboardList,
+};
+
+const TABS = getManagerNavItems().map((item) => ({
+  href: item.href,
+  label: item.key === "dashboard" ? "Home" : item.label,
+  icon: iconComponentMap[item.iconKey] || LayoutDashboard,
+}));
 
 export function ManagerBottomTabBar() {
   const pathname = usePathname();

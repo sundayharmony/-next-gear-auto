@@ -17,9 +17,6 @@ function normalizeRole(role: unknown): AppRole {
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthFromRequest(request);
-    // #region agent log
-    fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H2',location:'api/auth/route.ts:GET',message:'Auth GET token payload parsed',data:{hasAuth:Boolean(auth),role:auth?.role||null,subPresent:Boolean(auth?.sub)},timestamp:Date.now()})}).catch(()=>{});
-    // #endregion
     if (!auth) {
       // Return 200 with success:false (not 401) so browsers don't log a red console error
       // on every page load for unauthenticated visitors
@@ -124,9 +121,6 @@ export async function POST(request: Request) {
         }
 
         auditLog("LOGIN_SUCCESS", { ip, userId: admin.id, email: normalizedEmail, details: { role: "admin" } });
-        // #region agent log
-        fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H1',location:'api/auth/route.ts:POST:adminLogin',message:'Admin login success path hit',data:{emailDomain:normalizedEmail.split("@")[1]||null,roleIssued:'admin'},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
 
         // Issue JWT tokens
         const accessToken = await createAccessToken({ userId: admin.id, role: "admin", email: admin.email });
@@ -188,9 +182,6 @@ export async function POST(request: Request) {
       }
 
       auditLog("LOGIN_SUCCESS", { ip, userId: customer.id, email: normalizedEmail, details: { role: "customer" } });
-      // #region agent log
-      fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H1',location:'api/auth/route.ts:POST:customerLogin',message:'Customer table login success path hit',data:{emailDomain:normalizedEmail.split("@")[1]||null,dbRole:customer.role||null,passwordHashPresent:Boolean(customer.password_hash)},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
 
       // Map DB fields to frontend expected format
       const mapped = {
@@ -210,9 +201,6 @@ export async function POST(request: Request) {
       // Validate role type before casting to prevent type errors
       const roleValue = customer.role || "customer";
       const customerRole = normalizeRole(roleValue);
-      // #region agent log
-      fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H1',location:'api/auth/route.ts:POST:customerRoleNormalize',message:'Role normalization for non-admin login',data:{roleValue,normalizedRole:customerRole},timestamp:Date.now()})}).catch(()=>{});
-      // #endregion
       const accessToken = await createAccessToken({ userId: customer.id, role: customerRole, email: customer.email });
       const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
 

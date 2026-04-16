@@ -97,9 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const res = await fetch("/api/auth", { credentials: "same-origin", signal: controller.signal });
         clearTimeout(timeoutId);
         const data = await res.json();
-        // #region agent log
-        fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H2',location:'auth-context.tsx:validateSession',message:'Session validation response received',data:{status:res.status,success:Boolean(data?.success),hasData:Boolean(data?.data),role:data?.data?.role||null},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         if (data.success && data.data && !cancelled) {
           // Update localStorage with server-verified user data
           dispatch({ type: "LOGIN_SUCCESS", payload: data.data });
@@ -110,9 +107,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } catch {
         clearTimeout(timeoutId);
-        // #region agent log
-        fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H3',location:'auth-context.tsx:validateSession',message:'Session validation fetch failed',data:{aborted:controller.signal.aborted},timestamp:Date.now()})}).catch(()=>{});
-        // #endregion
         // Network error — keep cached user (offline-friendly)
       } finally {
         if (!cancelled) dispatch({ type: "SET_LOADING", payload: false });

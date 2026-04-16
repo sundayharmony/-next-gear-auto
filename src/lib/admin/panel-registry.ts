@@ -16,7 +16,7 @@ export const panelFeatureRegistry: PanelFeature[] = [
   { key: "dashboard", label: "Dashboard", adminPath: "/admin", managerPath: "/manager", sharedWithManager: true },
   { key: "bookings", label: "Bookings", adminPath: "/admin/bookings", managerPath: "/manager/bookings", sharedWithManager: true },
   { key: "calendar", label: "Calendar", adminPath: "/admin/calendar", managerPath: "/manager/calendar", sharedWithManager: true },
-  { key: "vehicles", label: "Vehicles", adminPath: "/admin/vehicles", managerPath: "/manager/vehicles", sharedWithManager: true },
+  { key: "vehicles", label: "Vehicles", adminPath: "/admin/vehicles", managerPath: "/manager/vehicles", sharedWithManager: false },
   { key: "blockedDates", label: "Blocked Dates", adminPath: "/admin/blocked-dates", sharedWithManager: false },
   { key: "maintenance", label: "Maintenance", adminPath: "/admin/maintenance", managerPath: "/manager/maintenance", sharedWithManager: true },
   { key: "locations", label: "Locations", adminPath: "/admin/locations", managerPath: "/manager/locations", sharedWithManager: true },
