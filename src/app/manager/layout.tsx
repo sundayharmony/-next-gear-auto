@@ -9,7 +9,6 @@ import { PageContainer } from "@/components/layout/page-container";
 import { SwipeBack } from "@/components/admin/swipe-back";
 import { ThemeProvider } from "@/lib/context/theme-context";
 import { useAuth } from "@/lib/context/auth-context";
-import { featureFlags } from "@/lib/config/feature-flags";
 import { ManagerBottomTabBar } from "@/components/manager/bottom-tab-bar";
 import { cn } from "@/lib/utils/cn";
 
@@ -34,12 +33,11 @@ function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const managerEnabled = featureFlags.managerPanelMaster() && featureFlags.managerPanelRoutes();
   const hasManagerAccess = isAuthenticated && (user?.role === "manager" || user?.role === "admin");
   // #region agent log
-  fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H4',location:'manager/layout.tsx:gate',message:'Manager layout gate evaluation',data:{authLoading,managerEnabled,hasManagerAccess,isAuthenticated,userRole:user?.role||null,pathname},timestamp:Date.now()})}).catch(()=>{});
+  fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H4',location:'manager/layout.tsx:gate',message:'Manager layout gate evaluation',data:{authLoading,hasManagerAccess,isAuthenticated,userRole:user?.role||null,pathname},timestamp:Date.now()})}).catch(()=>{});
   // #endregion
-  if (!managerEnabled || !hasManagerAccess) {
+  if (!hasManagerAccess) {
     return (
       <PageContainer className="py-16 text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
