@@ -20,7 +20,7 @@ Use explicit values to avoid accidental newline characters in env values:
 2. Set `FF_STAFF_MESSAGING_ENABLED=true` for internal testing accounts.
 3. Set `FF_STAFF_MESSAGING_EMAIL_ENABLED=true` once delivery logs are healthy.
 4. Set `FF_STAFF_MESSAGING_PUSH_ENABLED=true` after PWA push subscription validation.
-5. Keep `/api/cron/message-notifications` scheduled in Vercel cron with `Authorization: Bearer ${CRON_SECRET}`.
+5. Keep `/api/cron/message-notifications` scheduled in Vercel cron with `Authorization: Bearer ${CRON_SECRET}`. On Vercel Hobby, crons may only run **once per day** (this repo uses `30 9 * * *` UTC).
 
 ## Kill Switches
 - Disable all messaging immediately: `FF_STAFF_MESSAGING_ENABLED=false`.

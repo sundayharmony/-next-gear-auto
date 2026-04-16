@@ -6,7 +6,7 @@
     },
     {
       "path": "/api/cron/message-notifications",
-      "schedule": "*/10 * * * *"
+      "schedule": "30 9 * * *"
     }
   ],
   "headers": [
