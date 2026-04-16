@@ -40,8 +40,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the caller owns this booking (or is admin)
-    if (auth.role !== "admin") {
+    // Verify the caller owns this booking unless staff-level authenticated.
+    if (auth.role !== "admin" && auth.role !== "manager") {
       const { data: bookingOwner } = await supabase
         .from("bookings")
         .select("customer_email")

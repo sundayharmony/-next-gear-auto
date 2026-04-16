@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdmin } from "@/lib/auth/admin-check";
+import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { reviewLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { escapeHtml } from "@/lib/utils/validation";
 
-// GET: Return reviews — verified admins see all statuses, public only sees approved
+// GET: Return reviews — verified staff see all statuses, public only sees approved
 export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const vehicleId = searchParams.get("vehicleId");
@@ -13,11 +13,11 @@ export async function GET(req: NextRequest) {
   const statusFilter = searchParams.get("status"); // all, pending, approved, rejected
   const supabase = getServiceSupabase();
 
-  // Verify admin identity if admin view requested
-  let isAdmin = false;
+  // Verify staff identity if admin-style review view requested
+  let isStaff = false;
   if (adminRequested) {
-    const auth = await verifyAdmin(req);
-    isAdmin = auth.authorized;
+    const auth = await verifyAdminOrManager(req);
+    isStaff = auth.authorized;
   }
 
   // Try to fetch from Supabase first
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false });
 
     // For public API, only show approved. For verified admin, optionally filter by status
-    if (!isAdmin) {
+    if (!isStaff) {
       query = query.eq("status", "approved");
     } else if (statusFilter && statusFilter !== "all") {
       query = query.eq("status", statusFilter);
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ data: reviews, success: true }, {
       headers: {
-        "Cache-Control": isAdmin ? "no-store, no-cache" : "public, s-maxage=300, stale-while-revalidate=600",
+        "Cache-Control": isStaff ? "no-store, no-cache" : "public, s-maxage=300, stale-while-revalidate=600",
       },
     });
   } catch (err) {
@@ -155,9 +155,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH: Approve or reject a review (admin)
+// PATCH: Approve or reject a review (staff)
 export async function PATCH(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
@@ -195,9 +195,9 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE: Remove a review (admin)
+// DELETE: Remove a review (staff)
 export async function DELETE(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   const { searchParams } = new URL(req.url);

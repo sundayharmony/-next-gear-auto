@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdmin } from "@/lib/auth/admin-check";
+import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 
 // Fetch thumbnail from Instagram post by scraping og:image meta tag
@@ -89,9 +89,9 @@ export async function GET() {
   }
 }
 
-// POST: Add a new Instagram post URL (admin only)
+// POST: Add a new Instagram post URL (staff only)
 export async function POST(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
 
   const supabase = getServiceSupabase();
@@ -149,9 +149,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH: Refresh thumbnail for a post (admin only)
+// PATCH: Refresh thumbnail for a post (staff only)
 export async function PATCH(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
 
   const supabase = getServiceSupabase();
@@ -204,9 +204,9 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE: Remove an Instagram post (admin only)
+// DELETE: Remove an Instagram post (staff only)
 export async function DELETE(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
 
   const supabase = getServiceSupabase();

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
 
+function hasPanelAccess(role: string | null | undefined): boolean {
+  return role === "admin" || role === "manager";
+}
+
 /**
  * Server-side geocoding proxy.
  * Calls the Google Geocoding API from the server so the API key is not
@@ -13,7 +17,7 @@ import { logger } from "@/lib/utils/logger";
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthFromRequest(request);
-    if (!auth || auth.role !== "admin") {
+    if (!auth || !hasPanelAccess(auth.role)) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }

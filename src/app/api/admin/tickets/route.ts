@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdmin } from "@/lib/auth/admin-check";
+import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 
 // GET: List tickets with optional filters
 export async function GET(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
 
   const supabase = getServiceSupabase();
@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
 
 // POST: Create a new ticket
 export async function POST(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
 
   const supabase = getServiceSupabase();
@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
 
 // PUT: Update a ticket
 export async function PUT(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
 
   const supabase = getServiceSupabase();
@@ -278,7 +278,7 @@ export async function PUT(req: NextRequest) {
 
 // DELETE: Delete a ticket
 export async function DELETE(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
 
   const supabase = getServiceSupabase();

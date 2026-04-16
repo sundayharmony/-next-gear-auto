@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowLeft, Plus, Trash2, RefreshCw, ExternalLink, X, Loader2 } from "lucide-react";
 import { Instagram } from "@/components/icons/instagram";
 import { Card } from "@/components/ui/card";
@@ -24,6 +25,8 @@ interface InstaPost {
 }
 
 export default function AdminInstagramPage() {
+  const pathname = usePathname();
+  const homePath = pathname.startsWith("/manager") ? "/manager" : "/admin";
   const [posts, setPosts] = useState<InstaPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [newUrl, setNewUrl] = useState("");
@@ -124,7 +127,7 @@ export default function AdminInstagramPage() {
       <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <Link href="/admin" className="text-purple-300 hover:text-white transition-colors">
+            <Link href={homePath} className="text-purple-300 hover:text-white transition-colors">
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div>

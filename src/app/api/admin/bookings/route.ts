@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdmin } from "@/lib/auth/admin-check";
+import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 
 // GET: List all bookings for admin (with vehicle names)
 export async function GET(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
 
   const supabase = getServiceSupabase();

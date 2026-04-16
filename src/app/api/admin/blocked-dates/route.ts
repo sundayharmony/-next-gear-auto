@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdmin } from "@/lib/auth/admin-check";
+import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 
 /**
@@ -8,7 +8,7 @@ import { logger } from "@/lib/utils/logger";
  * List blocked dates, optionally filtered by vehicle.
  */
 export async function GET(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
 
   try {

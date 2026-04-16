@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdmin } from "@/lib/auth/admin-check";
+import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 
 function isValidVehicleId(id: unknown): id is string {
@@ -13,13 +13,18 @@ function isValidVehicleId(id: unknown): id is string {
 
 // GET: List all vehicles from Supabase
 export async function GET(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
+    const isManager = auth.role === "manager";
     const { data, error } = await supabase
       .from("vehicles")
-      .select("id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at")
+      .select(
+        isManager
+          ? "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, maintenance_status, description, color, is_published, created_at"
+          : "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at"
+      )
       .order("created_at", { ascending: true });
 
     if (error) {
@@ -44,11 +49,11 @@ export async function GET(req: NextRequest) {
       licensePlate: v.license_plate || "",
       vin: v.vin || "",
       maintenanceStatus: v.maintenance_status || "good",
-      purchasePrice: v.purchase_price ?? 0,
-      isFinanced: v.is_financed ?? false,
-      monthlyPayment: v.monthly_payment ?? 0,
-      paymentDayOfMonth: v.payment_day_of_month ?? 1,
-      financingStartDate: v.financing_start_date || null,
+      purchasePrice: isManager ? undefined : (v.purchase_price ?? 0),
+      isFinanced: isManager ? undefined : (v.is_financed ?? false),
+      monthlyPayment: isManager ? undefined : (v.monthly_payment ?? 0),
+      paymentDayOfMonth: isManager ? undefined : (v.payment_day_of_month ?? 1),
+      financingStartDate: isManager ? undefined : (v.financing_start_date || null),
       isPublished: v.is_published !== false,
       createdAt: v.created_at || null,
     }));

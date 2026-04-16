@@ -3,11 +3,15 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
 
+function hasPanelAccess(role: string | null | undefined): boolean {
+  return role === "admin" || role === "manager";
+}
+
 // GET: List all locations (optionally filter by is_active)
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthFromRequest(request);
-    if (!auth || auth.role !== "admin") {
+    if (!auth || !hasPanelAccess(auth.role)) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
     const supabase = getServiceSupabase();
@@ -32,7 +36,7 @@ export async function GET(request: NextRequest) {
 export async function POST(request: NextRequest) {
   try {
     const auth = await getAuthFromRequest(request);
-    if (!auth || auth.role !== "admin") {
+    if (!auth || !hasPanelAccess(auth.role)) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
     const body = await request.json();
@@ -104,7 +108,7 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const auth = await getAuthFromRequest(request);
-    if (!auth || auth.role !== "admin") {
+    if (!auth || !hasPanelAccess(auth.role)) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
 
@@ -181,7 +185,7 @@ export async function PATCH(request: NextRequest) {
 export async function DELETE(request: NextRequest) {
   try {
     const auth = await getAuthFromRequest(request);
-    if (!auth || auth.role !== "admin") {
+    if (!auth || !hasPanelAccess(auth.role)) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
     const { searchParams } = new URL(request.url);

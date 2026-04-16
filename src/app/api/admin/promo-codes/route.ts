@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdmin } from "@/lib/auth/admin-check";
+import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 
 // GET: List all promo codes (Supabase with JSON fallback)
 export async function GET(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
@@ -39,7 +39,7 @@ export async function GET(req: NextRequest) {
 
 // POST: Create a new promo code
 export async function POST(request: NextRequest) {
-  const auth = await verifyAdmin(request);
+  const auth = await verifyAdminOrManager(request);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
 
 // PUT: Update a promo code
 export async function PUT(request: NextRequest) {
-  const auth = await verifyAdmin(request);
+  const auth = await verifyAdminOrManager(request);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
@@ -190,7 +190,7 @@ export async function PUT(request: NextRequest) {
 
 // DELETE: Remove a promo code
 export async function DELETE(request: NextRequest) {
-  const auth = await verifyAdmin(request);
+  const auth = await verifyAdminOrManager(request);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   try {
