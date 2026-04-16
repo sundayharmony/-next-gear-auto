@@ -17,7 +17,6 @@ import { logger } from "@/lib/utils/logger";
 import { BottomTabBar } from "@/components/admin/bottom-tab-bar";
 import { SwipeBack } from "@/components/admin/swipe-back";
 import { buildPageTitleMap, getAdminNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
-import { featureFlags } from "@/lib/config/feature-flags";
 
 const iconComponentMap: Record<PanelIconKey, React.ComponentType<{ className?: string }>> = {
   dashboard: LayoutDashboard,
@@ -36,13 +35,11 @@ const iconComponentMap: Record<PanelIconKey, React.ComponentType<{ className?: s
   clipboard: Calendar,
 };
 
-const NAV_ITEMS = getAdminNavItems()
-  .filter((item) => item.key !== "managers" || featureFlags.adminManagerAccessUi())
-  .map((item) => ({
-    href: item.href,
-    label: item.label,
-    icon: iconComponentMap[item.iconKey],
-  }));
+const NAV_ITEMS = getAdminNavItems().map((item) => ({
+  href: item.href,
+  label: item.label,
+  icon: iconComponentMap[item.iconKey],
+}));
 
 // Map pathnames to short page titles for mobile header
 const PAGE_TITLES: Record<string, string> = buildPageTitleMap(getAdminNavItems());

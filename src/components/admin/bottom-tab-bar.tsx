@@ -12,7 +12,6 @@ import { Instagram } from "@/components/icons/instagram";
 import { useTheme } from "@/lib/context/theme-context";
 import { cn } from "@/lib/utils/cn";
 import { getAdminNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
-import { featureFlags } from "@/lib/config/feature-flags";
 
 interface TabItem {
   href: string;
@@ -37,7 +36,7 @@ const iconComponentMap: Record<PanelIconKey, React.ComponentType<{ className?: s
   clipboard: MoreHorizontal,
 };
 
-const adminNavItems = getAdminNavItems().filter((item) => item.key !== "managers" || featureFlags.adminManagerAccessUi());
+const adminNavItems = getAdminNavItems();
 
 const PRIMARY_TAB_KEYS = new Set(["dashboard", "bookings", "calendar", "vehicles"]);
 const PRIMARY_TABS: TabItem[] = adminNavItems

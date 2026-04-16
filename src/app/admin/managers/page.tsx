@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { featureFlags } from "@/lib/config/feature-flags";
 import { logger } from "@/lib/utils/logger";
 
 interface ManagerRow {
@@ -91,14 +90,6 @@ export default function AdminManagersPage() {
       logger.error("Failed to update manager access:", error);
     }
   }, [fetchManagers]);
-
-  if (!featureFlags.adminManagerAccessUi()) {
-    return (
-      <PageContainer className="py-10">
-        <Card><CardContent className="p-6 text-center"><p className="text-gray-500">Manager access UI is currently disabled.</p></CardContent></Card>
-      </PageContainer>
-    );
-  }
 
   return (
     <>
