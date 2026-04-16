@@ -36,6 +36,9 @@ function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
 
   const managerEnabled = featureFlags.managerPanelMaster() && featureFlags.managerPanelRoutes();
   const hasManagerAccess = isAuthenticated && (user?.role === "manager" || user?.role === "admin");
+  // #region agent log
+  fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H4',location:'manager/layout.tsx:gate',message:'Manager layout gate evaluation',data:{authLoading,managerEnabled,hasManagerAccess,isAuthenticated,userRole:user?.role||null,pathname},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
   if (!managerEnabled || !hasManagerAccess) {
     return (
       <PageContainer className="py-16 text-center">

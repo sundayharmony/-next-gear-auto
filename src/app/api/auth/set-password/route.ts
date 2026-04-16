@@ -60,6 +60,9 @@ export async function POST(request: Request) {
       .select("id, password_hash, name, email, phone, dob, role, created_at")
       .eq("email", normalizedEmail)
       .maybeSingle();
+    // #region agent log
+    fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H5',location:'api/auth/set-password/route.ts:customerLookup',message:'Set-password customer lookup result',data:{lookupError:Boolean(findError),hasCustomer:Boolean(customer),dbRole:customer?.role||null,hasExistingPassword:Boolean(customer?.password_hash)},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
 
     // Timing attack mitigation: always perform a bcrypt hash to ensure
     // consistent response time whether the account exists or not.
@@ -112,6 +115,9 @@ export async function POST(request: Request) {
 
     // Issue JWT tokens so user is logged in automatically
     const customerRole = isAppRole(customer.role) ? customer.role : "customer";
+    // #region agent log
+    fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H5',location:'api/auth/set-password/route.ts:tokenIssue',message:'Set-password token role selection',data:{dbRole:customer.role||null,issuedRole:customerRole},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     const accessToken = await createAccessToken({ userId: customer.id, role: customerRole, email: customer.email });
     const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
 

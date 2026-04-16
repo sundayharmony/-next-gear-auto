@@ -33,6 +33,9 @@ export default function LoginPage() {
 
     try {
       const user = await login(email, password);
+      // #region agent log
+      fetch('http://127.0.0.1:7281/ingest/53c91875-0450-4365-9e2e-62372b8ba563',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'6fde49'},body:JSON.stringify({sessionId:'6fde49',runId:'admin-access-denied-run1',hypothesisId:'H1',location:'login/page.tsx:handleSubmit',message:'Login returned user for redirect',data:{hasUser:Boolean(user),role:user?.role||null,redirect:user?.role==="admin"?"/admin":user?.role==="manager"?"/manager":"/account"},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       // Redirect admin users to admin dashboard, customers to account page
       if (user?.role === "admin") {
         router.push("/admin");
