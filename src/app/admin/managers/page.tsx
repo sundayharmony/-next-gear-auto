@@ -61,7 +61,7 @@ export default function AdminManagersPage() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        setMessage("Manager access created.");
+        setMessage(json.message || "Manager access created.");
         setForm({ name: "", email: "", phone: "" });
         await fetchManagers();
       } else {
