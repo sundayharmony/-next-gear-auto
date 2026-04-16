@@ -2,12 +2,14 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { featureFlags } from "@/lib/config/feature-flags";
 
 export function useStaffMessageUnreadCount(enabled = true, intervalMs = 15000) {
   const [count, setCount] = useState(0);
+  const messagingEnabled = featureFlags.staffMessagingEnabled();
 
   const load = useCallback(async () => {
-    if (!enabled) return;
+    if (!enabled || !messagingEnabled) return;
     try {
       const res = await adminFetch("/api/admin/messages/threads");
       const json = await res.json();
@@ -17,14 +19,14 @@ export function useStaffMessageUnreadCount(enabled = true, intervalMs = 15000) {
     } catch {
       // best-effort polling only
     }
-  }, [enabled]);
+  }, [enabled, messagingEnabled]);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || !messagingEnabled) return;
     load();
     const timer = setInterval(load, intervalMs);
     return () => clearInterval(timer);
-  }, [enabled, intervalMs, load]);
+  }, [enabled, messagingEnabled, intervalMs, load]);
 
   return count;
 }
