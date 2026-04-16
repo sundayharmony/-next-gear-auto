@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
-import { isStaffMessagingEnabled } from "@/lib/config/feature-flags";
+import { staffMessagingMasterEnabled } from "@/lib/config/staff-messaging-server";
 
 export async function GET(req: NextRequest) {
-  if (!isStaffMessagingEnabled("staffMessagingEnabled")) {
-    return NextResponse.json({ success: false, message: "Staff messaging is disabled" }, { status: 403 });
-  }
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
+  if (!staffMessagingMasterEnabled()) {
+    return NextResponse.json({ success: true, data: [], messagingEnabled: false });
+  }
 
   const supabase = getServiceSupabase();
   try {
@@ -38,7 +38,7 @@ export async function GET(req: NextRequest) {
       })),
     ];
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data, messagingEnabled: true });
   } catch (error) {
     logger.error("Staff directory failed", error);
     return NextResponse.json({ success: false, message: "Failed to load staff" }, { status: 500 });

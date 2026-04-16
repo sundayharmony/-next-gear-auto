@@ -75,8 +75,13 @@ export function MessagingPushRegistration({ className }: { className?: string })
       const registration = await getServiceWorkerRegistration();
       const cfgRes = await fetch("/api/admin/messages/push-config", { credentials: "same-origin" });
       const cfgJson = await cfgRes.json();
-      if (!cfgRes.ok || !cfgJson?.success || !cfgJson?.data?.publicKey) {
+      if (!cfgRes.ok || !cfgJson?.success) {
         throw new Error(cfgJson?.message || "Failed to load push config");
+      }
+      if (!cfgJson.data?.pushEnabled || !cfgJson.data?.publicKey) {
+        setStatus("error");
+        setError(cfgJson.data?.reason || "Push notifications are disabled for this site (server settings or missing VAPID keys).");
+        return;
       }
 
       let subscription = await registration.pushManager.getSubscription();

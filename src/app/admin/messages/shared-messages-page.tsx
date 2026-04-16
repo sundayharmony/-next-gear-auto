@@ -46,21 +46,36 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** When false, staff messaging is off in server env — show guidance instead of errors. */
+  const [serverMessagingOn, setServerMessagingOn] = useState(true);
 
   const fetchThreads = useCallback(async () => {
     const res = await adminFetch("/api/admin/messages/threads");
     const json = await res.json();
     if (!res.ok || !json.success) throw new Error(json.message || "Failed to load threads");
-    setThreads(json.data || []);
-  }, []);
+    const on = json.messagingEnabled !== false;
+    setServerMessagingOn(on);
+    setThreads(on ? json.data || [] : []);
+    if (!on) {
+      setSelectedThreadId(null);
+      setMessages([]);
+      router.replace(panelPath);
+    }
+  }, [router, panelPath]);
 
   const fetchMessages = useCallback(async (threadId: string) => {
+    if (!serverMessagingOn) {
+      setMessages([]);
+      return;
+    }
     const res = await adminFetch(`/api/admin/messages/threads/${threadId}/messages?limit=100`);
     const json = await res.json();
     if (!res.ok || !json.success) throw new Error(json.message || "Failed to load messages");
     setMessages(json.data || []);
-    await adminFetch(`/api/admin/messages/threads/${threadId}/read`, { method: "POST" });
-  }, []);
+    if (json.messagingEnabled !== false) {
+      await adminFetch(`/api/admin/messages/threads/${threadId}/read`, { method: "POST" });
+    }
+  }, [serverMessagingOn]);
 
   useEffect(() => {
     let mounted = true;
@@ -75,8 +90,17 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
         const staffJson = await staffRes.json();
         if (!mounted) return;
         if (!threadsRes.ok || !threadsJson.success) throw new Error(threadsJson.message || "Failed to load threads");
-        setThreads(threadsJson.data || []);
-        if (staffRes.ok && staffJson.success) setStaff(staffJson.data || []);
+        const messagingOn = threadsJson.messagingEnabled !== false;
+        setServerMessagingOn(messagingOn);
+        setThreads(messagingOn ? threadsJson.data || [] : []);
+        if (!messagingOn) {
+          setSelectedThreadId(null);
+          setMessages([]);
+          router.replace(panelPath);
+        }
+        if (staffRes.ok && staffJson.success) {
+          setStaff(staffJson.messagingEnabled === false ? [] : staffJson.data || []);
+        }
         setError(null);
       } catch (e) {
         if (mounted) setError(e instanceof Error ? e.message : String(e));
@@ -87,7 +111,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     run();
     const timer = setInterval(() => { fetchThreads().catch(() => undefined); }, 15000);
     return () => { mounted = false; clearInterval(timer); };
-  }, [fetchThreads]);
+  }, [fetchThreads, router, panelPath]);
 
   useEffect(() => {
     const urlThread = searchParams.get("thread");
@@ -96,9 +120,9 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   }, [searchParams, threads, selectedThreadId]);
 
   useEffect(() => {
-    if (!selectedThreadId) return;
+    if (!selectedThreadId || !serverMessagingOn) return;
     fetchMessages(selectedThreadId).catch((e) => setError(e instanceof Error ? e.message : String(e)));
-  }, [selectedThreadId, fetchMessages]);
+  }, [selectedThreadId, fetchMessages, serverMessagingOn]);
 
   const selectedThread = useMemo(() => threads.find((t) => t.id === selectedThreadId) || null, [threads, selectedThreadId]);
   const unreadCount = useMemo(() => threads.reduce((sum, t) => sum + (t.unread_count || 0), 0), [threads]);
@@ -109,7 +133,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   };
 
   const createDm = async () => {
-    if (!dmTarget) return;
+    if (!serverMessagingOn || !dmTarget) return;
     const [role, userId] = dmTarget.split(":");
     setBusy(true);
     try {
@@ -132,7 +156,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   };
 
   const createChannel = async () => {
-    if (!channelTitle.trim()) return;
+    if (!serverMessagingOn || !channelTitle.trim()) return;
     setBusy(true);
     try {
       const members = staff.map((s) => ({ userId: s.id, role: s.role }));
@@ -154,7 +178,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   };
 
   const sendMessage = async () => {
-    if (!selectedThreadId || !composer.trim()) return;
+    if (!serverMessagingOn || !selectedThreadId || !composer.trim()) return;
     setBusy(true);
     try {
       const res = await adminFetch(`/api/admin/messages/threads/${selectedThreadId}/messages`, {
@@ -186,24 +210,35 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
 
       <PageContainer className="py-5 sm:py-8 space-y-4">
         <MessagingPushRegistration />
+        {!serverMessagingOn && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
+            Internal messaging is turned off in production settings. In Vercel, set{" "}
+            <code className="rounded bg-amber-100/80 px-1">FF_STAFF_MESSAGING_ENABLED</code> to{" "}
+            <code className="rounded bg-amber-100/80 px-1">true</code>, optionally{" "}
+            <code className="rounded bg-amber-100/80 px-1">FF_STAFF_MESSAGING_EMAIL_ENABLED</code> /{" "}
+            <code className="rounded bg-amber-100/80 px-1">FF_STAFF_MESSAGING_PUSH_ENABLED</code>, then redeploy. Run{" "}
+            <code className="rounded bg-amber-100/80 px-1">supabase-internal-messaging.sql</code> on your database if you have not already.
+          </div>
+        )}
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-4">
           <div className="rounded-lg border border-gray-200 bg-white p-3 space-y-3">
             <div className="flex items-center gap-2 text-sm font-semibold text-gray-900"><MessageSquare className="h-4 w-4" /> Threads</div>
             <div className="flex gap-2">
-              <Select value={dmTarget} onChange={(e) => setDmTarget(e.target.value)}>
+              <Select value={dmTarget} onChange={(e) => setDmTarget(e.target.value)} disabled={!serverMessagingOn}>
                 <option value="">Start direct message...</option>
                 {staff.map((s) => <option key={`${s.role}:${s.id}`} value={`${s.role}:${s.id}`}>{s.name} ({s.role})</option>)}
               </Select>
-              <Button size="sm" onClick={createDm} disabled={busy || !dmTarget}><Plus className="h-4 w-4" /></Button>
+              <Button size="sm" onClick={createDm} disabled={!serverMessagingOn || busy || !dmTarget}><Plus className="h-4 w-4" /></Button>
             </div>
             <div className="flex gap-2">
-              <Input value={channelTitle} onChange={(e) => setChannelTitle(e.target.value)} placeholder="Channel title" />
-              <Button size="sm" variant="outline" onClick={createChannel} disabled={busy || !channelTitle.trim()}>Create Channel</Button>
+              <Input value={channelTitle} onChange={(e) => setChannelTitle(e.target.value)} placeholder="Channel title" disabled={!serverMessagingOn} />
+              <Button size="sm" variant="outline" onClick={createChannel} disabled={!serverMessagingOn || busy || !channelTitle.trim()}>Create Channel</Button>
             </div>
             <div className="space-y-2">
               {loading && <p className="text-xs text-gray-500">Loading threads...</p>}
-              {!loading && threads.length === 0 && <p className="text-xs text-gray-500">No threads yet.</p>}
+              {!loading && serverMessagingOn && threads.length === 0 && <p className="text-xs text-gray-500">No threads yet.</p>}
+              {!loading && !serverMessagingOn && <p className="text-xs text-gray-500">Messaging is disabled.</p>}
               {threads.map((t) => (
                 <button key={t.id} onClick={() => openThread(t.id)} className={`w-full rounded-md border px-3 py-2 text-left ${selectedThreadId === t.id ? "border-purple-300 bg-purple-50" : "border-gray-200 bg-white hover:bg-gray-50"}`}>
                   <div className="flex items-center justify-between gap-2">
@@ -231,8 +266,8 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
               ))}
             </div>
             <div className="mt-3 flex gap-2">
-              <Input value={composer} onChange={(e) => setComposer(e.target.value)} placeholder="Type a message..." onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} />
-              <Button onClick={sendMessage} disabled={busy || !selectedThreadId || !composer.trim()}><Send className="h-4 w-4" /></Button>
+              <Input value={composer} onChange={(e) => setComposer(e.target.value)} placeholder="Type a message..." disabled={!serverMessagingOn} onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }} />
+              <Button onClick={sendMessage} disabled={!serverMessagingOn || busy || !selectedThreadId || !composer.trim()}><Send className="h-4 w-4" /></Button>
             </div>
           </div>
         </div>

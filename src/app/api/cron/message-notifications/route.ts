@@ -4,11 +4,15 @@ import { logger } from "@/lib/utils/logger";
 import { sendInternalMessageNotification } from "@/lib/email/mailer";
 import { nextBackoffMinutes, resolveStaffIdentity, type StaffRole } from "@/lib/messaging/service";
 import { sendWebPush } from "@/lib/notifications/push";
-import { isStaffMessagingEnabled } from "@/lib/config/feature-flags";
+import {
+  staffMessagingEmailChannelEnabled,
+  staffMessagingMasterEnabled,
+  staffMessagingPushChannelEnabled,
+} from "@/lib/config/staff-messaging-server";
 import { chooseOutboxDecision } from "@/lib/messaging/outbox-policy";
 
 export async function GET(req: NextRequest) {
-  if (!isStaffMessagingEnabled("staffMessagingEnabled")) {
+  if (!staffMessagingMasterEnabled()) {
     return NextResponse.json({ success: true, skipped: true, reason: "staff messaging disabled" });
   }
   const cronSecret = process.env.CRON_SECRET;
@@ -84,11 +88,12 @@ export async function GET(req: NextRequest) {
           .eq("id", message.thread_id)
           .maybeSingle();
         const basePath = recipient.role === "manager" ? "/manager/messages" : "/admin/messages";
-        const threadUrl = `https://rentnextgearauto.com${basePath}?thread=${message.thread_id}`;
+        const siteBase = (process.env.NEXT_PUBLIC_SITE_URL || "https://www.rentnextgearauto.com").replace(/\/$/, "");
+        const threadUrl = `${siteBase}${basePath}?thread=${message.thread_id}`;
         const preview = message.body.length > 240 ? `${message.body.slice(0, 240)}...` : message.body;
 
         if (job.channel === "email") {
-          if (!isStaffMessagingEnabled("staffMessagingEmailEnabled")) {
+          if (!staffMessagingEmailChannelEnabled()) {
             await supabase.from("notification_outbox").update({
               status: "dead",
               last_error: "email notifications disabled",
@@ -107,7 +112,7 @@ export async function GET(req: NextRequest) {
             threadUrl,
           });
         } else {
-          if (!isStaffMessagingEnabled("staffMessagingPushEnabled")) {
+          if (!staffMessagingPushChannelEnabled()) {
             await supabase.from("notification_outbox").update({
               status: "dead",
               last_error: "push notifications disabled",

@@ -2,16 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { requireActiveMembership } from "@/lib/messaging/service";
-import { isStaffMessagingEnabled } from "@/lib/config/feature-flags";
+import { staffMessagingMasterEnabled } from "@/lib/config/staff-messaging-server";
 
 type Params = { params: Promise<{ threadId: string }> };
 
 export async function POST(req: NextRequest, { params }: Params) {
-  if (!isStaffMessagingEnabled("staffMessagingEnabled")) {
-    return NextResponse.json({ success: false, message: "Staff messaging is disabled" }, { status: 403 });
-  }
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
+  if (!staffMessagingMasterEnabled()) {
+    return NextResponse.json({ success: true, data: { skipped: true }, messagingEnabled: false });
+  }
   const { threadId } = await params;
   const supabase = getServiceSupabase();
 
@@ -32,5 +32,5 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ success: false, message: "Failed to update read state" }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, data: { threadId, last_read_at: now } });
+  return NextResponse.json({ success: true, data: { threadId, last_read_at: now }, messagingEnabled: true });
 }

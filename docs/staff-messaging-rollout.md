@@ -1,13 +1,19 @@
 # Staff Messaging Rollout
 
 ## Required Environment Variables
-- `FF_STAFF_MESSAGING_ENABLED`
-- `FF_STAFF_MESSAGING_EMAIL_ENABLED`
-- `FF_STAFF_MESSAGING_PUSH_ENABLED`
+- `FF_STAFF_MESSAGING_ENABLED` (server)
+- `FF_STAFF_MESSAGING_EMAIL_ENABLED` (server)
+- `FF_STAFF_MESSAGING_PUSH_ENABLED` (server)
+- Optional client mirrors (recommended so the UI can reflect flags without guessing): `NEXT_PUBLIC_FF_STAFF_MESSAGING_*` matching the three above.
 - `WEB_PUSH_VAPID_PUBLIC_KEY`
 - `WEB_PUSH_VAPID_PRIVATE_KEY`
 - `WEB_PUSH_SUBJECT`
 - `CRON_SECRET`
+
+### Vercel CLI (non-interactive)
+Use explicit values to avoid accidental newline characters in env values:
+
+`npx vercel env add FF_STAFF_MESSAGING_ENABLED production --value true --yes --force`
 
 ## Staged Enablement
 1. Set `FF_STAFF_MESSAGING_ENABLED=false` and deploy DB migration + APIs.

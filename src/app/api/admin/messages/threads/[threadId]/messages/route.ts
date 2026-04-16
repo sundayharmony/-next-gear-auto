@@ -3,18 +3,19 @@ import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
 import { normalizeMessageBody, requireActiveMembership } from "@/lib/messaging/service";
-import { isStaffMessagingEnabled } from "@/lib/config/feature-flags";
+import { staffMessagingMasterEnabled } from "@/lib/config/staff-messaging-server";
 
 type Params = { params: Promise<{ threadId: string }> };
 
 export async function GET(req: NextRequest, { params }: Params) {
-  if (!isStaffMessagingEnabled("staffMessagingEnabled")) {
-    return NextResponse.json({ success: false, message: "Staff messaging is disabled" }, { status: 403 });
-  }
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
   const { threadId } = await params;
   const supabase = getServiceSupabase();
+
+  if (!staffMessagingMasterEnabled()) {
+    return NextResponse.json({ success: true, data: [], messagingEnabled: false });
+  }
 
   const member = await requireActiveMembership(supabase, threadId, auth.userId);
   if (!member) {
@@ -41,7 +42,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       return NextResponse.json({ success: false, message: "Failed to fetch messages" }, { status: 500 });
     }
 
-    return NextResponse.json({ success: true, data: (data || []).reverse() });
+    return NextResponse.json({ success: true, data: (data || []).reverse(), messagingEnabled: true });
   } catch (error) {
     logger.error("List messages failed", error);
     return NextResponse.json({ success: false, message: "Failed to fetch messages" }, { status: 500 });
@@ -49,11 +50,11 @@ export async function GET(req: NextRequest, { params }: Params) {
 }
 
 export async function POST(req: NextRequest, { params }: Params) {
-  if (!isStaffMessagingEnabled("staffMessagingEnabled")) {
-    return NextResponse.json({ success: false, message: "Staff messaging is disabled" }, { status: 403 });
-  }
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
+  if (!staffMessagingMasterEnabled()) {
+    return NextResponse.json({ success: false, message: "Staff messaging is disabled" }, { status: 403 });
+  }
   const { threadId } = await params;
   const supabase = getServiceSupabase();
 

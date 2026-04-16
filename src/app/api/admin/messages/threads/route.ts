@@ -3,18 +3,18 @@ import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
 import { normalizeThreadTitle, resolveStaffIdentity, type StaffRole } from "@/lib/messaging/service";
-import { isStaffMessagingEnabled } from "@/lib/config/feature-flags";
+import { staffMessagingMasterEnabled } from "@/lib/config/staff-messaging-server";
 
 type CreateThreadBody =
   | { threadType: "dm"; peerUserId: string; peerRole: StaffRole }
   | { threadType: "channel"; title: string; members?: Array<{ userId: string; role: StaffRole }> };
 
 export async function GET(req: NextRequest) {
-  if (!isStaffMessagingEnabled("staffMessagingEnabled")) {
-    return NextResponse.json({ success: false, message: "Staff messaging is disabled" }, { status: 403 });
-  }
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
+  if (!staffMessagingMasterEnabled()) {
+    return NextResponse.json({ success: true, data: [], messagingEnabled: false });
+  }
   const supabase = getServiceSupabase();
 
   try {
@@ -30,7 +30,9 @@ export async function GET(req: NextRequest) {
     }
 
     const threadIds = (memberships || []).map((m: any) => m.thread_id);
-    if (threadIds.length === 0) return NextResponse.json({ success: true, data: [] });
+    if (threadIds.length === 0) {
+      return NextResponse.json({ success: true, data: [], messagingEnabled: true });
+    }
 
     const [{ data: threads }, { data: members }, { data: allMessages }] = await Promise.all([
       supabase
@@ -85,7 +87,7 @@ export async function GET(req: NextRequest) {
       members: membersByThread.get(thread.id) || [],
     }));
 
-    return NextResponse.json({ success: true, data });
+    return NextResponse.json({ success: true, data, messagingEnabled: true });
   } catch (error) {
     logger.error("List threads failed", error);
     return NextResponse.json({ success: false, message: "Failed to load threads" }, { status: 500 });
@@ -93,11 +95,11 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isStaffMessagingEnabled("staffMessagingEnabled")) {
-    return NextResponse.json({ success: false, message: "Staff messaging is disabled" }, { status: 403 });
-  }
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
+  if (!staffMessagingMasterEnabled()) {
+    return NextResponse.json({ success: false, message: "Staff messaging is disabled" }, { status: 403 });
+  }
   const supabase = getServiceSupabase();
 
   let body: CreateThreadBody;

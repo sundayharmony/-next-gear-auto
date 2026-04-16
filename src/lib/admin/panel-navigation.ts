@@ -1,5 +1,4 @@
 import { getAdminFeatures, getManagerFeatures } from "@/lib/admin/panel-registry";
-import { featureFlags } from "@/lib/config/feature-flags";
 
 export type PanelIconKey =
   | "dashboard"
@@ -46,27 +45,23 @@ const iconMap: Record<string, PanelIconKey> = {
 };
 
 export function getAdminNavItems(): PanelNavItem[] {
-  return getAdminFeatures()
-    .filter((feature) => feature.key !== "messages" || featureFlags.staffMessagingEnabled())
-    .map((feature) => ({
+  return getAdminFeatures().map((feature) => ({
     key: feature.key,
     href: feature.adminPath,
     label: feature.label,
     iconKey: iconMap[feature.key] ?? "dashboard",
     sharedWithManager: feature.sharedWithManager,
-    }));
+  }));
 }
 
 export function getManagerNavItems(): PanelNavItem[] {
-  return getManagerFeatures()
-    .filter((feature) => feature.key !== "messages" || featureFlags.staffMessagingEnabled())
-    .map((feature) => ({
+  return getManagerFeatures().map((feature) => ({
     key: feature.key,
     href: feature.managerPath as string,
     label: feature.label,
     iconKey: iconMap[feature.key] ?? "dashboard",
     sharedWithManager: feature.sharedWithManager,
-    }));
+  }));
 }
 
 export function buildPageTitleMap(navItems: PanelNavItem[]): Record<string, string> {

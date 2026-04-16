@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
-import { isStaffMessagingEnabled } from "@/lib/config/feature-flags";
+import { staffMessagingPushChannelEnabled } from "@/lib/config/staff-messaging-server";
 
 interface PushSubscriptionPayload {
   endpoint: string;
@@ -10,11 +10,11 @@ interface PushSubscriptionPayload {
 }
 
 export async function POST(req: NextRequest) {
-  if (!isStaffMessagingEnabled("staffMessagingPushEnabled")) {
-    return NextResponse.json({ success: false, message: "Push messaging is disabled" }, { status: 403 });
-  }
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
+  if (!staffMessagingPushChannelEnabled()) {
+    return NextResponse.json({ success: false, message: "Push messaging is disabled" }, { status: 403 });
+  }
   const supabase = getServiceSupabase();
 
   let body: PushSubscriptionPayload;
@@ -62,11 +62,11 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  if (!isStaffMessagingEnabled("staffMessagingPushEnabled")) {
-    return NextResponse.json({ success: false, message: "Push messaging is disabled" }, { status: 403 });
-  }
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
+  if (!staffMessagingPushChannelEnabled()) {
+    return NextResponse.json({ success: false, message: "Push messaging is disabled" }, { status: 403 });
+  }
   const supabase = getServiceSupabase();
 
   const url = new URL(req.url);
