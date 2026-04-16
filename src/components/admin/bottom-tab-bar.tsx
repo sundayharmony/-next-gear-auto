@@ -127,7 +127,7 @@ export function BottomTabBar() {
                   href={item.href}
                   onClick={() => setShowMore(false)}
                   className={cn(
-                    "flex flex-col items-center gap-1.5 py-3.5 px-2 rounded-xl transition-all active:scale-95",
+                    "flex min-h-[76px] flex-col items-center justify-center gap-1.5 py-3.5 px-2 rounded-xl transition-all active:scale-95",
                     active
                       ? "bg-purple-50 text-purple-600"
                       : "text-gray-600 hover:bg-gray-50 active:bg-gray-100"
@@ -161,7 +161,7 @@ export function BottomTabBar() {
                   role="tab"
                   aria-selected={active}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 px-3 min-w-[64px] transition-all active:scale-90",
+                    "flex min-h-[68px] flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 px-3 min-w-[64px] transition-all active:scale-90",
                     active ? "text-purple-600" : "text-gray-400"
                   )}
                 >
@@ -187,7 +187,7 @@ export function BottomTabBar() {
               aria-selected={moreIsActive}
               onClick={() => setShowMore(!showMore)}
               className={cn(
-                "flex flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 px-3 min-w-[64px] transition-all active:scale-90",
+                "flex min-h-[68px] flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 px-3 min-w-[64px] transition-all active:scale-90",
                 moreIsActive || showMore ? "text-purple-600" : "text-gray-400"
               )}
             >
