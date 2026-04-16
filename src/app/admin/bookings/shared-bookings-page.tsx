@@ -273,6 +273,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
         />
 
         <BookingFilters
+          statusFilterPreset={config.mode === "manager" ? "manager" : "admin"}
           statusFilter={statusFilter}
           onStatusChange={setStatusFilter}
           vehicleFilter={vehicleFilter}

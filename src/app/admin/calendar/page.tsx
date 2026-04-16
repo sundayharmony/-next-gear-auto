@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { usePathname } from "next/navigation";
 import type { BookingDbRow, VehicleListItem } from "@/lib/types";
 import {
   ChevronLeft,
@@ -24,6 +25,8 @@ type BookingRow = BookingDbRow;
 type Vehicle = VehicleListItem;
 
 export default function AdminCalendarPage() {
+  const pathname = usePathname();
+  const bookingsEndpoint = pathname.startsWith("/manager") ? "/api/manager/bookings" : "/api/bookings";
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -98,7 +101,10 @@ export default function AdminCalendarPage() {
     const toStr = `${to.getFullYear()}-${pad(to.getMonth() + 1)}-${pad(to.getDate())}`;
 
     try {
-      const res = await adminFetch(`/api/bookings?from=${fromStr}&to=${toStr}`, {
+      const query = bookingsEndpoint === "/api/manager/bookings"
+        ? `${bookingsEndpoint}?status=all`
+        : `${bookingsEndpoint}?from=${fromStr}&to=${toStr}`;
+      const res = await adminFetch(query, {
         signal: bookingsAbortControllerRef.current?.signal,
       });
       if (res.ok) {
@@ -110,7 +116,7 @@ export default function AdminCalendarPage() {
       if (error instanceof Error && error.name === "AbortError") return;
       logger.error("Failed to fetch bookings:", error);
     }
-  }, [view, timelineStart, calendarMonth]);
+  }, [view, timelineStart, calendarMonth, bookingsEndpoint]);
 
   // Fetch data on mount and when view/date range changes
   useEffect(() => {

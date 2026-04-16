@@ -50,9 +50,12 @@ interface BookingFiltersProps {
     canBulkEmail: boolean;
     canCreateBookings: boolean;
   };
+  /** Manager feed only includes active/upcoming trips — hide terminal status pills. */
+  statusFilterPreset?: "admin" | "manager";
 }
 
-const statuses = ["all", "pending", "confirmed", "active", "completed", "cancelled"];
+const STATUSES_ADMIN = ["all", "pending", "confirmed", "active", "completed", "cancelled"] as const;
+const STATUSES_MANAGER = ["all", "pending", "confirmed", "active"] as const;
 
 export default function BookingFilters({
   statusFilter,
@@ -76,11 +79,13 @@ export default function BookingFilters({
   onClearSelection,
   bulkUpdating,
   capabilities,
+  statusFilterPreset = "admin",
 }: BookingFiltersProps) {
   const canExportCsv = capabilities?.canExportCsv ?? true;
   const canBulkUpdate = capabilities?.canBulkUpdate ?? true;
   const canBulkEmail = capabilities?.canBulkEmail ?? true;
   const canCreateBookings = capabilities?.canCreateBookings ?? true;
+  const statusPills = statusFilterPreset === "manager" ? STATUSES_MANAGER : STATUSES_ADMIN;
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -102,7 +107,7 @@ export default function BookingFilters({
     <div className="space-y-4">
       {/* Status filter pills — horizontal scroll on mobile, wrap on desktop */}
       <div className="flex gap-2 overflow-x-auto sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 scrollbar-hide" role="group" aria-label="Filter bookings by status">
-        {statuses.map((status) => (
+        {statusPills.map((status) => (
           <button
             key={status}
             onClick={() => onStatusChange(status)}
@@ -266,8 +271,11 @@ export default function BookingFilters({
       {/* Results count */}
       <div className="text-sm text-gray-600">
         <span className="font-medium">{bookingCount} bookings</span>
-        {statusFilter === "all" && (
+        {statusFilter === "all" && statusFilterPreset === "admin" && (
           <span className="ml-2">(cancelled trips hidden)</span>
+        )}
+        {statusFilter === "all" && statusFilterPreset === "manager" && (
+          <span className="ml-2">(completed and cancelled not in this list)</span>
         )}
       </div>
     </div>

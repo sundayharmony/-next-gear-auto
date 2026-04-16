@@ -5,6 +5,16 @@ import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 import { isManagerFeatureEnabled } from "@/lib/config/feature-flags";
 
+const sortColumnMap: Record<string, string> = {
+  customer_name: "customer_name",
+  pickup_date: "pickup_date",
+  return_date: "return_date",
+  total_price: "total_price",
+  deposit: "deposit",
+  status: "status",
+  created_at: "created_at",
+};
+
 export async function GET(req: NextRequest) {
   if (!isManagerFeatureEnabled("managerPanelRoutes")) {
     return NextResponse.json({ success: false, message: "Manager panel routes are disabled." }, { status: 403 });
@@ -16,13 +26,16 @@ export async function GET(req: NextRequest) {
   const supabase = getServiceSupabase();
   const status = req.nextUrl.searchParams.get("status");
   const managerId = req.nextUrl.searchParams.get("manager_id");
+  const search = req.nextUrl.searchParams.get("search");
+  const sortParam = req.nextUrl.searchParams.get("sort");
+  const orderParam = req.nextUrl.searchParams.get("order");
+
+  const sortColumn = sortParam && sortColumnMap[sortParam] ? sortColumnMap[sortParam] : "created_at";
+  const isAscending = orderParam === "asc";
 
   try {
     const today = new Date().toISOString().slice(0, 10);
-    let query = supabase
-      .from("bookings")
-      .select("*, vehicles(year, make, model)")
-      .order("created_at", { ascending: false });
+    let query = supabase.from("bookings").select("*, vehicles(year, make, model)");
 
     if (auth.role === "manager") {
       // Managers can see all active and upcoming trips across channels.
@@ -36,6 +49,19 @@ export async function GET(req: NextRequest) {
     if (status && status !== "all") {
       query = query.eq("status", status);
     }
+
+    if (search) {
+      const safeSearch = (search || "").slice(0, 100);
+      const sanitized = safeSearch.replace(/[%_*(),.<>!=&|]/g, "");
+      if (sanitized) {
+        const escapedSearch = encodeURIComponent(sanitized);
+        query = query.or(
+          `customer_name.ilike.%${escapedSearch}%,customer_email.ilike.%${escapedSearch}%,id.eq.${escapedSearch}`
+        );
+      }
+    }
+
+    query = query.order(sortColumn, { ascending: isAscending });
 
     const { data, error } = await query;
     if (error) {
