@@ -4,6 +4,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Header } from "./header";
 import { Footer } from "./footer";
+import { StaffServiceWorkerBootstrap } from "@/components/messaging/staff-sw-bootstrap";
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -21,7 +22,12 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
 
   if (isPanelRoute) {
     // In standalone PWA mode, admin gets no site header/footer at all
-    return <div className={isStandalone ? "pwa-safe-top" : ""}>{children}</div>;
+    return (
+      <div className={isStandalone ? "pwa-safe-top" : ""}>
+        <StaffServiceWorkerBootstrap />
+        {children}
+      </div>
+    );
   }
 
   return (

@@ -406,3 +406,73 @@ export async function sendBookingExtended(data: ExtensionEmailData & { customerE
     throw error;
   }
 }
+
+export interface InternalMessageEmailData {
+  recipientEmail: string;
+  recipientName: string;
+  senderName: string;
+  senderRole: "admin" | "manager";
+  threadTitle?: string | null;
+  messagePreview: string;
+  threadUrl: string;
+}
+
+function internalMessageTemplate(data: InternalMessageEmailData): string {
+  const recipientName = escapeHtml(data.recipientName || "there");
+  const senderName = escapeHtml(data.senderName || "Staff");
+  const senderRole = escapeHtml(data.senderRole);
+  const threadTitle = data.threadTitle ? escapeHtml(data.threadTitle) : "Direct Message";
+  const preview = escapeHtml(data.messagePreview);
+  const url = escapeHtml(data.threadUrl);
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#f3f4f6;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;">
+    <tr>
+      <td align="center" style="padding:36px 16px;">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:14px;overflow:hidden;">
+          <tr>
+            <td style="background:linear-gradient(135deg,#7C3AED,#5B21B6);padding:28px 32px;color:#ffffff;">
+              <h1 style="margin:0;font-size:22px;font-weight:700;">New Internal Message</h1>
+              <p style="margin:8px 0 0;color:rgba(255,255,255,0.9);font-size:14px;">${threadTitle}</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 32px;">
+              <p style="margin:0 0 16px;font-size:15px;color:#1f2937;">Hi ${recipientName},</p>
+              <p style="margin:0 0 16px;font-size:15px;color:#4b5563;">
+                ${senderName} (${senderRole}) sent you a new internal message:
+              </p>
+              <div style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;padding:14px 16px;margin:0 0 18px;">
+                <p style="margin:0;font-size:14px;color:#111827;white-space:pre-wrap;">${preview}</p>
+              </div>
+              <a href="${url}" style="display:inline-block;background:#7C3AED;color:#fff;text-decoration:none;font-weight:600;font-size:14px;padding:10px 16px;border-radius:8px;">Open Message</a>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
+
+export async function sendInternalMessageNotification(data: InternalMessageEmailData) {
+  try {
+    const transporter = getTransporter();
+    const html = internalMessageTemplate(data);
+    await sendMailWithRetry(transporter, {
+      from: FROM_SYSTEM,
+      to: data.recipientEmail,
+      subject: `New message from ${data.senderName} - ${data.threadTitle || "Direct Message"}`,
+      html,
+      text: stripHtmlTags(html),
+    });
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send internal message notification:", errorMsg);
+    throw error;
+  }
+}

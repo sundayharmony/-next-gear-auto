@@ -16,6 +16,7 @@ import {
   Users,
   Tag,
   Star,
+  MessageSquare,
   ClipboardList,
   LogOut,
   Loader2,
@@ -32,6 +33,7 @@ import { ManagerBottomTabBar } from "@/components/manager/bottom-tab-bar";
 import { getManagerNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
 import { Instagram } from "@/components/icons/instagram";
 import { cn } from "@/lib/utils/cn";
+import { useStaffMessageUnreadCount } from "@/lib/hooks/use-staff-message-unread-count";
 
 const iconComponentMap: Record<PanelIconKey, LucideIcon> = {
   dashboard: LayoutDashboard,
@@ -46,6 +48,7 @@ const iconComponentMap: Record<PanelIconKey, LucideIcon> = {
   users: Users,
   tag: Tag,
   star: Star,
+  messageSquare: MessageSquare,
   instagram: Instagram,
   clipboard: ClipboardList,
 };
@@ -61,7 +64,12 @@ function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
+  const unreadMessages = useStaffMessageUnreadCount(isAuthenticated && hasRoleForMessages(user?.role));
   const [loggingOut, setLoggingOut] = React.useState(false);
+
+  function hasRoleForMessages(role: string | undefined) {
+    return role === "manager" || role === "admin";
+  }
 
   if (authLoading) {
     return (
@@ -114,6 +122,11 @@ function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
             >
               <item.icon className="h-4.5 w-4.5 shrink-0" />
               {item.label}
+              {item.href === "/manager/messages" && unreadMessages > 0 && (
+                <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-purple-500 px-1.5 text-[10px] font-bold text-white">
+                  {unreadMessages}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -157,7 +170,7 @@ function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
+      <main className="flex-1 min-w-0 min-h-0 overflow-y-auto pb-[calc(env(safe-area-inset-bottom,0px)+76px)] lg:pb-0">
         <SwipeBack>{children}</SwipeBack>
       </main>
 

@@ -23,6 +23,7 @@ export const panelFeatureRegistry: PanelFeature[] = [
   { key: "finances", label: "Finances", adminPath: "/admin/finances", sharedWithManager: false },
   { key: "tickets", label: "Tickets", adminPath: "/admin/tickets", managerPath: "/manager/tickets", sharedWithManager: true },
   { key: "customers", label: "Customers", adminPath: "/admin/customers", managerPath: "/manager/customers", sharedWithManager: true },
+  { key: "messages", label: "Messages", adminPath: "/admin/messages", managerPath: "/manager/messages", sharedWithManager: true },
   { key: "managers", label: "Managers", adminPath: "/admin/managers", sharedWithManager: false },
   { key: "promoCodes", label: "Promo Codes", adminPath: "/admin/promo-codes", managerPath: "/manager/promo-codes", sharedWithManager: true },
   { key: "reviews", label: "Reviews", adminPath: "/admin/reviews", managerPath: "/manager/reviews", sharedWithManager: true },

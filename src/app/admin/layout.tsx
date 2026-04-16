@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Ticket, Bell, MapPin, ShieldBan, Loader2, Moon, Sun
+  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Ticket, Bell, MapPin, ShieldBan, Loader2, Moon, Sun, MessageSquare
 } from "lucide-react";
 import { Instagram } from "@/components/icons/instagram";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import { logger } from "@/lib/utils/logger";
 import { BottomTabBar } from "@/components/admin/bottom-tab-bar";
 import { SwipeBack } from "@/components/admin/swipe-back";
 import { buildPageTitleMap, getAdminNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
+import { useStaffMessageUnreadCount } from "@/lib/hooks/use-staff-message-unread-count";
 
 const iconComponentMap: Record<PanelIconKey, React.ComponentType<{ className?: string }>> = {
   dashboard: LayoutDashboard,
@@ -31,6 +32,7 @@ const iconComponentMap: Record<PanelIconKey, React.ComponentType<{ className?: s
   users: Users,
   tag: Tag,
   star: Star,
+  messageSquare: MessageSquare,
   instagram: Instagram,
   clipboard: Calendar,
 };
@@ -54,6 +56,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const [pendingCount, setPendingCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [recentBookings, setRecentBookings] = useState<Array<{ id: string; customer_name: string; created_at: string; total_price: number }>>([]);
+  const unreadMessages = useStaffMessageUnreadCount(isAuthenticated && user?.role === "admin");
 
   // Track abort controller for fetch cancellation
   const abortControllerRef = React.useRef<AbortController | null>(null);
@@ -344,6 +347,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             >
               <item.icon className="h-4.5 w-4.5 shrink-0" />
               {item.label}
+              {item.href === "/admin/messages" && unreadMessages > 0 && (
+                <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-purple-500 px-1.5 text-[10px] font-bold text-white">
+                  {unreadMessages}
+                </span>
+              )}
               {isActive(item.href) && <ChevronRight className="h-3.5 w-3.5 ml-auto" />}
             </Link>
           ))}
@@ -391,7 +399,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* ═══════ MAIN CONTENT ═══════ */}
-      <main className="flex-1 min-w-0 min-h-0 overflow-y-auto">
+      <main className="flex-1 min-w-0 min-h-0 overflow-y-auto pb-[calc(env(safe-area-inset-bottom,0px)+76px)] lg:pb-0">
         <SwipeBack>
           {children}
         </SwipeBack>

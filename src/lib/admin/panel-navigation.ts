@@ -1,4 +1,5 @@
 import { getAdminFeatures, getManagerFeatures } from "@/lib/admin/panel-registry";
+import { featureFlags } from "@/lib/config/feature-flags";
 
 export type PanelIconKey =
   | "dashboard"
@@ -14,7 +15,8 @@ export type PanelIconKey =
   | "tag"
   | "star"
   | "instagram"
-  | "clipboard";
+  | "clipboard"
+  | "messageSquare";
 
 export interface PanelNavItem {
   key: string;
@@ -38,28 +40,33 @@ const iconMap: Record<string, PanelIconKey> = {
   managers: "users",
   promoCodes: "tag",
   reviews: "star",
+  messages: "messageSquare",
   instagram: "instagram",
   analytics: "clipboard",
 };
 
 export function getAdminNavItems(): PanelNavItem[] {
-  return getAdminFeatures().map((feature) => ({
+  return getAdminFeatures()
+    .filter((feature) => feature.key !== "messages" || featureFlags.staffMessagingEnabled())
+    .map((feature) => ({
     key: feature.key,
     href: feature.adminPath,
     label: feature.label,
     iconKey: iconMap[feature.key] ?? "dashboard",
     sharedWithManager: feature.sharedWithManager,
-  }));
+    }));
 }
 
 export function getManagerNavItems(): PanelNavItem[] {
-  return getManagerFeatures().map((feature) => ({
+  return getManagerFeatures()
+    .filter((feature) => feature.key !== "messages" || featureFlags.staffMessagingEnabled())
+    .map((feature) => ({
     key: feature.key,
     href: feature.managerPath as string,
     label: feature.label,
     iconKey: iconMap[feature.key] ?? "dashboard",
     sharedWithManager: feature.sharedWithManager,
-  }));
+    }));
 }
 
 export function buildPageTitleMap(navItems: PanelNavItem[]): Record<string, string> {

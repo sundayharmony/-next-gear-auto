@@ -41,6 +41,11 @@ type Database = {
       instagram_posts: GenericTable;
       locations: GenericTable;
       booking_activity: GenericTable;
+      message_threads: GenericTable;
+      message_thread_members: GenericTable;
+      messages: GenericTable;
+      notification_outbox: GenericTable;
+      push_subscriptions: GenericTable;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;

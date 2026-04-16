@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 import {
   LayoutDashboard, Calendar, Car, Users, DollarSign,
   CalendarDays, Tag, Star, Wrench, Ticket, MapPin, ShieldBan,
-  MoreHorizontal, X, Moon, Sun,
+  MoreHorizontal, X, Moon, Sun, MessageSquare,
 } from "lucide-react";
 import { Instagram } from "@/components/icons/instagram";
 import { useTheme } from "@/lib/context/theme-context";
@@ -32,6 +32,7 @@ const iconComponentMap: Record<PanelIconKey, React.ComponentType<{ className?: s
   users: Users,
   tag: Tag,
   star: Star,
+  messageSquare: MessageSquare,
   instagram: Instagram,
   clipboard: MoreHorizontal,
 };
@@ -145,12 +146,12 @@ export function BottomTabBar() {
 
       {/* Bottom tab bar */}
       <nav
-        className="shrink-0 z-[91] lg:hidden"
+        className="fixed inset-x-0 bottom-0 shrink-0 z-[91] lg:hidden"
         role="tablist"
         aria-label="Admin navigation"
       >
         <div className="bg-white/80 backdrop-blur-xl border-t border-gray-200/50 shadow-[0_-2px_20px_rgba(0,0,0,0.06)]">
-          <div className="flex items-stretch justify-around px-2 pb-[env(safe-area-inset-bottom,0px)]">
+          <div className="flex items-stretch justify-around px-2 pb-[calc(env(safe-area-inset-bottom,0px)+4px)]">
             {PRIMARY_TABS.map((tab) => {
               const active = isActive(tab.href);
               return (
