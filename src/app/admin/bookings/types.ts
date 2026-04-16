@@ -2,14 +2,21 @@
 // Re-exports canonical types from @/lib/types; adds booking-module-specific types.
 
 // Re-export shared types so booking components can import from one place
-export type { BookingDbRow as BookingRow, BookingExtra as ExtraItem, VehicleListItem as Vehicle } from "@/lib/types";
+import type { BookingDbRow, BookingExtra, VehicleListItem } from "@/lib/types";
+export type { BookingExtra as ExtraItem, VehicleListItem as Vehicle } from "@/lib/types";
 export { TIME_SLOTS, PAYMENT_METHODS, STATUS_STEPS } from "@/lib/types";
 
 // Re-export extras from the single source of truth (data/extras.json)
 // We import and re-export so components don't need to know about the JSON file.
 import extrasData from "@/data/extras.json";
-import type { BookingExtra } from "@/lib/types";
 export const AVAILABLE_EXTRAS: BookingExtra[] = extrasData as BookingExtra[];
+
+export interface BookingRow extends Omit<BookingDbRow, "total_price" | "deposit"> {
+  total_price: number | null;
+  deposit: number | null;
+  canViewPricing?: boolean;
+  canManage?: boolean;
+}
 
 // ─── Booking-module-specific types (not shared elsewhere) ─────────
 

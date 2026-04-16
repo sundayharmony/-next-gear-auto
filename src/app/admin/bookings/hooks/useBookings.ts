@@ -5,6 +5,7 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { logger } from "@/lib/utils/logger";
 import type { BookingRow, Vehicle, CustomerOption, SortField, SortOrder } from "../types";
+import type { BookingsPageConfig } from "../config";
 
 interface UseBookingsReturn {
   bookings: BookingRow[];
@@ -33,7 +34,7 @@ interface UseBookingsReturn {
   overdueBookings: BookingRow[];
 }
 
-export function useBookings(): UseBookingsReturn {
+export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [allCustomers, setAllCustomers] = useState<CustomerOption[]>([]);
@@ -65,14 +66,14 @@ export function useBookings(): UseBookingsReturn {
       params.set("sort", sortField);
       params.set("order", sortOrder);
 
-      const url = `/api/bookings${params.toString() ? `?${params}` : ""}`;
+      const url = `${config.bookingsEndpoint}${params.toString() ? `?${params}` : ""}`;
       const res = await adminFetch(url, { signal: abortControllerRef.current?.signal });
       if (!res.ok) throw new Error(`Failed to fetch bookings: ${res.status}`);
       const data = await res.json();
       if (data.success) {
         let results = data.data || [];
-        // Hide cancelled unless specifically filtering for them
-        if (statusFilter === "all") {
+        // Admin list hides cancelled rows in default view. Manager feed already excludes them server-side.
+        if (statusFilter === "all" && config.mode === "admin") {
           results = results.filter((b: BookingRow) => b.status !== "cancelled");
         }
         // Client-side vehicle filter
@@ -87,11 +88,11 @@ export function useBookings(): UseBookingsReturn {
       logger.error("Failed to fetch bookings:", err);
     }
     setLoading(false);
-  }, [statusFilter, vehicleFilter, searchQuery, sortField, sortOrder]);
+  }, [config.bookingsEndpoint, config.mode, statusFilter, vehicleFilter, searchQuery, sortField, sortOrder]);
 
   const fetchVehicles = useCallback(async () => {
     try {
-      const res = await adminFetch("/api/admin/vehicles");
+      const res = await adminFetch(config.vehiclesEndpoint);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       if (data.success) setVehicles(data.data || []);
@@ -99,11 +100,11 @@ export function useBookings(): UseBookingsReturn {
       logger.error("Failed to fetch vehicles:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch vehicles");
     }
-  }, [setError]);
+  }, [config.vehiclesEndpoint, setError]);
 
   const fetchCustomers = useCallback(async () => {
     try {
-      const res = await adminFetch("/api/admin/customers");
+      const res = await adminFetch(config.customersEndpoint);
       if (!res.ok) throw new Error("Failed to fetch");
       const data = await res.json();
       if (data.success) {
@@ -120,7 +121,7 @@ export function useBookings(): UseBookingsReturn {
       logger.error("Failed to fetch customers:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch customers");
     }
-  }, [setError]);
+  }, [config.customersEndpoint, setError]);
 
   // Fetch bookings when filters change
   useEffect(() => {
@@ -149,6 +150,12 @@ export function useBookings(): UseBookingsReturn {
   }, [sortField]);
 
   const updateStatus = useCallback(async (bookingId: string, newStatus: string) => {
+    const booking = bookings.find((b) => b.id === bookingId);
+    if (config.mode === "manager" && booking && booking.canManage === false) {
+      setError("You can only manage bookings you created.");
+      return;
+    }
+
     setUpdating(bookingId);
     try {
       const res = await adminFetch("/api/bookings", {
@@ -175,10 +182,22 @@ export function useBookings(): UseBookingsReturn {
     } finally {
       setUpdating(null);
     }
-  }, [setSuccess, setError]);
+  }, [bookings, config.mode, setSuccess, setError]);
 
   const bulkUpdateStatus = useCallback(async (ids: Set<string>, newStatus: string): Promise<number> => {
-    const promises = Array.from(ids).map((id) =>
+    const targetIds = config.mode === "manager"
+      ? Array.from(ids).filter((id) => {
+          const booking = bookings.find((b) => b.id === id);
+          return booking?.canManage !== false;
+        })
+      : Array.from(ids);
+
+    if (targetIds.length === 0) {
+      setError("No selectable bookings can be updated.");
+      return 0;
+    }
+
+    const promises = targetIds.map((id) =>
       adminFetch("/api/bookings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -212,7 +231,7 @@ export function useBookings(): UseBookingsReturn {
       fetchBookings();
     }
     return successCount;
-  }, [fetchBookings, setError, setSuccess]);
+  }, [bookings, config.mode, fetchBookings, setError, setSuccess]);
 
   // Computed: today's pickups, returns, overdue
   // Note: Don't memoize 'today' as it causes stale values past midnight

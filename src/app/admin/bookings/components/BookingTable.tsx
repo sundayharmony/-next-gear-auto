@@ -21,6 +21,9 @@ interface BookingTableProps {
   sortField: SortField;
   sortOrder: SortOrder;
   onSort: (field: SortField) => void;
+  capabilities?: {
+    canSeePricingByDefault: boolean;
+  };
 }
 
 export default function BookingTable({
@@ -34,7 +37,9 @@ export default function BookingTable({
   sortField,
   sortOrder,
   onSort,
+  capabilities,
 }: BookingTableProps) {
+  const canSeePricingByDefault = capabilities?.canSeePricingByDefault ?? true;
   const getOriginLabel = (origin?: string) => {
     if (origin === "manager_panel") return "Manager";
     if (origin === "admin_panel") return "Admin";
@@ -66,6 +71,13 @@ export default function BookingTable({
       default:
         return [];
     }
+  };
+
+  const getCanManage = (booking: BookingRow): boolean => booking.canManage !== false;
+  const getCanViewPricing = (booking: BookingRow): boolean => {
+    if (booking.canViewPricing === true) return true;
+    if (booking.canViewPricing === false) return false;
+    return canSeePricingByDefault;
   };
 
 
@@ -128,7 +140,8 @@ export default function BookingTable({
         {bookings.map((booking) => {
           const isSelected = selectedIds.has(booking.id);
           const rentalDays = calculateRentalDays(booking.pickup_date, booking.return_date);
-          const statusActions = getStatusActions(booking.status);
+          const statusActions = getCanManage(booking) ? getStatusActions(booking.status) : [];
+          const canViewPricing = getCanViewPricing(booking);
           const balance = (booking.total_price ?? 0) - (booking.deposit ?? 0);
           const balanceColor = getBalanceColor(booking.total_price ?? 0, booking.deposit ?? 0);
 
@@ -186,10 +199,16 @@ export default function BookingTable({
               {/* Bottom row: price + balance + doc icons + actions */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
                 <div className="flex items-center gap-3">
-                  <span className="font-semibold text-gray-900 text-sm">${(booking.total_price ?? 0).toFixed(2)}</span>
-                  <span className={`text-xs font-medium ${balanceColor}`}>
-                    {balance === 0 ? "Paid" : `$${balance.toFixed(2)} due`}
-                  </span>
+                  {canViewPricing ? (
+                    <>
+                      <span className="font-semibold text-gray-900 text-sm">${(booking.total_price ?? 0).toFixed(2)}</span>
+                      <span className={`text-xs font-medium ${balanceColor}`}>
+                        {balance === 0 ? "Paid" : `$${balance.toFixed(2)} due`}
+                      </span>
+                    </>
+                  ) : (
+                    <span className="text-xs font-medium text-gray-500">Pricing hidden</span>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -263,7 +282,8 @@ export default function BookingTable({
             {bookings.map((booking) => {
               const isSelected = selectedIds.has(booking.id);
               const rentalDays = calculateRentalDays(booking.pickup_date, booking.return_date);
-              const statusActions = getStatusActions(booking.status);
+              const statusActions = getCanManage(booking) ? getStatusActions(booking.status) : [];
+              const canViewPricing = getCanViewPricing(booking);
               const balance = (booking.total_price ?? 0) - (booking.deposit ?? 0);
               const balanceColor = getBalanceColor(booking.total_price ?? 0, booking.deposit ?? 0);
 
@@ -323,12 +343,20 @@ export default function BookingTable({
 
                   {/* Total */}
                   <td className="px-4 py-3">
-                    <div className="font-semibold text-gray-900">${((booking.total_price ?? 0)).toFixed(2)}</div>
+                    {canViewPricing ? (
+                      <div className="font-semibold text-gray-900">${((booking.total_price ?? 0)).toFixed(2)}</div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Hidden</div>
+                    )}
                   </td>
 
                   {/* Balance */}
                   <td className="px-4 py-3">
-                    <div className={`font-semibold ${balanceColor}`}>${(balance ?? 0).toFixed(2)}</div>
+                    {canViewPricing ? (
+                      <div className={`font-semibold ${balanceColor}`}>${(balance ?? 0).toFixed(2)}</div>
+                    ) : (
+                      <div className="text-xs text-gray-500">Hidden</div>
+                    )}
                   </td>
 
                   {/* Status */}

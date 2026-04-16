@@ -20,8 +20,13 @@ This project enforces a shared contract for Admin features that are marked as `s
 
 - Every `sharedWithManager: true` feature must declare a `managerPath`.
 - Every shared manager path must have a real page file under `src/app/manager/.../page.tsx`.
+- Every shared manager page must reference shared/admin UI sources (`@/app/admin/...`) to avoid drift.
 - Manager-shared set cannot include finance or fleet (`finances`, `vehicles`).
 - Any `syncException` used for temporary desync must not be expired.
+
+### Allowed sync exemption
+
+- `dashboard` is intentionally manager-specific and exempt from the shared UI import rule.
 
 ## Current safe defaults
 

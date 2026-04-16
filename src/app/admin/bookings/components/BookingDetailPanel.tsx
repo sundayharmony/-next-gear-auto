@@ -71,6 +71,15 @@ interface BookingDetailPanelProps {
   onUpdateStatus: (bookingId: string, newStatus: string) => void;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
+  capabilities?: {
+    canSendBookingEmail: boolean;
+    canViewAdminNotes: boolean;
+    canViewActivityTimeline: boolean;
+    canManagePayments: boolean;
+    canExtendBooking: boolean;
+    customerDetailsBasePath: string;
+    ticketsPagePath: string;
+  };
 }
 
 export function BookingDetailPanel(props: BookingDetailPanelProps) {
@@ -82,7 +91,17 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     onUpdateStatus,
     onError,
     onSuccess,
+    capabilities,
   } = props;
+  const canSendBookingEmail = capabilities?.canSendBookingEmail ?? true;
+  const canViewAdminNotes = capabilities?.canViewAdminNotes ?? true;
+  const canViewActivityTimeline = capabilities?.canViewActivityTimeline ?? true;
+  const canManagePayments = capabilities?.canManagePayments ?? true;
+  const canExtendBooking = capabilities?.canExtendBooking ?? true;
+  const customerDetailsBasePath = capabilities?.customerDetailsBasePath ?? "/admin/customers";
+  const ticketsPagePath = capabilities?.ticketsPagePath ?? "/admin/tickets";
+  const canViewPricing = booking.canViewPricing !== false;
+  const canManageRow = booking.canManage !== false;
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -160,8 +179,12 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       try {
         const results = await Promise.allSettled([
           adminFetch(`/api/admin/tickets?booking_id=${booking.id}`, { signal: abortController.signal }),
-          adminFetch(`/api/admin/booking-activity?booking_id=${booking.id}`, { signal: abortController.signal }),
-          adminFetch(`/api/admin/booking-payments?booking_id=${booking.id}`, { signal: abortController.signal }),
+          canViewActivityTimeline
+            ? adminFetch(`/api/admin/booking-activity?booking_id=${booking.id}`, { signal: abortController.signal })
+            : Promise.resolve(new Response(JSON.stringify({ data: [] }))),
+          canManagePayments
+            ? adminFetch(`/api/admin/booking-payments?booking_id=${booking.id}`, { signal: abortController.signal })
+            : Promise.resolve(new Response(JSON.stringify({ data: [] }))),
         ]);
 
         if (cancelled) return;
@@ -208,7 +231,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       cancelled = true;
       abortController.abort();
     };
-  }, [booking.id]);
+  }, [booking.id, canManagePayments, canViewActivityTimeline]);
 
   // Fetch locations
   useEffect(() => {
@@ -318,6 +341,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Send email to customer
   const handleSendEmail = async () => {
+    if (!canSendBookingEmail) return;
     setSendingEmail(true);
     try {
       const res = await adminFetch("/api/admin/send-booking-email", {
@@ -341,6 +365,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Reset existing agreement and resend a fresh signing link
   const handleResendAgreement = async () => {
+    if (!canSendBookingEmail) return;
     setResendingAgreement(true);
     try {
       const res = await adminFetch("/api/admin/send-booking-email", {
@@ -461,6 +486,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Record a payment
   const handleRecordPayment = async () => {
+    if (!canManagePayments) return;
     if (saving) return;
     const parsedAmount = parseFloat(paymentForm.amount);
     if (!paymentForm.amount || isNaN(parsedAmount) || parsedAmount <= 0) {
@@ -512,6 +538,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Quick-toggle payment status (mark fully paid or unpaid)
   const handleTogglePaymentStatus = async (markPaid: boolean) => {
+    if (!canManagePayments) return;
     if (saving) return;
     setSaving(true);
     try {
@@ -538,6 +565,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Delete a payment record
   const handleDeletePayment = async (paymentId: string) => {
+    if (!canManagePayments) return;
     if (saving) return;
     setSaving(true);
     try {
@@ -696,6 +724,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Handle extend booking
   const handleExtendBooking = async () => {
+    if (!canExtendBooking) return;
     if (!extendDate) {
       onError("Please select a new return date");
       return;
@@ -767,7 +796,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
               {editMode ? "Edit Booking" : "Booking Details"}
             </h2>
             <div className="flex items-center gap-2">
-              {!editMode && !["completed", "cancelled"].includes(booking.status) && (
+              {!editMode && canManageRow && !["completed", "cancelled"].includes(booking.status) && (
                 <Button
                   size="sm"
                   variant="ghost"
@@ -940,7 +969,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 <div className="flex gap-2 pt-2">
                   {booking.customer_id && (
                     <a
-                      href={`/admin/customers/${booking.customer_id}`}
+                      href={`${customerDetailsBasePath}/${booking.customer_id}`}
                       className="text-blue-600 hover:text-blue-700 text-xs flex items-center gap-1"
                     >
                       <Link2 className="w-3 h-3" />
@@ -1336,30 +1365,42 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Total Price</span>
-                  <span className="font-semibold">
-                    ${(booking.total_price ?? 0).toFixed(2)}
-                  </span>
+                  {canViewPricing ? (
+                    <span className="font-semibold">
+                      ${(booking.total_price ?? 0).toFixed(2)}
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-gray-500">Hidden</span>
+                  )}
                 </div>
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Amount Paid</span>
-                  <span className="font-semibold">
-                    ${(booking.deposit ?? 0).toFixed(2)}
-                  </span>
+                  {canViewPricing ? (
+                    <span className="font-semibold">
+                      ${(booking.deposit ?? 0).toFixed(2)}
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-gray-500">Hidden</span>
+                  )}
                 </div>
 
                 {/* Progress bar */}
                 <div className="w-full bg-gray-300 rounded-full h-2 overflow-hidden">
                   <div
                     className="bg-green-500 h-full transition-all"
-                    style={{ width: `${paymentPercentage}%` }}
+                    style={{ width: `${canViewPricing ? paymentPercentage : 0}%` }}
                   />
                 </div>
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Balance Due</span>
-                  <span className={`font-semibold ${balanceDue > 0 ? "text-red-600" : "text-green-600"}`}>
-                    ${balanceDue.toFixed(2)}
-                  </span>
+                  {canViewPricing ? (
+                    <span className={`font-semibold ${balanceDue > 0 ? "text-red-600" : "text-green-600"}`}>
+                      ${balanceDue.toFixed(2)}
+                    </span>
+                  ) : (
+                    <span className="font-semibold text-gray-500">Hidden</span>
+                  )}
                 </div>
 
                 {booking.payment_method && (
@@ -1369,7 +1410,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 )}
 
                 {/* Payment History */}
-                {payments.length > 0 && (
+                {canManagePayments && payments.length > 0 && (
                   <div className="pt-2 border-t border-gray-300 space-y-1">
                     <p className="text-xs font-semibold text-gray-700 mb-1">Payment History</p>
                     {payments.map((p) => {
@@ -1408,7 +1449,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 )}
 
                 {/* Quick payment status toggles */}
-                <div className="pt-2 flex gap-2">
+                {canManagePayments && (
+                  <div className="pt-2 flex gap-2">
                   {balanceDue > 0 ? (
                     <Button
                       size="sm"
@@ -1432,10 +1474,12 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       Mark Unpaid
                     </Button>
                   )}
-                </div>
+                  </div>
+                )}
 
                 {/* Record payment button and form */}
-                <div className="pt-2 border-t border-gray-300">
+                {canManagePayments && (
+                  <div className="pt-2 border-t border-gray-300">
                   {!showRecordPayment ? (
                     <Button
                       size="sm"
@@ -1506,13 +1550,14 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       </div>
                     </div>
                   )}
-                </div>
+                  </div>
+                )}
               </div>
             )}
           </div>
 
           {/* Extend Booking */}
-          {["confirmed", "active"].includes(booking.status) && !editMode && (
+          {canExtendBooking && ["confirmed", "active"].includes(booking.status) && !editMode && (
             <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
               <button
                 onClick={() => setShowExtend(!showExtend)}
@@ -1618,7 +1663,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           )}
 
           {/* Admin Notes */}
-          <div className="space-y-2">
+          {canViewAdminNotes && (
+            <div className="space-y-2">
             <button
               onClick={() => setShowNotes(!showNotes)}
               className="w-full flex items-center justify-between text-sm font-semibold hover:bg-gray-50 p-2 rounded"
@@ -1655,7 +1701,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 )}
               </div>
             )}
-          </div>
+            </div>
+          )}
 
           {/* Agreement */}
           <div className="space-y-2 border-t border-gray-200 pt-4">
@@ -1684,14 +1731,16 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     View Agreement
                   </a>
                 )}
-                <button
-                  onClick={handleResendAgreement}
-                  disabled={resendingAgreement}
-                  className="mt-1 text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1 disabled:opacity-50"
-                >
-                  <RefreshCw className={`w-3 h-3 ${resendingAgreement ? "animate-spin" : ""}`} />
-                  {resendingAgreement ? "Sending..." : "Reset & Resend Agreement"}
-                </button>
+                {canSendBookingEmail && (
+                  <button
+                    onClick={handleResendAgreement}
+                    disabled={resendingAgreement}
+                    className="mt-1 text-xs text-purple-600 hover:text-purple-800 flex items-center gap-1 disabled:opacity-50"
+                  >
+                    <RefreshCw className={`w-3 h-3 ${resendingAgreement ? "animate-spin" : ""}`} />
+                    {resendingAgreement ? "Sending..." : "Reset & Resend Agreement"}
+                  </button>
+                )}
               </div>
             ) : (
               <p className="text-sm text-gray-500">Not yet signed</p>
@@ -1732,7 +1781,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 ))}
               </div>
               <a
-                href="/admin/tickets"
+                href={ticketsPagePath}
                 className="text-xs text-blue-600 hover:text-blue-700 flex items-center gap-1"
               >
                 <Link2 className="w-3 h-3" />
@@ -1742,7 +1791,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           )}
 
           {/* Activity Timeline */}
-          <div className="space-y-2 border-t border-gray-200 pt-4">
+          {canViewActivityTimeline && (
+            <div className="space-y-2 border-t border-gray-200 pt-4">
             <button
               onClick={() => setShowActivity(!showActivity)}
               className="w-full flex items-center justify-between text-sm font-semibold hover:bg-gray-50 p-2 rounded"
@@ -1781,7 +1831,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 )}
               </div>
             )}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Footer Actions */}
@@ -1808,21 +1859,23 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             </>
           ) : (
             <>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="flex-1 text-xs"
-                  title="Send email to customer"
-                  disabled={sendingEmail}
-                  onClick={handleSendEmail}
-                >
-                  <Mail className="w-3 h-3 mr-1" />
-                  {sendingEmail ? "Sending..." : "Send Email"}
-                </Button>
-              </div>
+              {canSendBookingEmail && (
+                <div className="flex gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="flex-1 text-xs"
+                    title="Send email to customer"
+                    disabled={sendingEmail}
+                    onClick={handleSendEmail}
+                  >
+                    <Mail className="w-3 h-3 mr-1" />
+                    {sendingEmail ? "Sending..." : "Send Email"}
+                  </Button>
+                </div>
+              )}
 
-              {booking.status !== "cancelled" && booking.status !== "completed" && (
+              {canManageRow && booking.status !== "cancelled" && booking.status !== "completed" && (
                 <div className="space-y-2">
                   {/* Next status button */}
                   {booking.status === "pending" && (

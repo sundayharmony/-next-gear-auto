@@ -8,6 +8,7 @@ const failures = [];
 const now = Date.now();
 
 const disallowedManagerSharedKeys = new Set(["finances", "vehicles"]);
+const managerUiSyncExemptKeys = new Set(["dashboard"]);
 
 const featureRegex = /\{\s*key:\s*"([^"]+)",\s*label:\s*"([^"]+)",\s*adminPath:\s*"([^"]+)"(?:,\s*managerPath:\s*"([^"]+)")?,\s*sharedWithManager:\s*(true|false)/g;
 const features = [];
@@ -43,6 +44,17 @@ for (const feature of features) {
 
   if (!fs.existsSync(managerPagePath)) {
     failures.push(`Shared feature "${feature.key}" points to missing page: ${path.relative(process.cwd(), managerPagePath)}`);
+    continue;
+  }
+
+  if (!managerUiSyncExemptKeys.has(feature.key)) {
+    const managerPageSource = fs.readFileSync(managerPagePath, "utf8");
+    const hasSharedUiReference = managerPageSource.includes("@/app/admin/");
+    if (!hasSharedUiReference) {
+      failures.push(
+        `Shared feature "${feature.key}" must reuse admin/shared UI source (missing '@/app/admin/' import/reference): ${path.relative(process.cwd(), managerPagePath)}`
+      );
+    }
   }
 }
 

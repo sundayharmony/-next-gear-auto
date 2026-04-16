@@ -44,6 +44,12 @@ interface BookingFiltersProps {
   onBulkEmail: () => void;
   onClearSelection: () => void;
   bulkUpdating: boolean;
+  capabilities?: {
+    canExportCsv: boolean;
+    canBulkUpdate: boolean;
+    canBulkEmail: boolean;
+    canCreateBookings: boolean;
+  };
 }
 
 const statuses = ["all", "pending", "confirmed", "active", "completed", "cancelled"];
@@ -69,7 +75,12 @@ export default function BookingFilters({
   onBulkEmail,
   onClearSelection,
   bulkUpdating,
+  capabilities,
 }: BookingFiltersProps) {
+  const canExportCsv = capabilities?.canExportCsv ?? true;
+  const canBulkUpdate = capabilities?.canBulkUpdate ?? true;
+  const canBulkEmail = capabilities?.canBulkEmail ?? true;
+  const canCreateBookings = capabilities?.canCreateBookings ?? true;
   const [localSearch, setLocalSearch] = useState(searchQuery);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -152,84 +163,94 @@ export default function BookingFilters({
           >
             <RefreshCw className="w-4 h-4" />
           </Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={onExportCSV}
-            disabled={loading}
-            title="Export as CSV"
-            aria-label="Export as CSV"
-          >
-            <Download className="w-4 h-4" />
-          </Button>
-          <Button
-            onClick={onCreateNew}
-            size="sm"
-            className="bg-purple-600 hover:bg-purple-700 text-white"
-          >
-            <Plus className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">New Booking</span>
-          </Button>
+          {canExportCsv && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onExportCSV}
+              disabled={loading}
+              title="Export as CSV"
+              aria-label="Export as CSV"
+            >
+              <Download className="w-4 h-4" />
+            </Button>
+          )}
+          {canCreateBookings && (
+            <Button
+              onClick={onCreateNew}
+              size="sm"
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <Plus className="w-4 h-4 sm:mr-2" />
+              <span className="hidden sm:inline">New Booking</span>
+            </Button>
+          )}
         </div>
       </div>
 
       {/* Bulk action bar */}
-      {selectedCount > 0 && (
+      {selectedCount > 0 && (canBulkUpdate || canBulkEmail) && (
         <div className="flex flex-wrap items-center gap-2 px-4 py-2 bg-purple-50 border border-purple-200 rounded-lg">
           <span className="text-sm font-medium text-purple-900">
             {selectedCount} selected
           </span>
           <div className="flex-1" />
-          <button
-            onClick={onBulkConfirm}
-            disabled={bulkUpdating}
-            title="Confirm selected bookings"
-            aria-label={`Confirm ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Check className="w-4 h-4" aria-hidden="true" />
-            Confirm
-          </button>
-          <button
-            onClick={onBulkStart}
-            disabled={bulkUpdating}
-            title="Start selected bookings"
-            aria-label={`Start ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Check className="w-4 h-4" aria-hidden="true" />
-            Start
-          </button>
-          <button
-            onClick={onBulkComplete}
-            disabled={bulkUpdating}
-            title="Complete selected bookings"
-            aria-label={`Complete ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Check className="w-4 h-4" aria-hidden="true" />
-            Complete
-          </button>
-          <button
-            onClick={onBulkCancel}
-            disabled={bulkUpdating}
-            title="Cancel selected bookings"
-            aria-label={`Cancel ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 rounded-full hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <X className="w-4 h-4" aria-hidden="true" />
-            Cancel
-          </button>
-          <button
-            onClick={onBulkEmail}
-            disabled={bulkUpdating}
-            title="Send email to selected"
-            aria-label={`Send email to ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
-            className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Mail className="w-4 h-4" aria-hidden="true" />
-            Email
-          </button>
+          {canBulkUpdate && (
+            <>
+              <button
+                onClick={onBulkConfirm}
+                disabled={bulkUpdating}
+                title="Confirm selected bookings"
+                aria-label={`Confirm ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Check className="w-4 h-4" aria-hidden="true" />
+                Confirm
+              </button>
+              <button
+                onClick={onBulkStart}
+                disabled={bulkUpdating}
+                title="Start selected bookings"
+                aria-label={`Start ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Check className="w-4 h-4" aria-hidden="true" />
+                Start
+              </button>
+              <button
+                onClick={onBulkComplete}
+                disabled={bulkUpdating}
+                title="Complete selected bookings"
+                aria-label={`Complete ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <Check className="w-4 h-4" aria-hidden="true" />
+                Complete
+              </button>
+              <button
+                onClick={onBulkCancel}
+                disabled={bulkUpdating}
+                title="Cancel selected bookings"
+                aria-label={`Cancel ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
+                className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-red-600 rounded-full hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <X className="w-4 h-4" aria-hidden="true" />
+                Cancel
+              </button>
+            </>
+          )}
+          {canBulkEmail && (
+            <button
+              onClick={onBulkEmail}
+              disabled={bulkUpdating}
+              title="Send email to selected"
+              aria-label={`Send email to ${selectedCount} selected booking${selectedCount !== 1 ? "s" : ""}`}
+              className="inline-flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-purple-700 rounded-full hover:bg-purple-100 active:bg-purple-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Mail className="w-4 h-4" aria-hidden="true" />
+              Email
+            </button>
+          )}
           <button
             onClick={onClearSelection}
             disabled={bulkUpdating}
