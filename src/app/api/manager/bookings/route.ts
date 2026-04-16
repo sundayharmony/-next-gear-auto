@@ -18,16 +18,21 @@ export async function GET(req: NextRequest) {
   const managerId = req.nextUrl.searchParams.get("manager_id");
 
   try {
+    const today = new Date().toISOString().slice(0, 10);
     let query = supabase
       .from("bookings")
       .select("*, vehicles(year, make, model)")
-      .eq("origin_channel", "manager_panel")
       .order("created_at", { ascending: false });
 
-    const effectiveManagerId = auth.role === "manager" ? auth.userId : managerId;
-    if (effectiveManagerId) {
-      query = query.eq("created_by_user_id", effectiveManagerId);
+    if (auth.role === "manager") {
+      // Managers can see all active and upcoming trips across channels.
+      query = query
+        .not("status", "in", "(cancelled,completed)")
+        .gte("return_date", today);
+    } else if (managerId) {
+      query = query.eq("created_by_user_id", managerId);
     }
+
     if (status && status !== "all") {
       query = query.eq("status", status);
     }
@@ -41,8 +46,19 @@ export async function GET(req: NextRequest) {
     const enriched = (data || []).map((b) => {
       const v = b.vehicles as unknown as { year: number; make: string; model: string } | null;
       const { vehicles: _vehicle, ...rest } = b;
+      const canViewPricing = auth.role === "admin" || b.created_by_user_id === auth.userId;
+      const canManage = auth.role === "admin" || b.created_by_user_id === auth.userId;
+
+      const total_price = canViewPricing ? b.total_price : null;
+      const deposit = canViewPricing ? b.deposit : null;
+      const location_surcharge = canViewPricing ? b.location_surcharge : null;
       return {
         ...rest,
+        total_price,
+        deposit,
+        location_surcharge,
+        canViewPricing,
+        canManage,
         vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
       };
     });

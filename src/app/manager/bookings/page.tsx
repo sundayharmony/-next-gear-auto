@@ -20,7 +20,9 @@ interface BookingRow {
   pickup_date: string;
   return_date: string;
   status: string;
-  total_price: number;
+  total_price: number | null;
+  canViewPricing?: boolean;
+  canManage?: boolean;
 }
 
 interface VehicleOption {
@@ -155,7 +157,7 @@ export default function ManagerBookingsPage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Manager Bookings</h1>
-            <p className="mt-1 text-sm sm:text-base text-purple-200">Only manager-origin bookings are shown here.</p>
+            <p className="mt-1 text-sm sm:text-base text-purple-200">View all active and upcoming trips. Pricing is only shown on trips you created.</p>
           </div>
           <Button variant="outline" size="sm" className="border-purple-400 text-purple-200 hover:bg-purple-800 hidden sm:inline-flex" onClick={fetchBookings}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
@@ -198,11 +200,11 @@ export default function ManagerBookingsPage() {
 
         <Card>
           <CardContent className="p-5">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Recent Manager Bookings</h2>
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">Active &amp; Upcoming Trips</h2>
             {loading ? (
               <div className="text-center py-8"><RefreshCw className="h-6 w-6 animate-spin text-purple-600 mx-auto" /></div>
             ) : bookings.length === 0 ? (
-              <p className="text-gray-500">No manager bookings yet.</p>
+              <p className="text-gray-500">No active or upcoming trips found.</p>
             ) : (
               <div className="space-y-3">
                 {bookings.map((booking) => (
@@ -216,23 +218,28 @@ export default function ManagerBookingsPage() {
                     </div>
                     <p className="text-sm text-gray-600 mt-2 flex items-center gap-2"><Calendar className="h-4 w-4" /> {formatDate(booking.pickup_date)} to {formatDate(booking.return_date)}</p>
                     <p className="text-sm text-gray-600">{booking.vehicleName || booking.vehicle_id}</p>
+                    <p className="text-sm text-gray-600">
+                      {booking.canViewPricing
+                        ? `Trip price: $${Number(booking.total_price ?? 0).toFixed(2)}`
+                        : "Trip price: hidden (not created by you)"}
+                    </p>
                     <div className="flex flex-wrap gap-2 mt-3">
-                      {booking.status === "pending" && (
+                      {booking.canManage && booking.status === "pending" && (
                         <Button size="sm" variant="outline" disabled={updatingId === booking.id} onClick={() => updateBookingStatus(booking.id, "confirmed")}>
                           Confirm
                         </Button>
                       )}
-                      {booking.status === "confirmed" && (
+                      {booking.canManage && booking.status === "confirmed" && (
                         <Button size="sm" variant="outline" disabled={updatingId === booking.id} onClick={() => updateBookingStatus(booking.id, "active")}>
                           Start
                         </Button>
                       )}
-                      {booking.status === "active" && (
+                      {booking.canManage && booking.status === "active" && (
                         <Button size="sm" variant="outline" disabled={updatingId === booking.id} onClick={() => updateBookingStatus(booking.id, "completed")}>
                           Complete
                         </Button>
                       )}
-                      {!["cancelled", "completed"].includes(booking.status) && (
+                      {booking.canManage && !["cancelled", "completed"].includes(booking.status) && (
                         <Button size="sm" variant="outline" disabled={updatingId === booking.id} onClick={() => updateBookingStatus(booking.id, "cancelled")}>
                           Cancel
                         </Button>
