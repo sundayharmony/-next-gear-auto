@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MessageSquare, Plus, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,13 +9,21 @@ import { Select } from "@/components/ui/select";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { MessagingPushRegistration } from "@/components/messaging/push-registration";
+import { ToastContainer, ToastNotification } from "@/components/ui/toast";
 
 interface ThreadRow {
   id: string;
   thread_type: "dm" | "channel";
   title: string | null;
+  display_title?: string;
+  counterpart: { id: string; role: string; name: string; email: string } | null;
   unread_count: number;
-  last_message: { body: string; created_at: string } | null;
+  last_message: {
+    id: string;
+    body: string;
+    created_at: string;
+    sender_user_id: string;
+  } | null;
 }
 
 interface MessageRow {
@@ -33,6 +41,11 @@ interface StaffRow {
   email: string;
 }
 
+type InboundToast = { key: string; type: "info"; title: string; message?: string };
+
+const TOAST_THROTTLE_MS = 4000;
+const MAX_TOAST_DEDUPE_IDS = 400;
+
 export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/admin/messages" | "/manager/messages"; panelTitle: string }) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -48,6 +61,63 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   const [error, setError] = useState<string | null>(null);
   /** When false, staff messaging is off in server env — show guidance instead of errors. */
   const [serverMessagingOn, setServerMessagingOn] = useState(true);
+  const [toasts, setToasts] = useState<InboundToast[]>([]);
+
+  const selectedThreadIdRef = useRef<string | null>(null);
+  const threadLastMessageBaselineRef = useRef<Map<string, string | null> | null>(null);
+  const toastShownMessageIdsRef = useRef<Set<string>>(new Set());
+  const lastToastAtRef = useRef(0);
+
+  useEffect(() => {
+    selectedThreadIdRef.current = selectedThreadId;
+  }, [selectedThreadId]);
+
+  const dismissToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((t) => t.key !== id));
+  }, []);
+
+  const maybeNotifyInbound = useCallback(
+    (incoming: ThreadRow[], viewerId: string | null) => {
+      if (!viewerId || typeof document === "undefined") return;
+      if (document.visibilityState !== "visible") return;
+
+      const baseline = threadLastMessageBaselineRef.current;
+      const nextMap = new Map<string, string | null>(incoming.map((t) => [t.id, t.last_message?.id ?? null]));
+
+      if (baseline === null) {
+        threadLastMessageBaselineRef.current = nextMap;
+        return;
+      }
+
+      const now = Date.now();
+      for (const t of incoming) {
+        const mid = t.last_message?.id ?? null;
+        const prev = baseline.get(t.id) ?? null;
+        if (!mid || mid === prev) continue;
+        if (!t.last_message || t.last_message.sender_user_id === viewerId) continue;
+        if (t.id === selectedThreadIdRef.current) continue;
+        if (toastShownMessageIdsRef.current.has(mid)) continue;
+        if (now - lastToastAtRef.current < TOAST_THROTTLE_MS) continue;
+
+        toastShownMessageIdsRef.current.add(mid);
+        if (toastShownMessageIdsRef.current.size > MAX_TOAST_DEDUPE_IDS) {
+          const arr = [...toastShownMessageIdsRef.current];
+          toastShownMessageIdsRef.current = new Set(arr.slice(-200));
+        }
+        lastToastAtRef.current = now;
+
+        const title = t.display_title || t.title || "New message";
+        const body = t.last_message.body?.slice(0, 120) || "";
+        setToasts((prev) => [
+          ...prev,
+          { key: mid, type: "info", title, message: body || undefined },
+        ]);
+      }
+
+      threadLastMessageBaselineRef.current = nextMap;
+    },
+    []
+  );
 
   const fetchThreads = useCallback(async () => {
     const res = await adminFetch("/api/admin/messages/threads");
@@ -55,13 +125,17 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     if (!res.ok || !json.success) throw new Error(json.message || "Failed to load threads");
     const on = json.messagingEnabled !== false;
     setServerMessagingOn(on);
-    setThreads(on ? json.data || [] : []);
+    const list: ThreadRow[] = on ? json.data || [] : [];
+    setThreads(list);
+    const vid = json.viewer?.userId ?? null;
+    if (on) maybeNotifyInbound(list, vid);
     if (!on) {
       setSelectedThreadId(null);
       setMessages([]);
+      threadLastMessageBaselineRef.current = null;
       router.replace(panelPath);
     }
-  }, [router, panelPath]);
+  }, [router, panelPath, maybeNotifyInbound]);
 
   const fetchMessages = useCallback(async (threadId: string) => {
     if (!serverMessagingOn) {
@@ -92,7 +166,13 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
         if (!threadsRes.ok || !threadsJson.success) throw new Error(threadsJson.message || "Failed to load threads");
         const messagingOn = threadsJson.messagingEnabled !== false;
         setServerMessagingOn(messagingOn);
-        setThreads(messagingOn ? threadsJson.data || [] : []);
+        const list: ThreadRow[] = messagingOn ? threadsJson.data || [] : [];
+        setThreads(list);
+        if (messagingOn) {
+          maybeNotifyInbound(list, threadsJson.viewer?.userId ?? null);
+        } else {
+          threadLastMessageBaselineRef.current = null;
+        }
         if (!messagingOn) {
           setSelectedThreadId(null);
           setMessages([]);
@@ -109,9 +189,14 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       }
     };
     run();
-    const timer = setInterval(() => { fetchThreads().catch(() => undefined); }, 15000);
-    return () => { mounted = false; clearInterval(timer); };
-  }, [fetchThreads, router, panelPath]);
+    const timer = setInterval(() => {
+      fetchThreads().catch(() => undefined);
+    }, 15000);
+    return () => {
+      mounted = false;
+      clearInterval(timer);
+    };
+  }, [fetchThreads, router, panelPath, maybeNotifyInbound]);
 
   useEffect(() => {
     const urlThread = searchParams.get("thread");
@@ -126,6 +211,10 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
 
   const selectedThread = useMemo(() => threads.find((t) => t.id === selectedThreadId) || null, [threads, selectedThreadId]);
   const unreadCount = useMemo(() => threads.reduce((sum, t) => sum + (t.unread_count || 0), 0), [threads]);
+
+  const threadHeaderTitle = selectedThread
+    ? selectedThread.display_title || selectedThread.title || (selectedThread.thread_type === "dm" ? "Direct message" : "Channel")
+    : "Select a thread";
 
   const openThread = (threadId: string) => {
     setSelectedThreadId(threadId);
@@ -201,6 +290,19 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
 
   return (
     <>
+      <ToastContainer>
+        {toasts.map((t) => (
+          <ToastNotification
+            key={t.key}
+            id={t.key}
+            type={t.type}
+            title={t.title}
+            message={t.message}
+            onDismiss={dismissToast}
+          />
+        ))}
+      </ToastContainer>
+
       <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h1 className="text-2xl sm:text-3xl font-bold">{panelTitle}</h1>
@@ -217,7 +319,8 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
             <code className="rounded bg-amber-100/80 px-1">true</code>, optionally{" "}
             <code className="rounded bg-amber-100/80 px-1">FF_STAFF_MESSAGING_EMAIL_ENABLED</code> /{" "}
             <code className="rounded bg-amber-100/80 px-1">FF_STAFF_MESSAGING_PUSH_ENABLED</code>, then redeploy. Run{" "}
-            <code className="rounded bg-amber-100/80 px-1">supabase-internal-messaging.sql</code> on your database if you have not already.
+            <code className="rounded bg-amber-100/80 px-1">supabase-internal-messaging.sql</code> and{" "}
+            <code className="rounded bg-amber-100/80 px-1">supabase-internal-messaging-dm-pair.sql</code> on your database if you have not already.
           </div>
         )}
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
@@ -242,7 +345,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
               {threads.map((t) => (
                 <button key={t.id} onClick={() => openThread(t.id)} className={`w-full rounded-md border px-3 py-2 text-left ${selectedThreadId === t.id ? "border-purple-300 bg-purple-50" : "border-gray-200 bg-white hover:bg-gray-50"}`}>
                   <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-gray-900 truncate">{t.title || "Direct Message"}</p>
+                    <p className="text-sm font-medium text-gray-900 truncate">{t.display_title || t.title || (t.thread_type === "dm" ? "Direct message" : "Channel")}</p>
                     {t.unread_count > 0 && <span className="rounded-full bg-purple-600 px-2 py-0.5 text-[10px] font-bold text-white">{t.unread_count}</span>}
                   </div>
                   {t.last_message && <p className="text-xs text-gray-500 truncate mt-1">{t.last_message.body}</p>}
@@ -253,7 +356,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
 
           <div className="rounded-lg border border-gray-200 bg-white p-3 flex flex-col min-h-[420px]">
             <div className="border-b pb-2 mb-3">
-              <p className="text-sm font-semibold text-gray-900">{selectedThread?.title || "Select a thread"}</p>
+              <p className="text-sm font-semibold text-gray-900">{threadHeaderTitle}</p>
             </div>
             <div className="flex-1 overflow-y-auto space-y-2 pr-1">
               {!selectedThreadId && <p className="text-sm text-gray-500">Choose or create a thread to start messaging.</p>}

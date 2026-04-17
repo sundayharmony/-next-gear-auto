@@ -31,6 +31,7 @@ export async function GET(req: NextRequest, { params }: Params) {
       .from("messages")
       .select("id, thread_id, sender_user_id, sender_role, body, client_message_id, created_at, edited_at, deleted_at")
       .eq("thread_id", threadId)
+      .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(limit);
 

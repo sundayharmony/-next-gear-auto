@@ -48,7 +48,23 @@ type Database = {
       push_subscriptions: GenericTable;
     };
     Views: Record<string, never>;
-    Functions: Record<string, never>;
+    Functions: {
+      staff_message_thread_unread_counts: {
+        Args: { p_user_id: string; p_thread_ids: string[] };
+        Returns: { thread_id: string; unread_count: number }[];
+      };
+      staff_get_or_create_dm_thread: {
+        Args: {
+          p_low: string;
+          p_high: string;
+          p_creator_user_id: string;
+          p_creator_role: string;
+          p_peer_user_id: string;
+          p_peer_role: string;
+        };
+        Returns: { thread_id: string; created_new: boolean }[];
+      };
+    };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
   };

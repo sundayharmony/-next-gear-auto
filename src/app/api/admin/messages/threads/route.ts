@@ -2,18 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
-import { normalizeThreadTitle, resolveStaffIdentity, type StaffRole } from "@/lib/messaging/service";
+import {
+  batchResolveStaffIdentities,
+  formatStaffDisplayName,
+  normalizeThreadTitle,
+  orderedDmPair,
+  resolveStaffIdentity,
+  staffIdentityKey,
+  type StaffRole,
+} from "@/lib/messaging/service";
 import { staffMessagingMasterEnabled } from "@/lib/config/staff-messaging-server";
 
 type CreateThreadBody =
   | { threadType: "dm"; peerUserId: string; peerRole: StaffRole }
   | { threadType: "channel"; title: string; members?: Array<{ userId: string; role: StaffRole }> };
 
+type RpcDmRow = { thread_id: string; created_new: boolean };
+type RpcUnreadRow = { thread_id: string; unread_count: number };
+
 export async function GET(req: NextRequest) {
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
   if (!staffMessagingMasterEnabled()) {
-    return NextResponse.json({ success: true, data: [], messagingEnabled: false });
+    return NextResponse.json({ success: true, data: [], messagingEnabled: false, viewer: { userId: auth.userId } });
   }
   const supabase = getServiceSupabase();
 
@@ -29,15 +40,23 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Failed to load threads" }, { status: 500 });
     }
 
-    const threadIds = (memberships || []).map((m: any) => m.thread_id);
+    const threadIds = (memberships || []).map((m: { thread_id: string }) => m.thread_id);
     if (threadIds.length === 0) {
-      return NextResponse.json({ success: true, data: [], messagingEnabled: true });
+      return NextResponse.json({
+        success: true,
+        data: [],
+        messagingEnabled: true,
+        viewer: { userId: auth.userId },
+        unread_total: 0,
+      });
     }
 
     const [{ data: threads }, { data: members }, { data: allMessages }] = await Promise.all([
       supabase
         .from("message_threads")
-        .select("id, thread_type, title, created_at, updated_at, last_message_at, created_by_user_id, created_by_role")
+        .select(
+          "id, thread_type, title, created_at, updated_at, last_message_at, created_by_user_id, created_by_role, dm_user_id_low, dm_user_id_high"
+        )
         .in("id", threadIds)
         .order("last_message_at", { ascending: false }),
       supabase
@@ -49,45 +68,106 @@ export async function GET(req: NextRequest) {
         .from("messages")
         .select("id, thread_id, body, sender_user_id, sender_role, created_at")
         .in("thread_id", threadIds)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false })
         .limit(500),
     ]);
 
-    const membersByThread = new Map<string, any[]>();
+    const membersByThread = new Map<string, { thread_id: string; user_id: string; role: StaffRole }[]>();
     for (const member of members || []) {
       const bucket = membersByThread.get(member.thread_id) || [];
       bucket.push(member);
       membersByThread.set(member.thread_id, bucket);
     }
 
-    const latestByThread = new Map<string, any>();
+    const latestByThread = new Map<string, Record<string, unknown>>();
     for (const msg of allMessages || []) {
       if (!latestByThread.has(msg.thread_id)) latestByThread.set(msg.thread_id, msg);
     }
 
-    const membershipByThread = new Map<string, any>((memberships || []).map((m: any) => [m.thread_id, m]));
+    type MembershipRow = { thread_id: string; last_read_at: string | null; muted: boolean };
+    const membershipByThread = new Map<string, MembershipRow>(
+      (memberships || []).map((m: MembershipRow) => [m.thread_id, m])
+    );
 
     const unreadByThread = new Map<string, number>();
-    for (const membership of memberships || []) {
-      let q = supabase
-        .from("messages")
-        .select("id", { count: "exact", head: true })
-        .eq("thread_id", membership.thread_id)
-        .neq("sender_user_id", auth.userId);
-      if (membership.last_read_at) q = q.gt("created_at", membership.last_read_at);
-      const { count } = await q;
-      unreadByThread.set(membership.thread_id, count || 0);
+    const { data: unreadRpc, error: unreadRpcError } = await supabase.rpc("staff_message_thread_unread_counts", {
+      p_user_id: auth.userId,
+      p_thread_ids: threadIds,
+    });
+
+    if (!unreadRpcError && Array.isArray(unreadRpc)) {
+      for (const row of unreadRpc as RpcUnreadRow[]) {
+        unreadByThread.set(row.thread_id, Number(row.unread_count) || 0);
+      }
+    } else {
+      if (unreadRpcError) {
+        logger.warn("staff_message_thread_unread_counts RPC unavailable; falling back to per-thread counts", unreadRpcError);
+      }
+      for (const membership of memberships || []) {
+        let q = supabase
+          .from("messages")
+          .select("id", { count: "exact", head: true })
+          .eq("thread_id", membership.thread_id)
+          .is("deleted_at", null)
+          .neq("sender_user_id", auth.userId);
+        if (membership.last_read_at) q = q.gt("created_at", membership.last_read_at);
+        const { count } = await q;
+        unreadByThread.set(membership.thread_id, count || 0);
+      }
     }
 
-    const data = (threads || []).map((thread: any) => ({
-      ...thread,
-      unread_count: unreadByThread.get(thread.id) || 0,
-      muted: membershipByThread.get(thread.id)?.muted || false,
-      last_message: latestByThread.get(thread.id) || null,
-      members: membersByThread.get(thread.id) || [],
-    }));
+    const counterpartSpecs: { userId: string; role: StaffRole }[] = [];
+    for (const thread of threads || []) {
+      if (thread.thread_type !== "dm") continue;
+      const tmembers = membersByThread.get(thread.id) || [];
+      const other = tmembers.find((m) => m.user_id !== auth.userId);
+      if (other) counterpartSpecs.push({ userId: other.user_id, role: other.role });
+    }
+    const identityMap = await batchResolveStaffIdentities(supabase, counterpartSpecs);
 
-    return NextResponse.json({ success: true, data, messagingEnabled: true });
+    const data = (threads || []).map((thread: Record<string, unknown>) => {
+      const tmembers = membersByThread.get(thread.id as string) || [];
+      let display_title: string;
+      let counterpart: { id: string; role: StaffRole; name: string; email: string } | null = null;
+
+      if (thread.thread_type === "dm") {
+        const other = tmembers.find((m) => m.user_id !== auth.userId);
+        if (other) {
+          const ident = identityMap.get(staffIdentityKey(other.role, other.user_id));
+          if (ident) {
+            counterpart = { id: ident.id, role: ident.role, name: ident.name, email: ident.email };
+            display_title = formatStaffDisplayName(ident);
+          } else {
+            display_title = other.user_id;
+          }
+        } else {
+          display_title = "Direct message";
+        }
+      } else {
+        display_title = (thread.title as string) || "Channel";
+      }
+
+      return {
+        ...thread,
+        display_title,
+        counterpart,
+        unread_count: unreadByThread.get(thread.id as string) || 0,
+        muted: membershipByThread.get(thread.id as string)?.muted || false,
+        last_message: latestByThread.get(thread.id as string) || null,
+        members: tmembers,
+      };
+    });
+
+    const unread_total = data.reduce((s, t: { unread_count?: number }) => s + (t.unread_count || 0), 0);
+
+    return NextResponse.json({
+      success: true,
+      data,
+      messagingEnabled: true,
+      viewer: { userId: auth.userId },
+      unread_total,
+    });
   } catch (error) {
     logger.error("List threads failed", error);
     return NextResponse.json({ success: false, message: "Failed to load threads" }, { status: 500 });
@@ -121,64 +201,60 @@ export async function POST(req: NextRequest) {
       const peer = await resolveStaffIdentity(supabase, body.peerUserId, body.peerRole);
       if (!peer) return NextResponse.json({ success: false, message: "Peer user not found" }, { status: 404 });
 
-      const { data: myThreadIds } = await supabase
-        .from("message_thread_members")
-        .select("thread_id")
-        .eq("user_id", auth.userId)
-        .eq("status", "active");
-      const candidateIds = (myThreadIds || []).map((r: any) => r.thread_id);
-      if (candidateIds.length > 0) {
-        const { data: dmThreads } = await supabase
-          .from("message_threads")
-          .select("id")
-          .in("id", candidateIds)
-          .eq("thread_type", "dm");
-        const dmIds = (dmThreads || []).map((d: any) => d.id);
-        if (dmIds.length > 0) {
-          const { data: dmMembers } = await supabase
-            .from("message_thread_members")
-            .select("thread_id, user_id")
-            .in("thread_id", dmIds)
-            .eq("status", "active");
-          const grouped = new Map<string, Set<string>>();
-          for (const row of dmMembers || []) {
-            const set = grouped.get(row.thread_id) || new Set<string>();
-            set.add(row.user_id);
-            grouped.set(row.thread_id, set);
-          }
-          for (const [threadId, set] of grouped) {
-            if (set.size === 2 && set.has(auth.userId) && set.has(body.peerUserId)) {
-              return NextResponse.json({ success: true, data: { id: threadId, reused: true } });
-            }
-          }
-        }
+      const [low, high] = orderedDmPair(auth.userId, body.peerUserId);
+
+      const { data: rpcRows, error: rpcError } = await supabase.rpc("staff_get_or_create_dm_thread", {
+        p_low: low,
+        p_high: high,
+        p_creator_user_id: auth.userId,
+        p_creator_role: auth.role,
+        p_peer_user_id: body.peerUserId,
+        p_peer_role: body.peerRole,
+      });
+
+      if (rpcError) {
+        logger.error("staff_get_or_create_dm_thread RPC failed", rpcError);
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "Failed to create or load DM thread. Ensure supabase-internal-messaging-dm-pair.sql has been applied.",
+          },
+          { status: 500 }
+        );
       }
 
-      const { data: thread, error: threadError } = await supabase
+      const row = (Array.isArray(rpcRows) ? rpcRows[0] : rpcRows) as RpcDmRow | undefined;
+      if (!row?.thread_id) {
+        return NextResponse.json({ success: false, message: "Failed to resolve DM thread" }, { status: 500 });
+      }
+
+      const { data: fullThread, error: loadErr } = await supabase
         .from("message_threads")
-        .insert({
-          thread_type: "dm",
-          created_by_user_id: auth.userId,
-          created_by_role: auth.role,
-          title: null,
-        })
-        .select("id, thread_type, title, created_at")
-        .single();
-      if (threadError || !thread) {
-        logger.error("Failed to create DM thread", threadError);
-        return NextResponse.json({ success: false, message: "Failed to create thread" }, { status: 500 });
+        .select("id, thread_type, title, created_at, dm_user_id_low, dm_user_id_high")
+        .eq("id", row.thread_id)
+        .maybeSingle();
+
+      if (loadErr || !fullThread) {
+        logger.error("Failed to load DM thread after RPC", loadErr);
+        return NextResponse.json({ success: false, message: "Failed to load thread" }, { status: 500 });
       }
 
-      const { error: membersError } = await supabase.from("message_thread_members").insert([
-        { thread_id: thread.id, user_id: auth.userId, role: auth.role, status: "active" },
-        { thread_id: thread.id, user_id: body.peerUserId, role: body.peerRole, status: "active" },
-      ]);
-      if (membersError) {
-        logger.error("Failed to insert DM members", membersError);
-        return NextResponse.json({ success: false, message: "Failed to create thread members" }, { status: 500 });
-      }
-
-      return NextResponse.json({ success: true, data: thread }, { status: 201 });
+      const reused = !row.created_new;
+      const status = reused ? 200 : 201;
+      return NextResponse.json(
+        {
+          success: true,
+          data: {
+            id: fullThread.id,
+            reused,
+            thread_type: fullThread.thread_type,
+            title: fullThread.title,
+            created_at: fullThread.created_at,
+          },
+        },
+        { status }
+      );
     }
 
     const title = normalizeThreadTitle(body.title);
@@ -210,7 +286,7 @@ export async function POST(req: NextRequest) {
       .single();
     if (threadError || !thread) {
       logger.error("Failed to create channel thread", threadError);
-      return NextResponse.json({ success: false, message: "Failed to create channel" }, { status: 500 });
+      return NextResponse.json({ success: false, message: "Failed to create thread" }, { status: 500 });
     }
 
     const membersPayload = Array.from(uniqueMembers.values()).map((member) => ({

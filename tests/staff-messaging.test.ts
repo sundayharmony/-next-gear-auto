@@ -1,6 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizeMessageBody, nextBackoffMinutes } from "@/lib/messaging/service";
+import {
+  formatStaffDisplayName,
+  normalizeMessageBody,
+  nextBackoffMinutes,
+  orderedDmPair,
+} from "@/lib/messaging/service";
 import { chooseOutboxDecision, isTransientNotificationError } from "@/lib/messaging/outbox-policy";
 
 test("normalizeMessageBody trims and rejects invalid payloads", () => {
@@ -9,6 +14,23 @@ test("normalizeMessageBody trims and rejects invalid payloads", () => {
   assert.equal(normalizeMessageBody("   "), null);
   assert.equal(normalizeMessageBody(42), null);
   assert.equal(normalizeMessageBody("x".repeat(4001)), null);
+});
+
+test("orderedDmPair is stable lexicographic ordering", () => {
+  assert.deepEqual(orderedDmPair("b", "a"), ["a", "b"]);
+  assert.deepEqual(orderedDmPair("a", "b"), ["a", "b"]);
+});
+
+test("formatStaffDisplayName prefers name then email then id", () => {
+  assert.equal(
+    formatStaffDisplayName({ id: "u1", role: "admin", name: "  Pat  ", email: "p@x.com" }),
+    "Pat"
+  );
+  assert.equal(
+    formatStaffDisplayName({ id: "u1", role: "manager", name: "", email: " m@y.com " }),
+    "m@y.com"
+  );
+  assert.equal(formatStaffDisplayName({ id: "u1", role: "admin", name: "", email: "" }), "u1");
 });
 
 test("backoff escalates across attempts", () => {

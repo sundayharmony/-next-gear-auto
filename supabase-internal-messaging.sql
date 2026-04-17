@@ -115,3 +115,5 @@ create trigger trg_push_subscriptions_updated_at
 before update on push_subscriptions
 for each row
 execute function set_updated_at();
+
+-- Next: run supabase-internal-messaging-dm-pair.sql for canonical DM pairs, RPC helpers, and merge of duplicate DMs.

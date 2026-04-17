@@ -16,7 +16,10 @@ export function useStaffMessageUnreadCount(enabled = true, intervalMs = 15000) {
         setCount(0);
         return;
       }
-      const total = (json.data || []).reduce((sum: number, t: { unread_count?: number }) => sum + (t.unread_count || 0), 0);
+      const total =
+        typeof json.unread_total === "number"
+          ? json.unread_total
+          : (json.data || []).reduce((sum: number, t: { unread_count?: number }) => sum + (t.unread_count || 0), 0);
       setCount(total);
     } catch {
       // best-effort polling only
