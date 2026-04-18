@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, Hash, Loader2, MessageSquare, Plus, Send } from "lucide-react";
+import { ChevronLeft, Hash, ImagePlus, Loader2, MessageSquare, Plus, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -22,6 +22,7 @@ interface ThreadRow {
   last_message: {
     id: string;
     body: string;
+    preview?: string;
     created_at: string;
     sender_user_id: string;
   } | null;
@@ -33,6 +34,7 @@ interface MessageRow {
   sender_user_id: string;
   sender_role: "admin" | "manager";
   created_at: string;
+  metadata?: { image_urls?: string[] } | null;
 }
 
 interface StaffRow {
@@ -46,6 +48,10 @@ type InboundToast = { key: string; type: "info"; title: string; message?: string
 
 const TOAST_THROTTLE_MS = 4000;
 const MAX_TOAST_DEDUPE_IDS = 400;
+
+const MAX_MESSAGE_ATTACHMENTS = 6;
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const ATTACHMENT_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
 
 function formatShortTime(iso: string): string {
   const d = new Date(iso);
@@ -86,21 +92,29 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   const [loading, setLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [serverMessagingOn, setServerMessagingOn] = useState(true);
   const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<InboundToast[]>([]);
   const [isNarrow, setIsNarrow] = useState(false);
   const [mobileTab, setMobileTab] = useState<"list" | "chat">("list");
+  const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
+  const [uploadingAttachments, setUploadingAttachments] = useState(false);
 
   const selectedThreadIdRef = useRef<string | null>(null);
   const threadLastMessageBaselineRef = useRef<Map<string, string | null> | null>(null);
   const toastShownMessageIdsRef = useRef<Set<string>>(new Set());
   const lastToastAtRef = useRef(0);
   const messagesScrollRef = useRef<HTMLDivElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     selectedThreadIdRef.current = selectedThreadId;
+  }, [selectedThreadId]);
+
+  useEffect(() => {
+    setAttachmentUrls([]);
   }, [selectedThreadId]);
 
   useLayoutEffect(() => {
@@ -152,8 +166,9 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
         lastToastAtRef.current = now;
 
         const title = t.display_title || t.title || "New message";
-        const body = t.last_message.body?.slice(0, 120) || "";
-        setToasts((prev) => [...prev, { key: mid, type: "info", title, message: body || undefined }]);
+        const preview =
+          (t.last_message.preview ?? t.last_message.body)?.slice(0, 120) || "";
+        setToasts((prev) => [...prev, { key: mid, type: "info", title, message: preview || undefined }]);
       }
 
       threadLastMessageBaselineRef.current = nextMap;
@@ -275,7 +290,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     if (!q) return threads;
     return threads.filter((t) => {
       const title = (t.display_title || t.title || "").toLowerCase();
-      const preview = (t.last_message?.body || "").toLowerCase();
+      const preview = (t.last_message?.preview ?? t.last_message?.body ?? "").toLowerCase();
       return title.includes(q) || preview.includes(q);
     });
   }, [threads, threadSearch]);
@@ -346,18 +361,84 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     }
   };
 
+  const uploadAttachment = useCallback(
+    async (file: File, threadId: string) => {
+      const fd = new FormData();
+      fd.append("file", file);
+      const res = await adminFetch(`/api/admin/messages/threads/${threadId}/attachments`, {
+        method: "POST",
+        body: fd,
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "Upload failed");
+      return json.url as string;
+    },
+    []
+  );
+
+  const onAttachmentFilesSelected = async (e: ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    e.target.value = "";
+    if (!files?.length || !selectedThreadId || !serverMessagingOn) return;
+
+    const remaining = MAX_MESSAGE_ATTACHMENTS - attachmentUrls.length;
+    if (remaining <= 0) {
+      setError(`You can attach up to ${MAX_MESSAGE_ATTACHMENTS} photos per message.`);
+      return;
+    }
+
+    const list = Array.from(files).slice(0, remaining);
+    for (const file of list) {
+      if (!ATTACHMENT_MIME.has(file.type)) {
+        setError("Only JPEG, PNG, WebP, and GIF images are allowed.");
+        return;
+      }
+      if (file.size > MAX_ATTACHMENT_BYTES) {
+        setError("Each image must be 5MB or smaller.");
+        return;
+      }
+    }
+
+    setUploadingAttachments(true);
+    setError(null);
+    try {
+      const urls: string[] = [];
+      for (const file of list) {
+        const url = await uploadAttachment(file, selectedThreadId);
+        urls.push(url);
+      }
+      setAttachmentUrls((prev) => [...prev, ...urls]);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setUploadingAttachments(false);
+    }
+  };
+
+  const removePendingAttachment = (url: string) => {
+    setAttachmentUrls((prev) => prev.filter((u) => u !== url));
+  };
+
   const sendMessage = async () => {
-    if (!serverMessagingOn || !selectedThreadId || !composer.trim()) return;
+    if (!serverMessagingOn || !selectedThreadId) return;
+    const text = composer.trim();
+    const urls = attachmentUrls;
+    if (!text && urls.length === 0) return;
     setBusy(true);
     try {
       const res = await adminFetch(`/api/admin/messages/threads/${selectedThreadId}/messages`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ body: composer, clientMessageId: crypto.randomUUID() }),
+        body: JSON.stringify({
+          body: text || undefined,
+          imageUrls: urls.length ? urls : undefined,
+          clientMessageId: crypto.randomUUID(),
+        }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to send message");
       setComposer("");
+      setAttachmentUrls([]);
       await fetchMessages(selectedThreadId);
       await fetchThreads();
       setError(null);
@@ -365,6 +446,26 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       setError(e instanceof Error ? e.message : String(e));
     } finally {
       setBusy(false);
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (!serverMessagingOn || !selectedThreadId) return;
+    if (!window.confirm("Delete this message? This cannot be undone.")) return;
+    setDeletingId(messageId);
+    try {
+      const res = await adminFetch(`/api/admin/messages/threads/${selectedThreadId}/messages/${messageId}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) throw new Error(json.message || "Failed to delete message");
+      await fetchMessages(selectedThreadId);
+      await fetchThreads();
+      setError(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -476,7 +577,11 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                         <p className="text-sm font-medium text-gray-900 truncate">
                           {t.display_title || t.title || (t.thread_type === "dm" ? "Direct message" : "Channel")}
                         </p>
-                        {t.last_message && <p className="text-xs text-gray-500 truncate mt-0.5">{t.last_message.body}</p>}
+                        {t.last_message && (
+                          <p className="text-xs text-gray-500 truncate mt-0.5">
+                            {t.last_message.preview ?? t.last_message.body}
+                          </p>
+                        )}
                       </div>
                     </div>
                     <div className="flex shrink-0 flex-col items-end gap-1">
@@ -524,18 +629,75 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                 !messagesLoading &&
                 messages.map((m) => {
                   const isOwn = viewerUserId != null && m.sender_user_id === viewerUserId;
+                  const isDeleting = deletingId === m.id;
+                  const imageUrls = m.metadata?.image_urls?.filter(Boolean) ?? [];
+                  const showText = (m.body || "").trim().length > 0;
                   return (
                     <div key={m.id} className={cn("flex w-full", isOwn ? "justify-end" : "justify-start")}>
                       <div
                         className={cn(
-                          "max-w-[min(100%,28rem)] rounded-2xl px-3 py-2 shadow-sm",
+                          "relative max-w-[min(100%,28rem)] rounded-2xl px-3 py-2 shadow-sm",
                           isOwn ? "bg-purple-600 text-white" : "border border-gray-200 bg-gray-50 text-gray-900"
                         )}
                       >
-                        <p className={cn("text-[11px] mb-1", isOwn ? "text-purple-100" : "text-gray-500")}>
-                          {m.sender_role} · {formatMessageDetailTime(m.created_at)}
-                        </p>
-                        <p className={cn("text-sm whitespace-pre-wrap break-words", isOwn ? "text-white" : "text-gray-900")}>{m.body}</p>
+                        <div className={cn("flex items-start justify-between gap-2", isOwn ? "text-purple-100" : "text-gray-500")}>
+                          <p className="text-[11px] mb-1">
+                            {m.sender_role} · {formatMessageDetailTime(m.created_at)}
+                          </p>
+                          {isOwn && serverMessagingOn && (
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 w-7 shrink-0 p-0 text-white opacity-80 hover:bg-white/15 hover:opacity-100"
+                              disabled={isDeleting}
+                              onClick={() => deleteMessage(m.id)}
+                              aria-label="Delete message"
+                            >
+                              {isDeleting ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden />
+                              ) : (
+                                <Trash2 className="h-3.5 w-3.5" aria-hidden />
+                              )}
+                            </Button>
+                          )}
+                        </div>
+                        {imageUrls.length > 0 && (
+                          <div
+                            className={cn(
+                              "gap-2",
+                              showText ? "mb-2" : "",
+                              imageUrls.length > 1 ? "grid grid-cols-2" : "flex flex-col"
+                            )}
+                          >
+                            {imageUrls.map((src) => (
+                              <a
+                                key={src}
+                                href={src}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className={cn(
+                                  "block overflow-hidden rounded-lg ring-1 ring-black/10",
+                                  imageUrls.length > 1 ? "aspect-square" : ""
+                                )}
+                              >
+                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                <img
+                                  src={src}
+                                  alt=""
+                                  className={cn(
+                                    imageUrls.length > 1 ? "h-full w-full object-cover" : "max-h-64 w-full max-w-full object-contain"
+                                  )}
+                                />
+                              </a>
+                            ))}
+                          </div>
+                        )}
+                        {showText && (
+                          <p className={cn("text-sm whitespace-pre-wrap break-words pr-1", isOwn ? "text-white" : "text-gray-900")}>
+                            {m.body}
+                          </p>
+                        )}
                       </div>
                     </div>
                   );
@@ -544,35 +706,100 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
 
             <div
               className={cn(
-                "mt-auto flex shrink-0 gap-2 border-t border-gray-200 p-3",
+                "mt-auto flex shrink-0 flex-col gap-2 border-t border-gray-200 p-3",
                 "pb-[calc(0.75rem+env(safe-area-inset-bottom,0px)+12px)] lg:pb-3"
               )}
             >
-              <textarea
-                value={composer}
-                onChange={(e) => setComposer(e.target.value)}
-                placeholder="Type a message..."
-                disabled={!serverMessagingOn}
-                rows={2}
-                className={cn(
-                  "min-h-[44px] max-h-[160px] w-full flex-1 resize-y rounded-md border border-input bg-background px-3 py-2 text-sm",
-                  "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                )}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
+              <input
+                ref={attachmentInputRef}
+                type="file"
+                accept="image/jpeg,image/png,image/webp,image/gif"
+                multiple
+                className="hidden"
+                aria-hidden
+                onChange={onAttachmentFilesSelected}
               />
-              <Button
-                type="button"
-                className="shrink-0 self-end"
-                onClick={sendMessage}
-                disabled={!serverMessagingOn || busy || !selectedThreadId || !composer.trim()}
-              >
-                <Send className="h-4 w-4" />
-              </Button>
+              {attachmentUrls.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {attachmentUrls.map((url) => (
+                    <div key={url} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-gray-200 bg-gray-100">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img src={url} alt="" className="h-full w-full object-cover" />
+                      <button
+                        type="button"
+                        className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"
+                        onClick={() => removePendingAttachment(url)}
+                        disabled={busy || uploadingAttachments}
+                        aria-label="Remove attachment"
+                      >
+                        <X className="h-3.5 w-3.5" aria-hidden />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <textarea
+                  value={composer}
+                  onChange={(e) => setComposer(e.target.value)}
+                  placeholder="Type a message..."
+                  disabled={!serverMessagingOn}
+                  rows={2}
+                  className={cn(
+                    "min-h-[44px] max-h-[160px] w-full flex-1 resize-y rounded-md border border-input bg-background px-3 py-2 text-sm",
+                    "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  )}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault();
+                      const hasContent = composer.trim().length > 0 || attachmentUrls.length > 0;
+                      if (hasContent && !busy && !uploadingAttachments && selectedThreadId && serverMessagingOn) {
+                        sendMessage();
+                      }
+                    }
+                  }}
+                />
+                <div className="flex shrink-0 flex-col gap-1 self-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10"
+                    disabled={
+                      !serverMessagingOn ||
+                      busy ||
+                      uploadingAttachments ||
+                      !selectedThreadId ||
+                      attachmentUrls.length >= MAX_MESSAGE_ATTACHMENTS
+                    }
+                    onClick={() => attachmentInputRef.current?.click()}
+                    aria-label="Add photos"
+                    title="Add photos"
+                  >
+                    {uploadingAttachments ? (
+                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
+                    ) : (
+                      <ImagePlus className="h-4 w-4" aria-hidden />
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="icon"
+                    className="h-10 w-10"
+                    onClick={sendMessage}
+                    disabled={
+                      !serverMessagingOn ||
+                      busy ||
+                      uploadingAttachments ||
+                      !selectedThreadId ||
+                      (!composer.trim() && attachmentUrls.length === 0)
+                    }
+                    aria-label="Send message"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
             </div>
           </div>
         </div>

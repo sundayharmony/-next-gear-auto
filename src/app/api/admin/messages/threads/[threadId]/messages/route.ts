@@ -2,8 +2,17 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
-import { normalizeMessageBody, requireActiveMembership } from "@/lib/messaging/service";
-import { staffMessagingMasterEnabled } from "@/lib/config/staff-messaging-server";
+import {
+  normalizeMessageBody,
+  requireActiveMembership,
+  validateStaffMessageContent,
+} from "@/lib/messaging/service";
+import {
+  staffMessagingEmailChannelEnabled,
+  staffMessagingMasterEnabled,
+  staffMessagingPushChannelEnabled,
+} from "@/lib/config/staff-messaging-server";
+import { flushPendingNotificationsForMessage } from "@/lib/messaging/outbox-worker";
 
 type Params = { params: Promise<{ threadId: string }> };
 
@@ -29,7 +38,7 @@ export async function GET(req: NextRequest, { params }: Params) {
   try {
     let query = supabase
       .from("messages")
-      .select("id, thread_id, sender_user_id, sender_role, body, client_message_id, created_at, edited_at, deleted_at")
+      .select("id, thread_id, sender_user_id, sender_role, body, client_message_id, created_at, edited_at, deleted_at, metadata")
       .eq("thread_id", threadId)
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
@@ -64,23 +73,30 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ success: false, message: "Thread access denied" }, { status: 403 });
   }
 
-  let payload: { body: string; clientMessageId?: string };
+  let payload: { body?: string; clientMessageId?: string; imageUrls?: string[] };
   try {
     payload = await req.json();
   } catch {
     return NextResponse.json({ success: false, message: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const body = normalizeMessageBody(payload.body);
-  if (!body) {
-    return NextResponse.json({ success: false, message: "Message body is required and must be <= 4000 chars" }, { status: 400 });
+  const parsed = validateStaffMessageContent(payload.body, payload.imageUrls);
+  if (!parsed) {
+    return NextResponse.json(
+      { success: false, message: "Add text and/or valid image attachments (max 6). Images must be uploaded first." },
+      { status: 400 }
+    );
   }
+
+  const { body, imageUrls } = parsed;
+  const metadata =
+    imageUrls.length > 0 ? { image_urls: imageUrls } : ({} as Record<string, never>);
 
   try {
     if (payload.clientMessageId) {
       const { data: existing } = await supabase
         .from("messages")
-        .select("id, thread_id, sender_user_id, sender_role, body, created_at")
+        .select("id, thread_id, sender_user_id, sender_role, body, created_at, metadata")
         .eq("thread_id", threadId)
         .eq("sender_user_id", auth.userId)
         .eq("client_message_id", payload.clientMessageId)
@@ -96,10 +112,11 @@ export async function POST(req: NextRequest, { params }: Params) {
         thread_id: threadId,
         sender_user_id: auth.userId,
         sender_role: auth.role,
-        body,
+        body: body || "",
         client_message_id: payload.clientMessageId || null,
+        metadata,
       })
-      .select("id, thread_id, sender_user_id, sender_role, body, client_message_id, created_at")
+      .select("id, thread_id, sender_user_id, sender_role, body, client_message_id, created_at, metadata")
       .single();
 
     if (createError || !created) {
@@ -146,6 +163,14 @@ export async function POST(req: NextRequest, { params }: Params) {
         onConflict: "message_id,recipient_user_id,channel",
         ignoreDuplicates: true,
       });
+
+      if (staffMessagingEmailChannelEnabled() || staffMessagingPushChannelEnabled()) {
+        try {
+          await flushPendingNotificationsForMessage(supabase, created.id);
+        } catch (flushErr) {
+          logger.error("Immediate notification delivery failed; cron will retry", flushErr);
+        }
+      }
     }
 
     return NextResponse.json({ success: true, data: created }, { status: 201 });

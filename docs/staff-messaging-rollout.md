@@ -26,6 +26,10 @@ Use explicit values to avoid accidental newline characters in env values:
    - Defines RPCs `staff_get_or_create_dm_thread` (race-safe DM open) and `staff_message_thread_unread_counts` (batched unread).
 3. If the migration raises an exception about DM rows without a canonical pair, inspect `message_threads` where `thread_type = 'dm'` and pair columns are null (typically invalid membership counts). Fix data, then re-run the migration file from step 2.
 
+## Storage (message photos)
+- The **`staff-message-attachments`** bucket is **created automatically** on the first successful photo upload (service role lists buckets, creates the public bucket if missing, then uploads). You do not need to create it manually in the Supabase dashboard unless you prefer to pre-provision it.
+- `NEXT_PUBLIC_SUPABASE_URL` must be set so message URLs validate and the UI can load images from your project host.
+
 ## Staged Enablement
 1. Set `FF_STAFF_MESSAGING_ENABLED=false` and deploy DB migration + APIs.
 2. Set `FF_STAFF_MESSAGING_ENABLED=true` for internal testing accounts.
@@ -35,8 +39,8 @@ Use explicit values to avoid accidental newline characters in env values:
 
 ### Email / push latency (cron vs instant)
 - Outbox rows are written when a message is sent (`notification_outbox` has a unique key on `(message_id, recipient_user_id, channel)` so each recipient receives at most one row per channel per message).
-- With **daily** cron on Hobby, email and web push are **not** delivered in real time; they flush when the cron runs next.
-- For **near-instant** delivery, either upgrade to a plan that allows frequent crons, schedule the worker externally (e.g. GitHub Actions hitting the cron URL), or add an optional **on-send** path later (invoke the same batch processor from the message POST handler behind a feature flag, keeping cron as a safety net).
+- When **`FF_STAFF_MESSAGING_EMAIL_ENABLED`** and/or **`FF_STAFF_MESSAGING_PUSH_ENABLED`** are on, the API **processes those outbox rows immediately** after each new message (same worker logic as cron), so recipients get email/push without waiting for the cron schedule.
+- The **daily** cron on Vercel Hobby still runs as a **backup** for any pending/retry rows (e.g. if immediate send failed or was skipped).
 
 ## Kill Switches
 - Disable all messaging immediately: `FF_STAFF_MESSAGING_ENABLED=false`.

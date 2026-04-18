@@ -4,6 +4,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
 import {
   batchResolveStaffIdentities,
+  formatMessageListPreview,
   formatStaffDisplayName,
   normalizeThreadTitle,
   orderedDmPair,
@@ -66,7 +67,7 @@ export async function GET(req: NextRequest) {
         .eq("status", "active"),
       supabase
         .from("messages")
-        .select("id, thread_id, body, sender_user_id, sender_role, created_at")
+        .select("id, thread_id, body, sender_user_id, sender_role, created_at, metadata")
         .in("thread_id", threadIds)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
@@ -148,13 +149,30 @@ export async function GET(req: NextRequest) {
         display_title = (thread.title as string) || "Channel";
       }
 
+      const latest = latestByThread.get(thread.id as string) as
+        | {
+            id: string;
+            body: string;
+            sender_user_id: string;
+            sender_role: string;
+            created_at: string;
+            metadata?: { image_urls?: string[] };
+          }
+        | undefined;
+      const last_message = latest
+        ? {
+            ...latest,
+            preview: formatMessageListPreview(latest.body, latest.metadata),
+          }
+        : null;
+
       return {
         ...thread,
         display_title,
         counterpart,
         unread_count: unreadByThread.get(thread.id as string) || 0,
         muted: membershipByThread.get(thread.id as string)?.muted || false,
-        last_message: latestByThread.get(thread.id as string) || null,
+        last_message,
         members: tmembers,
       };
     });

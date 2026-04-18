@@ -101,6 +101,57 @@ export function normalizeMessageBody(raw: unknown, maxLen = 4000): string | null
   return normalized;
 }
 
+const MAX_MESSAGE_IMAGES = 6;
+
+/** Validates public Supabase Storage URLs for staff message attachments (same project host, path contains bucket). */
+export function normalizeMessageImageUrls(raw: unknown, maxImages = MAX_MESSAGE_IMAGES): string[] | null {
+  if (raw == null || raw === undefined) return [];
+  if (!Array.isArray(raw)) return null;
+  if (raw.length > maxImages) return null;
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
+  if (!base) return null;
+  let baseHost: string;
+  try {
+    baseHost = new URL(base).host;
+  } catch {
+    return null;
+  }
+  const out: string[] = [];
+  for (const item of raw) {
+    if (typeof item !== "string" || item.length > 2048) return null;
+    try {
+      const u = new URL(item);
+      if (u.host !== baseHost) return null;
+      if (!u.pathname.includes("/staff-message-attachments/")) return null;
+      out.push(item);
+    } catch {
+      return null;
+    }
+  }
+  return out;
+}
+
+/** Message may be text only, images only, or both; body max 4000 chars. */
+export function validateStaffMessageContent(
+  bodyRaw: unknown,
+  imageUrlsRaw: unknown
+): { body: string; imageUrls: string[] } | null {
+  const imageUrls = normalizeMessageImageUrls(imageUrlsRaw);
+  if (imageUrls === null) return null;
+  const text = typeof bodyRaw === "string" ? bodyRaw.replace(/\r\n/g, "\n").trim() : "";
+  if (text.length > 4000) return null;
+  if (!text && imageUrls.length === 0) return null;
+  return { body: text, imageUrls };
+}
+
+/** Short line for thread list / toast when body may be empty but images exist. */
+export function formatMessageListPreview(body: string, metadata: { image_urls?: string[] } | null | undefined): string {
+  const b = (body || "").trim();
+  const n = metadata?.image_urls?.length ?? 0;
+  if (!b && n > 0) return n === 1 ? "Photo" : `${n} photos`;
+  return b;
+}
+
 export function normalizeThreadTitle(raw: unknown, maxLen = 120): string | null {
   if (typeof raw !== "string") return null;
   const title = raw.trim();
