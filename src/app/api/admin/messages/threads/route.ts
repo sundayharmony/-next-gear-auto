@@ -12,7 +12,10 @@ import {
   staffIdentityKey,
   type StaffRole,
 } from "@/lib/messaging/service";
-import { staffMessagingMasterEnabled } from "@/lib/config/staff-messaging-server";
+import {
+  staffMessagingMasterEnabled,
+  staffMessagingNotificationChannels,
+} from "@/lib/config/staff-messaging-server";
 
 type CreateThreadBody =
   | { threadType: "dm"; peerUserId: string; peerRole: StaffRole }
@@ -25,7 +28,13 @@ export async function GET(req: NextRequest) {
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
   if (!staffMessagingMasterEnabled()) {
-    return NextResponse.json({ success: true, data: [], messagingEnabled: false, viewer: { userId: auth.userId } });
+    return NextResponse.json({
+      success: true,
+      data: [],
+      messagingEnabled: false,
+      viewer: { userId: auth.userId },
+      channels: { email: false, push: false },
+    });
   }
   const supabase = getServiceSupabase();
 
@@ -49,6 +58,7 @@ export async function GET(req: NextRequest) {
         messagingEnabled: true,
         viewer: { userId: auth.userId },
         unread_total: 0,
+        channels: staffMessagingNotificationChannels(),
       });
     }
 
@@ -185,6 +195,7 @@ export async function GET(req: NextRequest) {
       messagingEnabled: true,
       viewer: { userId: auth.userId },
       unread_total,
+      channels: staffMessagingNotificationChannels(),
     });
   } catch (error) {
     logger.error("List threads failed", error);

@@ -101,6 +101,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   const [mobileTab, setMobileTab] = useState<"list" | "chat">("list");
   const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
   const [uploadingAttachments, setUploadingAttachments] = useState(false);
+  const [notificationChannels, setNotificationChannels] = useState<{ email: boolean; push: boolean } | null>(null);
 
   const selectedThreadIdRef = useRef<string | null>(null);
   const threadLastMessageBaselineRef = useRef<Map<string, string | null> | null>(null);
@@ -184,6 +185,9 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     setServerMessagingOn(on);
     const list: ThreadRow[] = on ? json.data || [] : [];
     setThreads(list);
+    if (json.channels && typeof json.channels.email === "boolean" && typeof json.channels.push === "boolean") {
+      setNotificationChannels({ email: json.channels.email, push: json.channels.push });
+    }
     const vid = json.viewer?.userId ?? null;
     if (vid) setViewerUserId(vid);
     if (on) maybeNotifyInbound(list, vid);
@@ -234,6 +238,13 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
         setServerMessagingOn(messagingOn);
         const list: ThreadRow[] = messagingOn ? threadsJson.data || [] : [];
         setThreads(list);
+        if (
+          threadsJson.channels &&
+          typeof threadsJson.channels.email === "boolean" &&
+          typeof threadsJson.channels.push === "boolean"
+        ) {
+          setNotificationChannels({ email: threadsJson.channels.email, push: threadsJson.channels.push });
+        }
         if (threadsJson.viewer?.userId) setViewerUserId(threadsJson.viewer.userId);
         if (messagingOn) {
           maybeNotifyInbound(list, threadsJson.viewer?.userId ?? null);
@@ -498,6 +509,14 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
             <code className="rounded bg-amber-100/80 px-1">FF_STAFF_MESSAGING_PUSH_ENABLED</code>, then redeploy. Run{" "}
             <code className="rounded bg-amber-100/80 px-1">supabase-internal-messaging.sql</code> and{" "}
             <code className="rounded bg-amber-100/80 px-1">supabase-internal-messaging-dm-pair.sql</code> on your database if you have not already.
+          </div>
+        )}
+        {serverMessagingOn && notificationChannels && !notificationChannels.email && (
+          <div className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-950">
+            Email notifications are off for this deployment. Recipients will not get email when you message them. To turn them on, set{" "}
+            <code className="rounded bg-sky-100/90 px-1">FF_STAFF_MESSAGING_EMAIL_ENABLED</code> or{" "}
+            <code className="rounded bg-sky-100/90 px-1">NEXT_PUBLIC_FF_STAFF_MESSAGING_EMAIL_ENABLED</code> to{" "}
+            <code className="rounded bg-sky-100/90 px-1">true</code> in Vercel (or unset both so the default applies), then redeploy.
           </div>
         )}
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
