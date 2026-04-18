@@ -98,8 +98,18 @@ export async function processOutboxJob(supabase: any, job: OutboxJobRow): Promis
         stats.dead++;
         return stats;
       }
+      const recipientEmail = (recipient.email || "").trim();
+      if (!recipientEmail) {
+        await supabase.from("notification_outbox").update({
+          status: "dead",
+          last_error: "recipient has no email address in staff profile",
+          updated_at: new Date().toISOString(),
+        }).eq("id", job.id);
+        stats.dead++;
+        return stats;
+      }
       await sendInternalMessageNotification({
-        recipientEmail: recipient.email,
+        recipientEmail,
         recipientName: recipient.name,
         senderName: sender.name,
         senderRole: sender.role,

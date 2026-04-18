@@ -38,9 +38,15 @@ Use explicit values to avoid accidental newline characters in env values:
 5. Keep `/api/cron/message-notifications` scheduled in Vercel cron with `Authorization: Bearer ${CRON_SECRET}`. On Vercel Hobby, crons may only run **once per day** (this repo uses `30 9 * * *` UTC).
 
 ### Email / push latency (cron vs instant)
-- Outbox rows are written when a message is sent (`notification_outbox` has a unique key on `(message_id, recipient_user_id, channel)` so each recipient receives at most one row per channel per message).
-- When **`FF_STAFF_MESSAGING_EMAIL_ENABLED`** and/or **`FF_STAFF_MESSAGING_PUSH_ENABLED`** are on, the API **processes those outbox rows immediately** after each new message (same worker logic as cron), so recipients get email/push without waiting for the cron schedule.
+- Outbox rows are created **only for channels that are enabled**: email rows require **`FF_STAFF_MESSAGING_EMAIL_ENABLED=true`**; push rows require **`FF_STAFF_MESSAGING_PUSH_ENABLED=true`**. If both are off, no notification jobs are queued for new messages (`notification_outbox` has a unique key on `(message_id, recipient_user_id, channel)` when rows exist).
+- When at least one of those flags is on, the API **processes matching outbox rows immediately** after each new message (same worker logic as cron), so recipients get email/push without waiting for the cron schedule.
 - The **daily** cron on Vercel Hobby still runs as a **backup** for any pending/retry rows (e.g. if immediate send failed or was skipped).
+
+### Email not arriving (troubleshooting)
+- Set **`FF_STAFF_MESSAGING_EMAIL_ENABLED=true`** in the same environment as the app (e.g. Vercel **Production**), then **redeploy**. Master flag **`FF_STAFF_MESSAGING_ENABLED`** must also be true.
+- Production sends use **SMTP**: configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, and **`SMTP_PASS`** (required in production for the mailer).
+- In Supabase, open **`notification_outbox`** for a test message: rows with **`status = dead`** or **`retry`** include **`last_error`** (e.g. SMTP auth `535`, missing recipient email on the `admins` / `customers` row, or channel disabled).
+- Recipients must have a non-empty **email** on their staff record (`admins.email` or manager `customers.email`).
 
 ## Kill Switches
 - Disable all messaging immediately: `FF_STAFF_MESSAGING_ENABLED=false`.

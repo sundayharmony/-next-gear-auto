@@ -2,11 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
-import {
-  normalizeMessageBody,
-  requireActiveMembership,
-  validateStaffMessageContent,
-} from "@/lib/messaging/service";
+import { requireActiveMembership, validateStaffMessageContent } from "@/lib/messaging/service";
 import {
   staffMessagingEmailChannelEnabled,
   staffMessagingMasterEnabled,
@@ -139,36 +135,48 @@ export async function POST(req: NextRequest, { params }: Params) {
       .eq("status", "active")
       .neq("user_id", auth.userId);
 
-    if ((recipients || []).length > 0) {
-      const outboxRows: Array<Record<string, unknown>> = [];
-      for (const r of recipients || []) {
-        outboxRows.push({
-          message_id: created.id,
-          recipient_user_id: r.user_id,
-          recipient_role: r.role,
-          channel: "email",
-          status: "pending",
-          send_after: new Date().toISOString(),
-        });
-        outboxRows.push({
-          message_id: created.id,
-          recipient_user_id: r.user_id,
-          recipient_role: r.role,
-          channel: "push",
-          status: "pending",
-          send_after: new Date().toISOString(),
-        });
-      }
-      await supabase.from("notification_outbox").upsert(outboxRows, {
-        onConflict: "message_id,recipient_user_id,channel",
-        ignoreDuplicates: true,
-      });
+    const emailOn = staffMessagingEmailChannelEnabled();
+    const pushOn = staffMessagingPushChannelEnabled();
 
-      if (staffMessagingEmailChannelEnabled() || staffMessagingPushChannelEnabled()) {
-        try {
-          await flushPendingNotificationsForMessage(supabase, created.id);
-        } catch (flushErr) {
-          logger.error("Immediate notification delivery failed; cron will retry", flushErr);
+    if ((recipients || []).length > 0 && (emailOn || pushOn)) {
+      const outboxRows: Array<Record<string, unknown>> = [];
+      const sendAfter = new Date().toISOString();
+      for (const r of recipients || []) {
+        if (emailOn) {
+          outboxRows.push({
+            message_id: created.id,
+            recipient_user_id: r.user_id,
+            recipient_role: r.role,
+            channel: "email",
+            status: "pending",
+            send_after: sendAfter,
+          });
+        }
+        if (pushOn) {
+          outboxRows.push({
+            message_id: created.id,
+            recipient_user_id: r.user_id,
+            recipient_role: r.role,
+            channel: "push",
+            status: "pending",
+            send_after: sendAfter,
+          });
+        }
+      }
+
+      if (outboxRows.length > 0) {
+        const { error: outboxError } = await supabase.from("notification_outbox").upsert(outboxRows, {
+          onConflict: "message_id,recipient_user_id,channel",
+          ignoreDuplicates: true,
+        });
+        if (outboxError) {
+          logger.error("notification_outbox upsert failed — recipients will not get email/push for this message", outboxError);
+        } else {
+          try {
+            await flushPendingNotificationsForMessage(supabase, created.id);
+          } catch (flushErr) {
+            logger.error("Immediate notification delivery failed; cron will retry", flushErr);
+          }
         }
       }
     }
