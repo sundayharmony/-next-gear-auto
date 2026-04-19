@@ -253,25 +253,67 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Check for existing overlapping blocks ──
-    const { data: existing } = await supabase
+    // ── Overlapping blocks: merge date range + refresh metadata (fixes calendar when Turo resends or dates shift) ──
+    const { data: overlapping } = await supabase
       .from("blocked_dates")
-      .select("id, start_date, end_date")
+      .select("id, start_date, end_date, source")
       .eq("vehicle_id", matchedVehicle.id)
       .lte("start_date", parsed.endDate)
       .gte("end_date", parsed.startDate);
 
-    if (existing && existing.length > 0) {
-      logger.info("Turo webhook: dates already blocked", {
+    if (overlapping && overlapping.length > 0) {
+      const row = overlapping[0];
+      const mergedStart = parsed.startDate < row.start_date ? parsed.startDate : row.start_date;
+      const mergedEnd = parsed.endDate > row.end_date ? parsed.endDate : row.end_date;
+      const rangeWidened = mergedStart !== row.start_date || mergedEnd !== row.end_date;
+      const reason = parsed.guestName
+        ? `Turo: ${parsed.guestName}${parsed.earnings ? ` — $${parsed.earnings}` : ""}`
+        : `Turo booking${parsed.earnings ? ` — $${parsed.earnings}` : ""}`;
+
+      const updateFields: Record<string, string | number | boolean | null> = {
+        start_date: mergedStart,
+        end_date: mergedEnd,
+        reason,
+      };
+      if (parsed.pickupTime != null) updateFields.pickup_time = parsed.pickupTime;
+      if (parsed.returnTime != null) updateFields.return_time = parsed.returnTime;
+      if (parsed.location != null) updateFields.location = parsed.location;
+      if (parsed.earnings != null) updateFields.earnings = parsed.earnings;
+
+      const { data: updated, error: mergeErr } = await supabase
+        .from("blocked_dates")
+        .update(updateFields)
+        .eq("id", row.id)
+        .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason")
+        .maybeSingle();
+
+      if (mergeErr) {
+        logger.error("Turo webhook: merge update error", mergeErr);
+        return NextResponse.json({ success: false, message: mergeErr.message }, { status: 500 });
+      }
+
+      logger.info("Turo webhook: merged blocked_dates row", {
+        id: row.id,
         vehicle: vehicleLabel,
-        dates: `${parsed.startDate} → ${parsed.endDate}`,
-        existingId: existing[0].id,
+        previous: `${row.start_date} → ${row.end_date}`,
+        merged: `${mergedStart} → ${mergedEnd}`,
+        rangeWidened,
       });
+
       return NextResponse.json({
         success: true,
-        action: "skipped",
-        skipped: true,
-        message: `Dates already blocked for ${vehicleLabel} (${existing[0].start_date} to ${existing[0].end_date})`,
+        action: rangeWidened ? "merged_widened" : "merged_refresh",
+        message: rangeWidened
+          ? `Updated block for ${vehicleLabel} to ${mergedStart} → ${mergedEnd}`
+          : `Refreshed Turo block for ${vehicleLabel} (${mergedStart} → ${mergedEnd})`,
+        data: updated,
+        parsed: {
+          confidence: parsed.confidence,
+          guestName: parsed.guestName,
+          vehicleDescription: parsed.vehicleDescription,
+          vehicleMatched: vehicleLabel,
+          vehicleMatchScore: matchScore,
+        },
       });
     }
 

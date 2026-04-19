@@ -1,23 +1,27 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdmin } from "@/lib/auth/admin-check";
+import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import {
+  bookingConflictsWithAny,
+  overlapConfigForMode,
+  toBookingInterval,
+  type BookingOverlapMode,
+} from "@/lib/utils/booking-overlap";
 
 /**
- * GET /api/bookings/check-overlap?vehicleId=...&pickupDate=...&returnDate=...
+ * GET /api/bookings/check-overlap?vehicleId=...&pickupDate=...&returnDate=...&pickupTime=&returnTime=
  *
  * Checks whether a vehicle has any overlapping bookings for the given date range.
- * Used by the admin CreateBookingForm to warn before double-booking.
+ * Used by admin/manager CreateBookingForm to warn before double-booking.
  */
 export async function GET(req: NextRequest) {
-  // Admin-only endpoint — enforce early return (Bug 18)
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) {
     return auth.response;
   }
 
   try {
-
     const { searchParams } = new URL(req.url);
     const vehicleId = searchParams.get("vehicleId");
     const pickupDate = searchParams.get("pickupDate");
@@ -32,37 +36,26 @@ export async function GET(req: NextRequest) {
       );
     }
 
+    const mode: BookingOverlapMode = auth.role === "manager" ? "manager" : "default";
+    const { statuses, minGapMinutes } = overlapConfigForMode(mode);
+
     const supabase = getServiceSupabase();
 
     const { data: conflicting } = await supabase
       .from("bookings")
       .select("id, pickup_date, return_date, pickup_time, return_time, customer_name, status")
       .eq("vehicle_id", vehicleId)
-      .in("status", ["confirmed", "active", "pending"])
+      .in("status", [...statuses])
       .lte("pickup_date", returnDate)
       .gte("return_date", pickupDate);
 
-    // Apply time-based gap logic: allow same-day turnovers with 60+ minute gap
+    const proposed = toBookingInterval(pickupDate, returnDate, pickupTime, returnTime);
+
     let hasRealOverlap = false;
     if (conflicting && conflicting.length > 0) {
-      const newPickup = new Date(`${pickupDate}T${pickupTime}`);
-      const newReturn = new Date(`${returnDate}T${returnTime}`);
-
-      hasRealOverlap = conflicting.some((existing) => {
-        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time || "00:00"}`);
-        const existReturn = new Date(`${existing.return_date}T${existing.return_time || "23:59"}`);
-
-        // Check if there is at least 60 minutes gap between the two bookings
-        const gapAfterExisting = (newPickup.getTime() - existReturn.getTime()) / 60000;
-        const gapAfterNew = (existPickup.getTime() - newReturn.getTime()) / 60000;
-
-        // No conflict if new booking starts 60+ min after existing ends,
-        // or existing starts 60+ min after new booking ends
-        return gapAfterExisting < 60 && gapAfterNew < 60;
-      });
+      hasRealOverlap = bookingConflictsWithAny(proposed, conflicting, minGapMinutes);
     }
 
-    // Also check blocked_dates (manual blocks, Turo email sync, etc.)
     let blockedConflict = false;
     if (!hasRealOverlap) {
       const { data: blocks } = await supabase

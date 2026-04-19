@@ -239,8 +239,10 @@ export default function CreateBookingForm({
       overlapAbortControllerRef.current = new AbortController();
 
       try {
+        const pt = encodeURIComponent(form.pickupTime || "00:00");
+        const rt = encodeURIComponent(form.returnTime || "23:59");
         const res = await adminFetch(
-          `/api/bookings/check-overlap?vehicleId=${form.vehicleId}&pickupDate=${form.pickupDate}&returnDate=${form.returnDate}`,
+          `/api/bookings/check-overlap?vehicleId=${encodeURIComponent(form.vehicleId)}&pickupDate=${encodeURIComponent(form.pickupDate)}&returnDate=${encodeURIComponent(form.returnDate)}&pickupTime=${pt}&returnTime=${rt}`,
           { method: "GET", signal: overlapAbortControllerRef.current.signal }
         );
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -265,7 +267,7 @@ export default function CreateBookingForm({
         overlapAbortControllerRef.current.abort();
       }
     };
-  }, [form.vehicleId, form.pickupDate, form.returnDate]);
+  }, [form.vehicleId, form.pickupDate, form.returnDate, form.pickupTime, form.returnTime]);
 
   // Auto-calculate price (skipped when admin has manually set a custom price)
   useEffect(() => {

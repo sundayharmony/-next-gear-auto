@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
+import { bookingConflictsWithAny, overlapConfigForMode, toBookingInterval } from "@/lib/utils/booking-overlap";
 
 export async function GET(req: NextRequest) {
   const supabase = getServiceSupabase();
@@ -34,12 +35,13 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Check for overlapping confirmed/active bookings in Supabase
+    const { statuses, minGapMinutes } = overlapConfigForMode("default");
+
     const { data: conflicting, error } = await supabase
       .from("bookings")
       .select("id, pickup_date, return_date, pickup_time, return_time, status")
       .eq("vehicle_id", vehicleId)
-      .in("status", ["confirmed", "active", "pending"])
+      .in("status", [...statuses])
       .lte("pickup_date", endDate)
       .gte("return_date", startDate);
 
@@ -53,22 +55,13 @@ export async function GET(req: NextRequest) {
       }, { status: 503 });
     }
 
-    // Allow same-day turnovers with at least 60-minute gap
+    // Allow same-day turnovers with at least 60-minute gap (shared logic with POST /api/bookings)
     let available = true;
     if (conflicting && conflicting.length > 0) {
       const pickupTime = searchParams.get("pickupTime") || "00:00";
       const returnTime = searchParams.get("returnTime") || "23:59";
-      const newPickup = new Date(`${startDate}T${pickupTime}`);
-      const newReturn = new Date(`${endDate}T${returnTime}`);
-
-      const hasRealConflict = conflicting.some((existing) => {
-        const existPickup = new Date(`${existing.pickup_date}T${existing.pickup_time || "00:00"}`);
-        const existReturn = new Date(`${existing.return_date}T${existing.return_time || "23:59"}`);
-        const gapAfterExisting = (newPickup.getTime() - existReturn.getTime()) / 60000;
-        const gapAfterNew = (existPickup.getTime() - newReturn.getTime()) / 60000;
-        return gapAfterExisting < 60 && gapAfterNew < 60;
-      });
-
+      const proposed = toBookingInterval(startDate, endDate, pickupTime, returnTime);
+      const hasRealConflict = bookingConflictsWithAny(proposed, conflicting, minGapMinutes);
       available = !hasRealConflict;
     }
 

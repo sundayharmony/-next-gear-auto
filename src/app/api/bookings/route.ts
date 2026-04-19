@@ -294,10 +294,19 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Double-booking check — admins can always overlap; clients need 60min gap
+    // Double-booking check — admins bypass; managers use confirmed/active + blocked_dates only (no 60min gap)
     const canBypassOverlap = isAdminUser;
+    const overlapMode = isManagerUser ? "manager" : "default";
     if (!canBypassOverlap && body.vehicleId && body.pickupDate && body.returnDate) {
-      const overlap = await checkBookingOverlap(supabase, body.vehicleId, body.pickupDate, body.returnDate, body.pickupTime || null, body.returnTime || null);
+      const overlap = await checkBookingOverlap(
+        supabase,
+        body.vehicleId,
+        body.pickupDate,
+        body.returnDate,
+        body.pickupTime || null,
+        body.returnTime || null,
+        { mode: overlapMode },
+      );
       if (overlap) return overlap;
     }
 
@@ -403,7 +412,15 @@ export async function POST(request: NextRequest) {
 
     // Re-check for overlaps immediately before insert to minimize race condition window
     if (!canBypassOverlap && body.vehicleId && body.pickupDate && body.returnDate) {
-      const finalOverlap = await checkBookingOverlap(supabase, body.vehicleId, body.pickupDate, body.returnDate, body.pickupTime || null, body.returnTime || null);
+      const finalOverlap = await checkBookingOverlap(
+        supabase,
+        body.vehicleId,
+        body.pickupDate,
+        body.returnDate,
+        body.pickupTime || null,
+        body.returnTime || null,
+        { mode: overlapMode },
+      );
       if (finalOverlap) return finalOverlap;
     }
 

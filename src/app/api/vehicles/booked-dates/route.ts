@@ -15,13 +15,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Fetch all non-cancelled bookings for this vehicle
-    // Only confirmed and active bookings block dates (pending are unpaid and may be abandoned)
+    // Bookings that occupy the vehicle on the calendar (includes pending website holds + confirmed/active)
     const { data: bookings, error } = await supabase
       .from("bookings")
       .select("id, pickup_date, return_date, pickup_time, return_time, status")
       .eq("vehicle_id", vehicleId)
-      .in("status", ["confirmed", "active"])
+      .in("status", ["confirmed", "active", "pending"])
       .order("pickup_date", { ascending: true })
       .limit(500);
 
@@ -45,17 +44,19 @@ export async function GET(req: NextRequest) {
     // Also fetch blocked dates (manual blocks, Turo email sync, etc.)
     const { data: blocks } = await supabase
       .from("blocked_dates")
-      .select("start_date, end_date")
+      .select("start_date, end_date, pickup_time, return_time")
       .eq("vehicle_id", vehicleId)
       .gte("end_date", new Date(Date.now() - 30 * 86400000).toISOString().split("T")[0])
       .order("start_date", { ascending: true });
 
-    const blockedRanges = (blocks || []).map((b) => ({
-      pickupDate: b.start_date,
-      returnDate: b.end_date,
-      pickupTime: "00:00",
-      returnTime: "23:59",
-    }));
+    const blockedRanges = (blocks || []).map(
+      (b: { start_date: string; end_date: string; pickup_time?: string | null; return_time?: string | null }) => ({
+        pickupDate: b.start_date,
+        returnDate: b.end_date,
+        pickupTime: b.pickup_time?.trim() || "00:00",
+        returnTime: b.return_time?.trim() || "23:59",
+      }),
+    );
 
     return NextResponse.json({
       success: true,

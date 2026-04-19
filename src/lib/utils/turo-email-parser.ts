@@ -149,9 +149,11 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   let startDate: string | null = null;
   let endDate: string | null = null;
 
-  // Pattern 1: "Trip starts: <date>" / "Trip ends: <date>"
-  const tripStartMatch = text.match(/trip\s+start[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i);
-  const tripEndMatch = text.match(/trip\s+end[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i);
+  // Pattern 1: "Trip starts: <date>" / "Trip begins: <date>" / "Trip ends: <date>"
+  const tripStartMatch = text.match(/trip\s+start[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i)
+    || text.match(/trip\s+begin[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i);
+  const tripEndMatch = text.match(/trip\s+end[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i)
+    || text.match(/trip\s+conclude[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i);
   if (tripStartMatch) {
     startDate = parseFlexibleDate(tripStartMatch[1]);
     rawMatches.push(`Trip start: "${tripStartMatch[1].trim()}"`);
@@ -159,6 +161,22 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   if (tripEndMatch) {
     endDate = parseFlexibleDate(tripEndMatch[1]);
     rawMatches.push(`Trip end: "${tripEndMatch[1].trim()}"`);
+  }
+
+  // Pattern 1b: "Pickup on <date>" / "Return on <date>" (common in mobile-style Turo copy)
+  if (!startDate) {
+    const pickupOn = text.match(/pickup\s+on\s*[:–—-]?\s*(.+?)(?:\n|return|$)/i);
+    if (pickupOn) {
+      startDate = parseFlexibleDate(pickupOn[1]);
+      if (startDate) rawMatches.push(`Pickup on: "${pickupOn[1].trim()}"`);
+    }
+  }
+  if (!endDate) {
+    const returnOn = text.match(/return\s+on\s*[:–—-]?\s*(.+?)(?:\n|pickup|guest|$)/i);
+    if (returnOn) {
+      endDate = parseFlexibleDate(returnOn[1]);
+      if (endDate) rawMatches.push(`Return on: "${returnOn[1].trim()}"`);
+    }
   }
 
   // Pattern 2: "Start date: <date>" / "End date: <date>"
