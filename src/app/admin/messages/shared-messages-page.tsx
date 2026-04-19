@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, Hash, ImagePlus, Loader2, MessageSquare, Plus, Send, Trash2, X } from "lucide-react";
+import { ChevronLeft, FileText, Hash, Loader2, MessageSquare, Paperclip, Plus, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -11,6 +11,12 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { MessagingPushRegistration } from "@/components/messaging/push-registration";
 import { ToastContainer, ToastNotification } from "@/components/ui/toast";
 import { cn } from "@/lib/utils/cn";
+import { isImageAttachmentUrl } from "@/lib/messaging/service";
+import {
+  STAFF_ATTACHMENT_ACCEPT_ATTR,
+  STAFF_ATTACHMENT_ALLOWED_MIMES,
+  STAFF_ATTACHMENT_MAX_BYTES,
+} from "@/lib/messaging/staff-attachment-allowlist";
 
 interface ThreadRow {
   id: string;
@@ -50,8 +56,15 @@ const TOAST_THROTTLE_MS = 4000;
 const MAX_TOAST_DEDUPE_IDS = 400;
 
 const MAX_MESSAGE_ATTACHMENTS = 6;
-const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
-const ATTACHMENT_MIME = new Set(["image/jpeg", "image/png", "image/webp", "image/gif"]);
+
+function fileLabelFromUrl(url: string): string {
+  try {
+    const seg = decodeURIComponent(new URL(url).pathname.split("/").pop() || "");
+    return seg || "File";
+  } catch {
+    return "File";
+  }
+}
 
 function formatShortTime(iso: string): string {
   const d = new Date(iso);
@@ -99,7 +112,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   const [toasts, setToasts] = useState<InboundToast[]>([]);
   const [isNarrow, setIsNarrow] = useState(false);
   const [mobileTab, setMobileTab] = useState<"list" | "chat">("list");
-  const [attachmentUrls, setAttachmentUrls] = useState<string[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<Array<{ url: string; name: string }>>([]);
   const [uploadingAttachments, setUploadingAttachments] = useState(false);
   const [notificationChannels, setNotificationChannels] = useState<{ email: boolean; push: boolean } | null>(null);
 
@@ -115,7 +128,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   }, [selectedThreadId]);
 
   useEffect(() => {
-    setAttachmentUrls([]);
+    setPendingAttachments([]);
   }, [selectedThreadId]);
 
   useLayoutEffect(() => {
@@ -373,7 +386,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   };
 
   const uploadAttachment = useCallback(
-    async (file: File, threadId: string) => {
+    async (file: File, threadId: string): Promise<{ url: string; name: string }> => {
       const fd = new FormData();
       fd.append("file", file);
       const res = await adminFetch(`/api/admin/messages/threads/${threadId}/attachments`, {
@@ -382,7 +395,9 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Upload failed");
-      return json.url as string;
+      const url = json.url as string;
+      const name = typeof json.filename === "string" && json.filename.trim() ? json.filename.trim() : fileLabelFromUrl(url);
+      return { url, name };
     },
     []
   );
@@ -392,20 +407,22 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     e.target.value = "";
     if (!files?.length || !selectedThreadId || !serverMessagingOn) return;
 
-    const remaining = MAX_MESSAGE_ATTACHMENTS - attachmentUrls.length;
+    const remaining = MAX_MESSAGE_ATTACHMENTS - pendingAttachments.length;
     if (remaining <= 0) {
-      setError(`You can attach up to ${MAX_MESSAGE_ATTACHMENTS} photos per message.`);
+      setError(`You can attach up to ${MAX_MESSAGE_ATTACHMENTS} files per message.`);
       return;
     }
 
     const list = Array.from(files).slice(0, remaining);
     for (const file of list) {
-      if (!ATTACHMENT_MIME.has(file.type)) {
-        setError("Only JPEG, PNG, WebP, and GIF images are allowed.");
+      if (!STAFF_ATTACHMENT_ALLOWED_MIMES.has(file.type)) {
+        setError(
+          "Unsupported file type. Use images, PDF, TXT, CSV, or Word/Excel/PowerPoint files (see upload restrictions)."
+        );
         return;
       }
-      if (file.size > MAX_ATTACHMENT_BYTES) {
-        setError("Each image must be 5MB or smaller.");
+      if (file.size > STAFF_ATTACHMENT_MAX_BYTES) {
+        setError("Each file must be 10MB or smaller.");
         return;
       }
     }
@@ -413,12 +430,12 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     setUploadingAttachments(true);
     setError(null);
     try {
-      const urls: string[] = [];
+      const added: Array<{ url: string; name: string }> = [];
       for (const file of list) {
-        const url = await uploadAttachment(file, selectedThreadId);
-        urls.push(url);
+        const item = await uploadAttachment(file, selectedThreadId);
+        added.push(item);
       }
-      setAttachmentUrls((prev) => [...prev, ...urls]);
+      setPendingAttachments((prev) => [...prev, ...added]);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     } finally {
@@ -427,13 +444,13 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   };
 
   const removePendingAttachment = (url: string) => {
-    setAttachmentUrls((prev) => prev.filter((u) => u !== url));
+    setPendingAttachments((prev) => prev.filter((p) => p.url !== url));
   };
 
   const sendMessage = async () => {
     if (!serverMessagingOn || !selectedThreadId) return;
     const text = composer.trim();
-    const urls = attachmentUrls;
+    const urls = pendingAttachments.map((p) => p.url);
     if (!text && urls.length === 0) return;
     setBusy(true);
     try {
@@ -442,14 +459,14 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           body: text || undefined,
-          imageUrls: urls.length ? urls : undefined,
+          attachmentUrls: urls.length ? urls : undefined,
           clientMessageId: crypto.randomUUID(),
         }),
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to send message");
       setComposer("");
-      setAttachmentUrls([]);
+      setPendingAttachments([]);
       await fetchMessages(selectedThreadId);
       await fetchThreads();
       setError(null);
@@ -649,7 +666,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                 messages.map((m) => {
                   const isOwn = viewerUserId != null && m.sender_user_id === viewerUserId;
                   const isDeleting = deletingId === m.id;
-                  const imageUrls = m.metadata?.image_urls?.filter(Boolean) ?? [];
+                  const attachmentUrls = m.metadata?.image_urls?.filter(Boolean) ?? [];
                   const showText = (m.body || "").trim().length > 0;
                   return (
                     <div key={m.id} className={cn("flex w-full", isOwn ? "justify-end" : "justify-start")}>
@@ -681,35 +698,65 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                             </Button>
                           )}
                         </div>
-                        {imageUrls.length > 0 && (
-                          <div
-                            className={cn(
-                              "gap-2",
-                              showText ? "mb-2" : "",
-                              imageUrls.length > 1 ? "grid grid-cols-2" : "flex flex-col"
+                        {attachmentUrls.length > 0 && (
+                          <div className={cn("gap-2", showText ? "mb-2" : "")}>
+                            {attachmentUrls.every(isImageAttachmentUrl) && attachmentUrls.length > 1 ? (
+                              <div className="grid grid-cols-2 gap-2">
+                                {attachmentUrls.map((src) => (
+                                  <a
+                                    key={src}
+                                    href={src}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="block aspect-square overflow-hidden rounded-lg ring-1 ring-black/10"
+                                  >
+                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                    <img src={src} alt="" className="h-full w-full object-cover" />
+                                  </a>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="flex flex-col gap-2">
+                                {attachmentUrls.map((src) => {
+                                  const label = fileLabelFromUrl(src);
+                                  if (isImageAttachmentUrl(src)) {
+                                    return (
+                                      <a
+                                        key={src}
+                                        href={src}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="block overflow-hidden rounded-lg ring-1 ring-black/10"
+                                      >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                          src={src}
+                                          alt=""
+                                          className="max-h-64 w-full max-w-full object-contain"
+                                        />
+                                      </a>
+                                    );
+                                  }
+                                  return (
+                                    <a
+                                      key={src}
+                                      href={src}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className={cn(
+                                        "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
+                                        isOwn
+                                          ? "border-white/30 bg-white/10 text-white hover:bg-white/15"
+                                          : "border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
+                                      )}
+                                    >
+                                      <FileText className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
+                                      <span className="min-w-0 truncate">{label}</span>
+                                    </a>
+                                  );
+                                })}
+                              </div>
                             )}
-                          >
-                            {imageUrls.map((src) => (
-                              <a
-                                key={src}
-                                href={src}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className={cn(
-                                  "block overflow-hidden rounded-lg ring-1 ring-black/10",
-                                  imageUrls.length > 1 ? "aspect-square" : ""
-                                )}
-                              >
-                                {/* eslint-disable-next-line @next/next/no-img-element */}
-                                <img
-                                  src={src}
-                                  alt=""
-                                  className={cn(
-                                    imageUrls.length > 1 ? "h-full w-full object-cover" : "max-h-64 w-full max-w-full object-contain"
-                                  )}
-                                />
-                              </a>
-                            ))}
                           </div>
                         )}
                         {showText && (
@@ -732,22 +779,39 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
               <input
                 ref={attachmentInputRef}
                 type="file"
-                accept="image/jpeg,image/png,image/webp,image/gif"
+                accept={STAFF_ATTACHMENT_ACCEPT_ATTR}
                 multiple
                 className="hidden"
                 aria-hidden
                 onChange={onAttachmentFilesSelected}
               />
-              {attachmentUrls.length > 0 && (
+              {pendingAttachments.length > 0 && (
                 <div className="flex flex-wrap gap-2">
-                  {attachmentUrls.map((url) => (
-                    <div key={url} className="relative h-16 w-16 shrink-0 overflow-hidden rounded-md border border-gray-200 bg-gray-100">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={url} alt="" className="h-full w-full object-cover" />
+                  {pendingAttachments.map((p) => (
+                    <div
+                      key={p.url}
+                      className={cn(
+                        "relative flex shrink-0 overflow-hidden rounded-md border border-gray-200 bg-gray-100",
+                        isImageAttachmentUrl(p.url) ? "h-16 w-16" : "h-16 max-w-[200px] min-w-[120px] items-center px-2"
+                      )}
+                    >
+                      {isImageAttachmentUrl(p.url) ? (
+                        <>
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img src={p.url} alt="" className="h-full w-full object-cover" />
+                        </>
+                      ) : (
+                        <div className="flex w-full items-center gap-1.5 px-1">
+                          <FileText className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
+                          <span className="truncate text-xs text-gray-800" title={p.name}>
+                            {p.name}
+                          </span>
+                        </div>
+                      )}
                       <button
                         type="button"
                         className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"
-                        onClick={() => removePendingAttachment(url)}
+                        onClick={() => removePendingAttachment(p.url)}
                         disabled={busy || uploadingAttachments}
                         aria-label="Remove attachment"
                       >
@@ -771,7 +835,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                   onKeyDown={(e) => {
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
-                      const hasContent = composer.trim().length > 0 || attachmentUrls.length > 0;
+                      const hasContent = composer.trim().length > 0 || pendingAttachments.length > 0;
                       if (hasContent && !busy && !uploadingAttachments && selectedThreadId && serverMessagingOn) {
                         sendMessage();
                       }
@@ -789,16 +853,16 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                       busy ||
                       uploadingAttachments ||
                       !selectedThreadId ||
-                      attachmentUrls.length >= MAX_MESSAGE_ATTACHMENTS
+                      pendingAttachments.length >= MAX_MESSAGE_ATTACHMENTS
                     }
                     onClick={() => attachmentInputRef.current?.click()}
-                    aria-label="Add photos"
-                    title="Add photos"
+                    aria-label="Attach files"
+                    title="Attach images, PDF, or Office files (max 10MB each)"
                   >
                     {uploadingAttachments ? (
                       <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                     ) : (
-                      <ImagePlus className="h-4 w-4" aria-hidden />
+                      <Paperclip className="h-4 w-4" aria-hidden />
                     )}
                   </Button>
                   <Button
@@ -811,7 +875,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                       busy ||
                       uploadingAttachments ||
                       !selectedThreadId ||
-                      (!composer.trim() && attachmentUrls.length === 0)
+                      (!composer.trim() && pendingAttachments.length === 0)
                     }
                     aria-label="Send message"
                   >

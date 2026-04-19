@@ -29,9 +29,10 @@ Use explicit values to avoid accidental newline characters in env values:
    - Defines RPCs `staff_get_or_create_dm_thread` (race-safe DM open) and `staff_message_thread_unread_counts` (batched unread).
 3. If the migration raises an exception about DM rows without a canonical pair, inspect `message_threads` where `thread_type = 'dm'` and pair columns are null (typically invalid membership counts). Fix data, then re-run the migration file from step 2.
 
-## Storage (message photos)
-- The **`staff-message-attachments`** bucket is **created automatically** on the first successful photo upload (service role lists buckets, creates the public bucket if missing, then uploads). You do not need to create it manually in the Supabase dashboard unless you prefer to pre-provision it.
-- `NEXT_PUBLIC_SUPABASE_URL` must be set so message URLs validate and the UI can load images from your project host.
+## Storage (message attachments)
+- The **`staff-message-attachments`** bucket is **created automatically** on the first successful upload (service role lists buckets, creates the public bucket if missing, then uploads). You do not need to create it manually in the Supabase dashboard unless you prefer to pre-provision it.
+- Allowed types include common **images** (JPEG, PNG, WebP, GIF), **PDF**, **TXT**, **CSV**, and **Word / Excel / PowerPoint** (see [`staff-attachment-allowlist.ts`](../src/lib/messaging/staff-attachment-allowlist.ts)); max **10MB** per file, up to **6** attachments per message.
+- `NEXT_PUBLIC_SUPABASE_URL` must be set so message URLs validate and the UI can load attachments from your project host.
 
 ## Staged Enablement
 1. Set `FF_STAFF_MESSAGING_ENABLED=false` and deploy DB migration + APIs.

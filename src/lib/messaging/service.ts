@@ -101,13 +101,26 @@ export function normalizeMessageBody(raw: unknown, maxLen = 4000): string | null
   return normalized;
 }
 
-const MAX_MESSAGE_IMAGES = 6;
+const MAX_MESSAGE_ATTACHMENTS = 6;
+
+const IMAGE_FILE_EXTS = new Set(["jpg", "jpeg", "png", "gif", "webp"]);
+
+/** True if the URL path ends with a common raster image extension (for preview / list labels). */
+export function isImageAttachmentUrl(url: string): boolean {
+  try {
+    const path = new URL(url).pathname.toLowerCase();
+    const ext = path.split(".").pop() || "";
+    return IMAGE_FILE_EXTS.has(ext);
+  } catch {
+    return false;
+  }
+}
 
 /** Validates public Supabase Storage URLs for staff message attachments (same project host, path contains bucket). */
-export function normalizeMessageImageUrls(raw: unknown, maxImages = MAX_MESSAGE_IMAGES): string[] | null {
+export function normalizeMessageAttachmentUrls(raw: unknown, maxAttachments = MAX_MESSAGE_ATTACHMENTS): string[] | null {
   if (raw == null || raw === undefined) return [];
   if (!Array.isArray(raw)) return null;
-  if (raw.length > maxImages) return null;
+  if (raw.length > maxAttachments) return null;
   const base = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
   if (!base) return null;
   let baseHost: string;
@@ -131,12 +144,15 @@ export function normalizeMessageImageUrls(raw: unknown, maxImages = MAX_MESSAGE_
   return out;
 }
 
-/** Message may be text only, images only, or both; body max 4000 chars. */
+/** @deprecated Use normalizeMessageAttachmentUrls — name kept for backward compatibility. */
+export const normalizeMessageImageUrls = normalizeMessageAttachmentUrls;
+
+/** Message may be text only, attachments only, or both; body max 4000 chars. */
 export function validateStaffMessageContent(
   bodyRaw: unknown,
-  imageUrlsRaw: unknown
+  attachmentUrlsRaw: unknown
 ): { body: string; imageUrls: string[] } | null {
-  const imageUrls = normalizeMessageImageUrls(imageUrlsRaw);
+  const imageUrls = normalizeMessageAttachmentUrls(attachmentUrlsRaw);
   if (imageUrls === null) return null;
   const text = typeof bodyRaw === "string" ? bodyRaw.replace(/\r\n/g, "\n").trim() : "";
   if (text.length > 4000) return null;
@@ -144,11 +160,17 @@ export function validateStaffMessageContent(
   return { body: text, imageUrls };
 }
 
-/** Short line for thread list / toast when body may be empty but images exist. */
+/** Short line for thread list / toast when body may be empty but attachments exist. */
 export function formatMessageListPreview(body: string, metadata: { image_urls?: string[] } | null | undefined): string {
   const b = (body || "").trim();
-  const n = metadata?.image_urls?.length ?? 0;
-  if (!b && n > 0) return n === 1 ? "Photo" : `${n} photos`;
+  const urls = (metadata?.image_urls || []).filter(Boolean);
+  const n = urls.length;
+  if (!b && n > 0) {
+    const imageCount = urls.filter(isImageAttachmentUrl).length;
+    if (imageCount === n) return n === 1 ? "Photo" : `${n} photos`;
+    if (imageCount === 0) return n === 1 ? "File" : `${n} files`;
+    return n === 1 ? "Attachment" : `${n} attachments`;
+  }
   return b;
 }
 

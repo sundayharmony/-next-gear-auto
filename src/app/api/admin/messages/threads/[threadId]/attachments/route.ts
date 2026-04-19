@@ -4,15 +4,20 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
 import { requireActiveMembership } from "@/lib/messaging/service";
 import { staffMessagingMasterEnabled } from "@/lib/config/staff-messaging-server";
+import {
+  STAFF_ATTACHMENT_ALLOWED_MIMES,
+  STAFF_ATTACHMENT_MAX_BYTES,
+  staffAttachmentExtAllowedForMime,
+  staffAttachmentPrimaryExtForMime,
+} from "@/lib/messaging/staff-attachment-allowlist";
 
 type Params = { params: Promise<{ threadId: string }> };
 
 const BUCKET = "staff-message-attachments";
-const MAX_BYTES = 5 * 1024 * 1024;
 
 /**
  * Ensures the public bucket exists (idempotent). Called on each upload so the first
- * staff photo upload works without a manual Supabase dashboard step.
+ * staff attachment upload works without a manual Supabase dashboard step.
  */
 async function ensureStaffMessageAttachmentsBucket(
   supabase: ReturnType<typeof getServiceSupabase>
@@ -28,7 +33,7 @@ async function ensureStaffMessageAttachmentsBucket(
 
   const { error: createError } = await supabase.storage.createBucket(BUCKET, {
     public: true,
-    fileSizeLimit: MAX_BYTES,
+    fileSizeLimit: STAFF_ATTACHMENT_MAX_BYTES,
   });
   if (createError) {
     const msg = (createError.message || "").toLowerCase();
@@ -68,37 +73,27 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ success: false, message: "No file provided" }, { status: 400 });
   }
 
-  const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif"];
-  if (!allowedTypes.includes(file.type)) {
+  if (!STAFF_ATTACHMENT_ALLOWED_MIMES.has(file.type)) {
     return NextResponse.json(
-      { success: false, message: "Invalid file type. Use JPG, PNG, WebP, or GIF." },
+      {
+        success: false,
+        message:
+          "Unsupported file type. Allowed: images (JPG, PNG, WebP, GIF), PDF, TXT, CSV, Word, Excel, PowerPoint.",
+      },
       { status: 400 }
     );
   }
 
   const nameExt = file.name.split(".").pop()?.toLowerCase() || "";
-  const extMimeMap: Record<string, string[]> = {
-    jpg: ["image/jpeg"],
-    jpeg: ["image/jpeg"],
-    png: ["image/png"],
-    webp: ["image/webp"],
-    gif: ["image/gif"],
-  };
-  if (!extMimeMap[nameExt] || !extMimeMap[nameExt].includes(file.type)) {
+  if (!staffAttachmentExtAllowedForMime(file.type, nameExt)) {
     return NextResponse.json({ success: false, message: "File extension does not match content type" }, { status: 400 });
   }
 
-  if (file.size > MAX_BYTES) {
-    return NextResponse.json({ success: false, message: "Image too large. Maximum 5MB." }, { status: 400 });
+  if (file.size > STAFF_ATTACHMENT_MAX_BYTES) {
+    return NextResponse.json({ success: false, message: "File too large. Maximum 10MB." }, { status: 400 });
   }
 
-  const extByMime: Record<string, string> = {
-    "image/jpeg": "jpg",
-    "image/png": "png",
-    "image/webp": "webp",
-    "image/gif": "gif",
-  };
-  const fileExt = extByMime[file.type] || "jpg";
+  const fileExt = staffAttachmentPrimaryExtForMime(file.type);
   const fileName = `${threadId}/${crypto.randomUUID()}.${fileExt}`;
 
   try {
@@ -126,7 +121,12 @@ export async function POST(req: NextRequest, { params }: Params) {
     const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(uploadResult.data.path);
     const publicUrl = urlData.publicUrl;
 
-    return NextResponse.json({ success: true, url: publicUrl, messagingEnabled: true });
+    return NextResponse.json({
+      success: true,
+      url: publicUrl,
+      filename: file.name,
+      messagingEnabled: true,
+    });
   } catch (error) {
     logger.error("Staff message attachment error", error);
     return NextResponse.json({ success: false, message: "Upload failed" }, { status: 500 });

@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  formatMessageListPreview,
   formatStaffDisplayName,
   normalizeMessageBody,
   nextBackoffMinutes,
@@ -27,6 +28,15 @@ test("normalizeMessageBody trims and rejects invalid payloads", () => {
 test("orderedDmPair is stable lexicographic ordering", () => {
   assert.deepEqual(orderedDmPair("b", "a"), ["a", "b"]);
   assert.deepEqual(orderedDmPair("a", "b"), ["a", "b"]);
+});
+
+test("formatMessageListPreview labels photos vs files vs mixed", () => {
+  const base = "https://x.supabase.co/storage/v1/object/public/staff-message-attachments/t/uuid";
+  assert.equal(formatMessageListPreview("", { image_urls: [`${base}.jpg`] }), "Photo");
+  assert.equal(formatMessageListPreview("", { image_urls: [`${base}.jpg`, `${base}2.jpg`] }), "2 photos");
+  assert.equal(formatMessageListPreview("", { image_urls: [`${base}.pdf`] }), "File");
+  assert.equal(formatMessageListPreview("", { image_urls: [`${base}.pdf`, `${base}2.pdf`] }), "2 files");
+  assert.equal(formatMessageListPreview("", { image_urls: [`${base}.jpg`, `${base}.pdf`] }), "2 attachments");
 });
 
 test("formatStaffDisplayName prefers name then email then id", () => {

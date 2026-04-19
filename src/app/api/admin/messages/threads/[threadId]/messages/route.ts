@@ -69,17 +69,18 @@ export async function POST(req: NextRequest, { params }: Params) {
     return NextResponse.json({ success: false, message: "Thread access denied" }, { status: 403 });
   }
 
-  let payload: { body?: string; clientMessageId?: string; imageUrls?: string[] };
+  let payload: { body?: string; clientMessageId?: string; imageUrls?: string[]; attachmentUrls?: string[] };
   try {
     payload = await req.json();
   } catch {
     return NextResponse.json({ success: false, message: "Invalid JSON payload" }, { status: 400 });
   }
 
-  const parsed = validateStaffMessageContent(payload.body, payload.imageUrls);
+  const attachmentPayload = payload.attachmentUrls ?? payload.imageUrls;
+  const parsed = validateStaffMessageContent(payload.body, attachmentPayload);
   if (!parsed) {
     return NextResponse.json(
-      { success: false, message: "Add text and/or valid image attachments (max 6). Images must be uploaded first." },
+      { success: false, message: "Add text and/or valid attachments (max 6). Upload files before sending." },
       { status: 400 }
     );
   }
