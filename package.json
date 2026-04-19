@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
     "test": "npm run check:panel-sync && npm run test:messaging",
-    "test:messaging": "tsx --test tests/staff-messaging.test.ts tests/booking-overlap.test.ts",
+    "test:messaging": "tsx --test tests/staff-messaging.test.ts tests/booking-overlap.test.ts tests/booking-dates.test.ts",
     "check:panel-sync": "node ./scripts/check-panel-sync.mjs"
   },
   "keywords": [],

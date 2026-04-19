@@ -99,6 +99,16 @@ async function hasBlockedDateOverlap(
 
 export interface CheckBookingOverlapOptions {
   mode?: BookingOverlapMode;
+  /** When updating an existing booking, ignore this row (same id) so it does not conflict with itself. */
+  excludeBookingId?: string;
+}
+
+export function excludeBookingRow<T extends { id: string }>(
+  rows: T[] | null | undefined,
+  excludeBookingId: string | undefined,
+): T[] {
+  if (!rows?.length || !excludeBookingId) return rows ?? [];
+  return rows.filter((r) => r.id !== excludeBookingId);
 }
 
 /**
@@ -118,7 +128,7 @@ export async function checkBookingOverlap(
   const mode: BookingOverlapMode = options.mode ?? "default";
   const { statuses, minGapMinutes } = overlapConfigForMode(mode);
 
-  const { data: conflicting } = await supabase
+  const { data: conflictingRaw } = await supabase
     .from("bookings")
     .select("id, pickup_date, return_date, pickup_time, return_time")
     .eq("vehicle_id", vehicleId)
@@ -126,9 +136,11 @@ export async function checkBookingOverlap(
     .lte("pickup_date", returnDate)
     .gte("return_date", pickupDate);
 
+  const conflicting = excludeBookingRow(conflictingRaw, options.excludeBookingId);
+
   const proposed = toBookingInterval(pickupDate, returnDate, pickupTime, returnTime);
 
-  if (conflicting?.length) {
+  if (conflicting.length) {
     const hasBookingConflict = bookingConflictsWithAny(proposed, conflicting, minGapMinutes);
     if (hasBookingConflict) {
       const message =

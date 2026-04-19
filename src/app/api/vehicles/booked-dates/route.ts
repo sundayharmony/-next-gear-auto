@@ -58,10 +58,17 @@ export async function GET(req: NextRequest) {
       }),
     );
 
-    return NextResponse.json({
-      success: true,
-      data: [...bookedRanges, ...blockedRanges],
-    });
+    return NextResponse.json(
+      {
+        success: true,
+        data: [...bookedRanges, ...blockedRanges],
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      },
+    );
   } catch (err) {
     logger.error("Booked dates API error:", err);
     return NextResponse.json(

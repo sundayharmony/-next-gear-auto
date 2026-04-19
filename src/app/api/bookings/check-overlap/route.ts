@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import {
   bookingConflictsWithAny,
   overlapConfigForMode,
@@ -33,6 +34,19 @@ export async function GET(req: NextRequest) {
       return NextResponse.json(
         { success: false, hasOverlap: false, message: "Missing required params" },
         { status: 400 }
+      );
+    }
+
+    if (!isYyyyMmDd(pickupDate) || !isYyyyMmDd(returnDate)) {
+      return NextResponse.json(
+        { success: false, hasOverlap: false, message: "pickupDate and returnDate must be YYYY-MM-DD" },
+        { status: 400 },
+      );
+    }
+    if (!isoDateOrderingOk(pickupDate, returnDate)) {
+      return NextResponse.json(
+        { success: false, hasOverlap: false, message: "returnDate must be on or after pickupDate" },
+        { status: 400 },
       );
     }
 

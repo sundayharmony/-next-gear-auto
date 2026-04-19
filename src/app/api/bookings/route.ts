@@ -10,6 +10,7 @@ import { logger } from "@/lib/utils/logger";
 import { getAuthFromRequest, type TokenPayload } from "@/lib/auth/jwt";
 import { getVehicleDisplayName } from "@/lib/types";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
+import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { isManagerFeatureEnabled } from "@/lib/config/feature-flags";
 
 export async function GET(request: NextRequest) {
@@ -277,6 +278,18 @@ export async function POST(request: NextRequest) {
     // Validate required fields
     if (!body.vehicleId || !body.pickupDate || !body.returnDate) {
       return NextResponse.json({ success: false, message: "vehicleId, pickupDate, and returnDate are required" }, { status: 400 });
+    }
+    if (!isYyyyMmDd(body.pickupDate) || !isYyyyMmDd(body.returnDate)) {
+      return NextResponse.json(
+        { success: false, message: "pickupDate and returnDate must be valid dates in YYYY-MM-DD format" },
+        { status: 400 },
+      );
+    }
+    if (!isoDateOrderingOk(body.pickupDate, body.returnDate)) {
+      return NextResponse.json(
+        { success: false, message: "returnDate must be on or after pickupDate" },
+        { status: 400 },
+      );
     }
 
     // Validate totalPrice is numeric if provided
@@ -718,7 +731,41 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // Admins can change dates on any booking — skip overlap check for PATCH
+    const isAdminEditor = auth.role === "admin";
+    const schedulingKeys = ["vehicle_id", "pickup_date", "return_date", "pickup_time", "return_time"] as const;
+    const managerTouchesSchedule =
+      !isAdminEditor &&
+      isManagerEditor &&
+      schedulingKeys.some((k) => updateFields[k] !== undefined);
+
+    if (managerTouchesSchedule) {
+      const vId = String(updateFields.vehicle_id ?? booking.vehicle_id);
+      const pu = String(updateFields.pickup_date ?? booking.pickup_date);
+      const rd = String(updateFields.return_date ?? booking.return_date);
+      const pt = (updateFields.pickup_time !== undefined ? updateFields.pickup_time : booking.pickup_time) as string | null;
+      const rt = (updateFields.return_time !== undefined ? updateFields.return_time : booking.return_time) as string | null;
+
+      if (!isYyyyMmDd(pu) || !isYyyyMmDd(rd)) {
+        return NextResponse.json(
+          { success: false, message: "pickup_date and return_date must be valid dates in YYYY-MM-DD format" },
+          { status: 400 },
+        );
+      }
+      if (!isoDateOrderingOk(pu, rd)) {
+        return NextResponse.json(
+          { success: false, message: "return_date must be on or after pickup_date" },
+          { status: 400 },
+        );
+      }
+
+      const overlap = await checkBookingOverlap(supabase, vId, pu, rd, pt ?? null, rt ?? null, {
+        mode: "manager",
+        excludeBookingId: bookingId,
+      });
+      if (overlap) return overlap;
+    }
+
+    // Admins can change dates on any booking — skip overlap check for PATCH (managers validated above)
 
     const { error } = await supabase
       .from("bookings")

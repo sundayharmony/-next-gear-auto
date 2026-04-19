@@ -4,7 +4,11 @@ import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
 import { sendBookingExtended } from "@/lib/email/mailer";
 import { getVehicleDisplayName } from "@/lib/types";
+import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import Stripe from "stripe";
+
+/** Matches IDs from create booking: `bk` + 7 hex chars (see POST /api/bookings). */
+const BOOKING_ID_RE = /^bk[0-9a-f]{7}$/i;
 
 export async function POST(request: NextRequest) {
   try {
@@ -30,9 +34,8 @@ export async function POST(request: NextRequest) {
 
     const { bookingId, newReturnDate, newReturnTime, extensionAmount } = body;
 
-    // Validate bookingId is UUID
     const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-    if (!bookingId || !uuidRegex.test(bookingId)) {
+    if (!bookingId || (!BOOKING_ID_RE.test(bookingId) && !uuidRegex.test(bookingId))) {
       return NextResponse.json(
         { success: false, message: "Valid bookingId is required" },
         { status: 400 }
@@ -101,6 +104,19 @@ export async function POST(request: NextRequest) {
     const extensionDays = Math.ceil(
       (newReturn.getTime() - currentReturn.getTime()) / (1000 * 60 * 60 * 24)
     );
+
+    const effectiveReturnTime = newReturnTime ?? booking.return_time ?? null;
+
+    const overlap = await checkBookingOverlap(
+      supabase,
+      booking.vehicle_id,
+      booking.pickup_date,
+      newReturnDate,
+      booking.pickup_time ?? null,
+      effectiveReturnTime ?? null,
+      { mode: "default", excludeBookingId: bookingId },
+    );
+    if (overlap) return overlap;
 
     // 6. Fetch vehicle for display name
     const { data: vehicle } = await supabase

@@ -7,6 +7,7 @@ import { calculateRentalDays, calculatePricing, applyDiscount } from "@/lib/util
 import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { escapeHtml } from "@/lib/utils/validation";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
+import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
@@ -111,6 +112,21 @@ export async function POST(request: NextRequest) {
         { success: false, message: "Pickup and return dates must be strings" },
         { status: 400 }
       );
+    }
+
+    if (!pickupDate.includes("T") && !returnDate.includes("T")) {
+      if (!isYyyyMmDd(pickupDate) || !isYyyyMmDd(returnDate)) {
+        return NextResponse.json(
+          { success: false, message: "Pickup and return dates must be valid YYYY-MM-DD values" },
+          { status: 400 },
+        );
+      }
+      if (!isoDateOrderingOk(pickupDate, returnDate)) {
+        return NextResponse.json(
+          { success: false, message: "Return date must be on or after pickup date" },
+          { status: 400 },
+        );
+      }
     }
 
     // Validate dates — incorporate pickupTime/returnTime so same-day duration checks work
