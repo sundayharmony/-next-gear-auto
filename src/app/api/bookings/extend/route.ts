@@ -5,6 +5,7 @@ import { logger } from "@/lib/utils/logger";
 import { sendBookingExtended } from "@/lib/email/mailer";
 import { getVehicleDisplayName } from "@/lib/types";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
+import { regenerateSignedAgreementForBooking } from "@/lib/agreement/signed-agreement";
 import Stripe from "stripe";
 
 /** Matches IDs from create booking: `bk` + 7 hex chars (see POST /api/bookings). */
@@ -249,6 +250,20 @@ export async function POST(request: NextRequest) {
           original_end_date: originalReturnDate,
         })
         .eq("id", blockedDates[0].id);
+    }
+
+    // If the agreement is already signed, regenerate the PDF with updated dates while preserving signatures.
+    if (booking.agreement_signed_at) {
+      try {
+        await regenerateSignedAgreementForBooking(supabase, {
+          ...booking,
+          return_date: newReturnDate,
+          return_time: newReturnTime || booking.return_time,
+          total_price: newTotalPrice,
+        });
+      } catch (regenErr) {
+        logger.error("Signed agreement refresh failed after extension:", regenErr);
+      }
     }
 
     // 13. Record extension payment (if amount > 0)

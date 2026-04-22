@@ -69,7 +69,7 @@ interface BookingDetailPanelProps {
   vehicles: Vehicle[];
   onClose: () => void;
   onUpdateBooking: (updated: BookingRow) => void;
-  onUpdateStatus: (bookingId: string, newStatus: string) => void;
+  onUpdateStatus: (bookingId: string, newStatus: string) => Promise<boolean> | boolean;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
   capabilities?: {
@@ -302,16 +302,10 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   // Update booking status
   const updateStatus = async (newStatus: string) => {
     try {
-      const response = await adminFetch(`/api/bookings`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: booking.id, status: newStatus }),
-      });
+      const ok = await Promise.resolve(onUpdateStatus(booking.id, newStatus));
+      if (!ok) return;
 
-      if (!response.ok) throw new Error("Failed to update status");
-
-      const updated = await response.json();
-      onUpdateStatus(booking.id, newStatus);
+      onUpdateBooking({ ...booking, status: newStatus });
 
       // Log the status change
       await adminFetch(`/api/admin/booking-activity`, {
@@ -706,8 +700,9 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     booking.payment_method ||
     "Not specified";
 
-  const paymentPercentage = (booking.total_price ?? 0) > 0
-    ? Math.min(100, Math.round(((booking.deposit ?? 0) / booking.total_price) * 100))
+  const totalPrice = booking.total_price ?? 0;
+  const paymentPercentage = totalPrice > 0
+    ? Math.min(100, Math.round(((booking.deposit ?? 0) / totalPrice) * 100))
     : 0;
 
   // Computed payment status
@@ -1601,10 +1596,10 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
           {/* Extend Booking */}
           {canExtendBooking && ["confirmed", "active"].includes(booking.status) && !editMode && (
-            <div className="border-t border-gray-200 dark:border-gray-700 pt-4 mt-4">
+            <div className="mt-4 border-t border-gray-200 pt-4">
               <button
                 onClick={() => setShowExtend(!showExtend)}
-                className="flex items-center gap-2 text-sm font-medium text-violet-600 hover:text-violet-700"
+                className="flex items-center gap-2 text-sm font-medium text-purple-600 hover:text-purple-700"
               >
                 <CalendarPlus className="h-4 w-4" />
                 Extend Booking
@@ -1612,35 +1607,35 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
               </button>
 
               {showExtend && (
-                <div className="mt-3 space-y-3 bg-violet-50 dark:bg-violet-900/20 rounded-lg p-4">
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Current return: <span className="font-medium text-gray-700 dark:text-gray-200">{formatDate(booking.return_date)}</span>
+                <div className="mt-3 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
+                  <p className="text-xs text-gray-500">
+                    Current return: <span className="font-medium text-gray-700">{formatDate(booking.return_date)}</span>
                     {booking.return_time && ` at ${formatTime(booking.return_time)}`}
                   </p>
 
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">New Return Date</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">New Return Date</label>
                     <input
                       type="date"
                       value={extendDate}
                       min={booking.return_date}
                       onChange={(e) => setExtendDate(e.target.value)}
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm"
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">New Return Time (optional)</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">New Return Time (optional)</label>
                     <input
                       type="time"
                       value={extendTime}
                       onChange={(e) => setExtendTime(e.target.value)}
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm"
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-xs font-medium text-gray-600 dark:text-gray-300 mb-1">Extension Charge ($)</label>
+                    <label className="mb-1 block text-xs font-medium text-gray-600">Extension Charge ($)</label>
                     <input
                       type="number"
                       min="0"
@@ -1648,20 +1643,20 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       value={extendAmount}
                       onChange={(e) => setExtendAmount(e.target.value)}
                       placeholder="0.00"
-                      className="w-full rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 px-3 py-1.5 text-sm"
+                      className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
                     />
                     <p className="text-xs text-gray-400 mt-1">Enter 0 for a free extension</p>
                   </div>
 
                   {extendDate && extendDate > booking.return_date && (
-                    <div className="bg-white dark:bg-gray-800 rounded-md p-3 text-xs space-y-1">
-                      <p className="text-gray-600 dark:text-gray-300">
+                    <div className="rounded-md border border-gray-200 bg-white p-3 text-xs space-y-1">
+                      <p className="text-gray-600">
                         Extension: <span className="font-medium">{Math.ceil((new Date(extendDate + "T00:00:00").getTime() - new Date(booking.return_date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))} day(s)</span>
                       </p>
-                      <p className="text-gray-600 dark:text-gray-300">
-                        Additional charge: <span className="font-medium text-violet-600">${parseFloat(extendAmount || "0").toFixed(2)}</span>
+                      <p className="text-gray-600">
+                        Additional charge: <span className="font-medium text-purple-600">${parseFloat(extendAmount || "0").toFixed(2)}</span>
                       </p>
-                      <p className="text-gray-600 dark:text-gray-300">
+                      <p className="text-gray-600">
                         New total: <span className="font-medium">${(Number(booking.total_price) + parseFloat(extendAmount || "0")).toFixed(2)}</span>
                       </p>
                     </div>
@@ -1671,21 +1666,21 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     <button
                       onClick={handleExtendBooking}
                       disabled={extending || !extendDate}
-                      className="flex-1 rounded-md bg-violet-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-violet-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="flex-1 rounded-md bg-purple-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {extending ? "Extending..." : "Extend & Send Payment Link"}
                     </button>
                     <button
                       onClick={() => { setShowExtend(false); setExtendResult(null); }}
-                      className="rounded-md border border-gray-300 dark:border-gray-600 px-3 py-1.5 text-sm text-gray-600 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700"
+                      className="rounded-md border border-gray-300 px-3 py-1.5 text-sm text-gray-600 hover:bg-gray-100"
                     >
                       Cancel
                     </button>
                   </div>
 
                   {extendResult && (
-                    <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-md p-3">
-                      <p className="text-sm text-green-700 dark:text-green-300 font-medium">
+                    <div className="rounded-md border border-green-200 bg-green-50 p-3">
+                      <p className="text-sm font-medium text-green-700">
                         {extendResult.message || "Booking extended!"}
                       </p>
                       {extendResult.paymentUrl && (
@@ -1693,7 +1688,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                           href={extendResult.paymentUrl}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="mt-2 inline-block text-xs text-violet-600 hover:text-violet-700 underline"
+                          className="mt-2 inline-block text-xs text-purple-600 underline hover:text-purple-700"
                         >
                           View payment link →
                         </a>

@@ -6,6 +6,8 @@ import {
   normalizeMessageBody,
   nextBackoffMinutes,
   orderedDmPair,
+  parseMessageBodyRuns,
+  stripMessageFormattingMarkers,
 } from "@/lib/messaging/service";
 import {
   chooseOutboxDecision,
@@ -37,6 +39,43 @@ test("formatMessageListPreview labels photos vs files vs mixed", () => {
   assert.equal(formatMessageListPreview("", { image_urls: [`${base}.pdf`] }), "File");
   assert.equal(formatMessageListPreview("", { image_urls: [`${base}.pdf`, `${base}2.pdf`] }), "2 files");
   assert.equal(formatMessageListPreview("", { image_urls: [`${base}.jpg`, `${base}.pdf`] }), "2 attachments");
+});
+
+test("stripMessageFormattingMarkers removes simple markdown markers", () => {
+  assert.equal(stripMessageFormattingMarkers("**Hello** *there*"), "Hello there");
+  assert.equal(stripMessageFormattingMarkers("***Both***"), "Both");
+  assert.equal(stripMessageFormattingMarkers("No markers"), "No markers");
+});
+
+test("parseMessageBodyRuns extracts bold and italic runs", () => {
+  const runs = parseMessageBodyRuns("Start **bold** then *italic*");
+  assert.equal(runs.length, 1);
+  assert.deepEqual(runs[0], [
+    { text: "Start ", bold: false, italic: false },
+    { text: "bold", bold: true, italic: false },
+    { text: " then ", bold: false, italic: false },
+    { text: "italic", bold: false, italic: true },
+  ]);
+});
+
+test("parseMessageBodyRuns keeps unmatched markers as plain text", () => {
+  const runs = parseMessageBodyRuns("Bad **marker and lone *");
+  assert.equal(runs.length, 1);
+  assert.equal(
+    runs[0].map((r) => r.text).join(""),
+    "Bad **marker and lone *"
+  );
+  assert.equal(runs[0].every((r) => !r.bold && !r.italic), true);
+});
+
+test("parseMessageBodyRuns supports combined bold+italic markers", () => {
+  const runs = parseMessageBodyRuns("Use ***both*** styles");
+  assert.equal(runs.length, 1);
+  assert.deepEqual(runs[0], [
+    { text: "Use ", bold: false, italic: false },
+    { text: "both", bold: true, italic: true },
+    { text: " styles", bold: false, italic: false },
+  ]);
 });
 
 test("formatStaffDisplayName prefers name then email then id", () => {

@@ -12,6 +12,7 @@ import { getVehicleDisplayName } from "@/lib/types";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { isManagerFeatureEnabled } from "@/lib/config/feature-flags";
+import { regenerateSignedAgreementForBooking } from "@/lib/agreement/signed-agreement";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -733,6 +734,7 @@ export async function PATCH(request: NextRequest) {
 
     const isAdminEditor = auth.role === "admin";
     const schedulingKeys = ["vehicle_id", "pickup_date", "return_date", "pickup_time", "return_time"] as const;
+    const scheduleChanged = schedulingKeys.some((k) => updateFields[k] !== undefined && updateFields[k] !== booking[k]);
     const managerTouchesSchedule =
       !isAdminEditor &&
       isManagerEditor &&
@@ -878,6 +880,21 @@ export async function PATCH(request: NextRequest) {
         if (newCust) {
           await supabase.from("bookings").update({ customer_id: newCust.id }).eq("id", bookingId);
         }
+      }
+    }
+
+    // If agreement is already signed and trip schedule changed, rebuild agreement with same signatures.
+    if (scheduleChanged && booking.agreement_signed_at) {
+      try {
+        await regenerateSignedAgreementForBooking(supabase, {
+          ...booking,
+          ...updateFields,
+          id: bookingId,
+          agreement_signed_at: booking.agreement_signed_at,
+          signed_name: booking.signed_name,
+        });
+      } catch (regenErr) {
+        logger.error("Signed agreement refresh failed after schedule update:", regenErr);
       }
     }
 

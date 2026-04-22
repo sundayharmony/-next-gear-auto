@@ -16,7 +16,7 @@ interface BookingTableProps {
   onToggleSelect: (id: string) => void;
   onToggleSelectAll: () => void;
   onSelectBooking: (booking: BookingRow) => void;
-  onUpdateStatus: (bookingId: string, newStatus: string) => void;
+  onUpdateStatus: (bookingId: string, newStatus: string) => Promise<boolean> | boolean;
   updating: string | null;
   sortField: SortField;
   sortOrder: SortOrder;

@@ -101,6 +101,87 @@ export function normalizeMessageBody(raw: unknown, maxLen = 4000): string | null
   return normalized;
 }
 
+export interface MessageTextRun {
+  text: string;
+  bold: boolean;
+  italic: boolean;
+}
+
+function parseMessageLineRuns(line: string): MessageTextRun[] {
+  const runs: MessageTextRun[] = [];
+  let i = 0;
+  const pushPlain = (text: string) => {
+    if (!text) return;
+    runs.push({ text, bold: false, italic: false });
+  };
+
+  while (i < line.length) {
+    // ***text*** -> bold + italic
+    if (line.startsWith("***", i)) {
+      const close = line.indexOf("***", i + 3);
+      if (close > i + 3) {
+        runs.push({ text: line.slice(i + 3, close), bold: true, italic: true });
+        i = close + 3;
+        continue;
+      }
+      pushPlain(line.slice(i, i + 3));
+      i += 3;
+      continue;
+    }
+
+    // **text** -> bold
+    if (line.startsWith("**", i)) {
+      const close = line.indexOf("**", i + 2);
+      if (close > i + 2) {
+        runs.push({ text: line.slice(i + 2, close), bold: true, italic: false });
+        i = close + 2;
+        continue;
+      }
+      pushPlain(line.slice(i, i + 2));
+      i += 2;
+      continue;
+    }
+
+    // *text* -> italic
+    if (line[i] === "*") {
+      const close = line.indexOf("*", i + 1);
+      if (close > i + 1) {
+        runs.push({ text: line.slice(i + 1, close), bold: false, italic: true });
+        i = close + 1;
+        continue;
+      }
+      pushPlain("*");
+      i += 1;
+      continue;
+    }
+
+    // Plain text until next marker
+    const next = line.indexOf("*", i);
+    if (next === -1) {
+      pushPlain(line.slice(i));
+      break;
+    }
+    pushPlain(line.slice(i, next));
+    i = next;
+  }
+
+  return runs;
+}
+
+/** Parse plain message text into simple runs for bold/italic display. */
+export function parseMessageBodyRuns(body: string): MessageTextRun[][] {
+  return (body || "").replace(/\r\n/g, "\n").split("\n").map(parseMessageLineRuns);
+}
+
+/** Remove simple formatting markers for thread list preview text. */
+export function stripMessageFormattingMarkers(text: string): string {
+  if (!text) return "";
+  return text
+    .replace(/\*\*\*([^*]+)\*\*\*/g, "$1")
+    .replace(/\*\*([^*]+)\*\*/g, "$1")
+    .replace(/\*([^*]+)\*/g, "$1");
+}
+
 const MAX_MESSAGE_ATTACHMENTS = 6;
 
 const IMAGE_FILE_EXTS = new Set(["jpg", "jpeg", "png", "gif", "webp"]);
@@ -162,7 +243,7 @@ export function validateStaffMessageContent(
 
 /** Short line for thread list / toast when body may be empty but attachments exist. */
 export function formatMessageListPreview(body: string, metadata: { image_urls?: string[] } | null | undefined): string {
-  const b = (body || "").trim();
+  const b = stripMessageFormattingMarkers((body || "").trim());
   const urls = (metadata?.image_urls || []).filter(Boolean);
   const n = urls.length;
   if (!b && n > 0) {

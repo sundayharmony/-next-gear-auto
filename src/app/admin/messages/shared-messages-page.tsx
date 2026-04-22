@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, FileText, Hash, Loader2, MessageSquare, Paperclip, Plus, Send, Trash2, X } from "lucide-react";
+import { Bold, ChevronLeft, FileText, Hash, Italic, Loader2, MessageSquare, Paperclip, Plus, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -11,7 +11,7 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { MessagingPushRegistration } from "@/components/messaging/push-registration";
 import { ToastContainer, ToastNotification } from "@/components/ui/toast";
 import { cn } from "@/lib/utils/cn";
-import { isImageAttachmentUrl } from "@/lib/messaging/service";
+import { isImageAttachmentUrl, parseMessageBodyRuns } from "@/lib/messaging/service";
 import {
   STAFF_ATTACHMENT_ACCEPT_ATTR,
   STAFF_ATTACHMENT_ALLOWED_MIMES,
@@ -56,6 +56,7 @@ const TOAST_THROTTLE_MS = 4000;
 const MAX_TOAST_DEDUPE_IDS = 400;
 
 const MAX_MESSAGE_ATTACHMENTS = 6;
+const MAX_MESSAGE_BODY_CHARS = 4000;
 
 function fileLabelFromUrl(url: string): string {
   try {
@@ -122,6 +123,8 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   const lastToastAtRef = useRef(0);
   const messagesScrollRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const draftStorageKey = selectedThreadId ? `staff-message-draft:${panelPath}:${selectedThreadId}` : null;
 
   useEffect(() => {
     selectedThreadIdRef.current = selectedThreadId;
@@ -130,6 +133,33 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   useEffect(() => {
     setPendingAttachments([]);
   }, [selectedThreadId]);
+
+  useEffect(() => {
+    if (!draftStorageKey || typeof window === "undefined") {
+      if (!selectedThreadId) setComposer("");
+      return;
+    }
+    try {
+      const stored = window.localStorage.getItem(draftStorageKey);
+      setComposer(stored || "");
+    } catch {
+      setComposer("");
+    }
+  }, [draftStorageKey, selectedThreadId]);
+
+  useEffect(() => {
+    if (!draftStorageKey || typeof window === "undefined") return;
+    try {
+      const trimmed = composer.trim();
+      if (!trimmed) {
+        window.localStorage.removeItem(draftStorageKey);
+      } else {
+        window.localStorage.setItem(draftStorageKey, composer);
+      }
+    } catch {
+      // Ignore storage errors
+    }
+  }, [composer, draftStorageKey]);
 
   useLayoutEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
@@ -452,6 +482,10 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     const text = composer.trim();
     const urls = pendingAttachments.map((p) => p.url);
     if (!text && urls.length === 0) return;
+    if (text.length > MAX_MESSAGE_BODY_CHARS) {
+      setError(`Message text is too long (${text.length}/${MAX_MESSAGE_BODY_CHARS}).`);
+      return;
+    }
     setBusy(true);
     try {
       const res = await adminFetch(`/api/admin/messages/threads/${selectedThreadId}/messages`, {
@@ -467,6 +501,9 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to send message");
       setComposer("");
       setPendingAttachments([]);
+      if (draftStorageKey && typeof window !== "undefined") {
+        window.localStorage.removeItem(draftStorageKey);
+      }
       await fetchMessages(selectedThreadId);
       await fetchThreads();
       setError(null);
@@ -476,6 +513,31 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       setBusy(false);
     }
   };
+
+  const applyComposerFormat = useCallback(
+    (marker: "*" | "**") => {
+      const el = composerRef.current;
+      if (!el || !serverMessagingOn) return;
+      const start = el.selectionStart ?? composer.length;
+      const end = el.selectionEnd ?? composer.length;
+      const before = composer.slice(0, start);
+      const selected = composer.slice(start, end);
+      const after = composer.slice(end);
+      const wrapped = selected ? `${marker}${selected}${marker}` : `${marker}${marker}`;
+      const next = before + wrapped + after;
+      setComposer(next);
+      requestAnimationFrame(() => {
+        el.focus();
+        if (selected) {
+          el.setSelectionRange(start + marker.length, end + marker.length);
+        } else {
+          const pos = start + marker.length;
+          el.setSelectionRange(pos, pos);
+        }
+      });
+    },
+    [composer, serverMessagingOn]
+  );
 
   const deleteMessage = async (messageId: string) => {
     if (!serverMessagingOn || !selectedThreadId) return;
@@ -499,6 +561,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
 
   const showThreadList = !isNarrow || mobileTab === "list";
   const showConversation = !isNarrow || mobileTab === "chat";
+  const composerChars = composer.length;
 
   return (
     <>
@@ -668,6 +731,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                   const isDeleting = deletingId === m.id;
                   const attachmentUrls = m.metadata?.image_urls?.filter(Boolean) ?? [];
                   const showText = (m.body || "").trim().length > 0;
+                  const formattedLines = showText ? parseMessageBodyRuns(m.body) : [];
                   return (
                     <div key={m.id} className={cn("flex w-full", isOwn ? "justify-end" : "justify-start")}>
                       <div
@@ -761,7 +825,19 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                         )}
                         {showText && (
                           <p className={cn("text-sm whitespace-pre-wrap break-words pr-1", isOwn ? "text-white" : "text-gray-900")}>
-                            {m.body}
+                            {formattedLines.map((line, lineIdx) => (
+                              <span key={`${m.id}-line-${lineIdx}`}>
+                                {line.map((run, runIdx) => (
+                                  <span
+                                    key={`${m.id}-line-${lineIdx}-run-${runIdx}`}
+                                    className={cn(run.bold && "font-semibold", run.italic && "italic")}
+                                  >
+                                    {run.text}
+                                  </span>
+                                ))}
+                                {lineIdx < formattedLines.length - 1 ? "\n" : ""}
+                              </span>
+                            ))}
                           </p>
                         )}
                       </div>
@@ -821,18 +897,76 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                   ))}
                 </div>
               )}
+              <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500">
+                <span>
+                  Formatting: <code className="rounded bg-gray-100 px-1">**bold**</code>,{" "}
+                  <code className="rounded bg-gray-100 px-1">*italic*</code>
+                </span>
+                <div className="flex items-center gap-2">
+                  {composer.trim().length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => setComposer("")}
+                      className="rounded px-1.5 py-0.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
+                    >
+                      Clear draft
+                    </button>
+                  )}
+                  <span className={cn(composerChars > MAX_MESSAGE_BODY_CHARS * 0.9 && "text-amber-600")}>
+                    {composerChars}/{MAX_MESSAGE_BODY_CHARS}
+                  </span>
+                </div>
+              </div>
               <div className="flex gap-2">
+                <div className="flex shrink-0 flex-col gap-1 self-end">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10"
+                    disabled={!serverMessagingOn || busy || !selectedThreadId}
+                    onClick={() => applyComposerFormat("**")}
+                    aria-label="Bold selected text"
+                    title="Bold (Ctrl/Cmd+B)"
+                  >
+                    <Bold className="h-4 w-4" aria-hidden />
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="h-10 w-10"
+                    disabled={!serverMessagingOn || busy || !selectedThreadId}
+                    onClick={() => applyComposerFormat("*")}
+                    aria-label="Italicize selected text"
+                    title="Italic (Ctrl/Cmd+I)"
+                  >
+                    <Italic className="h-4 w-4" aria-hidden />
+                  </Button>
+                </div>
                 <textarea
+                  ref={composerRef}
                   value={composer}
                   onChange={(e) => setComposer(e.target.value)}
-                  placeholder="Type a message..."
+                  placeholder="Type a message... Use **bold** or *italic*."
                   disabled={!serverMessagingOn}
                   rows={2}
+                  maxLength={MAX_MESSAGE_BODY_CHARS}
                   className={cn(
                     "min-h-[44px] max-h-[160px] w-full flex-1 resize-y rounded-md border border-input bg-background px-3 py-2 text-sm",
                     "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   )}
                   onKeyDown={(e) => {
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
+                      e.preventDefault();
+                      applyComposerFormat("**");
+                      return;
+                    }
+                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
+                      e.preventDefault();
+                      applyComposerFormat("*");
+                      return;
+                    }
                     if (e.key === "Enter" && !e.shiftKey) {
                       e.preventDefault();
                       const hasContent = composer.trim().length > 0 || pendingAttachments.length > 0;

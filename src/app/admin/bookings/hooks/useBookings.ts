@@ -26,7 +26,7 @@ interface UseBookingsReturn {
   sortOrder: SortOrder;
   setSort: (field: SortField) => void;
   fetchBookings: () => Promise<void>;
-  updateStatus: (bookingId: string, newStatus: string) => Promise<void>;
+  updateStatus: (bookingId: string, newStatus: string) => Promise<boolean>;
   bulkUpdateStatus: (ids: Set<string>, newStatus: string) => Promise<number>;
   updating: string | null;
   todayPickups: BookingRow[];
@@ -149,11 +149,11 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
     }
   }, [sortField]);
 
-  const updateStatus = useCallback(async (bookingId: string, newStatus: string) => {
+  const updateStatus = useCallback(async (bookingId: string, newStatus: string): Promise<boolean> => {
     const booking = bookings.find((b) => b.id === bookingId);
     if (config.mode === "manager" && booking && booking.canManage === false) {
       setError("You can only manage bookings you created.");
-      return;
+      return false;
     }
 
     setUpdating(bookingId);
@@ -174,11 +174,14 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
           );
         }
         setSuccess(`Booking ${newStatus} successfully!`);
+        return true;
       } else {
         setError(data.message || `Failed to update booking to "${newStatus}"`);
+        return false;
       }
     } catch {
       setError("Network error — could not update booking status");
+      return false;
     } finally {
       setUpdating(null);
     }

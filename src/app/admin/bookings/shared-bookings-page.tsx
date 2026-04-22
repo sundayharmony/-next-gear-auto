@@ -222,10 +222,35 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
     setShowDetail(true);
   }, []);
 
+  // Keep detail panel in sync with latest list row updates.
+  useEffect(() => {
+    if (!selectedBooking) return;
+    const latest = bookings.find((b) => b.id === selectedBooking.id);
+    if (!latest) {
+      setShowDetail(false);
+      setSelectedBooking(null);
+      return;
+    }
+    if (latest !== selectedBooking) {
+      setSelectedBooking(latest);
+    }
+  }, [bookings, selectedBooking]);
+
   const handleUpdateBookingInList = useCallback((updated: BookingRow) => {
     setSelectedBooking(updated);
     detailDirtyRef.current = true;
   }, []);
+
+  const handleUpdateStatusFromDetail = useCallback(
+    async (bookingId: string, newStatus: string) => {
+      const ok = await updateStatus(bookingId, newStatus);
+      if (!ok) return false;
+      setSelectedBooking((prev) => (prev && prev.id === bookingId ? { ...prev, status: newStatus } : prev));
+      detailDirtyRef.current = true;
+      return true;
+    },
+    [updateStatus]
+  );
 
   const handleCloseDetail = useCallback(() => {
     setShowDetail(false);
@@ -322,7 +347,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
           onToggleSelect={toggleSelect}
           onToggleSelectAll={toggleSelectAll}
           onSelectBooking={handleSelectBooking}
-          onUpdateStatus={updateStatus}
+          onUpdateStatus={handleUpdateStatusFromDetail}
           updating={updating}
           sortField={sortField}
           sortOrder={sortOrder}
@@ -347,7 +372,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
           vehicles={vehicles}
           onClose={handleCloseDetail}
           onUpdateBooking={handleUpdateBookingInList}
-          onUpdateStatus={updateStatus}
+          onUpdateStatus={handleUpdateStatusFromDetail}
           onError={setError}
           onSuccess={setSuccess}
           capabilities={{
