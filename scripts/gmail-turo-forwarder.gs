@@ -3,8 +3,7 @@
  *
  * This script runs on a schedule in your Gmail account. It searches for
  * new Turo booking confirmation emails, forwards the email body to
- * your NextGearAuto webhook endpoint, and labels them as processed
- * so they're not sent twice.
+ * your NextGearAuto webhook endpoint, and marks successful messages as read.
  *
  * ─── SETUP INSTRUCTIONS ───
  *
@@ -13,7 +12,7 @@
  * 3. Update the two constants below (WEBHOOK_URL and WEBHOOK_SECRET)
  * 4. Run `setup()` once from the toolbar (Run → setup)
  *    — It will ask for Gmail permissions; grant them
- *    — It creates a "NGA-Processed" label and a 15-minute timer
+ *    — It creates a 15-minute timer
  * 5. That's it! The script will auto-check every 15 minutes.
  *
  * To test: Run `processNewTuroEmails()` manually from the toolbar
@@ -26,17 +25,13 @@
 const WEBHOOK_URL = "https://rentnextgearauto.com/api/webhooks/turo-email";
 const WEBHOOK_SECRET = "PASTE_YOUR_SECRET_HERE"; // Must match TURO_WEBHOOK_SECRET in Vercel
 
-// Gmail search query for Turo booking emails
-// Adjust if Turo uses a different sender address for your account
-const TURO_SEARCH_QUERY = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) subject:(trip OR booking OR reservation OR confirmed OR extended OR modified OR extension OR updated) -label:NGA-Processed';
-
-// Label applied to processed emails so they're not sent again
-const PROCESSED_LABEL_NAME = "NGA-Processed";
+// Gmail search query for Turo booking emails.
+// IMPORTANT: Use is:unread at message-level; do NOT rely on thread labels.
+const TURO_SEARCH_QUERY = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) subject:(trip OR booking OR reservation OR confirmed OR extended OR modified OR extension OR updated) is:unread';
 
 // ═══════ MAIN FUNCTION ═══════
 
 function processNewTuroEmails() {
-  const label = getOrCreateLabel(PROCESSED_LABEL_NAME);
   const threads = GmailApp.search(TURO_SEARCH_QUERY, 0, 20);
 
   if (threads.length === 0) {
@@ -50,6 +45,7 @@ function processNewTuroEmails() {
     const messages = thread.getMessages();
 
     for (const message of messages) {
+      if (!message.isUnread()) continue;
       const subject = message.getSubject();
       const body = message.getPlainBody() || message.getBody();
       const from = message.getFrom();
@@ -82,6 +78,7 @@ function processNewTuroEmails() {
 
         if (code === 201) {
           Logger.log("SUCCESS — Blocked dates created: " + result);
+          message.markRead();
         } else if (code === 200) {
           // Check if it was an extension or a skip
           try {
@@ -94,18 +91,18 @@ function processNewTuroEmails() {
           } catch (e) {
             Logger.log("SKIPPED — Already blocked: " + result);
           }
+          // 200 means webhook handled it (extended / merged / already blocked)
+          message.markRead();
         } else {
           Logger.log("RESPONSE " + code + ": " + result);
+          // Keep unread so failures can be retried/reviewed.
         }
       } catch (err) {
         Logger.log("ERROR sending to webhook: " + err.toString());
-        // Don't label as processed if webhook failed — retry next run
+        // Keep unread so webhook failure retries on next run.
         continue;
       }
     }
-
-    // Mark the entire thread as processed
-    thread.addLabel(label);
   }
 
   Logger.log("Done processing Turo emails.");
@@ -117,10 +114,6 @@ function processNewTuroEmails() {
  * Run this once to create the Gmail label and set up the 15-minute timer.
  */
 function setup() {
-  // Create label
-  getOrCreateLabel(PROCESSED_LABEL_NAME);
-  Logger.log("Label '" + PROCESSED_LABEL_NAME + "' is ready.");
-
   // Remove any existing triggers for this function
   const triggers = ScriptApp.getProjectTriggers();
   for (const trigger of triggers) {
@@ -154,13 +147,46 @@ function teardown() {
   Logger.log("Removed " + removed + " trigger(s). Auto-checking is now disabled.");
 }
 
-// ═══════ HELPERS ═══════
+/**
+ * One-time helper: backfill recent Turo emails that were missed.
+ * Usage: run backfillRecentTuroEmails(60) to process last 60 days.
+ *
+ * This does NOT mark messages read.
+ */
+function backfillRecentTuroEmails(days) {
+  const safeDays = Math.max(1, Math.min(Number(days) || 30, 365));
+  const query = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) subject:(trip OR booking OR reservation OR confirmed OR extended OR modified OR extension OR updated) newer_than:' + safeDays + 'd';
+  const threads = GmailApp.search(query, 0, 200);
+  Logger.log("Backfill threads: " + threads.length + " (newer_than " + safeDays + "d)");
 
-function getOrCreateLabel(name) {
-  let label = GmailApp.getUserLabelByName(name);
-  if (!label) {
-    label = GmailApp.createLabel(name);
-    Logger.log("Created Gmail label: " + name);
+  for (const thread of threads) {
+    const messages = thread.getMessages();
+    for (const message of messages) {
+      const from = message.getFrom();
+      if (!from || !from.toLowerCase().includes("turo")) continue;
+      const body = message.getPlainBody() || message.getBody();
+      const subject = message.getSubject();
+      try {
+        const response = UrlFetchApp.fetch(WEBHOOK_URL, {
+          method: "post",
+          contentType: "application/json",
+          headers: {
+            Authorization: "Bearer " + WEBHOOK_SECRET,
+          },
+          payload: JSON.stringify({
+            emailText: body,
+            subject: subject,
+            from: from,
+            date: message.getDate().toISOString(),
+          }),
+          muteHttpExceptions: true,
+        });
+        Logger.log("BACKFILL " + response.getResponseCode() + " — " + subject);
+      } catch (err) {
+        Logger.log("BACKFILL ERROR: " + err.toString());
+      }
+    }
   }
-  return label;
 }
+
+// ═══════ HELPERS ═══════
