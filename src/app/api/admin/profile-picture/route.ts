@@ -111,3 +111,40 @@ export async function POST(request: NextRequest) {
     );
   }
 }
+
+export async function DELETE(request: NextRequest) {
+  const auth = await verifyAdminOrManager(request);
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const supabase = getServiceSupabase();
+    const body = await request.json().catch(() => ({}));
+    const customerId = typeof body?.customerId === "string" ? body.customerId : null;
+
+    if (!customerId) {
+      return NextResponse.json(
+        { success: false, error: "Missing customerId" },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabase
+      .from("customers")
+      .update({ profile_picture_url: null })
+      .eq("id", customerId);
+
+    if (error) {
+      return NextResponse.json(
+        { success: false, error: "Failed to remove profile picture" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
+  } catch (error) {
+    return NextResponse.json(
+      { success: false, error: `Internal server error: ${error instanceof Error ? error.message : "Unknown"}` },
+      { status: 500 }
+    );
+  }
+}
