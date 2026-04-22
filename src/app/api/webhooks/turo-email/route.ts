@@ -3,6 +3,12 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { parseTuroEmail } from "@/lib/utils/turo-email-parser";
 import { logger } from "@/lib/utils/logger";
 
+function isMissingColumnError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const anyErr = error as { code?: string; message?: string };
+  return anyErr.code === "42703" || /column\s+.+\s+does\s+not\s+exist/i.test(anyErr.message || "");
+}
+
 /**
  * POST /api/webhooks/turo-email
  *
@@ -170,7 +176,7 @@ export async function POST(req: NextRequest) {
       // Find existing blocked date for this vehicle with matching start date
       const { data: existingBlocks } = await supabase
         .from("blocked_dates")
-        .select("id, start_date, end_date, earnings, reason")
+        .select("id, start_date, end_date, reason")
         .eq("vehicle_id", matchedVehicle.id)
         .eq("start_date", parsed.startDate)
         .order("created_at", { ascending: false })
@@ -181,7 +187,7 @@ export async function POST(req: NextRequest) {
       if (!matchedBlock) {
         const { data: overlapBlocks } = await supabase
           .from("blocked_dates")
-          .select("id, start_date, end_date, earnings, reason")
+          .select("id, start_date, end_date, reason")
           .eq("vehicle_id", matchedVehicle.id)
           .lte("start_date", parsed.startDate)
           .gte("end_date", parsed.startDate)
@@ -206,12 +212,27 @@ export async function POST(req: NextRequest) {
         const earningsNote = parsed.earnings ? ` — $${parsed.earnings}` : "";
         updateFields.reason = `Turo (extended)${guestNote}${earningsNote}`;
 
-        const { data: updated, error: updateError } = await supabase
+        let { data: updated, error: updateError } = await supabase
           .from("blocked_dates")
           .update(updateFields)
           .eq("id", matchedBlock.id)
           .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date")
           .maybeSingle();
+
+        if (updateError && isMissingColumnError(updateError)) {
+          const fallbackFields: Record<string, string | number | boolean | null> = {
+            end_date: parsed.endDate,
+            reason: updateFields.reason ?? null,
+          };
+          const fallback = await supabase
+            .from("blocked_dates")
+            .update(fallbackFields)
+            .eq("id", matchedBlock.id)
+            .select("id, vehicle_id, start_date, end_date, source, reason")
+            .maybeSingle();
+          updated = fallback.data;
+          updateError = fallback.error;
+        }
 
         if (updateError) {
           logger.error("Turo webhook: extension update error", updateError);
@@ -280,12 +301,28 @@ export async function POST(req: NextRequest) {
       if (parsed.location != null) updateFields.location = parsed.location;
       if (parsed.earnings != null) updateFields.earnings = parsed.earnings;
 
-      const { data: updated, error: mergeErr } = await supabase
+      let { data: updated, error: mergeErr } = await supabase
         .from("blocked_dates")
         .update(updateFields)
         .eq("id", row.id)
         .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason")
         .maybeSingle();
+
+      if (mergeErr && isMissingColumnError(mergeErr)) {
+        const fallbackFields = {
+          start_date: mergedStart,
+          end_date: mergedEnd,
+          reason,
+        };
+        const fallback = await supabase
+          .from("blocked_dates")
+          .update(fallbackFields)
+          .eq("id", row.id)
+          .select("id, vehicle_id, start_date, end_date, source, reason")
+          .maybeSingle();
+        updated = fallback.data;
+        mergeErr = fallback.error;
+      }
 
       if (mergeErr) {
         logger.error("Turo webhook: merge update error", mergeErr);
@@ -322,7 +359,7 @@ export async function POST(req: NextRequest) {
       ? `Turo: ${parsed.guestName}${parsed.earnings ? ` — $${parsed.earnings}` : ""}`
       : `Turo booking${parsed.earnings ? ` — $${parsed.earnings}` : ""}`;
 
-    const { data: created, error } = await supabase
+    let { data: created, error } = await supabase
       .from("blocked_dates")
       .insert({
         vehicle_id: matchedVehicle.id,
@@ -337,6 +374,22 @@ export async function POST(req: NextRequest) {
       })
       .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason")
       .maybeSingle();
+
+    if (error && isMissingColumnError(error)) {
+      const fallback = await supabase
+        .from("blocked_dates")
+        .insert({
+          vehicle_id: matchedVehicle.id,
+          start_date: parsed.startDate,
+          end_date: parsed.endDate,
+          source: "turo-email",
+          reason,
+        })
+        .select("id, vehicle_id, start_date, end_date, source, reason")
+        .maybeSingle();
+      created = fallback.data;
+      error = fallback.error;
+    }
 
     if (error) {
       logger.error("Turo webhook: insert error", error);

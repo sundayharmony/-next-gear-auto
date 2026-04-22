@@ -120,6 +120,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   // Email sending
   const [sendingEmail, setSendingEmail] = useState(false);
   const [resendingAgreement, setResendingAgreement] = useState(false);
+  const [overridingAgreement, setOverridingAgreement] = useState(false);
 
   // UI toggles
   const [showNotes, setShowNotes] = useState(false);
@@ -386,6 +387,36 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       onError("Network error — could not resend agreement");
     } finally {
       setResendingAgreement(false);
+    }
+  };
+
+  const handleOverrideAgreement = async () => {
+    if (overridingAgreement) return;
+    setOverridingAgreement(true);
+    try {
+      const res = await adminFetch("/api/bookings/override-signature", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        onError(data.message || "Failed to apply override signature.");
+        return;
+      }
+
+      const updated = {
+        ...booking,
+        signed_name: data.data?.signed_name || booking.signed_name,
+        agreement_signed_at: data.data?.agreement_signed_at || booking.agreement_signed_at,
+      };
+      onUpdateBooking(updated);
+      onSuccess(data.message || "Override signature applied.");
+    } catch (err) {
+      logger.error("Override agreement failed:", err);
+      onError("Failed to apply override signature.");
+    } finally {
+      setOverridingAgreement(false);
     }
   };
 
@@ -691,6 +722,17 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     partial: { label: "Partial", color: "bg-yellow-100 text-yellow-800" },
     unpaid: { label: "Unpaid", color: "bg-red-100 text-red-800" },
   };
+
+  const now = new Date();
+  const pickupStart = booking.pickup_date
+    ? new Date(`${booking.pickup_date}T${booking.pickup_time && /^\d{2}:\d{2}$/.test(booking.pickup_time) ? booking.pickup_time : "00:00"}:00`)
+    : null;
+  const canOverrideAgreement =
+    canViewAdminNotes &&
+    !booking.agreement_signed_at &&
+    !!pickupStart &&
+    !Number.isNaN(pickupStart.getTime()) &&
+    now >= pickupStart;
 
   // Recalculate price from vehicle rate, dates, and extras
   const handleRecalculatePrice = () => {
@@ -1743,7 +1785,21 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 )}
               </div>
             ) : (
-              <p className="text-sm text-gray-500">Not yet signed</p>
+              <div className="space-y-2">
+                <p className="text-sm text-gray-500">Not yet signed</p>
+                {canOverrideAgreement && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleOverrideAgreement}
+                    disabled={overridingAgreement}
+                    className="text-xs border-amber-300 text-amber-700 hover:bg-amber-50"
+                  >
+                    <PenLine className="w-3 h-3 mr-1" />
+                    {overridingAgreement ? "Applying Override..." : "Override Signature (Initials)"}
+                  </Button>
+                )}
+              </div>
             )}
           </div>
 

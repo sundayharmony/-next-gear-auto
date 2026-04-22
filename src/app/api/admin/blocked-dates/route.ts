@@ -3,6 +3,12 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 
+function isMissingColumnError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const anyErr = error as { code?: string; message?: string };
+  return anyErr.code === "42703" || /column\s+.+\s+does\s+not\s+exist/i.test(anyErr.message || "");
+}
+
 /**
  * GET /api/admin/blocked-dates?vehicleId=...
  * List blocked dates, optionally filtered by vehicle.
@@ -19,14 +25,37 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from("blocked_dates")
       .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date, created_at")
-      .gte("end_date", new Date().toISOString().split("T")[0])
       .order("start_date", { ascending: true });
 
     if (vehicleId) {
       query = query.eq("vehicle_id", vehicleId);
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+
+    if (error && isMissingColumnError(error)) {
+      let fallbackQuery = supabase
+        .from("blocked_dates")
+        .select("id, vehicle_id, start_date, end_date, source, reason, created_at")
+        .order("start_date", { ascending: true });
+
+      if (vehicleId) {
+        fallbackQuery = fallbackQuery.eq("vehicle_id", vehicleId);
+      }
+
+      const fallbackRes = await fallbackQuery;
+      data = (fallbackRes.data || []).map((row) => ({
+        ...row,
+        pickup_time: null,
+        return_time: null,
+        location: null,
+        earnings: null,
+        is_extension: false,
+        original_end_date: null,
+      }));
+      error = fallbackRes.error;
+    }
+
     if (error) {
       logger.error("Blocked dates GET error:", error);
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
