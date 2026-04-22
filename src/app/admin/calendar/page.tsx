@@ -353,6 +353,7 @@ export default function AdminCalendarPage() {
           {!loading && view === "calendar" && (
             <CalendarView
               bookings={filteredBookings}
+              blockedDates={blockedDates}
               currentMonth={calendarMonth}
               onPreviousMonth={() => {
                 const newMonth = new Date(calendarMonth);
@@ -1234,6 +1235,7 @@ function TimelineView({
 
 interface CalendarViewProps {
   bookings: BookingRow[];
+  blockedDates: BlockedDateEntry[];
   currentMonth: Date;
   onPreviousMonth: () => void;
   onNextMonth: () => void;
@@ -1244,6 +1246,7 @@ interface CalendarViewProps {
 
 function CalendarView({
   bookings,
+  blockedDates,
   currentMonth,
   onPreviousMonth,
   onNextMonth,
@@ -1297,7 +1300,22 @@ function CalendarView({
     }
   });
 
+  const blockedByDay: Record<string, BlockedDateEntry[]> = {};
+  blockedDates.forEach((block) => {
+    const start = new Date(block.start_date + "T00:00:00");
+    const end = new Date(block.end_date + "T00:00:00");
+    const current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
+    const endOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+    while (current <= endOnly) {
+      const dateKey = current.toISOString().split("T")[0];
+      if (!blockedByDay[dateKey]) blockedByDay[dateKey] = [];
+      blockedByDay[dateKey].push(block);
+      current.setDate(current.getDate() + 1);
+    }
+  });
+
   const selectedDayBookings = selectedDay ? (bookingsByDay[selectedDay] || []) : [];
+  const selectedDayBlocked = selectedDay ? (blockedByDay[selectedDay] || []) : [];
 
   return (
     <Card>
@@ -1339,6 +1357,7 @@ function CalendarView({
               const dateKey =
                 day && new Date(year, month, day).toISOString().split("T")[0];
               const dayBookings = dateKey ? (bookingsByDay[dateKey] || []) : [];
+              const dayBlocked = dateKey ? (blockedByDay[dateKey] || []) : [];
               const isSelected = dateKey === selectedDay;
               const isToday = dateKey === new Date().toISOString().split("T")[0];
 
@@ -1360,7 +1379,7 @@ function CalendarView({
                         {day}
                       </div>
                       {/* Mobile: dot indicators */}
-                      {dayBookings.length > 0 && (
+                      {(dayBookings.length > 0 || dayBlocked.length > 0) && (
                         <div className="flex items-center justify-center gap-0.5 sm:hidden">
                           {dayBookings.length <= 3 ? (
                             dayBookings.map((b) => (
@@ -1377,6 +1396,9 @@ function CalendarView({
                               <div className="w-1.5 h-1.5 rounded-full bg-purple-400" />
                               <span className="text-[9px] text-purple-600 font-bold ml-0.5">{dayBookings.length}</span>
                             </>
+                          )}
+                          {dayBlocked.length > 0 && (
+                            <div className="w-1.5 h-1.5 rounded-full bg-gray-500" title="Blocked dates present" />
                           )}
                         </div>
                       )}
@@ -1396,6 +1418,11 @@ function CalendarView({
                             +{dayBookings.length - 2} more
                           </div>
                         )}
+                        {dayBlocked.length > 0 && (
+                          <div className="text-[10px] text-gray-600 px-1 truncate">
+                            Blocked ({dayBlocked.length})
+                          </div>
+                        )}
                       </div>
                     </>
                   )}
@@ -1406,7 +1433,7 @@ function CalendarView({
         </div>
 
         {/* Selected Day Details */}
-        {selectedDay && selectedDayBookings.length > 0 && (
+        {selectedDay && (selectedDayBookings.length > 0 || selectedDayBlocked.length > 0) && (
           <div className="border-t border-gray-200 pt-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
@@ -1461,11 +1488,36 @@ function CalendarView({
                   </div>
                 </button>
               ))}
+              {selectedDayBlocked.map((block) => (
+                <div
+                  key={`blocked-${block.id}`}
+                  className="w-full text-left rounded-2xl sm:rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4"
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="min-w-0">
+                      <div className="font-semibold text-gray-800 truncate">
+                        {block.source === "turo-email" ? "Turo Block" : "Blocked Date"}
+                      </div>
+                      <div className="text-xs sm:text-sm text-gray-500 truncate">
+                        {block.reason || "Unavailable"}
+                      </div>
+                    </div>
+                    <Badge className="bg-gray-200 text-gray-700">
+                      blocked
+                    </Badge>
+                  </div>
+                  <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
+                    <span>{formatDate(block.start_date)}</span>
+                    <span className="text-gray-400">→</span>
+                    <span>{formatDate(block.end_date)}</span>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         )}
 
-        {selectedDay && selectedDayBookings.length === 0 && (
+        {selectedDay && selectedDayBookings.length === 0 && selectedDayBlocked.length === 0 && (
           <div className="border-t border-gray-200 pt-6">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-gray-900">
