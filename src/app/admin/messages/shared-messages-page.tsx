@@ -58,6 +58,73 @@ const MAX_TOAST_DEDUPE_IDS = 400;
 const MAX_MESSAGE_ATTACHMENTS = 6;
 const MAX_MESSAGE_BODY_CHARS = 4000;
 
+function escapeHtml(input: string): string {
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+function applyMarkdownMarkers(text: string, bold: boolean, italic: boolean): string {
+  if (!text) return "";
+  if (bold && italic) return `***${text}***`;
+  if (bold) return `**${text}**`;
+  if (italic) return `*${text}*`;
+  return text;
+}
+
+function editorHtmlToMarkdown(html: string): string {
+  if (!html) return "";
+  const root = document.createElement("div");
+  root.innerHTML = html;
+
+  const walk = (node: Node, fmt: { bold: boolean; italic: boolean }): string => {
+    if (node.nodeType === Node.TEXT_NODE) {
+      const text = node.textContent || "";
+      return applyMarkdownMarkers(text, fmt.bold, fmt.italic);
+    }
+    if (node.nodeType !== Node.ELEMENT_NODE) return "";
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+
+    if (tag === "br") return "\n";
+
+    const nextFmt = {
+      bold: fmt.bold || tag === "b" || tag === "strong",
+      italic: fmt.italic || tag === "i" || tag === "em",
+    };
+
+    let out = "";
+    el.childNodes.forEach((child) => {
+      out += walk(child, nextFmt);
+    });
+    if (tag === "div" || tag === "p") out += "\n";
+    return out;
+  };
+
+  let markdown = "";
+  root.childNodes.forEach((n) => {
+    markdown += walk(n, { bold: false, italic: false });
+  });
+
+  return markdown.replace(/\n{3,}/g, "\n\n").trim();
+}
+
+function markdownToEditorHtml(markdown: string): string {
+  if (!markdown) return "";
+  const lines = markdown.split("\n");
+  const rendered = lines.map((line) => {
+    const escaped = escapeHtml(line);
+    return escaped
+      .replace(/\*\*\*([^*]+)\*\*\*/g, "<strong><em>$1</em></strong>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*([^*]+)\*/g, "<em>$1</em>");
+  });
+  return rendered.join("<br>");
+}
+
 function fileLabelFromUrl(url: string): string {
   try {
     const seg = decodeURIComponent(new URL(url).pathname.split("/").pop() || "");
@@ -123,7 +190,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   const lastToastAtRef = useRef(0);
   const messagesScrollRef = useRef<HTMLDivElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
-  const composerRef = useRef<HTMLTextAreaElement | null>(null);
+  const composerRef = useRef<HTMLDivElement | null>(null);
   const draftStorageKey = selectedThreadId ? `staff-message-draft:${panelPath}:${selectedThreadId}` : null;
 
   useEffect(() => {
@@ -160,6 +227,16 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       // Ignore storage errors
     }
   }, [composer, draftStorageKey]);
+
+  useEffect(() => {
+    const el = composerRef.current;
+    if (!el) return;
+    if (document.activeElement === el) return;
+    const html = markdownToEditorHtml(composer);
+    if (el.innerHTML !== html) {
+      el.innerHTML = html;
+    }
+  }, [composer, selectedThreadId]);
 
   useLayoutEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
@@ -515,28 +592,14 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   };
 
   const applyComposerFormat = useCallback(
-    (marker: "*" | "**") => {
+    (command: "bold" | "italic") => {
       const el = composerRef.current;
       if (!el || !serverMessagingOn) return;
-      const start = el.selectionStart ?? composer.length;
-      const end = el.selectionEnd ?? composer.length;
-      const before = composer.slice(0, start);
-      const selected = composer.slice(start, end);
-      const after = composer.slice(end);
-      const wrapped = selected ? `${marker}${selected}${marker}` : `${marker}${marker}`;
-      const next = before + wrapped + after;
-      setComposer(next);
-      requestAnimationFrame(() => {
-        el.focus();
-        if (selected) {
-          el.setSelectionRange(start + marker.length, end + marker.length);
-        } else {
-          const pos = start + marker.length;
-          el.setSelectionRange(pos, pos);
-        }
-      });
+      el.focus();
+      document.execCommand(command);
+      setComposer(editorHtmlToMarkdown(el.innerHTML));
     },
-    [composer, serverMessagingOn]
+    [serverMessagingOn]
   );
 
   const deleteMessage = async (messageId: string) => {
@@ -899,8 +962,8 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
               )}
               <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500">
                 <span>
-                  Formatting: <code className="rounded bg-gray-100 px-1">**bold**</code>,{" "}
-                  <code className="rounded bg-gray-100 px-1">*italic*</code>
+                  Formatting shortcuts: <code className="rounded bg-gray-100 px-1">Ctrl/Cmd + B</code>,{" "}
+                  <code className="rounded bg-gray-100 px-1">Ctrl/Cmd + I</code>
                 </span>
                 <div className="flex items-center gap-2">
                   {composer.trim().length > 0 && (
@@ -925,7 +988,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                     size="icon"
                     className="h-10 w-10"
                     disabled={!serverMessagingOn || busy || !selectedThreadId}
-                    onClick={() => applyComposerFormat("**")}
+                    onClick={() => applyComposerFormat("bold")}
                     aria-label="Bold selected text"
                     title="Bold (Ctrl/Cmd+B)"
                   >
@@ -937,34 +1000,49 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                     size="icon"
                     className="h-10 w-10"
                     disabled={!serverMessagingOn || busy || !selectedThreadId}
-                    onClick={() => applyComposerFormat("*")}
+                    onClick={() => applyComposerFormat("italic")}
                     aria-label="Italicize selected text"
                     title="Italic (Ctrl/Cmd+I)"
                   >
                     <Italic className="h-4 w-4" aria-hidden />
                   </Button>
                 </div>
-                <textarea
-                  ref={composerRef}
-                  value={composer}
-                  onChange={(e) => setComposer(e.target.value)}
-                  placeholder="Type a message... Use **bold** or *italic*."
-                  disabled={!serverMessagingOn}
-                  rows={2}
-                  maxLength={MAX_MESSAGE_BODY_CHARS}
-                  className={cn(
-                    "min-h-[44px] max-h-[160px] w-full flex-1 resize-y rounded-md border border-input bg-background px-3 py-2 text-sm",
-                    "placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                <div className="relative w-full flex-1">
+                  {composerChars === 0 && (
+                    <div className="pointer-events-none absolute left-3 top-2 text-sm text-muted-foreground">
+                      Type a message...
+                    </div>
                   )}
-                  onKeyDown={(e) => {
+                  <div
+                    ref={composerRef}
+                    contentEditable={serverMessagingOn && !!selectedThreadId}
+                    suppressContentEditableWarning
+                    role="textbox"
+                    aria-multiline="true"
+                    aria-label="Type a message"
+                    className={cn(
+                      "min-h-[44px] max-h-[160px] w-full flex-1 overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-sm",
+                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                      (!serverMessagingOn || !selectedThreadId) && "cursor-not-allowed bg-gray-100 text-gray-500"
+                    )}
+                    onInput={(e) => {
+                      const html = (e.currentTarget as HTMLDivElement).innerHTML;
+                      const markdown = editorHtmlToMarkdown(html);
+                      if (markdown.length > MAX_MESSAGE_BODY_CHARS) {
+                        setError(`Message text is too long (${markdown.length}/${MAX_MESSAGE_BODY_CHARS}).`);
+                        return;
+                      }
+                      setComposer(markdown);
+                    }}
+                    onKeyDown={(e) => {
                     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
                       e.preventDefault();
-                      applyComposerFormat("**");
+                      applyComposerFormat("bold");
                       return;
                     }
                     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
                       e.preventDefault();
-                      applyComposerFormat("*");
+                      applyComposerFormat("italic");
                       return;
                     }
                     if (e.key === "Enter" && !e.shiftKey) {
@@ -975,7 +1053,8 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                       }
                     }
                   }}
-                />
+                  />
+                </div>
                 <div className="flex shrink-0 flex-col gap-1 self-end">
                   <Button
                     type="button"
