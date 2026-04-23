@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Bold, ChevronLeft, FileText, Hash, Italic, Loader2, MessageSquare, Paperclip, Plus, Send, Trash2, X } from "lucide-react";
+import { ChevronLeft, FileText, Hash, Loader2, MessageSquare, Paperclip, Plus, Send, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
@@ -981,32 +981,6 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                 </div>
               </div>
               <div className="flex gap-2">
-                <div className="flex shrink-0 flex-col gap-1 self-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10"
-                    disabled={!serverMessagingOn || busy || !selectedThreadId}
-                    onClick={() => applyComposerFormat("bold")}
-                    aria-label="Bold selected text"
-                    title="Bold (Ctrl/Cmd+B)"
-                  >
-                    <Bold className="h-4 w-4" aria-hidden />
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10"
-                    disabled={!serverMessagingOn || busy || !selectedThreadId}
-                    onClick={() => applyComposerFormat("italic")}
-                    aria-label="Italicize selected text"
-                    title="Italic (Ctrl/Cmd+I)"
-                  >
-                    <Italic className="h-4 w-4" aria-hidden />
-                  </Button>
-                </div>
                 <div className="relative w-full flex-1">
                   {composerChars === 0 && (
                     <div className="pointer-events-none absolute left-3 top-2 text-sm text-muted-foreground">

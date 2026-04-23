@@ -26,16 +26,18 @@ const WEBHOOK_URL = "https://rentnextgearauto.com/api/webhooks/turo-email";
 const WEBHOOK_SECRET = "PASTE_YOUR_SECRET_HERE"; // Must match TURO_WEBHOOK_SECRET in Vercel
 
 // Gmail search query for Turo emails.
-// IMPORTANT: Keep this broad so template/subject changes do not get skipped.
+// IMPORTANT: Keep this broad so sender aliases/subdomains don't get skipped.
 // We still parse + dedupe on the webhook side.
-const TURO_SEARCH_QUERY = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) newer_than:365d';
+const TURO_SEARCH_QUERY = "from:turo.com newer_than:365d";
 const PROCESSED_KEY_PREFIX = "turo_processed_";
 const PROCESSED_RETENTION_DAYS = 365;
+const SEARCH_BATCH_SIZE = 100;
+const MAX_SEARCH_THREADS = 1200;
 
 // ═══════ MAIN FUNCTION ═══════
 
 function processNewTuroEmails() {
-  const threads = GmailApp.search(TURO_SEARCH_QUERY, 0, 200);
+  const threads = searchThreads(TURO_SEARCH_QUERY, MAX_SEARCH_THREADS);
   pruneProcessedKeys(PROCESSED_RETENTION_DAYS);
 
   if (threads.length === 0) {
@@ -162,8 +164,8 @@ function teardown() {
  */
 function backfillRecentTuroEmails(days) {
   const safeDays = Math.max(1, Math.min(Number(days) || 30, 365));
-  const query = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) newer_than:' + safeDays + 'd';
-  const threads = GmailApp.search(query, 0, 200);
+  const query = "from:turo.com newer_than:" + safeDays + "d";
+  const threads = searchThreads(query, MAX_SEARCH_THREADS);
   Logger.log("Backfill threads: " + threads.length + " (newer_than " + safeDays + "d)");
 
   for (const thread of threads) {
@@ -236,4 +238,22 @@ function pruneProcessedKeys(retentionDays) {
     }
     Logger.log("Pruned processed message keys: " + toDelete.length);
   }
+}
+
+function searchThreads(query, maxThreads) {
+  const safeMax = Math.max(1, Math.min(Number(maxThreads) || 200, 5000));
+  const allThreads = [];
+  let offset = 0;
+
+  while (allThreads.length < safeMax) {
+    const remaining = safeMax - allThreads.length;
+    const limit = Math.min(SEARCH_BATCH_SIZE, remaining);
+    const batch = GmailApp.search(query, offset, limit);
+    if (!batch || batch.length === 0) break;
+    allThreads.push.apply(allThreads, batch);
+    if (batch.length < limit) break;
+    offset += batch.length;
+  }
+
+  return allThreads;
 }
