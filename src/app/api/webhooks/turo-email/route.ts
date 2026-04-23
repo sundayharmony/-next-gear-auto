@@ -95,78 +95,100 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    let matchedVehicle = vehicles[0]; // fallback to first vehicle
+    let matchedVehicle: (typeof vehicles)[number] | null = null;
     let matchScore = 0;
+    let secondBestScore = 0;
 
     // Escape special regex characters in a string
     const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
-    if (parsed.vehicleDescription) {
-      const desc = parsed.vehicleDescription.toLowerCase();
-      const fullText = emailText.toLowerCase();
+    const desc = (parsed.vehicleDescription || "").toLowerCase();
+    const fullText = emailText.toLowerCase();
 
-      for (const v of vehicles) {
-        let score = 0;
-        const make = (v.make || "").toLowerCase();
-        const model = (v.model || "").toLowerCase();
-        const year = String(v.year || "");
+    for (const v of vehicles) {
+      let score = 0;
+      const make = (v.make || "").toLowerCase();
+      const model = (v.model || "").toLowerCase();
+      const year = String(v.year || "");
 
-        // Exact make match
-        if (make && desc.includes(make)) score += 3;
-        // Handle abbreviations (VW/Volkswagen, Chevy/Chevrolet, RAM/Ram)
-        const aliases: Record<string, string[]> = {
-          volkswagen: ["vw"],
-          vw: ["volkswagen"],
-          chevrolet: ["chevy"],
-          chevy: ["chevrolet"],
-          ram: ["dodge ram", "dodge"],
-        };
-        if (make && aliases[make]) {
-          for (const alias of aliases[make]) {
-            if (desc.includes(alias)) { score += 3; break; }
+      const aliases: Record<string, string[]> = {
+        volkswagen: ["vw"],
+        vw: ["volkswagen"],
+        chevrolet: ["chevy"],
+        chevy: ["chevrolet"],
+        ram: ["dodge ram", "dodge"],
+      };
+
+      // Strong make/model/year signals from parsed vehicle description when available
+      if (desc) {
+        if (make && desc.includes(make)) score += 4;
+        if (model && desc.includes(model)) score += 5;
+        if (year && desc.includes(year)) score += 3;
+      }
+
+      // Full email body fallback matching (handles template variations)
+      if (make && fullText.includes(make)) score += 2;
+      if (model && fullText.includes(model)) score += 3;
+      if (make && aliases[make]) {
+        for (const alias of aliases[make]) {
+          if (fullText.includes(alias)) {
+            score += 2;
+            break;
           }
-        }
-
-        // Model match (full match is mutually exclusive with partial word match)
-        if (model && desc.includes(model)) {
-          score += 4;
-        } else if (model && model.length > 3) {
-          // Partial model match (e.g. "Highlander" in "Toyota Highlander XLE")
-          const modelWords = model.split(/\s+/);
-          for (const w of modelWords) {
-            if (w.length > 2 && desc.includes(w.toLowerCase())) score += 2;
-          }
-        }
-
-        // Year match — check parsed description first, then full email text
-        if (year && desc.includes(year)) {
-          score += 3;
-        } else if (year) {
-          // Search full email text for year near make/model (e.g. "2018 Volkswagen Jetta")
-          const makeOrModel = make || model;
-          if (makeOrModel) {
-            // Build regex-safe alternatives
-            const alts = [make, model].filter(Boolean).map(escapeRegex);
-            if (aliases[make]) {
-              alts.push(...aliases[make].map(escapeRegex));
-            }
-            const altsPattern = alts.join("|");
-            // Check for "2018 Volkswagen", "2018 VW", "Volkswagen Jetta 2018", etc.
-            const yearNearVehicle = new RegExp(
-              `${escapeRegex(year)}\\s{1,5}(?:${altsPattern})|(?:${altsPattern})\\s{1,5}${escapeRegex(year)}`,
-              "i"
-            );
-            if (yearNearVehicle.test(fullText)) {
-              score += 2;
-            }
-          }
-        }
-
-        if (score > matchScore) {
-          matchScore = score;
-          matchedVehicle = v;
         }
       }
+
+      if (model && model.length > 3) {
+        const modelWords = model.split(/\s+/).filter((w) => w.length > 2);
+        for (const w of modelWords) {
+          if (fullText.includes(w.toLowerCase())) score += 1;
+        }
+      }
+
+      // Bonus when year appears near make/model tokens.
+      if (year) {
+        const alts = [make, model].filter(Boolean).map(escapeRegex);
+        if (make && aliases[make]) alts.push(...aliases[make].map(escapeRegex));
+        if (alts.length > 0) {
+          const altsPattern = alts.join("|");
+          const yearNearVehicle = new RegExp(
+            `${escapeRegex(year)}\\s{1,8}(?:${altsPattern})|(?:${altsPattern})\\s{1,8}${escapeRegex(year)}`,
+            "i"
+          );
+          if (yearNearVehicle.test(fullText)) score += 3;
+        }
+      }
+
+      if (score > matchScore) {
+        secondBestScore = matchScore;
+        matchScore = score;
+        matchedVehicle = v;
+      } else if (score > secondBestScore) {
+        secondBestScore = score;
+      }
+    }
+
+    // Avoid silent wrong-vehicle inserts when match quality is weak/ambiguous.
+    if (!matchedVehicle || matchScore < 4 || matchScore === secondBestScore) {
+      logger.warn("Turo webhook: vehicle match confidence too low", {
+        vehicleDescription: parsed.vehicleDescription,
+        matchScore,
+        secondBestScore,
+      });
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Could not confidently match this Turo trip to a fleet vehicle",
+          parsed: {
+            confidence: parsed.confidence,
+            guestName: parsed.guestName,
+            vehicleDescription: parsed.vehicleDescription,
+            matchScore,
+            secondBestScore,
+          },
+        },
+        { status: 400 }
+      );
     }
 
     const vehicleLabel = `${matchedVehicle.year} ${matchedVehicle.make} ${matchedVehicle.model}`;

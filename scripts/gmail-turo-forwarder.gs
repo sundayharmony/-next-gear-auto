@@ -25,14 +25,18 @@
 const WEBHOOK_URL = "https://rentnextgearauto.com/api/webhooks/turo-email";
 const WEBHOOK_SECRET = "PASTE_YOUR_SECRET_HERE"; // Must match TURO_WEBHOOK_SECRET in Vercel
 
-// Gmail search query for Turo booking emails.
-// IMPORTANT: Use is:unread at message-level; do NOT rely on thread labels.
-const TURO_SEARCH_QUERY = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) subject:(trip OR booking OR reservation OR confirmed OR extended OR modified OR extension OR updated) is:unread';
+// Gmail search query for Turo emails.
+// IMPORTANT: Keep this broad so template/subject changes do not get skipped.
+// We still parse + dedupe on the webhook side.
+const TURO_SEARCH_QUERY = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) newer_than:365d';
+const PROCESSED_KEY_PREFIX = "turo_processed_";
+const PROCESSED_RETENTION_DAYS = 365;
 
 // ═══════ MAIN FUNCTION ═══════
 
 function processNewTuroEmails() {
-  const threads = GmailApp.search(TURO_SEARCH_QUERY, 0, 20);
+  const threads = GmailApp.search(TURO_SEARCH_QUERY, 0, 200);
+  pruneProcessedKeys(PROCESSED_RETENTION_DAYS);
 
   if (threads.length === 0) {
     Logger.log("No new Turo emails found.");
@@ -45,7 +49,8 @@ function processNewTuroEmails() {
     const messages = thread.getMessages();
 
     for (const message of messages) {
-      if (!message.isUnread()) continue;
+      const messageId = message.getId();
+      if (isProcessedMessage(messageId)) continue;
       const subject = message.getSubject();
       const body = message.getPlainBody() || message.getBody();
       const from = message.getFrom();
@@ -78,7 +83,8 @@ function processNewTuroEmails() {
 
         if (code === 201) {
           Logger.log("SUCCESS — Blocked dates created: " + result);
-          message.markRead();
+          markProcessedMessage(messageId);
+          if (message.isUnread()) message.markRead();
         } else if (code === 200) {
           // Check if it was an extension or a skip
           try {
@@ -92,14 +98,15 @@ function processNewTuroEmails() {
             Logger.log("SKIPPED — Already blocked: " + result);
           }
           // 200 means webhook handled it (extended / merged / already blocked)
-          message.markRead();
+          markProcessedMessage(messageId);
+          if (message.isUnread()) message.markRead();
         } else {
           Logger.log("RESPONSE " + code + ": " + result);
-          // Keep unread so failures can be retried/reviewed.
+          // Do not mark processed so failures can retry automatically.
         }
       } catch (err) {
         Logger.log("ERROR sending to webhook: " + err.toString());
-        // Keep unread so webhook failure retries on next run.
+        // Do not mark processed so webhook failures retry on next run.
         continue;
       }
     }
@@ -155,7 +162,7 @@ function teardown() {
  */
 function backfillRecentTuroEmails(days) {
   const safeDays = Math.max(1, Math.min(Number(days) || 30, 365));
-  const query = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) subject:(trip OR booking OR reservation OR confirmed OR extended OR modified OR extension OR updated) newer_than:' + safeDays + 'd';
+  const query = 'from:(no-reply@turo.com OR noreply@turo.com OR noreply@mail.turo.com OR support@turo.com) newer_than:' + safeDays + 'd';
   const threads = GmailApp.search(query, 0, 200);
   Logger.log("Backfill threads: " + threads.length + " (newer_than " + safeDays + "d)");
 
@@ -190,3 +197,43 @@ function backfillRecentTuroEmails(days) {
 }
 
 // ═══════ HELPERS ═══════
+function processedKey(messageId) {
+  return PROCESSED_KEY_PREFIX + String(messageId || "");
+}
+
+function isProcessedMessage(messageId) {
+  if (!messageId) return false;
+  const value = PropertiesService.getScriptProperties().getProperty(processedKey(messageId));
+  return Boolean(value);
+}
+
+function markProcessedMessage(messageId) {
+  if (!messageId) return;
+  PropertiesService.getScriptProperties().setProperty(
+    processedKey(messageId),
+    String(Date.now())
+  );
+}
+
+function pruneProcessedKeys(retentionDays) {
+  const safeDays = Math.max(1, Math.min(Number(retentionDays) || 365, 3650));
+  const cutoffMs = Date.now() - safeDays * 24 * 60 * 60 * 1000;
+  const props = PropertiesService.getScriptProperties();
+  const all = props.getProperties();
+  const toDelete = [];
+
+  for (const key in all) {
+    if (!key.startsWith(PROCESSED_KEY_PREFIX)) continue;
+    const ts = Number(all[key]);
+    if (!Number.isFinite(ts) || ts < cutoffMs) {
+      toDelete.push(key);
+    }
+  }
+
+  if (toDelete.length > 0) {
+    for (const key of toDelete) {
+      props.deleteProperty(key);
+    }
+    Logger.log("Pruned processed message keys: " + toDelete.length);
+  }
+}
