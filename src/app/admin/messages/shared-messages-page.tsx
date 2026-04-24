@@ -125,6 +125,16 @@ function markdownToEditorHtml(markdown: string): string {
   return rendered.join("<br>");
 }
 
+function placeCaretAtEnd(el: HTMLElement): void {
+  const selection = window.getSelection();
+  if (!selection) return;
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  range.collapse(false);
+  selection.removeAllRanges();
+  selection.addRange(range);
+}
+
 function fileLabelFromUrl(url: string): string {
   try {
     const seg = decodeURIComponent(new URL(url).pathname.split("/").pop() || "");
@@ -189,6 +199,8 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   const toastShownMessageIdsRef = useRef<Set<string>>(new Set());
   const lastToastAtRef = useRef(0);
   const messagesScrollRef = useRef<HTMLDivElement | null>(null);
+  const shouldStickToBottomRef = useRef(true);
+  const lastRenderedThreadRef = useRef<string | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const composerRef = useRef<HTMLDivElement | null>(null);
   const draftStorageKey = selectedThreadId ? `staff-message-draft:${panelPath}:${selectedThreadId}` : null;
@@ -238,6 +250,13 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     }
   }, [composer, selectedThreadId]);
 
+  useEffect(() => {
+    if (!selectedThreadId || !serverMessagingOn) return;
+    requestAnimationFrame(() => {
+      composerRef.current?.focus();
+    });
+  }, [selectedThreadId, serverMessagingOn]);
+
   useLayoutEffect(() => {
     const mq = window.matchMedia("(max-width: 1023px)");
     setIsNarrow(mq.matches);
@@ -249,8 +268,17 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   useLayoutEffect(() => {
     const el = messagesScrollRef.current;
     if (!el) return;
-    el.scrollTop = el.scrollHeight;
+    const threadChanged = lastRenderedThreadRef.current !== selectedThreadId;
+    if (threadChanged || shouldStickToBottomRef.current) {
+      el.scrollTop = el.scrollHeight;
+    }
+    lastRenderedThreadRef.current = selectedThreadId;
   }, [messages, selectedThreadId]);
+
+  useEffect(() => {
+    if (!selectedThreadId) return;
+    setError(null);
+  }, [selectedThreadId]);
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.key !== id));
@@ -778,7 +806,15 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
               <p className="text-sm font-semibold text-gray-900 truncate">{threadHeaderTitle}</p>
             </div>
 
-            <div ref={messagesScrollRef} className="min-h-0 flex-1 overflow-y-auto space-y-3 px-3 py-3">
+            <div
+              ref={messagesScrollRef}
+              className="min-h-0 flex-1 overflow-y-auto space-y-3 px-3 py-3"
+              onScroll={(e) => {
+                const el = e.currentTarget;
+                const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
+                shouldStickToBottomRef.current = distanceToBottom <= 80;
+              }}
+            >
               {!selectedThreadId && <p className="text-sm text-gray-500">Choose or create a thread to start messaging.</p>}
               {selectedThreadId && messagesLoading && (
                 <div className="flex justify-center py-8">
@@ -960,11 +996,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                   ))}
                 </div>
               )}
-              <div className="flex items-center justify-between gap-2 text-[11px] text-gray-500">
-                <span>
-                  Formatting shortcuts: <code className="rounded bg-gray-100 px-1">Ctrl/Cmd + B</code>,{" "}
-                  <code className="rounded bg-gray-100 px-1">Ctrl/Cmd + I</code>
-                </span>
+              <div className="flex items-center justify-end gap-2 text-[11px] text-gray-500">
                 <div className="flex items-center gap-2">
                   {composer.trim().length > 0 && (
                     <button
@@ -1000,15 +1032,31 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                       (!serverMessagingOn || !selectedThreadId) && "cursor-not-allowed bg-gray-100 text-gray-500"
                     )}
                     onInput={(e) => {
-                      const html = (e.currentTarget as HTMLDivElement).innerHTML;
-                      const markdown = editorHtmlToMarkdown(html);
-                      if (markdown.length > MAX_MESSAGE_BODY_CHARS) {
-                        setError(`Message text is too long (${markdown.length}/${MAX_MESSAGE_BODY_CHARS}).`);
-                        return;
+                      const editor = e.currentTarget as HTMLDivElement;
+                      const html = editor.innerHTML;
+                      const markdownRaw = editorHtmlToMarkdown(html);
+                      const tooLong = markdownRaw.length > MAX_MESSAGE_BODY_CHARS;
+                      const markdown = tooLong
+                        ? markdownRaw.slice(0, MAX_MESSAGE_BODY_CHARS)
+                        : markdownRaw;
+
+                      if (tooLong) {
+                        setError(`Message text is too long (${markdownRaw.length}/${MAX_MESSAGE_BODY_CHARS}).`);
+                        const normalizedHtml = markdownToEditorHtml(markdown);
+                        if (editor.innerHTML !== normalizedHtml) {
+                          editor.innerHTML = normalizedHtml;
+                          placeCaretAtEnd(editor);
+                        }
+                      } else if (error && error.startsWith("Message text is too long")) {
+                        setError(null);
                       }
+
                       setComposer(markdown);
                     }}
                     onKeyDown={(e) => {
+                    if (e.key === "Enter" && (e.nativeEvent as KeyboardEvent).isComposing) {
+                      return;
+                    }
                     if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
                       e.preventDefault();
                       applyComposerFormat("bold");
@@ -1025,6 +1073,11 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                       if (hasContent && !busy && !uploadingAttachments && selectedThreadId && serverMessagingOn) {
                         sendMessage();
                       }
+                      return;
+                    }
+                    if (e.key === "Escape" && error) {
+                      e.preventDefault();
+                      setError(null);
                     }
                   }}
                   />
