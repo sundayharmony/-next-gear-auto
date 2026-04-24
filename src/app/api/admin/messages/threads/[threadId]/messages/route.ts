@@ -173,11 +173,9 @@ export async function POST(req: NextRequest, { params }: Params) {
         if (outboxError) {
           logger.error("notification_outbox upsert failed — recipients will not get email/push for this message", outboxError);
         } else {
-          try {
-            await flushPendingNotificationsForMessage(supabase, created.id);
-          } catch (flushErr) {
+          void flushPendingNotificationsForMessage(supabase, created.id).catch((flushErr) => {
             logger.error("Immediate notification delivery failed; cron will retry", flushErr);
-          }
+          });
         }
       }
     }

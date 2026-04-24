@@ -834,7 +834,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
               {editMode ? "Edit Booking" : "Booking Details"}
             </h2>
             <div className="flex items-center gap-2">
-              {!editMode && canManageRow && !["completed", "cancelled"].includes(booking.status) && (
+              {!editMode && canManageRow && booking.status !== "cancelled" && (
                 <Button
                   size="sm"
                   variant="ghost"

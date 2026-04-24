@@ -604,14 +604,23 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to send message");
+      const created = json.data as MessageRow | undefined;
+      if (created?.id) {
+        setMessages((prev) => (prev.some((m) => m.id === created.id) ? prev : [...prev, created]));
+      }
       setComposer("");
       setPendingAttachments([]);
+      if (composerRef.current) {
+        composerRef.current.innerHTML = "";
+      }
       if (draftStorageKey && typeof window !== "undefined") {
         window.localStorage.removeItem(draftStorageKey);
       }
-      await fetchMessages(selectedThreadId);
-      await fetchThreads();
       setError(null);
+      void Promise.all([
+        fetchMessages(selectedThreadId),
+        fetchThreads(),
+      ]).catch((e) => setError(e instanceof Error ? e.message : String(e)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
