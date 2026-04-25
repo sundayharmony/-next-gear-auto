@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
 
 interface BlockedDate {
   id: string;
@@ -55,7 +56,12 @@ interface ParseResult {
   vehicleDescription: string | null;
   startDate: string | null;
   endDate: string | null;
+  pickupTime: string | null;
+  returnTime: string | null;
+  location: string | null;
   earnings: number | null;
+  isExtension: boolean;
+  originalEndDate: string | null;
   confidence: "high" | "medium" | "low";
   rawMatches: string[];
 }
@@ -102,6 +108,7 @@ export default function BlockedDatesPage() {
   const [editOriginalEndDate, setEditOriginalEndDate] = useState("");
   const [overlapConflicts, setOverlapConflicts] = useState<OverlapConflict[]>([]);
   const [forceOverride, setForceOverride] = useState(false);
+  const [selectedBlockDetail, setSelectedBlockDetail] = useState<BlockedDate | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -236,6 +243,10 @@ export default function BlockedDatesPage() {
           vehicleId: emailVehicleId,
           startDate: parseResult.startDate,
           endDate: parseResult.endDate,
+          pickupTime: parseResult.pickupTime,
+          returnTime: parseResult.returnTime,
+          location: parseResult.location,
+          earnings: parseResult.earnings,
           source: "turo-email",
           reason,
         }),
@@ -508,6 +519,18 @@ export default function BlockedDatesPage() {
                     <div>
                       <label className="text-xs font-medium text-gray-500">Vehicle Detected</label>
                       <p className="font-semibold">{parseResult.vehicleDescription || "—"}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">Pickup Time</label>
+                      <p className="font-semibold">{parseResult.pickupTime ? formatTime(parseResult.pickupTime) : "—"}</p>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-gray-500">Return Time</label>
+                      <p className="font-semibold">{parseResult.returnTime ? formatTime(parseResult.returnTime) : "—"}</p>
+                    </div>
+                    <div className="col-span-2">
+                      <label className="text-xs font-medium text-gray-500">Pickup Location</label>
+                      <p className="font-semibold">{parseResult.location || "—"}</p>
                     </div>
                   </div>
 
@@ -815,6 +838,7 @@ export default function BlockedDatesPage() {
               return (
                 <div
                   key={block.id}
+                  onClick={() => setSelectedBlockDetail(block)}
                   className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
                     isPast
                       ? "bg-gray-50 border-gray-200 opacity-60"
@@ -882,7 +906,7 @@ export default function BlockedDatesPage() {
                       {block.source === "turo-email" ? "Turo" : "Manual"}
                     </Badge>
                     <button
-                      onClick={() => startEditing(block)}
+                      onClick={(e) => { e.stopPropagation(); startEditing(block); }}
                       disabled={!!editingId}
                       className="p-1.5 rounded-lg text-gray-400 hover:text-purple-600 hover:bg-purple-50 transition-colors disabled:opacity-50"
                       aria-label="Edit block"
@@ -890,7 +914,7 @@ export default function BlockedDatesPage() {
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => handleDelete(block.id)}
+                      onClick={(e) => { e.stopPropagation(); handleDelete(block.id); }}
                       disabled={deletingId === block.id}
                       className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors disabled:opacity-50"
                       aria-label="Remove block"
@@ -905,6 +929,69 @@ export default function BlockedDatesPage() {
                 </div>
               );
             })}
+          </div>
+        )}
+
+        {/* Block details modal */}
+        {selectedBlockDetail && (
+          <div className="fixed inset-0 z-50 flex">
+            <div className="flex-1 bg-black/50" onClick={() => setSelectedBlockDetail(null)} />
+            <div className="w-full max-w-[calc(100vw-1rem)] sm:max-w-lg bg-white shadow-xl overflow-y-auto" role="dialog" aria-modal="true" aria-label="Blocked trip details">
+              <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+                <h2 className="text-lg font-semibold text-gray-900">Blocked Trip Details</h2>
+                <button onClick={() => setSelectedBlockDetail(null)} className="p-2 text-gray-400 hover:text-gray-600 -mr-2" aria-label="Close blocked trip details">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="p-5 space-y-4">
+                <div>
+                  <p className="text-xs text-gray-500">Vehicle</p>
+                  <p className="font-semibold">{getVehicleName(selectedBlockDetail.vehicle_id)}</p>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500">Start</p>
+                    <p className="font-medium">{formatDate(selectedBlockDetail.start_date)}</p>
+                    <p className="text-sm text-gray-500">{selectedBlockDetail.pickup_time ? formatTime(selectedBlockDetail.pickup_time) : "Time not provided"}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500">End</p>
+                    <p className="font-medium">{formatDate(selectedBlockDetail.end_date)}</p>
+                    <p className="text-sm text-gray-500">{selectedBlockDetail.return_time ? formatTime(selectedBlockDetail.return_time) : "Time not provided"}</p>
+                  </div>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Driver</p>
+                  <p className="font-medium">{getTuroDriverFromReason(selectedBlockDetail.reason) || "Unknown"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Pickup Location</p>
+                  <p className="font-medium">{selectedBlockDetail.location || "Not available"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Earnings</p>
+                  <p className="font-medium">
+                    {selectedBlockDetail.earnings != null ? `$${Number(selectedBlockDetail.earnings).toFixed(2)}` : "Not available"}
+                  </p>
+                </div>
+                {selectedBlockDetail.is_extension && (
+                  <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                    Extension detected
+                    {selectedBlockDetail.original_end_date ? ` — originally ended ${formatDate(selectedBlockDetail.original_end_date)}` : ""}
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-gray-500">Source</p>
+                  <p className="font-medium">{selectedBlockDetail.source === "turo-email" ? "Turo Email" : "Manual"}</p>
+                </div>
+                {selectedBlockDetail.reason && (
+                  <div>
+                    <p className="text-xs text-gray-500">Notes</p>
+                    <p className="font-medium">{selectedBlockDetail.reason}</p>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
       </PageContainer>

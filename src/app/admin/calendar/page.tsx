@@ -20,6 +20,7 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatTime, formatDate } from "@/lib/utils/date-helpers";
 import { statusColors, statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
+import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
 
 type BookingRow = BookingDbRow;
 type Vehicle = VehicleListItem;
@@ -54,7 +55,8 @@ export default function AdminCalendarPage() {
   const [showBookingDetail, setShowBookingDetail] = useState(false);
 
   // Blocked dates state
-  const [blockedDates, setBlockedDates] = useState<{ id: string; vehicle_id: string; start_date: string; end_date: string; source: string; reason: string | null }[]>([]);
+  const [blockedDates, setBlockedDates] = useState<BlockedDateEntry[]>([]);
+  const [selectedBlocked, setSelectedBlocked] = useState<BlockedDateEntry | null>(null);
 
   // Track abort controller for fetch cancellation
   const bookingsAbortControllerRef = React.useRef<AbortController | null>(null);
@@ -320,6 +322,7 @@ export default function AdminCalendarPage() {
                     setTimelineStart(today);
                   }}
                   onBookingClick={openBookingDetail}
+                  onBlockedDateClick={setSelectedBlocked}
                 />
               </div>
               {/* Desktop: Timeline table */}
@@ -345,6 +348,7 @@ export default function AdminCalendarPage() {
                     setTimelineStart(today);
                   }}
                   onBookingClick={openBookingDetail}
+                  onBlockedDateClick={setSelectedBlocked}
                 />
               </div>
             </>
@@ -370,6 +374,7 @@ export default function AdminCalendarPage() {
               selectedDay={selectedDay}
               onSelectDay={setSelectedDay}
               onBookingClick={openBookingDetail}
+              onBlockedDateClick={setSelectedBlocked}
             />
           )}
         </div>
@@ -531,6 +536,67 @@ export default function AdminCalendarPage() {
           </div>
         </div>
       )}
+
+      {selectedBlocked && (
+        (() => {
+          const selectedVehicle = vehicles.find((v) => v.id === selectedBlocked.vehicle_id);
+          return (
+        <div className="fixed inset-0 z-50 flex">
+          <div className="flex-1 bg-black/50" onClick={() => setSelectedBlocked(null)} />
+          <div className="w-full max-w-[calc(100vw-1rem)] sm:max-w-lg bg-white shadow-xl overflow-y-auto" role="dialog" aria-modal="true" aria-label="Blocked trip details">
+            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+              <h2 className="text-lg font-semibold text-gray-900">Blocked Trip Details</h2>
+              <button onClick={() => setSelectedBlocked(null)} className="p-2 text-gray-400 hover:text-gray-600 -mr-2" aria-label="Close blocked trip details">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="p-5 space-y-4">
+              <div>
+                <p className="text-xs text-gray-500">Vehicle</p>
+                <p className="font-semibold">{selectedVehicle ? `${selectedVehicle.year} ${selectedVehicle.make} ${selectedVehicle.model}` : "Unknown vehicle"}</p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <p className="text-xs text-gray-500">Pickup</p>
+                  <p className="font-medium">{formatDate(selectedBlocked.start_date)}</p>
+                  <p className="text-sm text-gray-500">{selectedBlocked.pickup_time ? formatTime(selectedBlocked.pickup_time) : "Time not provided"}</p>
+                </div>
+                <div>
+                  <p className="text-xs text-gray-500">Return</p>
+                  <p className="font-medium">{formatDate(selectedBlocked.end_date)}</p>
+                  <p className="text-sm text-gray-500">{selectedBlocked.return_time ? formatTime(selectedBlocked.return_time) : "Time not provided"}</p>
+                </div>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Driver</p>
+                <p className="font-medium">{getTuroDriverFromReason(selectedBlocked.reason) || "Unknown"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Pickup Location</p>
+                <p className="font-medium">{selectedBlocked.location || "Not available"}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Earnings</p>
+                <p className="font-medium">{selectedBlocked.earnings != null ? `$${Number(selectedBlocked.earnings).toFixed(2)}` : "Not available"}</p>
+              </div>
+              {selectedBlocked.is_extension && (
+                <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                  Extension detected
+                  {selectedBlocked.original_end_date ? ` — originally ended ${formatDate(selectedBlocked.original_end_date)}` : ""}
+                </div>
+              )}
+              {selectedBlocked.reason && (
+                <div>
+                  <p className="text-xs text-gray-500">Notes</p>
+                  <p className="font-medium">{selectedBlocked.reason}</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+          );
+        })()
+      )}
     </>
   );
 }
@@ -540,8 +606,14 @@ interface BlockedDateEntry {
   vehicle_id: string;
   start_date: string;
   end_date: string;
+  pickup_time: string | null;
+  return_time: string | null;
+  location: string | null;
+  earnings: number | null;
   source: string;
   reason: string | null;
+  is_extension: boolean | null;
+  original_end_date: string | null;
 }
 
 /* ═══════════════════════════════════════════════════
@@ -557,6 +629,7 @@ interface MobileAgendaViewProps {
   onNext: () => void;
   onToday: () => void;
   onBookingClick: (booking: BookingRow) => void;
+  onBlockedDateClick: (blocked: BlockedDateEntry) => void;
 }
 
 function MobileAgendaView({
@@ -568,6 +641,7 @@ function MobileAgendaView({
   onNext,
   onToday,
   onBookingClick,
+  onBlockedDateClick,
 }: MobileAgendaViewProps) {
   const [selectedDateKey, setSelectedDateKey] = useState<string>(() => {
     const t = new Date();
@@ -814,8 +888,9 @@ function MobileAgendaView({
         {blockedForDate.map((bd) => {
           const vehicle = vehicleMap[bd.vehicle_id];
           return (
-            <div
+            <button
               key={bd.id}
+              onClick={() => onBlockedDateClick(bd)}
               className="rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-4"
             >
               <div className="flex items-center gap-3">
@@ -830,7 +905,7 @@ function MobileAgendaView({
                   </p>
                 </div>
               </div>
-            </div>
+            </button>
           );
         })}
       </div>
@@ -851,6 +926,7 @@ interface TimelineViewProps {
   onNext: () => void;
   onToday: () => void;
   onBookingClick: (booking: BookingRow) => void;
+  onBlockedDateClick: (blocked: BlockedDateEntry) => void;
 }
 
 function TimelineView({
@@ -862,6 +938,7 @@ function TimelineView({
   onNext,
   onToday,
   onBookingClick,
+  onBlockedDateClick,
 }: TimelineViewProps) {
   const days = 9;
   const dateRange = Array.from({ length: days }, (_, i) => {
@@ -1175,7 +1252,8 @@ function TimelineView({
                               return (
                                 <div
                                   key={bd.id}
-                                  className="absolute top-1 bottom-1 rounded-md bg-gray-300/50 border border-dashed border-gray-400 z-[1] flex items-center px-2 pointer-events-none"
+                                  onClick={() => onBlockedDateClick(bd)}
+                                  className="absolute top-1 bottom-1 rounded-md bg-gray-300/50 border border-dashed border-gray-400 z-[4] flex items-center px-2 cursor-pointer"
                                   style={{ left: "0%", width: `${span * 100}%` }}
                                   title={bd.reason || `Blocked (${bd.source})`}
                                 >
@@ -1242,6 +1320,7 @@ interface CalendarViewProps {
   selectedDay: string | null;
   onSelectDay: (day: string | null) => void;
   onBookingClick: (booking: BookingRow) => void;
+  onBlockedDateClick: (blocked: BlockedDateEntry) => void;
 }
 
 function CalendarView({
@@ -1253,6 +1332,7 @@ function CalendarView({
   selectedDay,
   onSelectDay,
   onBookingClick,
+  onBlockedDateClick,
 }: CalendarViewProps) {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -1489,8 +1569,9 @@ function CalendarView({
                 </button>
               ))}
               {selectedDayBlocked.map((block) => (
-                <div
+                <button
                   key={`blocked-${block.id}`}
+                  onClick={() => onBlockedDateClick(block)}
                   className="w-full text-left rounded-2xl sm:rounded-lg border border-dashed border-gray-300 bg-gray-50 p-4"
                 >
                   <div className="flex items-start justify-between mb-2">
@@ -1511,7 +1592,7 @@ function CalendarView({
                     <span className="text-gray-400">→</span>
                     <span>{formatDate(block.end_date)}</span>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           </div>

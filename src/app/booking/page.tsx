@@ -26,6 +26,11 @@ import { logger } from "@/lib/utils/logger";
 import extras from "@/data/extras.json";
 import type { BookingExtra, Vehicle } from "@/lib/types";
 import { AGREEMENT_SIGNATURE_FIELDS } from "@/data/agreement-fields";
+import {
+  formatYyyyMmDdLocal,
+  localMidnightFromYyyyMmDd,
+  wholeCalendarDaysBetween,
+} from "@/lib/utils/booking-dates";
 
 const STEPS = [
   { num: 1, label: "Search", icon: Search },
@@ -427,16 +432,17 @@ function BookingPageInner() {
         // Fix 1: Check if pickup date is in the past
         const today = new Date();
         today.setHours(0, 0, 0, 0);
-        const pickupDate = new Date(searchDates.pickup);
-        pickupDate.setHours(0, 0, 0, 0);
-
-        if (pickupDate < today) {
+        const pickupDate = localMidnightFromYyyyMmDd(searchDates.pickup);
+        if (isNaN(pickupDate.getTime()) || pickupDate < today) {
           setDateValidationError("Pick-up date cannot be in the past");
           return false;
         }
 
-        const returnDate = new Date(searchDates.return);
-        returnDate.setHours(0, 0, 0, 0);
+        const returnDate = localMidnightFromYyyyMmDd(searchDates.return);
+        if (isNaN(returnDate.getTime())) {
+          setDateValidationError("Please select valid pick-up and return dates");
+          return false;
+        }
 
         // Fix 2: Minimum rental duration - at least 1 day after pickup
         if (returnDate <= pickupDate) {
@@ -449,20 +455,6 @@ function BookingPageInner() {
         if (daysDifference > 90) {
           setDateValidationError("Maximum rental duration is 90 days");
           return false;
-        }
-
-        // If same day, validate return time is at least 1 hour after pickup time
-        if (searchDates.pickup === searchDates.return) {
-          const pickupParts = (searchDates.pickupTime || "00:00").split(":");
-          const returnParts = (searchDates.returnTime || "00:00").split(":");
-          const phVal = parseInt(pickupParts[0] || "0", 10) || 0;
-          const pmVal = parseInt(pickupParts[1] || "0", 10) || 0;
-          const rhVal = parseInt(returnParts[0] || "0", 10) || 0;
-          const rmVal = parseInt(returnParts[1] || "0", 10) || 0;
-          if ((rhVal * 60 + rmVal) <= (phVal * 60 + pmVal)) {
-            setDateValidationError("Return time must be after pickup time on same day");
-            return false;
-          }
         }
 
         setDateValidationError("");
@@ -521,15 +513,7 @@ function BookingPageInner() {
     }
 
     if (booking.currentStep === 1) {
-      // Validate pickup date < return date
-      const pickupDate = new Date(searchDates.pickup);
-      const returnDate = new Date(searchDates.return);
-      if (pickupDate >= returnDate) {
-        setDateValidationError("Pickup date must be before return date");
-        return;
-      }
       setDateValidationError("");
-
       booking.setDates(searchDates.pickup, searchDates.return, searchDates.pickupTime, searchDates.returnTime);
       // Save selected locations to booking context
       const pickupLoc = locations.find(l => l.id === selectedPickupLocation);
@@ -579,7 +563,8 @@ function BookingPageInner() {
 
   const formatDateForInput = (dateStr: string) => {
     if (!dateStr) return "";
-    const date = new Date(dateStr + "T00:00:00");
+    const date = localMidnightFromYyyyMmDd(dateStr);
+    if (isNaN(date.getTime())) return "";
     return date.toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" });
   };
 
@@ -592,8 +577,10 @@ function BookingPageInner() {
 
     const minDate = new Date(today);
     if (!isPickup && searchDates.pickup) {
-      const pickupDate = new Date(searchDates.pickup + "T00:00:00");
-      minDate.setTime(Math.max(minDate.getTime(), pickupDate.getTime()));
+      const pickupDate = localMidnightFromYyyyMmDd(searchDates.pickup);
+      if (!isNaN(pickupDate.getTime())) {
+        minDate.setTime(Math.max(minDate.getTime(), pickupDate.getTime()));
+      }
     }
 
     const daysInMonth = getDaysInMonth(calendarViewDate);
@@ -609,8 +596,7 @@ function BookingPageInner() {
     const monthYear = calendarViewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
     const handleDayClick = (day: Date) => {
-      const dateStr = day.toISOString().split("T")[0];
-      onSelectDate(dateStr);
+      onSelectDate(formatYyyyMmDdLocal(day));
       onClose();
     };
 
@@ -646,7 +632,8 @@ function BookingPageInner() {
           <div className="grid grid-cols-7 gap-2">
             {days.map((day, idx) => {
               const isDisabled = day === null || day < minDate;
-              const isSelected = day && day.toISOString().split("T")[0] === (isPickup ? searchDates.pickup : searchDates.return);
+              const isSelected =
+                day !== null && formatYyyyMmDdLocal(day) === (isPickup ? searchDates.pickup : searchDates.return);
               return (
                 <button
                   key={idx}
@@ -735,8 +722,7 @@ function BookingPageInner() {
     const monthYear = dobViewDate.toLocaleDateString("en-US", { month: "long", year: "numeric" });
 
     const handleDayClick = (day: Date) => {
-      const dateStr = day.toISOString().split("T")[0];
-      onSelectDate(dateStr);
+      onSelectDate(formatYyyyMmDdLocal(day));
       onClose();
     };
 
@@ -801,7 +787,7 @@ function BookingPageInner() {
             {days.map((day, idx) => {
               const isFuture = day !== null && day > maxDate;
               const isDisabled = day === null || isFuture;
-              const isSelected = day && day.toISOString().split("T")[0] === selectedDate;
+              const isSelected = day !== null && formatYyyyMmDdLocal(day) === selectedDate;
               return (
                 <button
                   key={idx}
@@ -880,13 +866,7 @@ function BookingPageInner() {
                 <span className="text-gray-400">|</span>
                 <span>
                   {(() => {
-                    const days = Math.max(
-                      Math.ceil(
-                        Math.abs(new Date(booking.returnDate + "T00:00:00").getTime() - new Date(booking.pickupDate + "T00:00:00").getTime()) /
-                          (1000 * 60 * 60 * 24)
-                      ),
-                      1
-                    );
+                    const days = wholeCalendarDaysBetween(booking.pickupDate, booking.returnDate);
                     return `${days} day${days > 1 ? "s" : ""} x $${booking.selectedVehicle.dailyRate}/day`;
                   })()}
                 </span>
@@ -906,13 +886,7 @@ function BookingPageInner() {
                 ) : (
                   <span className="text-lg font-bold text-purple-700">
                     ${(() => {
-                      const days = Math.max(
-                        Math.ceil(
-                          Math.abs(new Date(booking.returnDate + "T00:00:00").getTime() - new Date(booking.pickupDate + "T00:00:00").getTime()) /
-                            (1000 * 60 * 60 * 24)
-                        ),
-                        1
-                      );
+                      const days = wholeCalendarDaysBetween(booking.pickupDate, booking.returnDate);
                       const base = days * booking.selectedVehicle.dailyRate;
                       const tax = base * 0.08;
                       return (base + tax).toFixed(2);
@@ -940,7 +914,9 @@ function BookingPageInner() {
                     <label className="mb-1.5 block text-sm font-medium text-gray-700">Pick-up Date</label>
                     <button
                       onClick={() => {
-                        setCalendarViewDate(searchDates.pickup ? new Date(searchDates.pickup + "T00:00:00") : new Date());
+                        setCalendarViewDate(
+                          searchDates.pickup ? localMidnightFromYyyyMmDd(searchDates.pickup) : new Date(),
+                        );
                         setShowPickupCalendar(true);
                       }}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white text-left hover:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
@@ -959,7 +935,9 @@ function BookingPageInner() {
                     <label className="mb-1.5 block text-sm font-medium text-gray-700">Return Date</label>
                     <button
                       onClick={() => {
-                        setCalendarViewDate(searchDates.return ? new Date(searchDates.return + "T00:00:00") : new Date());
+                        setCalendarViewDate(
+                          searchDates.return ? localMidnightFromYyyyMmDd(searchDates.return) : new Date(),
+                        );
                         setShowReturnCalendar(true);
                       }}
                       className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm bg-white text-left hover:border-purple-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition"
@@ -983,7 +961,7 @@ function BookingPageInner() {
                 {searchDates.pickup && searchDates.return && !dateValidationError && (
                   <div className="mt-4 rounded-lg bg-purple-50 p-3 text-sm text-purple-700">
                     <Calendar className="inline h-4 w-4 mr-1" />
-                    {Math.ceil((new Date(searchDates.return).getTime() - new Date(searchDates.pickup).getTime()) / (1000 * 60 * 60 * 24))} day rental
+                    {wholeCalendarDaysBetween(searchDates.pickup, searchDates.return)} day rental
                   </div>
                 )}
               </CardContent>
@@ -1412,8 +1390,10 @@ function BookingPageInner() {
                       type="button"
                       onClick={() => {
                         if (details.dob) {
-                          const d = new Date(details.dob + "T00:00:00");
-                          setDobViewDate(new Date(d.getFullYear(), d.getMonth(), 1));
+                          const d = localMidnightFromYyyyMmDd(details.dob);
+                          if (!isNaN(d.getTime())) {
+                            setDobViewDate(new Date(d.getFullYear(), d.getMonth(), 1));
+                          }
                         }
                         setShowDobCalendar(true);
                       }}
@@ -1423,7 +1403,12 @@ function BookingPageInner() {
                         <Calendar className="h-4 w-4 text-purple-500" />
                         <span className={details.dob ? "text-gray-900 font-medium" : "text-gray-400"}>
                           {details.dob
-                            ? new Date(details.dob + "T00:00:00").toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" })
+                            ? (() => {
+                                const d = localMidnightFromYyyyMmDd(details.dob);
+                                return isNaN(d.getTime())
+                                  ? "Select your birthday"
+                                  : d.toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" });
+                              })()
                             : "Select your birthday"}
                         </span>
                       </div>
@@ -1758,7 +1743,11 @@ function BookingPageInner() {
                               pickupTime={booking.pickupTime}
                               returnTime={booking.returnTime}
                               totalPrice={booking.pricing?.total || 0}
-                              totalDays={booking.pricing ? Math.max(1, Math.ceil((new Date(booking.returnDate + "T00:00:00").getTime() - new Date(booking.pickupDate + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))) : 1}
+                              totalDays={
+                                booking.pricing
+                                  ? wholeCalendarDaysBetween(booking.pickupDate, booking.returnDate)
+                                  : 1
+                              }
                               currentPage={fullAgreementPage}
                             />
                           </div>

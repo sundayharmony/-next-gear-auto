@@ -117,6 +117,16 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   // ── Extract location ──
   let location: string | null = null;
 
+  // "... trip with your Volkswagen Jetta at Newark Liberty International Airport is booked from ..."
+  const atPickupMatch = text.match(
+    /trip\s+with\s+your\s+.+?\s+at\s+(.+?)\s+is\s+booked\s+from/i,
+  );
+  if (atPickupMatch) {
+    location = atPickupMatch[1].trim();
+    if (location) rawMatches.push(`Location (at pickup): "${location}"`);
+    else location = null;
+  }
+
   // "Delivery Newark, NJ Newark Liberty International Airport"
   const deliveryMatch = text.match(/delivery\s+(.+?)(?:\n|Guests|Special|To help|Review|Use the|$)/i);
   if (deliveryMatch) {
