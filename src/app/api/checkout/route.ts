@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendBookingConfirmation, sendBookingPendingEmail, sendAdminNewBooking } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
-import { calculateRentalDays, calculatePricing, applyDiscount } from "@/lib/utils/price-calculator";
+import { calculateRentalHours, calculatePricing, applyDiscount } from "@/lib/utils/price-calculator";
 import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { escapeHtml } from "@/lib/utils/validation";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
@@ -229,7 +229,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const rentalDays = calculateRentalDays(pickupDate, returnDate);
+    const rentalHours = calculateRentalHours(pickupDate, returnDate, pickupTime, returnTime);
     const availableExtras = extrasData as BookingExtra[];
 
     // Map client extras to server-validated extras with correct prices
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
       return { ...serverExtra, selected: clientExtra.selected ?? true };
     }).filter(Boolean) as BookingExtra[];
 
-    let serverPricing = calculatePricing(rentalDays, vehicle.daily_rate, validatedExtras);
+    let serverPricing = calculatePricing(rentalHours, vehicle.daily_rate, validatedExtras);
 
     // Apply promo code discount if provided (re-validate server-side)
     if (promoCode && discountAmount && discountAmount > 0) {

@@ -152,7 +152,9 @@ export interface BlogPost {
 
 // Pricing Types
 export interface PricingBreakdown {
+  baseHours: number;
   baseDays: number;
+  hourlyRate: number;
   baseRate: number;
   baseTotal: number;
   multiDayDiscount: number;

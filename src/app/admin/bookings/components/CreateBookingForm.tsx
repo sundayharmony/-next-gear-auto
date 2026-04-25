@@ -9,6 +9,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
+import { calculatePricing, calculateRentalHours } from "@/lib/utils/price-calculator";
 import {
   Vehicle,
   CustomerOption,
@@ -212,12 +213,14 @@ export default function CreateBookingForm({
     }
   };
 
-  // Calculate days
-  const calculateDays = () => {
+  // Calculate billable hours from selected pickup/return date+time
+  const calculateHours = () => {
     if (!form.pickupDate || !form.returnDate) return 0;
-    const pickup = new Date(form.pickupDate + "T00:00:00").getTime();
-    const returnDate = new Date(form.returnDate + "T00:00:00").getTime();
-    return Math.max(1, Math.ceil((returnDate - pickup) / 86400000));
+    try {
+      return calculateRentalHours(form.pickupDate, form.returnDate, form.pickupTime, form.returnTime);
+    } catch {
+      return 0;
+    }
   };
 
   // Check for overlapping bookings
@@ -279,29 +282,19 @@ export default function CreateBookingForm({
       return;
     }
 
-    const days = calculateDays();
-    let baseTotal = days * (selectedVehicle.dailyRate ?? 0);
-    let extrasTotal = 0;
-
-    form.selectedExtras.forEach((extraId) => {
-      const extra = AVAILABLE_EXTRAS.find((e) => e.id === extraId);
-      if (extra) {
-        if (extra.billingType === "per-day") {
-          extrasTotal += days * extra.pricePerDay;
-        } else if (extra.billingType === "per-day-capped" && extra.maxPrice) {
-          extrasTotal += Math.min(days * extra.pricePerDay, extra.maxPrice);
-        } else if (extra.billingType === "one-time") {
-          extrasTotal += extra.pricePerDay;
-        }
-      }
-    });
-
-    const subtotal = baseTotal + extrasTotal;
-    const tax = subtotal * 0.08;
-    const total = Math.round((subtotal + tax) * 100) / 100;
+    const hours = calculateHours();
+    if (!hours) {
+      setForm((prev) => ({ ...prev, totalPrice: 0 }));
+      return;
+    }
+    const mappedExtras = AVAILABLE_EXTRAS.map((extra) => ({
+      ...extra,
+      selected: form.selectedExtras.includes(extra.id),
+    }));
+    const total = calculatePricing(hours, selectedVehicle.dailyRate ?? 0, mappedExtras).total;
 
     setForm((prev) => ({ ...prev, totalPrice: total }));
-  }, [form.vehicleId, form.pickupDate, form.returnDate, form.selectedExtras, vehicles, manualPriceOverride]);
+  }, [form.vehicleId, form.pickupDate, form.returnDate, form.pickupTime, form.returnTime, form.selectedExtras, vehicles, manualPriceOverride]);
 
   // Toggle extra
   const toggleExtra = (extraId: string) => {
@@ -350,8 +343,8 @@ export default function CreateBookingForm({
       onError("Return date is required");
       return false;
     }
-    if (form.returnDate <= form.pickupDate) {
-      onError("Return date must be after pickup date");
+    if (form.returnDate < form.pickupDate) {
+      onError("Return date must be on or after pickup date");
       return false;
     }
     // If pickup and return date are the same, return time must be after pickup time
@@ -447,21 +440,14 @@ export default function CreateBookingForm({
   };
 
   const selectedVehicle = vehicles.find((v) => v.id === form.vehicleId);
-  const days = calculateDays();
-
-  /* ── Compute price breakdown for summary card ── */
-  const baseTotal = selectedVehicle && days ? days * (selectedVehicle.dailyRate ?? 0) : 0;
-  let extrasTotal = 0;
-  form.selectedExtras.forEach((extraId) => {
-    const extra = AVAILABLE_EXTRAS.find((e) => e.id === extraId);
-    if (extra && days) {
-      if (extra.billingType === "per-day") extrasTotal += days * extra.pricePerDay;
-      else if (extra.billingType === "per-day-capped" && extra.maxPrice) extrasTotal += Math.min(days * extra.pricePerDay, extra.maxPrice);
-      else if (extra.billingType === "one-time") extrasTotal += extra.pricePerDay;
-    }
-  });
-  const subtotal = baseTotal + extrasTotal;
-  const tax = subtotal * 0.08;
+  const hours = calculateHours();
+  const previewPricing = selectedVehicle && hours
+    ? calculatePricing(
+      hours,
+      selectedVehicle.dailyRate ?? 0,
+      AVAILABLE_EXTRAS.map((extra) => ({ ...extra, selected: form.selectedExtras.includes(extra.id) })),
+    )
+    : null;
 
   /* ── Completion progress ── */
   const completedSteps = [
@@ -701,11 +687,11 @@ export default function CreateBookingForm({
           </div>
 
           {/* Duration badge */}
-          {days > 0 && (
+          {hours > 0 && (
             <div className="flex items-center gap-2">
               <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-xs font-medium">
                 <Clock className="w-3 h-3" />
-                {days} day{days !== 1 ? "s" : ""}
+                {hours} hour{hours !== 1 ? "s" : ""}
               </div>
             </div>
           )}
@@ -811,25 +797,25 @@ export default function CreateBookingForm({
           <SectionHeader icon={CreditCard} title="Payment & Pricing" subtitle="Review total and payment method" />
 
           {/* Price breakdown summary */}
-          {selectedVehicle && days > 0 && !manualPriceOverride && (
+          {selectedVehicle && previewPricing && !manualPriceOverride && (
             <div className="bg-gray-50 rounded-xl p-4 space-y-2 text-sm">
               <div className="flex justify-between text-gray-600">
-                <span>${selectedVehicle.dailyRate}/day &times; {days} day{days !== 1 ? "s" : ""}</span>
-                <span>${baseTotal.toFixed(2)}</span>
+                <span>${previewPricing.hourlyRate.toFixed(2)}/hour &times; {previewPricing.baseHours} hour{previewPricing.baseHours !== 1 ? "s" : ""}</span>
+                <span>${previewPricing.baseTotal.toFixed(2)}</span>
               </div>
-              {extrasTotal > 0 && (
+              {previewPricing.extrasTotal > 0 && (
                 <div className="flex justify-between text-gray-600">
                   <span>Extras & add-ons</span>
-                  <span>${extrasTotal.toFixed(2)}</span>
+                  <span>${previewPricing.extrasTotal.toFixed(2)}</span>
                 </div>
               )}
               <div className="flex justify-between text-gray-600">
                 <span>Tax (8%)</span>
-                <span>${tax.toFixed(2)}</span>
+                <span>${previewPricing.tax.toFixed(2)}</span>
               </div>
               <div className="flex justify-between font-bold text-gray-900 pt-2 border-t border-gray-200">
-                <span>Estimated Total</span>
-                <span className="text-purple-600">${(subtotal + tax).toFixed(2)}</span>
+                <span>Estimated Total (rounded to 0/5 cents)</span>
+                <span className="text-purple-600">${previewPricing.total.toFixed(2)}</span>
               </div>
             </div>
           )}

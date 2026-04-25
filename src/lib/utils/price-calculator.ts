@@ -1,8 +1,6 @@
 import type { BookingExtra, PricingBreakdown } from "@/lib/types";
 
 const TAX_RATE = 0.08;
-const MULTI_DAY_DISCOUNT_RATE = 0.075; // 7.5% per additional day
-const MAX_MULTI_DAY_DISCOUNT = 0.25;  // cap at 25% max discount per day
 const INSURANCE_DISCOUNT_RATE = 0.15;  // 15% off insurance
 const INSURANCE_EXTRA_ID = "e1";
 const SETUP_FEE = 10;  // $10 one-time booking setup/processing fee
@@ -10,6 +8,11 @@ const SETUP_FEE = 10;  // $10 one-time booking setup/processing fee
 /** Round to 2 decimal places with epsilon correction for floating-point precision */
 function roundCents(n: number): number {
   return Math.round((n + Number.EPSILON) * 100) / 100;
+}
+
+/** Round UP to the nearest 5 cents so totals end with 0 or 5. */
+function roundUpToNickel(n: number): number {
+  return roundCents(Math.ceil((n - Number.EPSILON) * 20) / 20);
 }
 
 export function calculateRentalDays(pickupDate: string, returnDate: string): number {
@@ -28,35 +31,35 @@ export function calculateRentalDays(pickupDate: string, returnDate: string): num
   return days;
 }
 
-/**
- * Calculate the base rental cost with multi-day discount.
- * Day 1 is full price; each additional day gets 7.5% off per extra day.
- * e.g. 3-day rental at $49/day:
- *   Day 1: $49.00 (full)
- *   Day 2: $49 × (1 - 0.075) = $45.33
- *   Day 3: $49 × (1 - 0.150) = $41.65
- *   Total: $135.98  (vs $147 without discount)
- */
-export function calculateBaseRate(days: number, dailyRate: number): { total: number; discount: number } {
+export function calculateRentalHours(
+  pickupDate: string,
+  returnDate: string,
+  pickupTime?: string | null,
+  returnTime?: string | null,
+): number {
+  const pickup = new Date(`${pickupDate}T${pickupTime || "00:00"}:00`);
+  const returnD = new Date(`${returnDate}T${returnTime || "00:00"}:00`);
+  const diffHours = Math.ceil((returnD.getTime() - pickup.getTime()) / (1000 * 60 * 60));
+
+  if (!Number.isFinite(diffHours) || diffHours < 1) {
+    throw new Error(
+      `Invalid rental hours calculated: pickup=${pickupDate} ${pickupTime}, return=${returnDate} ${returnTime}, hours=${diffHours}. Return datetime must be after pickup datetime.`,
+    );
+  }
+  return diffHours;
+}
+
+/** Calculate base rental from daily rate on an hourly basis. */
+export function calculateBaseRate(hours: number, dailyRate: number): { total: number; discount: number; hourlyRate: number } {
   if (dailyRate <= 0) {
     throw new Error("dailyRate must be greater than 0");
   }
-  if (days <= 1) {
-    return { total: dailyRate, discount: 0 };
+  if (hours < 1) {
+    throw new Error("hours must be at least 1");
   }
-
-  let total = 0;
-  for (let d = 0; d < days; d++) {
-    const discountForDay = d * MULTI_DAY_DISCOUNT_RATE; // 0 for day 1, 0.075 for day 2, etc.
-    const cappedDiscount = Math.min(discountForDay, MAX_MULTI_DAY_DISCOUNT); // cap at 25%
-    total += dailyRate * (1 - cappedDiscount);
-  }
-
-  total = roundCents(total);
-  const fullPrice = days * dailyRate;
-  const discount = roundCents(fullPrice - total);
-
-  return { total, discount };
+  const hourlyRate = dailyRate / 24;
+  const total = roundCents(hourlyRate * hours);
+  return { total, discount: 0, hourlyRate: roundCents(hourlyRate) };
 }
 
 /**
@@ -94,20 +97,23 @@ export function calculateExtrasTotal(
 }
 
 export function calculatePricing(
-  days: number,
+  hours: number,
   dailyRate: number,
   extras: BookingExtra[]
 ): PricingBreakdown {
-  const base = calculateBaseRate(days, dailyRate);
+  const days = Math.max(1, Math.ceil(hours / 24));
+  const base = calculateBaseRate(hours, dailyRate);
   const extrasResult = calculateExtrasTotal(extras, days);
   const extrasTotal = roundCents(extrasResult.items.reduce((sum, e) => sum + e.total, 0));
   const setupFee = SETUP_FEE;
   const subtotal = roundCents(base.total + extrasTotal + setupFee);
   const tax = roundCents(subtotal * TAX_RATE);
-  const total = roundCents(subtotal + tax);
+  const total = roundUpToNickel(subtotal + tax);
 
   return {
+    baseHours: hours,
     baseDays: days,
+    hourlyRate: base.hourlyRate,
     baseRate: dailyRate,
     baseTotal: base.total,
     multiDayDiscount: base.discount,
@@ -147,7 +153,7 @@ export function applyDiscount(
 
   const discountedSubtotal = Math.max(0, pricing.subtotal - discountAmount);
   const tax = roundCents(discountedSubtotal * TAX_RATE);
-  const total = discountedSubtotal + tax;
+  const total = roundUpToNickel(discountedSubtotal + tax);
 
   return {
     ...pricing,

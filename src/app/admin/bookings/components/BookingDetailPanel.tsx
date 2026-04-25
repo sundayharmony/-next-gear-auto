@@ -51,7 +51,7 @@ import {
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
-import { calculateRentalDays, calculatePricing } from "@/lib/utils/price-calculator";
+import { calculateRentalHours, calculatePricing } from "@/lib/utils/price-calculator";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { Location } from "@/lib/types";
@@ -744,20 +744,31 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       onError("Set pickup and return dates to recalculate");
       return;
     }
-    const days = calculateRentalDays(pickup, returnD);
+    let hours = 0;
+    try {
+      hours = calculateRentalHours(
+        pickup,
+        returnD,
+        (editData.pickup_time || booking.pickup_time || "10:00"),
+        (editData.return_time || booking.return_time || "10:00"),
+      );
+    } catch {
+      onError("Set return date/time after pickup date/time to recalculate");
+      return;
+    }
     // Map booking extras to full extras with pricing from AVAILABLE_EXTRAS
     const bookingExtras = (editData.extras ?? booking.extras ?? []) as { id: string; selected?: boolean }[];
     const mappedExtras = AVAILABLE_EXTRAS.map((ae) => {
       const match = bookingExtras.find((be) => be.id === ae.id);
       return { ...ae, selected: match?.selected ?? false };
     });
-    const pricing = calculatePricing(days, v.dailyRate, mappedExtras);
+    const pricing = calculatePricing(hours, v.dailyRate, mappedExtras);
     setEditData((prev) => ({
       ...prev,
       total_price: pricing.total,
       deposit: pricing.total,
     }));
-    onSuccess(`Recalculated: ${days} day${days > 1 ? "s" : ""} × $${v.dailyRate}/day = $${pricing.total.toFixed(2)}`);
+    onSuccess(`Recalculated: ${hours} hour${hours > 1 ? "s" : ""} at $${(v.dailyRate / 24).toFixed(2)}/hr = $${pricing.total.toFixed(2)}`);
   };
 
   // Handle extend booking

@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from "react";
 import type { Vehicle, BookingExtra, BookingStep, PricingBreakdown } from "@/lib/types";
-import { calculatePricing, calculateRentalDays, applyDiscount, type PromoDiscount } from "@/lib/utils/price-calculator";
+import { calculatePricing, calculateRentalHours, applyDiscount, type PromoDiscount } from "@/lib/utils/price-calculator";
 import { logger } from "@/lib/utils/logger";
 import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
@@ -122,15 +122,15 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
       return { ...state, currentStep: Math.max(state.currentStep - 1, 1) as BookingStep };
     case "CALCULATE_PRICING": {
       if (!state.selectedVehicle || !state.pickupDate || !state.returnDate) return state;
-      let days = 0;
+      let hours = 0;
       try {
-        days = calculateRentalDays(state.pickupDate, state.returnDate);
+        hours = calculateRentalHours(state.pickupDate, state.returnDate, state.pickupTime, state.returnTime);
       } catch (error) {
-        logger.error("Error calculating rental days:", error);
-        days = 0;
+        logger.error("Error calculating rental hours:", error);
+        hours = 0;
       }
       let pricing: PricingBreakdown & { discount?: PromoDiscount } = calculatePricing(
-        days,
+        hours,
         state.selectedVehicle.dailyRate,
         state.extras
       );

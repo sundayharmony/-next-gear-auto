@@ -31,6 +31,7 @@ import {
   localMidnightFromYyyyMmDd,
   wholeCalendarDaysBetween,
 } from "@/lib/utils/booking-dates";
+import { calculateRentalHours } from "@/lib/utils/price-calculator";
 
 const STEPS = [
   { num: 1, label: "Search", icon: Search },
@@ -444,15 +445,25 @@ function BookingPageInner() {
           return false;
         }
 
-        // Fix 2: Minimum rental duration - at least 1 day after pickup
-        if (returnDate <= pickupDate) {
-          setDateValidationError("Minimum 1 day rental required");
+        if (returnDate < pickupDate) {
+          setDateValidationError("Return date must be on or after pick-up date");
           return false;
         }
 
-        // Fix 3: Maximum booking duration - 90 days
-        const daysDifference = Math.floor((returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysDifference > 90) {
+        // Validate datetime order and duration using selected pickup/return times.
+        let rentalHours = 0;
+        try {
+          rentalHours = calculateRentalHours(
+            searchDates.pickup,
+            searchDates.return,
+            searchDates.pickupTime,
+            searchDates.returnTime,
+          );
+        } catch {
+          setDateValidationError("Return time must be after pickup time");
+          return false;
+        }
+        if (rentalHours > 90 * 24) {
           setDateValidationError("Maximum rental duration is 90 days");
           return false;
         }
@@ -866,8 +877,14 @@ function BookingPageInner() {
                 <span className="text-gray-400">|</span>
                 <span>
                   {(() => {
-                    const days = wholeCalendarDaysBetween(booking.pickupDate, booking.returnDate);
-                    return `${days} day${days > 1 ? "s" : ""} x $${booking.selectedVehicle.dailyRate}/day`;
+                    const hours = calculateRentalHours(
+                      booking.pickupDate,
+                      booking.returnDate,
+                      booking.pickupTime,
+                      booking.returnTime,
+                    );
+                    const hourlyRate = booking.selectedVehicle.dailyRate / 24;
+                    return `${hours} hour${hours > 1 ? "s" : ""} x $${hourlyRate.toFixed(2)}/hour`;
                   })()}
                 </span>
                 {booking.extras.filter((e) => e.selected).length > 0 && (
@@ -886,8 +903,13 @@ function BookingPageInner() {
                 ) : (
                   <span className="text-lg font-bold text-purple-700">
                     ${(() => {
-                      const days = wholeCalendarDaysBetween(booking.pickupDate, booking.returnDate);
-                      const base = days * booking.selectedVehicle.dailyRate;
+                      const hours = calculateRentalHours(
+                        booking.pickupDate,
+                        booking.returnDate,
+                        booking.pickupTime,
+                        booking.returnTime,
+                      );
+                      const base = (booking.selectedVehicle.dailyRate / 24) * hours;
                       const tax = base * 0.08;
                       return (base + tax).toFixed(2);
                     })()}
@@ -961,7 +983,15 @@ function BookingPageInner() {
                 {searchDates.pickup && searchDates.return && !dateValidationError && (
                   <div className="mt-4 rounded-lg bg-purple-50 p-3 text-sm text-purple-700">
                     <Calendar className="inline h-4 w-4 mr-1" />
-                    {wholeCalendarDaysBetween(searchDates.pickup, searchDates.return)} day rental
+                    {(() => {
+                      const hours = calculateRentalHours(
+                        searchDates.pickup,
+                        searchDates.return,
+                        searchDates.pickupTime,
+                        searchDates.returnTime,
+                      );
+                      return `${hours} hour${hours > 1 ? "s" : ""} rental`;
+                    })()}
                   </div>
                 )}
               </CardContent>
@@ -1562,15 +1592,11 @@ function BookingPageInner() {
                         <>
                           <div className="border-t pt-3 space-y-1">
                             <div className="flex justify-between text-sm">
-                              <span className="text-gray-500">Base ({booking.pricing.baseDays} day{booking.pricing.baseDays !== 1 ? "s" : ""})</span>
+                              <span className="text-gray-500">
+                                Base ({booking.pricing.baseHours} hour{booking.pricing.baseHours !== 1 ? "s" : ""} @ ${booking.pricing.hourlyRate.toFixed(2)}/hr)
+                              </span>
                               <span>${booking.pricing.baseTotal.toFixed(2)}</span>
                             </div>
-                            {booking.pricing.multiDayDiscount > 0 && (
-                              <div className="flex justify-between text-sm text-green-600">
-                                <span>Multi-day discount (7.5%/day)</span>
-                                <span>-${booking.pricing.multiDayDiscount.toFixed(2)}</span>
-                              </div>
-                            )}
                             {booking.pricing.extras.map((e) => (
                               <div key={e.name} className="flex justify-between text-sm">
                                 <span className="text-gray-500">{e.name}</span>
@@ -1609,9 +1635,9 @@ function BookingPageInner() {
                               <span>${booking.pricing.tax.toFixed(2)}</span>
                             </div>
                           </div>
-                          {(booking.pricing.multiDayDiscount > 0 || booking.pricing.insuranceDiscount > 0) && (
+                          {booking.pricing.insuranceDiscount > 0 && (
                             <div className="bg-green-50 border border-green-100 rounded-lg px-3 py-2 text-xs text-green-700 mt-2">
-                              You&apos;re saving ${(booking.pricing.multiDayDiscount + booking.pricing.insuranceDiscount).toFixed(2)} with multi-day &amp; insurance discounts!
+                              You&apos;re saving ${booking.pricing.insuranceDiscount.toFixed(2)} on insurance coverage.
                             </div>
                           )}
                           <div className="border-t pt-3 flex justify-between font-semibold text-lg">
