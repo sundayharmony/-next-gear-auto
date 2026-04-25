@@ -1677,9 +1677,9 @@ export default function AdminVehiclesPage() {
                       <span className="font-medium">License Plate:</span>{" "}
                       {vehicle.licensePlate || "—"}
                     </div>
-                    <div title={vehicle.vin || undefined}>
+                    <div title={vehicle.vin || undefined} className="break-all">
                       <span className="font-medium">VIN:</span>{" "}
-                      {vehicle.vin ? `...${vehicle.vin.slice(-6)}` : "—"}
+                      {vehicle.vin || "—"}
                     </div>
                   </div>
 
