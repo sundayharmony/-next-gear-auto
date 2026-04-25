@@ -18,7 +18,6 @@ import {
   TIME_SLOTS,
 } from "../types";
 import { Location } from "@/lib/types";
-import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 
 /* ── Section header component ── */
 function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle?: string }) {
@@ -351,11 +350,6 @@ export default function CreateBookingForm({
       onError("Return date is required");
       return false;
     }
-    const today = formatYyyyMmDdLocal(new Date());
-    if (form.pickupDate < today) {
-      onError("Pickup date must be today or later");
-      return false;
-    }
     if (form.returnDate <= form.pickupDate) {
       onError("Return date must be after pickup date");
       return false;
@@ -671,7 +665,6 @@ export default function CreateBookingForm({
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Pickup Date <span className="text-red-500">*</span></label>
               <DatePicker
-                min={new Date().toISOString().split("T")[0]}
                 value={form.pickupDate}
                 onChange={(val) => setForm({ ...form, pickupDate: val })}
               />
