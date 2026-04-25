@@ -247,10 +247,60 @@ export async function DELETE(request: NextRequest) {
       .eq("id", id)
       .maybeSingle();
 
+    // Prevent opaque 500s by detecting common dependency blockers first.
+    const [
+      { count: bookingsCount, error: bookingsErr },
+      { count: maintenanceCount, error: maintenanceErr },
+      { count: blockedDatesCount, error: blockedDatesErr },
+    ] = await Promise.all([
+      supabase.from("bookings").select("id", { count: "exact", head: true }).eq("vehicle_id", id),
+      supabase.from("maintenance_records").select("id", { count: "exact", head: true }).eq("vehicle_id", id),
+      supabase.from("blocked_dates").select("id", { count: "exact", head: true }).eq("vehicle_id", id),
+    ]);
+
+    if (bookingsErr || maintenanceErr || blockedDatesErr) {
+      logger.error("Vehicle dependency check failed:", {
+        bookingsErr,
+        maintenanceErr,
+        blockedDatesErr,
+        vehicleId: id,
+      });
+      return NextResponse.json(
+        { success: false, message: "Could not verify whether this vehicle can be deleted. Please try again." },
+        { status: 500 },
+      );
+    }
+
+    const dependentBookings = bookingsCount ?? 0;
+    const dependentMaintenance = maintenanceCount ?? 0;
+    const dependentBlockedDates = blockedDatesCount ?? 0;
+    if (dependentBookings > 0 || dependentMaintenance > 0 || dependentBlockedDates > 0) {
+      const parts: string[] = [];
+      if (dependentBookings > 0) parts.push(`${dependentBookings} booking${dependentBookings === 1 ? "" : "s"}`);
+      if (dependentMaintenance > 0) parts.push(`${dependentMaintenance} maintenance record${dependentMaintenance === 1 ? "" : "s"}`);
+      if (dependentBlockedDates > 0) parts.push(`${dependentBlockedDates} blocked date${dependentBlockedDates === 1 ? "" : "s"}`);
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Cannot delete this vehicle because it still has ${parts.join(", ")} attached.`,
+        },
+        { status: 409 },
+      );
+    }
+
     const { error } = await supabase.from("vehicles").delete().eq("id", id);
 
     if (error) {
       logger.error("Vehicle delete error:", error);
+      if ((error as { code?: string }).code === "23503") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Cannot delete this vehicle because other records still reference it.",
+          },
+          { status: 409 },
+        );
+      }
       return NextResponse.json({ success: false, message: "Failed to delete vehicle" }, { status: 500 });
     }
 

@@ -543,8 +543,10 @@ export default function AdminVehiclesPage() {
       const res = await adminFetch(`/api/admin/vehicles?id=${id}`, {
         method: "DELETE",
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data?.message || `HTTP ${res.status}`);
+      }
       if (data.success) {
         setVehicles((prev) => prev.filter((v) => v.id !== id));
         // Close edit form if we just deleted the vehicle being edited
@@ -553,8 +555,9 @@ export default function AdminVehiclesPage() {
       } else {
         setError(data.message || "Failed to delete vehicle");
       }
-    } catch {
-      setError("Network error — could not delete vehicle");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "";
+      setError(message || "Network error — could not delete vehicle");
     } finally {
       setDeletingId(null);
     }
