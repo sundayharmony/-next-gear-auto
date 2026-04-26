@@ -224,6 +224,28 @@ export default function CreateBookingForm({
     }
   };
 
+  const restoreAutoPrice = () => {
+    setManualPriceOverride(false);
+    const selectedVehicle = vehicles.find((v) => v.id === form.vehicleId);
+    if (!selectedVehicle || !form.pickupDate || !form.returnDate) {
+      setForm((prev) => ({ ...prev, totalPrice: 0 }));
+      onError("Select vehicle, pickup, and return date to recalculate price.");
+      return;
+    }
+    const hours = calculateHours();
+    if (!hours) {
+      setForm((prev) => ({ ...prev, totalPrice: 0 }));
+      onError("Set return date/time after pickup date/time to recalculate price.");
+      return;
+    }
+    const mappedExtras = AVAILABLE_EXTRAS.map((extra) => ({
+      ...extra,
+      selected: form.selectedExtras.includes(extra.id),
+    }));
+    const total = calculatePricing(hours, selectedVehicle.dailyRate ?? 0, mappedExtras).total;
+    setForm((prev) => ({ ...prev, totalPrice: total }));
+  };
+
   // Check for overlapping bookings
   const overlapAbortControllerRef = useRef<AbortController | null>(null);
 
@@ -857,7 +879,7 @@ export default function CreateBookingForm({
                 {manualPriceOverride && (
                   <button
                     type="button"
-                    onClick={() => setManualPriceOverride(false)}
+                    onClick={restoreAutoPrice}
                     title="Recalculate from daily rate"
                     className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 text-purple-500 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
                   >
