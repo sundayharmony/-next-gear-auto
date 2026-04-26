@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { logger } from "@/lib/utils/logger";
 import { calculatePricing, calculateRentalHours } from "@/lib/utils/price-calculator";
 import {
@@ -226,9 +227,18 @@ export default function CreateBookingForm({
   // Check for overlapping bookings
   const overlapAbortControllerRef = useRef<AbortController | null>(null);
 
+  const hasValidOverlapInput = () => {
+    if (!form.vehicleId || !form.pickupDate || !form.returnDate) return false;
+    if (!isYyyyMmDd(form.pickupDate) || !isYyyyMmDd(form.returnDate)) return false;
+    if (!isoDateOrderingOk(form.pickupDate, form.returnDate)) return false;
+    // For same-day ranges, ensure return time is after pickup time before querying overlap API.
+    if (form.pickupDate === form.returnDate && form.returnTime <= form.pickupTime) return false;
+    return true;
+  };
+
   useEffect(() => {
     const checkOverlap = async () => {
-      if (!form.vehicleId || !form.pickupDate || !form.returnDate) {
+      if (!hasValidOverlapInput()) {
         setHasOverlappingBookings(false);
         return;
       }
@@ -248,7 +258,14 @@ export default function CreateBookingForm({
           `/api/bookings/check-overlap?vehicleId=${encodeURIComponent(form.vehicleId)}&pickupDate=${encodeURIComponent(form.pickupDate)}&returnDate=${encodeURIComponent(form.returnDate)}&pickupTime=${pt}&returnTime=${rt}`,
           { method: "GET", signal: overlapAbortControllerRef.current.signal }
         );
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) {
+          // Invalid/incomplete ranges can still happen while typing; avoid noisy console errors.
+          if (res.status === 400) {
+            setHasOverlappingBookings(false);
+            return;
+          }
+          throw new Error(`HTTP ${res.status}`);
+        }
         const data = await res.json();
         setHasOverlappingBookings(data.hasOverlap || false);
       } catch (err) {
