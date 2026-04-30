@@ -1,7 +1,7 @@
 import { NextResponse, NextRequest } from "next/server";
 import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { sendBookingConfirmation, sendBookingPendingEmail, sendAdminNewBooking } from "@/lib/email/mailer";
+import { sendBookingConfirmationWithAgreement, sendBookingPendingEmail, sendAdminNewBooking } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
 import { calculateRentalHours, calculatePricing, applyDiscount } from "@/lib/utils/price-calculator";
 import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
@@ -491,7 +491,7 @@ export async function POST(request: NextRequest) {
         returnLocationName: returnLocationName || undefined,
       };
 
-      sendBookingConfirmation(emailData).catch(logger.error);
+      sendBookingConfirmationWithAgreement(emailData).catch(logger.error);
       sendAdminNewBooking(emailData).catch(logger.error);
 
       return NextResponse.json({

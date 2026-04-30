@@ -346,6 +346,24 @@ export async function sendBookingSignAgreement(data: BookingEmailData) {
   }
 }
 
+export async function sendBookingConfirmationWithAgreement(data: BookingEmailData) {
+  const [confirmationResult, agreementResult] = await Promise.allSettled([
+    sendBookingConfirmation(data),
+    sendBookingSignAgreement(data),
+  ]);
+
+  if (confirmationResult.status === "rejected") {
+    logger.error("Failed to send confirmation email in bundled send:", confirmationResult.reason);
+  }
+  if (agreementResult.status === "rejected") {
+    logger.error("Failed to send sign-agreement email in bundled send:", agreementResult.reason);
+  }
+
+  if (confirmationResult.status === "rejected" && agreementResult.status === "rejected") {
+    throw new Error("Both booking confirmation and sign-agreement email sends failed");
+  }
+}
+
 export async function sendPasswordResetLink(data: { customerName: string; customerEmail: string }) {
   try {
     // Generate a cryptographic token for the set-password link

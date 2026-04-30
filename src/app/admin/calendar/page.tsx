@@ -195,6 +195,30 @@ export default function AdminCalendarPage() {
     }
   };
 
+  const wheelThrottleRef = React.useRef(0);
+  const handleTimelineWheelShift = useCallback((direction: number) => {
+    const now = Date.now();
+    if (now - wheelThrottleRef.current < 220) return;
+    wheelThrottleRef.current = now;
+    setTimelineStart((prev) => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() + (direction > 0 ? 9 : -9));
+      return next;
+    });
+  }, []);
+
+  const handleCalendarWheelShift = useCallback((direction: number) => {
+    const now = Date.now();
+    if (now - wheelThrottleRef.current < 220) return;
+    wheelThrottleRef.current = now;
+    setCalendarMonth((prev) => {
+      const next = new Date(prev);
+      next.setMonth(next.getMonth() + (direction > 0 ? 1 : -1));
+      return next;
+    });
+    setSelectedDay(null);
+  }, []);
+
   return (
     <>
       {/* Desktop header */}
@@ -349,6 +373,7 @@ export default function AdminCalendarPage() {
                   }}
                   onBookingClick={openBookingDetail}
                   onBlockedDateClick={setSelectedBlocked}
+                  onRangeWheel={handleTimelineWheelShift}
                 />
               </div>
             </>
@@ -375,6 +400,7 @@ export default function AdminCalendarPage() {
               onSelectDay={setSelectedDay}
               onBookingClick={openBookingDetail}
               onBlockedDateClick={setSelectedBlocked}
+              onMonthWheel={handleCalendarWheelShift}
             />
           )}
         </div>
@@ -614,6 +640,50 @@ interface BlockedDateEntry {
   reason: string | null;
   is_extension: boolean | null;
   original_end_date: string | null;
+}
+
+interface VisibleSpan {
+  startIdx: number;
+  endIdx: number;
+  extendsLeft: boolean;
+  extendsRight: boolean;
+  startFraction: number;
+  endFraction: number;
+}
+
+function parseTimeFraction(time: string | null | undefined, fallback: number) {
+  if (!time) return fallback;
+  const [h, m] = time.split(":").map(Number);
+  if (Number.isNaN(h)) return fallback;
+  return Math.min(1, Math.max(0, (h + (m || 0) / 60) / 24));
+}
+
+function getVisibleEventSpan(
+  startDate: string,
+  endDate: string,
+  startTime: string | null | undefined,
+  endTime: string | null | undefined,
+  dateKeys: string[]
+): VisibleSpan | null {
+  const rangeStart = dateKeys[0];
+  const rangeEnd = dateKeys[dateKeys.length - 1];
+
+  if (endDate < rangeStart || startDate > rangeEnd) return null;
+
+  const clampedStart = startDate < rangeStart ? rangeStart : startDate;
+  const clampedEnd = endDate > rangeEnd ? rangeEnd : endDate;
+
+  const startIdx = dateKeys.indexOf(clampedStart);
+  const endIdx = dateKeys.indexOf(clampedEnd);
+  if (startIdx === -1 || endIdx === -1) return null;
+
+  const extendsLeft = startDate < rangeStart;
+  const extendsRight = endDate > rangeEnd;
+
+  const startFraction = extendsLeft ? 0 : parseTimeFraction(startTime, 0);
+  const endFraction = extendsRight ? 1 : parseTimeFraction(endTime, 1);
+
+  return { startIdx, endIdx, extendsLeft, extendsRight, startFraction, endFraction };
 }
 
 /* ═══════════════════════════════════════════════════
@@ -927,6 +997,7 @@ interface TimelineViewProps {
   onToday: () => void;
   onBookingClick: (booking: BookingRow) => void;
   onBlockedDateClick: (blocked: BlockedDateEntry) => void;
+  onRangeWheel: (direction: number) => void;
 }
 
 function TimelineView({
@@ -939,6 +1010,7 @@ function TimelineView({
   onToday,
   onBookingClick,
   onBlockedDateClick,
+  onRangeWheel,
 }: TimelineViewProps) {
   const days = 9;
   const dateRange = Array.from({ length: days }, (_, i) => {
@@ -955,6 +1027,7 @@ function TimelineView({
   };
 
   const dateKeys = dateRange.map(toDateKey);
+  const timelineScrollRef = React.useRef<HTMLDivElement | null>(null);
 
   // Group bookings by vehicle
   const bookingsByVehicle = useMemo(() => {
@@ -973,44 +1046,19 @@ function TimelineView({
 
   const getVisibleBookings = (vehicleId: string) => {
     const vehicleBookings = bookingsByVehicle[vehicleId] || [];
-    const rangeStart = dateKeys[0];
-    const rangeEnd = dateKeys[days - 1];
-
     return vehicleBookings
       .map((booking) => {
         const pickupKey = booking.pickup_date.split("T")[0];
         const returnKey = booking.return_date.split("T")[0];
-
-        if (returnKey < rangeStart || pickupKey > rangeEnd) return null;
-
-        const clampedStart = pickupKey < rangeStart ? rangeStart : pickupKey;
-        const clampedEnd = returnKey > rangeEnd ? rangeEnd : returnKey;
-
-        const startIdx = dateKeys.indexOf(clampedStart);
-        const endIdx = dateKeys.indexOf(clampedEnd);
-
-        if (startIdx === -1 || endIdx === -1) return null;
-
-        // Track if booking extends beyond visible range
-        const extendsLeft = pickupKey < rangeStart;
-        const extendsRight = returnKey > rangeEnd;
-
-        // Calculate fractional offsets based on pickup/return times
-        // startFraction: how far into the first day the booking starts (0 = midnight, 0.5 = noon)
-        // endFraction: how far into the last day the booking ends (0.5 = noon, 1 = end of day)
-        let startFraction = 0;
-        let endFraction = 1;
-
-        if (!extendsLeft && booking.pickup_time) {
-          const [h, m] = booking.pickup_time.split(":").map(Number);
-          if (!isNaN(h)) startFraction = (h + (m || 0) / 60) / 24;
-        }
-        if (!extendsRight && booking.return_time) {
-          const [h, m] = booking.return_time.split(":").map(Number);
-          if (!isNaN(h)) endFraction = (h + (m || 0) / 60) / 24;
-        }
-
-        return { booking, startIdx, endIdx, extendsLeft, extendsRight, startFraction, endFraction };
+        const span = getVisibleEventSpan(
+          pickupKey,
+          returnKey,
+          booking.pickup_time || null,
+          booking.return_time || null,
+          dateKeys
+        );
+        if (!span) return null;
+        return { booking, ...span };
       })
       .filter(Boolean) as { booking: BookingRow; startIdx: number; endIdx: number; extendsLeft: boolean; extendsRight: boolean; startFraction: number; endFraction: number }[];
   };
@@ -1047,6 +1095,22 @@ function TimelineView({
     });
     return counts;
   }, [bookingsByVehicle, vehicles, dateKeys]);
+
+  const handleTimelineWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    const scroller = timelineScrollRef.current;
+    if (!scroller) return;
+    const dominantHorizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY);
+    const shouldScrollHorizontally = dominantHorizontal || event.shiftKey;
+    if (shouldScrollHorizontally) {
+      event.preventDefault();
+      const amount = dominantHorizontal ? event.deltaX : event.deltaY;
+      scroller.scrollLeft += amount;
+      return;
+    }
+    if (Math.abs(event.deltaY) < 12) return;
+    event.preventDefault();
+    onRangeWheel(event.deltaY > 0 ? 1 : -1);
+  };
 
   return (
     <Card className="shadow-sm">
@@ -1089,7 +1153,11 @@ function TimelineView({
         </div>
 
         {/* Timeline Table */}
-        <div className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm overflow-hidden">
+        <div
+          ref={timelineScrollRef}
+          onWheel={handleTimelineWheel}
+          className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm overflow-hidden"
+        >
           <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
             <colgroup>
               <col style={{ width: "170px", minWidth: "170px" }} />
@@ -1244,17 +1312,30 @@ function TimelineView({
                               return toDateKey(date) === clampedStart && bd.end_date >= dateKeys[0] && bd.start_date <= dateKeys[dateKeys.length - 1];
                             })
                             .map((bd) => {
-                              const clampedStartKey = bd.start_date < dateKeys[0] ? dateKeys[0] : bd.start_date;
-                              const clampedEndKey = bd.end_date > dateKeys[dateKeys.length - 1] ? dateKeys[dateKeys.length - 1] : bd.end_date;
-                              const startIdx = dateKeys.indexOf(clampedStartKey);
-                              const endIdx = dateKeys.indexOf(clampedEndKey);
-                              const span = endIdx - startIdx + 1;
+                              const visibleSpan = getVisibleEventSpan(
+                                bd.start_date,
+                                bd.end_date,
+                                bd.pickup_time,
+                                bd.return_time,
+                                dateKeys
+                              );
+                              if (!visibleSpan) return null;
+                              const { endIdx, startIdx, extendsLeft, extendsRight, startFraction, endFraction } = visibleSpan;
+                              const fullDaySpan = endIdx - startIdx + 1;
+                              const trimStart = startFraction;
+                              const trimEnd = 1 - endFraction;
+                              const preciseSpan = Math.max(0.05, fullDaySpan - trimStart - trimEnd);
+                              const roundLeft = extendsLeft ? "rounded-l-none" : "rounded-l-md";
+                              const roundRight = extendsRight ? "rounded-r-none" : "rounded-r-md";
                               return (
                                 <div
                                   key={bd.id}
                                   onClick={() => onBlockedDateClick(bd)}
-                                  className="absolute top-1 bottom-1 rounded-md bg-gray-300/50 border border-dashed border-gray-400 z-[4] flex items-center px-2 cursor-pointer"
-                                  style={{ left: "0%", width: `${span * 100}%` }}
+                                  className={`absolute top-1 bottom-1 ${roundLeft} ${roundRight} bg-gray-300/50 border border-dashed border-gray-400 z-[4] flex items-center px-2 cursor-pointer`}
+                                  style={{
+                                    left: `calc(${trimStart * 100}%)`,
+                                    width: `calc(${preciseSpan * 100}% - 2px)`,
+                                  }}
                                   title={bd.reason || `Blocked (${bd.source})`}
                                 >
                                   <span className="text-[10px] text-gray-500 font-medium truncate">
@@ -1321,6 +1402,7 @@ interface CalendarViewProps {
   onSelectDay: (day: string | null) => void;
   onBookingClick: (booking: BookingRow) => void;
   onBlockedDateClick: (blocked: BlockedDateEntry) => void;
+  onMonthWheel: (direction: number) => void;
 }
 
 function CalendarView({
@@ -1333,6 +1415,7 @@ function CalendarView({
   onSelectDay,
   onBookingClick,
   onBlockedDateClick,
+  onMonthWheel,
 }: CalendarViewProps) {
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
@@ -1397,9 +1480,15 @@ function CalendarView({
   const selectedDayBookings = selectedDay ? (bookingsByDay[selectedDay] || []) : [];
   const selectedDayBlocked = selectedDay ? (blockedByDay[selectedDay] || []) : [];
 
+  const handleMonthWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (Math.abs(event.deltaY) < 12 || Math.abs(event.deltaX) > Math.abs(event.deltaY)) return;
+    event.preventDefault();
+    onMonthWheel(event.deltaY > 0 ? 1 : -1);
+  };
+
   return (
     <Card>
-      <CardContent className="p-6">
+      <CardContent className="p-6" onWheel={handleMonthWheel}>
         {/* Month Navigation */}
         <div className="flex items-center justify-between mb-6">
           <Button onClick={onPreviousMonth} variant="outline" size="sm">

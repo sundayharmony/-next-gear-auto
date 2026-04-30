@@ -97,6 +97,15 @@ interface Expense {
   created_at: string;
 }
 
+interface BlockedDateFinanceEntry {
+  id: string;
+  vehicle_id: string;
+  start_date: string;
+  end_date: string;
+  source: string;
+  earnings: number | null;
+}
+
 /** Vehicle with finance fields (matches shared Vehicle type) */
 type Vehicle = SharedVehicle;
 
@@ -251,6 +260,7 @@ function SectionHeader({
 // ─── Main Component ───────────────────────────────────────────────
 export default function AdminFinancesPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
+  const [blockedDates, setBlockedDates] = useState<BlockedDateFinanceEntry[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
@@ -307,8 +317,9 @@ export default function AdminFinancesPage() {
     setLoading(true);
     setError(null);
     try {
-      const [bookingsRes, expensesRes, vehiclesRes, maintenanceRes, ticketsRes] = await Promise.all([
+      const [bookingsRes, blockedDatesRes, expensesRes, vehiclesRes, maintenanceRes, ticketsRes] = await Promise.all([
         adminFetch("/api/admin/bookings"),
+        adminFetch("/api/admin/blocked-dates"),
         adminFetch("/api/admin/expenses"),
         adminFetch("/api/admin/vehicles"),
         adminFetch("/api/admin/maintenance"),
@@ -320,6 +331,7 @@ export default function AdminFinancesPage() {
       }
 
       const bookingsData = await bookingsRes.json();
+      const blockedDatesData = blockedDatesRes.ok ? await blockedDatesRes.json() : { data: [] };
       const expensesData = await expensesRes.json();
       const vehiclesData = await vehiclesRes.json();
       const maintenanceData = maintenanceRes.ok ? await maintenanceRes.json() : { data: [] };
@@ -328,6 +340,7 @@ export default function AdminFinancesPage() {
       if (!ticketsRes.ok) logger.warn("Failed to fetch tickets data");
 
       setBookings(Array.isArray(bookingsData?.data) ? bookingsData.data : []);
+      setBlockedDates(Array.isArray(blockedDatesData?.data) ? blockedDatesData.data : []);
       setExpenses(Array.isArray(expensesData?.data) ? expensesData.data : []);
       setVehicles(Array.isArray(vehiclesData?.data) ? vehiclesData.data : []);
       setMaintenance(Array.isArray(maintenanceData?.data) ? maintenanceData.data : []);
@@ -360,6 +373,19 @@ export default function AdminFinancesPage() {
     () => filteredBookings.filter((b) => ["confirmed", "active", "completed"].includes(b.status)),
     [filteredBookings]
   );
+
+  const turoRevenueEntries = useMemo(() => {
+    return blockedDates
+      .filter((block) => block.source === "turo-email")
+      .filter((block) => block.start_date <= dateRange.to && block.end_date >= dateRange.from)
+      .map((block) => ({
+        id: block.id,
+        vehicle_id: block.vehicle_id,
+        revenue: Number(block.earnings) || 0,
+        date: block.start_date,
+      }))
+      .filter((entry) => entry.revenue > 0);
+  }, [blockedDates, dateRange]);
 
   // Maintenance costs (all completed maintenance records show as expenses, filtered by date range)
   const maintenanceCosts = useMemo((): UnifiedExpense[] => {
@@ -455,7 +481,9 @@ export default function AdminFinancesPage() {
   }, [filteredExpenses, maintenanceCosts, financingCosts, ticketCosts]);
 
   const summaryData = useMemo(() => {
-    const totalRevenue = revenueBookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
+    const bookingRevenue = revenueBookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
+    const turoRevenue = turoRevenueEntries.reduce((sum, entry) => sum + entry.revenue, 0);
+    const totalRevenue = bookingRevenue + turoRevenue;
     const totalExpenses = allExpenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
@@ -481,9 +509,11 @@ export default function AdminFinancesPage() {
         : 0;
 
     const avgBookingValue =
-      revenueBookings.length > 0 ? totalRevenue / revenueBookings.length : 0;
+      revenueBookings.length > 0 ? bookingRevenue / revenueBookings.length : 0;
 
     return {
+      bookingRevenue,
+      turoRevenue,
       totalRevenue,
       totalExpenses,
       netProfit,
@@ -493,7 +523,7 @@ export default function AdminFinancesPage() {
       avgBookingValue,
       totalBookedDays,
     };
-  }, [revenueBookings, allExpenses, vehicles, dateRange]);
+  }, [revenueBookings, turoRevenueEntries, allExpenses, vehicles, dateRange]);
 
   // Cash flow data — monthly money in vs money out (based on selected date range)
   const cashFlowData = useMemo(() => {
@@ -509,6 +539,10 @@ export default function AdminFinancesPage() {
       const key = b.pickup_date.substring(0, 7); // "YYYY-MM"
       if (months[key]) months[key].income += b.total_price ?? 0;
     });
+    turoRevenueEntries.forEach((entry) => {
+      const key = entry.date.substring(0, 7);
+      if (months[key]) months[key].income += entry.revenue;
+    });
 
     allExpenses.forEach((e) => {
       const key = e.date.substring(0, 7);
@@ -521,7 +555,7 @@ export default function AdminFinancesPage() {
       expenses: Math.round(m.expenses),
       net: Math.round(m.income - m.expenses),
     }));
-  }, [revenueBookings, allExpenses, dateRange]);
+  }, [revenueBookings, turoRevenueEntries, allExpenses, dateRange]);
 
   // Daily earnings (within selected date range, max 30 days shown)
   const dailyEarningsData = useMemo(() => {
@@ -551,6 +585,10 @@ export default function AdminFinancesPage() {
       const idx = dayMap.get(b.pickup_date);
       if (idx !== undefined) days[idx].revenue += b.total_price ?? 0;
     });
+    turoRevenueEntries.forEach((entry) => {
+      const idx = dayMap.get(entry.date);
+      if (idx !== undefined) days[idx].revenue += entry.revenue;
+    });
 
     allExpenses.forEach((e) => {
       const idx = dayMap.get(e.date);
@@ -562,7 +600,7 @@ export default function AdminFinancesPage() {
       revenue: Math.round(d.revenue),
       expenses: Math.round(d.expenses),
     }));
-  }, [revenueBookings, allExpenses, dateRange]);
+  }, [revenueBookings, turoRevenueEntries, allExpenses, dateRange]);
 
   // Expense by category (includes maintenance + financing costs)
   const expenseCategoryData = useMemo(() => {
@@ -589,6 +627,13 @@ export default function AdminFinancesPage() {
       if (!bookingsByVehicle.has(b.vehicle_id)) bookingsByVehicle.set(b.vehicle_id, []);
       bookingsByVehicle.get(b.vehicle_id)!.push(b);
     });
+    const turoRevenueByVehicle = new Map<string, number>();
+    turoRevenueEntries.forEach((entry) => {
+      turoRevenueByVehicle.set(
+        entry.vehicle_id,
+        (turoRevenueByVehicle.get(entry.vehicle_id) || 0) + entry.revenue
+      );
+    });
 
     allExpenses.forEach((e) => {
       if (e.vehicle_id) {
@@ -601,7 +646,9 @@ export default function AdminFinancesPage() {
       .map((vehicle) => {
         const vBookings = bookingsByVehicle.get(vehicle.id) ?? [];
         const vExpenses = expensesByVehicle.get(vehicle.id) ?? [];
-        const revenue = vBookings.reduce((s, b) => s + (b.total_price ?? 0), 0);
+        const bookingRevenue = vBookings.reduce((s, b) => s + (b.total_price ?? 0), 0);
+        const turoRevenue = turoRevenueByVehicle.get(vehicle.id) || 0;
+        const revenue = bookingRevenue + turoRevenue;
         const expenseTotal = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
         // For financed vehicles, costs are already in allExpenses as financing entries
         const vehicleCost = vehicle.isFinanced ? 0 : (vehicle.purchasePrice ?? 0);
@@ -633,7 +680,7 @@ export default function AdminFinancesPage() {
         };
       })
       .sort((a, b) => b.profit - a.profit);
-  }, [vehicles, revenueBookings, allExpenses, dateRange]);
+  }, [vehicles, revenueBookings, turoRevenueEntries, allExpenses, dateRange]);
 
   // Revenue by month (based on selected date range)
   const revenueByMonth = useMemo(() => {
@@ -656,12 +703,18 @@ export default function AdminFinancesPage() {
         months[key].bookings += 1;
       }
     });
+    turoRevenueEntries.forEach((entry) => {
+      const key = entry.date.substring(0, 7);
+      if (months[key]) {
+        months[key].revenue += entry.revenue;
+      }
+    });
 
     return Object.values(months).map((m) => ({
       ...m,
       revenue: Math.round(m.revenue),
     }));
-  }, [revenueBookings, dateRange]);
+  }, [revenueBookings, turoRevenueEntries, dateRange]);
 
   // Monthly profit data (revenue, expenses, profit — based on selected date range)
   const monthlyProfitData = useMemo(() => {
@@ -681,6 +734,10 @@ export default function AdminFinancesPage() {
       const key = b.pickup_date.substring(0, 7);
       if (months[key]) months[key].revenue += b.total_price ?? 0;
     });
+    turoRevenueEntries.forEach((entry) => {
+      const key = entry.date.substring(0, 7);
+      if (months[key]) months[key].revenue += entry.revenue;
+    });
 
     allExpenses.forEach((e) => {
       const key = e.date.substring(0, 7);
@@ -693,7 +750,7 @@ export default function AdminFinancesPage() {
       expenses: Math.round(m.expenses),
       profit: Math.round(m.revenue - m.expenses),
     }));
-  }, [revenueBookings, allExpenses, dateRange]);
+  }, [revenueBookings, turoRevenueEntries, allExpenses, dateRange]);
 
   // ─── Expense CRUD ───────────────────────────────────────────────
   const handleAddExpense = async () => {

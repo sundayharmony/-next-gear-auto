@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { sendBookingConfirmation, sendAdminNewBooking } from "@/lib/email/mailer";
+import { sendBookingConfirmationWithAgreement, sendAdminNewBooking } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 
@@ -137,7 +137,7 @@ export async function POST(request: Request) {
               };
 
               // Send confirmation emails (don't await - fire and forget)
-              sendBookingConfirmation(emailData)
+              sendBookingConfirmationWithAgreement(emailData)
                 .then(() => logger.info("Confirmation email sent via webhook for booking:", bookingId))
                 .catch((error) => logger.error("Failed to send confirmation email via webhook:", error));
               sendAdminNewBooking(emailData)

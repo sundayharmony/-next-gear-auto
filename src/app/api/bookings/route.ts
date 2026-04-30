@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import {
-  sendBookingConfirmation,
+  sendBookingConfirmationWithAgreement,
   sendBookingPendingEmail,
   sendAdminNewBooking,
   sendCancellationEmail,
@@ -842,9 +842,9 @@ export async function PATCH(request: NextRequest) {
       } else if (emailChanged) {
         // Email was changed — send confirmation to the new email address
         // so the new recipient knows about their booking and can set up their password
-        sendBookingConfirmation(emailData).catch(logger.error);
+        sendBookingConfirmationWithAgreement(emailData).catch(logger.error);
       } else if (body.status === "confirmed" && booking.status === "pending") {
-        sendBookingConfirmation(emailData).catch(logger.error);
+        sendBookingConfirmationWithAgreement(emailData).catch(logger.error);
       }
     }
 
