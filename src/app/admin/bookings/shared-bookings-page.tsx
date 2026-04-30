@@ -129,13 +129,13 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
       .filter((b) => config.capabilities.canBulkUpdate || b.canManage !== false)
       .map((b) => b.id);
     const allSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selectedIds.has(id));
-    setSelectedIds(() => {
+    setSelectedIds((prev) => {
       if (allSelected) {
-        const next = new Set(selectedIds);
+        const next = new Set(prev);
         currentPageIds.forEach((id) => next.delete(id));
         return next;
       }
-      const next = new Set<string>();
+      const next = new Set(prev);
       currentPageIds.forEach((id) => next.add(id));
       return next;
     });

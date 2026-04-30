@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
+import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
 interface ManagerRow {
   id: string;
   name: string;
@@ -24,7 +26,7 @@ export default function AdminManagersPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [message, setMessage] = useState("");
+  const { error, setError, success, setSuccess } = useAutoToast();
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -56,7 +58,8 @@ export default function AdminManagersPage() {
       email: m.email || "",
       phone: m.phone || "",
     });
-    setMessage("");
+    setError(null);
+    setSuccess(null);
   };
 
   const cancelEdit = () => {
@@ -66,11 +69,12 @@ export default function AdminManagersPage() {
   const saveEdit = useCallback(async () => {
     if (!editingId) return;
     if (!editForm.name.trim() || !editForm.email.trim()) {
-      setMessage("Name and email are required.");
+      setError("Name and email are required.");
       return;
     }
     setSaving(true);
-    setMessage("");
+    setError(null);
+    setSuccess(null);
     try {
       const res = await adminFetch(`/api/admin/managers/${editingId}`, {
         method: "PATCH",
@@ -83,27 +87,28 @@ export default function AdminManagersPage() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        setMessage("Manager updated.");
+        setSuccess("Manager updated.");
         setEditingId(null);
         await fetchManagers();
       } else {
-        setMessage(json.message || "Failed to update manager.");
+        setError(json.message || "Failed to update manager.");
       }
     } catch (error) {
       logger.error("Failed to update manager:", error);
-      setMessage("Failed to update manager.");
+      setError("Failed to update manager.");
     } finally {
       setSaving(false);
     }
-  }, [editingId, editForm, fetchManagers]);
+  }, [editingId, editForm, fetchManagers, setError, setSuccess]);
 
   const createManager = useCallback(async () => {
     if (!form.name || !form.email) {
-      setMessage("Name and email are required.");
+      setError("Name and email are required.");
       return;
     }
     setSaving(true);
-    setMessage("");
+    setError(null);
+    setSuccess(null);
     try {
       const res = await adminFetch("/api/admin/managers", {
         method: "POST",
@@ -112,19 +117,19 @@ export default function AdminManagersPage() {
       });
       const json = await res.json();
       if (res.ok && json.success) {
-        setMessage(json.message || "Manager access created.");
+        setSuccess(json.message || "Manager access created.");
         setForm({ name: "", email: "", phone: "" });
         await fetchManagers();
       } else {
-        setMessage(json.message || "Failed to create manager.");
+        setError(json.message || "Failed to create manager.");
       }
     } catch (error) {
       logger.error("Failed to create manager:", error);
-      setMessage("Failed to create manager.");
+      setError("Failed to create manager.");
     } finally {
       setSaving(false);
     }
-  }, [fetchManagers, form]);
+  }, [fetchManagers, form, setError, setSuccess]);
 
   const removeManager = useCallback(
     async (managerId: string, email: string) => {
@@ -136,25 +141,26 @@ export default function AdminManagersPage() {
         return;
       }
       setRemovingId(managerId);
-      setMessage("");
+      setError(null);
+      setSuccess(null);
       try {
         const res = await adminFetch(`/api/admin/managers/${managerId}`, { method: "DELETE" });
         const json = await res.json();
         if (res.ok && json.success) {
-          setMessage(json.message || "Manager removed.");
+          setSuccess(json.message || "Manager removed.");
           if (editingId === managerId) setEditingId(null);
           await fetchManagers();
         } else {
-          setMessage(json.message || "Failed to remove manager.");
+          setError(json.message || "Failed to remove manager.");
         }
       } catch (error) {
         logger.error("Failed to remove manager:", error);
-        setMessage("Failed to remove manager.");
+        setError("Failed to remove manager.");
       } finally {
         setRemovingId(null);
       }
     },
-    [fetchManagers, editingId]
+    [fetchManagers, editingId, setError, setSuccess]
   );
 
   return (
@@ -179,6 +185,9 @@ export default function AdminManagersPage() {
       </section>
 
       <PageContainer className="py-6 sm:py-8 space-y-6">
+        {error ? <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} /> : null}
+        {success ? <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} /> : null}
+
         <Card>
           <CardContent className="p-5">
             <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
@@ -205,7 +214,6 @@ export default function AdminManagersPage() {
                 {saving && !editingId ? "Saving…" : "Create"}
               </Button>
             </div>
-            {message && <p className="text-sm text-gray-600 mt-3">{message}</p>}
           </CardContent>
         </Card>
 
@@ -219,7 +227,10 @@ export default function AdminManagersPage() {
                 <RefreshCw className="h-6 w-6 animate-spin text-purple-600 mx-auto" />
               </div>
             ) : managers.length === 0 ? (
-              <p className="text-gray-500">No manager accounts yet.</p>
+              <AdminEmptyState
+                title="No manager accounts yet"
+                description="Add your first manager above to grant panel access."
+              />
             ) : (
               <div className="space-y-3">
                 {managers.map((manager) => (

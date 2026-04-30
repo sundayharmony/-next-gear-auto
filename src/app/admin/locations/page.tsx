@@ -12,6 +12,7 @@ import { Location } from "@/lib/types";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
 
 /* ── Types ────────────────────────────────────── */
 
@@ -291,9 +292,12 @@ export default function AdminLocationsPage() {
       {/* Toast */}
       {toast && (
         <div className="fixed top-4 right-4 z-50">
-          <div className={`rounded-lg p-3 text-sm shadow-lg border ${toast.type === "ok" ? "bg-green-50 border-green-200 text-green-700" : "bg-red-50 border-red-200 text-red-700"}`}>
-            {toast.msg}
-          </div>
+          <AdminStatusBanner
+            type={toast.type === "ok" ? "success" : "error"}
+            message={toast.msg}
+            onDismiss={() => setToast(null)}
+            className="mb-0 min-w-[280px] shadow-lg"
+          />
         </div>
       )}
 
@@ -338,7 +342,15 @@ export default function AdminLocationsPage() {
       {loading ? (
         <div className="flex items-center justify-center py-12"><Loader2 className="h-8 w-8 text-purple-600 animate-spin" /></div>
       ) : locations.length === 0 ? (
-        <Card><CardContent className="p-8 text-center"><MapPin className="h-12 w-12 text-gray-300 mx-auto mb-3" /><p className="text-gray-500">No locations yet. Click "Add Location" to create one.</p></CardContent></Card>
+        <AdminEmptyState
+          title="No locations yet"
+          description="Create your first pickup/dropoff location to get started."
+          action={
+            <Button onClick={() => setShowAdd(true)} className="bg-purple-600 hover:bg-purple-700 text-white">
+              <Plus className="h-4 w-4 mr-2" /> Add Location
+            </Button>
+          }
+        />
       ) : (
         <Card>
           <CardContent className="p-0">

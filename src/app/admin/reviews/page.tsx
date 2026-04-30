@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
+import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
 
 interface Review {
   id: string;
@@ -130,12 +131,7 @@ export default function AdminReviewsPage() {
 
       <PageContainer className="py-8">
         {/* Error Banner */}
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} aria-label="Dismiss error" className="text-red-400 hover:text-red-600 ml-3">&times;</button>
-          </div>
-        )}
+        {error ? <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} /> : null}
 
         {/* Filters */}
         <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -169,12 +165,10 @@ export default function AdminReviewsPage() {
             </div>
           </Card>
         ) : reviews.length === 0 ? (
-          <Card className="p-8 text-center">
-            <div className="flex flex-col items-center justify-center gap-3">
-              <MessageSquare className="h-8 w-8 text-gray-300" />
-              <span className="text-gray-400">No reviews found.</span>
-            </div>
-          </Card>
+          <AdminEmptyState
+            title="No reviews found"
+            description="New submitted reviews will appear here for moderation."
+          />
         ) : (
           <div className="space-y-3">
             {reviews.map((r) => (

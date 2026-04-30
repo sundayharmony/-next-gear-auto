@@ -61,15 +61,9 @@ const SummaryCard = ({
                   </button>
                 ))}
                 {moreCount > 0 && (
-                  <button
-                    onClick={() => {
-                      // Could emit event or filter here
-                    }}
-                    className="text-xs font-semibold text-gray-500 hover:text-gray-700"
-                    aria-label={`${moreCount} more bookings`}
-                  >
+                  <p className="text-xs font-semibold text-gray-500" aria-label={`${moreCount} more bookings`}>
                     +{moreCount} more
-                  </button>
+                  </p>
                 )}
               </div>
             )}

@@ -120,25 +120,30 @@ export default function AdminCalendarPage() {
     }
   }, [view, timelineStart, calendarMonth, bookingsEndpoint]);
 
+  const fetchAuxiliaryData = useCallback(async () => {
+    const [vehiclesRes, blockedRes] = await Promise.all([
+      adminFetch("/api/admin/vehicles"),
+      adminFetch("/api/admin/blocked-dates"),
+    ]);
+    if (vehiclesRes.ok) {
+      const data = await vehiclesRes.json();
+      setVehicles(data.data || []);
+    }
+    if (blockedRes.ok) {
+      const data = await blockedRes.json();
+      setBlockedDates(data.data || []);
+    }
+  }, []);
+
   // Fetch data on mount and when view/date range changes
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [, vehiclesRes, blockedRes] = await Promise.all([
+        await Promise.all([
           fetchBookings(),
-          adminFetch("/api/admin/vehicles"),
-          adminFetch("/api/admin/blocked-dates"),
+          fetchAuxiliaryData(),
         ]);
-
-        if (vehiclesRes.ok) {
-          const data = await vehiclesRes.json();
-          setVehicles(data.data || []);
-        }
-        if (blockedRes.ok) {
-          const data = await blockedRes.json();
-          setBlockedDates(data.data || []);
-        }
       } catch (error) {
         logger.error("Failed to fetch calendar data:", error);
       } finally {
@@ -155,7 +160,7 @@ export default function AdminCalendarPage() {
       }
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [fetchBookings, fetchAuxiliaryData]);
 
   // Re-fetch bookings when navigating timeline or calendar
   useEffect(() => {
@@ -174,20 +179,10 @@ export default function AdminCalendarPage() {
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      const [, vehiclesRes, blockedRes] = await Promise.all([
+      await Promise.all([
         fetchBookings(),
-        adminFetch("/api/admin/vehicles"),
-        adminFetch("/api/admin/blocked-dates"),
+        fetchAuxiliaryData(),
       ]);
-
-      if (vehiclesRes.ok) {
-        const data = await vehiclesRes.json();
-        setVehicles(data.data || []);
-      }
-      if (blockedRes.ok) {
-        const data = await blockedRes.json();
-        setBlockedDates(data.data || []);
-      }
     } catch (error) {
       logger.error("Failed to refresh calendar data:", error);
     } finally {

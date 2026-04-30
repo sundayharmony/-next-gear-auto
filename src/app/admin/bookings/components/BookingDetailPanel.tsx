@@ -165,13 +165,6 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     };
   }, [onClose]);
 
-  // Cleanup pending timeouts on component unmount
-  useEffect(() => {
-    return () => {
-      if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
-    };
-  }, []);
-
   // Fetch tickets, activity, and payments on mount (in parallel)
   useEffect(() => {
     let cancelled = false;

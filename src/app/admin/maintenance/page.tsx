@@ -31,6 +31,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { Vehicle, getVehicleDisplayName } from "@/lib/types";
 import { MaintenancePhotoGallery } from "@/components/maintenance-photo-gallery";
 import { logger } from "@/lib/utils/logger";
+import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
 
 interface MaintenanceRecord {
   id: string;
@@ -782,18 +783,7 @@ export default function AdminMaintenancePage() {
       <PageContainer className="py-8">
         {/* Error Banner */}
         <div aria-live="assertive">
-          {error && (
-            <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-              <span>{error}</span>
-              <button
-                onClick={() => setError(null)}
-                aria-label="Dismiss error"
-                className="text-red-400 hover:text-red-600 ml-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 rounded"
-              >
-                &times;
-              </button>
-            </div>
-          )}
+          {error ? <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} /> : null}
         </div>
 
         {/* Stats Cards */}
@@ -912,16 +902,16 @@ export default function AdminMaintenancePage() {
             <p className="mt-4 text-gray-500">Loading records...</p>
           </div>
         ) : filteredRecords.length === 0 ? (
-          <div className="text-center py-12">
-            <Wrench className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-            <p className="text-gray-500">
-              {records.length === 0
-                ? "No maintenance records yet. Add your first record!"
+          <AdminEmptyState
+            title={records.length === 0 ? "No maintenance records yet" : "No records found"}
+            description={
+              records.length === 0
+                ? "Add your first maintenance record to start tracking work."
                 : searchQuery
                   ? `No records match "${searchQuery}".`
-                  : "No records match the current filter."}
-            </p>
-          </div>
+                  : "No records match the current filter."
+            }
+          />
         ) : (
           <Card className="overflow-hidden">
             <div className="overflow-x-auto">

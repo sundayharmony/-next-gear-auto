@@ -12,6 +12,7 @@ import { Select } from "@/components/ui/select";
 import { PageContainer } from "@/components/layout/page-container";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
+import { AdminStatusBanner } from "@/components/admin/ui-feedback";
 
 interface PromoCode {
   code: string;
@@ -186,12 +187,7 @@ export default function AdminPromoCodesPage() {
 
       <PageContainer className="py-8">
         {/* Error Banner */}
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} aria-label="Dismiss error" className="text-red-400 hover:text-red-600 ml-3">&times;</button>
-          </div>
-        )}
+        {error ? <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} /> : null}
 
         {/* Add Form */}
         {showAddForm && (
