@@ -1106,7 +1106,8 @@ function TimelineView({
   };
 
   const dateKeys = dateRange.map(toDateKey);
-  const timelineScrollRef = React.useRef<HTMLDivElement | null>(null);
+  /** Set when the scroll container DOM node mounts — guarantees wheel listener attaches (ref alone can be null on first layout). */
+  const [timelineScrollEl, setTimelineScrollEl] = useState<HTMLDivElement | null>(null);
 
   // Group bookings by vehicle
   const bookingsByVehicle = useMemo(() => {
@@ -1176,20 +1177,10 @@ function TimelineView({
   }, [bookingsByVehicle, vehicles, dateKeys]);
 
   // Native non-passive wheel: React's onWheel is passive so preventDefault does not stop page scroll.
+  // Effect depends on timelineScrollEl (ref callback) so we never attach with a null element.
   useLayoutEffect(() => {
-    const el = timelineScrollRef.current;
+    const el = timelineScrollEl;
     if (!el) return undefined;
-
-    let rafId: number | null = null;
-    let pendingScroll = 0;
-
-    const flush = () => {
-      rafId = null;
-      if (pendingScroll !== 0) {
-        el.scrollLeft += pendingScroll;
-        pendingScroll = 0;
-      }
-    };
 
     const onWheel = (ev: WheelEvent) => {
       ev.preventDefault();
@@ -1201,25 +1192,19 @@ function TimelineView({
       if (shouldScrollHorizontally) {
         delta = dominantHorizontal ? dx : dy;
       } else {
-        if (Math.abs(dy) < 0.25) return;
+        if (Math.abs(dy) < 0.01) return;
         delta = dy;
       }
 
-      pendingScroll += delta;
-      if (rafId == null) {
-        rafId = requestAnimationFrame(flush);
-      }
+      el.scrollLeft += delta;
     };
 
-    el.addEventListener("wheel", onWheel, { passive: false });
+    const opts: AddEventListenerOptions = { passive: false };
+    el.addEventListener("wheel", onWheel, opts);
     return () => {
-      el.removeEventListener("wheel", onWheel);
-      if (rafId != null) cancelAnimationFrame(rafId);
-      if (pendingScroll !== 0) {
-        el.scrollLeft += pendingScroll;
-      }
+      el.removeEventListener("wheel", onWheel, opts);
     };
-  }, []);
+  }, [timelineScrollEl]);
 
   return (
     <Card className="shadow-sm">
@@ -1263,7 +1248,7 @@ function TimelineView({
 
         {/* Timeline Table */}
         <div
-          ref={timelineScrollRef}
+          ref={(node) => setTimelineScrollEl(node)}
           className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm overflow-hidden overscroll-x-contain overscroll-y-none"
         >
           <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
