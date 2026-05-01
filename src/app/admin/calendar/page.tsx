@@ -25,7 +25,6 @@ import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
 type BookingRow = BookingDbRow;
 type Vehicle = VehicleListItem;
 const TIMELINE_WINDOW_DAYS = 180;
-const TIMELINE_NAV_STEP_DAYS = 30;
 
 export default function AdminCalendarPage() {
   const pathname = usePathname();
@@ -417,16 +416,6 @@ export default function AdminCalendarPage() {
                   blockedDates={blockedDates}
                   start={timelineStart}
                   days={TIMELINE_WINDOW_DAYS}
-                  onPrevious={() => {
-                    const newStart = new Date(timelineStart);
-                    newStart.setDate(newStart.getDate() - TIMELINE_NAV_STEP_DAYS);
-                    setTimelineStart(newStart);
-                  }}
-                  onNext={() => {
-                    const newStart = new Date(timelineStart);
-                    newStart.setDate(newStart.getDate() + TIMELINE_NAV_STEP_DAYS);
-                    setTimelineStart(newStart);
-                  }}
                   onToday={() => {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
@@ -1077,8 +1066,6 @@ interface TimelineViewProps {
   blockedDates: BlockedDateEntry[];
   start: Date;
   days: number;
-  onPrevious: () => void;
-  onNext: () => void;
   onToday: () => void;
   onBookingClick: (booking: BookingRow) => void;
   onBlockedDateClick: (blocked: BlockedDateEntry) => void;
@@ -1090,8 +1077,6 @@ function TimelineView({
   blockedDates,
   start,
   days,
-  onPrevious,
-  onNext,
   onToday,
   onBookingClick,
   onBlockedDateClick,
@@ -1276,14 +1261,8 @@ function TimelineView({
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-              <Button onClick={onPrevious} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-200">
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
               <Button onClick={handleTodayClick} variant="ghost" size="sm" className="h-8 px-3 hover:bg-gray-200 text-xs font-semibold">
                 Today
-              </Button>
-              <Button onClick={onNext} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-200">
-                <ChevronRight className="w-4 h-4" />
               </Button>
             </div>
             <span className="text-sm font-semibold text-gray-800">
