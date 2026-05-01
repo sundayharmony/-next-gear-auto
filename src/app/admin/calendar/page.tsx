@@ -1112,6 +1112,10 @@ function TimelineView({
   const dateKeys = dateRange.map(toDateKey);
   /** Set when the scroll container DOM node mounts — guarantees wheel listener attaches (ref alone can be null on first layout). */
   const [timelineScrollEl, setTimelineScrollEl] = useState<HTMLDivElement | null>(null);
+  const [visibleRange, setVisibleRange] = useState<{ startIdx: number; endIdx: number }>({
+    startIdx: 0,
+    endIdx: Math.max(days - 1, 0),
+  });
 
   // Group bookings by vehicle
   const bookingsByVehicle = useMemo(() => {
@@ -1210,6 +1214,61 @@ function TimelineView({
     };
   }, [timelineScrollEl]);
 
+  useEffect(() => {
+    setVisibleRange({
+      startIdx: 0,
+      endIdx: Math.max(days - 1, 0),
+    });
+  }, [start, days]);
+
+  useLayoutEffect(() => {
+    const el = timelineScrollEl;
+    if (!el) return undefined;
+
+    const computeVisibleRange = () => {
+      const dayHeaders = el.querySelectorAll<HTMLElement>("th[data-day-index]");
+      if (!dayHeaders.length) return;
+
+      const viewportLeft = el.scrollLeft;
+      const viewportRight = viewportLeft + el.clientWidth;
+      let firstVisible = -1;
+      let lastVisible = -1;
+
+      dayHeaders.forEach((header) => {
+        const idx = Number(header.dataset.dayIndex);
+        const left = header.offsetLeft;
+        const right = left + header.offsetWidth;
+        const intersectsViewport = right > viewportLeft && left < viewportRight;
+        if (!intersectsViewport) return;
+        if (firstVisible === -1 || idx < firstVisible) firstVisible = idx;
+        if (lastVisible === -1 || idx > lastVisible) lastVisible = idx;
+      });
+
+      if (firstVisible === -1 || lastVisible === -1) return;
+      setVisibleRange((prev) =>
+        prev.startIdx === firstVisible && prev.endIdx === lastVisible
+          ? prev
+          : { startIdx: firstVisible, endIdx: lastVisible }
+      );
+    };
+
+    computeVisibleRange();
+    el.addEventListener("scroll", computeVisibleRange, { passive: true });
+    window.addEventListener("resize", computeVisibleRange);
+    return () => {
+      el.removeEventListener("scroll", computeVisibleRange);
+      window.removeEventListener("resize", computeVisibleRange);
+    };
+  }, [timelineScrollEl, dateRange]);
+
+  const visibleStartDate = dateRange[Math.max(0, Math.min(visibleRange.startIdx, days - 1))] ?? dateRange[0];
+  const visibleEndDate = dateRange[Math.max(0, Math.min(visibleRange.endIdx, days - 1))] ?? dateRange[days - 1];
+
+  const handleTodayClick = useCallback(() => {
+    onToday();
+    timelineScrollEl?.scrollTo({ left: 0, behavior: "smooth" });
+  }, [onToday, timelineScrollEl]);
+
   return (
     <Card className="min-w-0 shadow-sm">
       <CardContent className="min-w-0 p-6">
@@ -1220,7 +1279,7 @@ function TimelineView({
               <Button onClick={onPrevious} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-200">
                 <ChevronLeft className="w-4 h-4" />
               </Button>
-              <Button onClick={onToday} variant="ghost" size="sm" className="h-8 px-3 hover:bg-gray-200 text-xs font-semibold">
+              <Button onClick={handleTodayClick} variant="ghost" size="sm" className="h-8 px-3 hover:bg-gray-200 text-xs font-semibold">
                 Today
               </Button>
               <Button onClick={onNext} variant="ghost" size="sm" className="h-8 w-8 p-0 hover:bg-gray-200">
@@ -1228,12 +1287,12 @@ function TimelineView({
               </Button>
             </div>
             <span className="text-sm font-semibold text-gray-800">
-              {dateRange[0].toLocaleDateString("en-US", {
+              {visibleStartDate.toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
               })}{" "}
               &ndash;{" "}
-              {dateRange[days - 1].toLocaleDateString("en-US", {
+              {visibleEndDate.toLocaleDateString("en-US", {
                 month: "short",
                 day: "numeric",
                 year: "numeric",
@@ -1279,6 +1338,7 @@ function TimelineView({
                   return (
                     <th
                       key={i}
+                      data-day-index={i}
                       className={`border-b-2 border-r border-gray-200 p-2 text-center text-xs font-medium relative ${
                         isDateToday
                           ? "bg-purple-100 text-purple-900"
