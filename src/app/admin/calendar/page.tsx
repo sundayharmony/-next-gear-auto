@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useLayoutEffect, useState, useMemo, useCallback } from "react";
 import { usePathname } from "next/navigation";
 import type { BookingDbRow, VehicleListItem } from "@/lib/types";
 import {
@@ -1044,6 +1044,30 @@ function MobileAgendaView({
    DESKTOP TIMELINE VIEW — horizontal table
    ═══════════════════════════════════════════════════ */
 
+const TIMELINE_WHEEL_LINE_PX = 18;
+
+/** Convert wheel delta to pixels for DOM_DELTA_LINE / DOM_DELTA_PAGE (trackpads usually send PIXEL). */
+function scaleWheelAxis(delta: number, deltaMode: number, pageSize: number): number {
+  switch (deltaMode) {
+    case WheelEvent.DOM_DELTA_LINE:
+      return delta * TIMELINE_WHEEL_LINE_PX;
+    case WheelEvent.DOM_DELTA_PAGE:
+      return delta * Math.max(pageSize, 1);
+    case WheelEvent.DOM_DELTA_PIXEL:
+    default:
+      return delta;
+  }
+}
+
+function normalizedWheelDeltas(ev: WheelEvent, el: HTMLElement): { dx: number; dy: number } {
+  const w = el.clientWidth;
+  const h = el.clientHeight;
+  return {
+    dx: scaleWheelAxis(ev.deltaX, ev.deltaMode, w),
+    dy: scaleWheelAxis(ev.deltaY, ev.deltaMode, h),
+  };
+}
+
 interface TimelineViewProps {
   bookings: BookingRow[];
   vehicles: Vehicle[];
@@ -1151,21 +1175,51 @@ function TimelineView({
     return counts;
   }, [bookingsByVehicle, vehicles, dateKeys]);
 
-  const handleTimelineWheel = (event: React.WheelEvent<HTMLDivElement>) => {
-    const scroller = timelineScrollRef.current;
-    if (!scroller) return;
-    const dominantHorizontal = Math.abs(event.deltaX) > Math.abs(event.deltaY);
-    const shouldScrollHorizontally = dominantHorizontal || event.shiftKey;
-    if (shouldScrollHorizontally) {
-      event.preventDefault();
-      const amount = dominantHorizontal ? event.deltaX : event.deltaY;
-      scroller.scrollLeft += amount;
-      return;
-    }
-    if (Math.abs(event.deltaY) < 1) return;
-    event.preventDefault();
-    scroller.scrollLeft += event.deltaY;
-  };
+  // Native non-passive wheel: React's onWheel is passive so preventDefault does not stop page scroll.
+  useLayoutEffect(() => {
+    const el = timelineScrollRef.current;
+    if (!el) return undefined;
+
+    let rafId: number | null = null;
+    let pendingScroll = 0;
+
+    const flush = () => {
+      rafId = null;
+      if (pendingScroll !== 0) {
+        el.scrollLeft += pendingScroll;
+        pendingScroll = 0;
+      }
+    };
+
+    const onWheel = (ev: WheelEvent) => {
+      ev.preventDefault();
+      const { dx, dy } = normalizedWheelDeltas(ev, el);
+      const dominantHorizontal = Math.abs(dx) > Math.abs(dy);
+      const shouldScrollHorizontally = dominantHorizontal || ev.shiftKey;
+
+      let delta = 0;
+      if (shouldScrollHorizontally) {
+        delta = dominantHorizontal ? dx : dy;
+      } else {
+        if (Math.abs(dy) < 0.25) return;
+        delta = dy;
+      }
+
+      pendingScroll += delta;
+      if (rafId == null) {
+        rafId = requestAnimationFrame(flush);
+      }
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (rafId != null) cancelAnimationFrame(rafId);
+      if (pendingScroll !== 0) {
+        el.scrollLeft += pendingScroll;
+      }
+    };
+  }, []);
 
   return (
     <Card className="shadow-sm">
@@ -1210,8 +1264,7 @@ function TimelineView({
         {/* Timeline Table */}
         <div
           ref={timelineScrollRef}
-          onWheel={handleTimelineWheel}
-          className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm overflow-hidden"
+          className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm overflow-hidden overscroll-x-contain overscroll-y-none"
         >
           <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
             <colgroup>

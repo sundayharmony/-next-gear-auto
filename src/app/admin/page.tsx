@@ -41,22 +41,6 @@ interface DashboardData {
   recentBookings: BookingRow[];
 }
 
-interface BlockedDateRow {
-  id: string;
-  vehicle_id: string;
-  start_date: string;
-  end_date: string;
-  source?: string | null;
-  pickup_time?: string | null;
-}
-
-interface VehicleRow {
-  id: string;
-  year: number;
-  make: string;
-  model: string;
-}
-
 interface MaintenanceRow {
   id: string;
   title: string;
@@ -86,25 +70,35 @@ async function fetchJsonData<T>(path: string, signal?: AbortSignal): Promise<T |
   }
 }
 
+/** Calendar day from DB date or ISO datetime (YYYY-MM-DD). */
+function bookingCalendarDay(value: string | null | undefined): string {
+  if (!value) return "";
+  const s = String(value).trim();
+  if (s.length >= 10 && /^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0, 10);
+  return s;
+}
+
 function buildHighlights(
   todayStr: string,
   bookings: BookingRow[],
-  blockedDates: BlockedDateRow[] | null,
-  maintenance: MaintenanceRow[] | null,
-  vehicles: VehicleRow[] | null
+  maintenance: MaintenanceRow[] | null
 ): TodayHighlightLists {
-  const vehicleMap = new Map<string, string>();
-  (vehicles || []).forEach((v) => {
-    vehicleMap.set(v.id, getVehicleDisplayName({ year: v.year, make: v.make, model: v.model }));
-  });
-
-  const nonCancelled = bookings.filter((b) => b.status !== "cancelled");
   const pickups: TodayHighlightLists["pickups"] = [];
   const returns: TodayHighlightLists["returns"] = [];
   const seen = new Set<string>();
 
-  for (const b of nonCancelled) {
-    if (b.pickup_date === todayStr) {
+  // Only website reservations — not blocked_dates / Turo calendar rows (those can disagree with rental pickup/return dates).
+  for (const b of bookings) {
+    if (b.status === "cancelled") continue;
+
+    const pickupDay = bookingCalendarDay(b.pickup_date);
+    const returnDay = bookingCalendarDay(b.return_date);
+
+    // Pickups today: rentals not finished before pickup (pending / confirmed / active)
+    if (
+      pickupDay === todayStr &&
+      (b.status === "pending" || b.status === "confirmed" || b.status === "active")
+    ) {
       const key = `b-pu-${b.id}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -116,7 +110,9 @@ function buildHighlights(
         });
       }
     }
-    if (b.return_date === todayStr) {
+
+    // Returns today: any non-cancelled trip whose return day is today
+    if (returnDay === todayStr) {
       const key = `b-rt-${b.id}`;
       if (!seen.has(key)) {
         seen.add(key);
@@ -125,37 +121,6 @@ function buildHighlights(
           label: b.customer_name || "Customer",
           sub: b.vehicleName || "Vehicle",
           href: `/admin/bookings?booking=${b.id}`,
-        });
-      }
-    }
-  }
-
-  for (const block of blockedDates || []) {
-    const vname = vehicleMap.get(block.vehicle_id) || "Vehicle";
-    const turo = block.source === "turo-email";
-    const prefix = turo ? "Turo" : "Blocked";
-    if (block.start_date === todayStr) {
-      const key = `bd-pu-${block.id}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        const time = block.pickup_time ? ` · ${formatTime(block.pickup_time)}` : "";
-        pickups.push({
-          key,
-          label: `${prefix} pickup`,
-          sub: `${vname}${time}`,
-          href: "/admin/calendar",
-        });
-      }
-    }
-    if (block.end_date === todayStr) {
-      const key = `bd-rt-${block.id}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        returns.push({
-          key,
-          label: `${prefix} return`,
-          sub: vname,
-          href: "/admin/calendar",
         });
       }
     }
@@ -256,14 +221,10 @@ export default function AdminDashboardPage() {
         created_at: String(b.created_at ?? ""),
       }));
 
-      const [blockedDates, maintenanceRows, vehicles] = await Promise.all([
-        fetchJsonData<BlockedDateRow[]>("/api/admin/blocked-dates", signal),
-        fetchJsonData<MaintenanceRow[]>(
-          `/api/admin/maintenance?from=${encodeURIComponent(todayStr)}&to=${encodeURIComponent(todayStr)}`,
-          signal
-        ),
-        fetchJsonData<VehicleRow[]>("/api/admin/vehicles", signal),
-      ]);
+      const maintenanceRows = await fetchJsonData<MaintenanceRow[]>(
+        `/api/admin/maintenance?from=${encodeURIComponent(todayStr)}&to=${encodeURIComponent(todayStr)}`,
+        signal
+      );
 
       const bookings = allBookings.filter((b) => b.status !== "cancelled");
       const confirmed = bookings.filter((b) => b.status === "confirmed");
@@ -278,7 +239,7 @@ export default function AdminDashboardPage() {
         .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
         .slice(0, 10);
 
-      setHighlights(buildHighlights(todayStr, allBookings, blockedDates, maintenanceRows, vehicles));
+      setHighlights(buildHighlights(todayStr, allBookings, maintenanceRows));
 
       setData({
         confirmedBookings: confirmed.length,
