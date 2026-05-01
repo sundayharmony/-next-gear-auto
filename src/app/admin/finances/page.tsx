@@ -43,6 +43,11 @@ import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate } from "@/lib/utils/date-helpers";
+import {
+  resolveTuroTripRevenue,
+  addProratedTuroRevenueByDay,
+  forEachProratedTuroDay,
+} from "@/lib/utils/turo-blocked-date";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { exportToCSV } from "@/lib/utils/csv-export";
@@ -95,6 +100,7 @@ interface Expense {
   description: string | null;
   date: string;
   created_at: string;
+  blocked_date_id?: string | null;
 }
 
 interface BlockedDateFinanceEntry {
@@ -104,6 +110,7 @@ interface BlockedDateFinanceEntry {
   end_date: string;
   source: string;
   earnings: number | null;
+  reason?: string | null;
 }
 
 /** Vehicle with finance fields (matches shared Vehicle type) */
@@ -116,6 +123,7 @@ interface EditingExpense {
   description: string;
   date: string;
   vehicle_id: string | null;
+  blocked_date_id?: string | null;
 }
 
 /** Unified expense entry with source tracking */
@@ -128,6 +136,7 @@ interface UnifiedExpense {
   date: string;
   created_at: string;
   source: "manual" | "maintenance" | "financing" | "ticket";
+  blocked_date_id?: string | null;
 }
 
 // ─── Constants ────────────────────────────────────────────────────
@@ -140,6 +149,8 @@ const CATEGORY_COLORS: Record<string, string> = {
   registration: "#EC4899",  // Pink
   financing: "#6366F1",     // Indigo (was purple — now clearly indigo)
   tickets: "#F97316",       // Orange
+  rideshare: "#8B5CF6",     // Violet (Uber/Lyft)
+  turo_trip: "#0D9488",     // Teal (misc Turo trip cost)
   other: "#6B7280",         // Gray
 };
 
@@ -152,6 +163,8 @@ const CATEGORY_ICONS: Record<string, React.ReactNode> = {
   registration: <FileText className="h-4 w-4" />,
   financing: <Wallet className="h-4 w-4" />,
   tickets: <Receipt className="h-4 w-4" />,
+  rideshare: <Car className="h-4 w-4" />,
+  turo_trip: <Target className="h-4 w-4" />,
   other: <MoreHorizontal className="h-4 w-4" />,
 };
 
@@ -164,6 +177,8 @@ const CATEGORIES = [
   "registration",
   "financing",
   "tickets",
+  "rideshare",
+  "turo_trip",
   "other",
 ];
 
@@ -278,6 +293,7 @@ export default function AdminFinancesPage() {
   const [addingExpense, setAddingExpense] = useState(false);
   const [newExpense, setNewExpense] = useState({
     vehicleId: "",
+    blockedDateId: "" as string,
     category: "maintenance",
     amount: "",
     description: "",
@@ -381,11 +397,24 @@ export default function AdminFinancesPage() {
       .map((block) => ({
         id: block.id,
         vehicle_id: block.vehicle_id,
-        revenue: Number(block.earnings) || 0,
+        revenue: resolveTuroTripRevenue(block),
         date: block.start_date,
-      }))
-      .filter((entry) => entry.revenue > 0);
+        start_date: block.start_date,
+        end_date: block.end_date,
+        reason: block.reason ?? null,
+      }));
   }, [blockedDates, dateRange]);
+
+  /** Sum of manual expenses linked to a Turo blocked_dates row (trip costs). */
+  const tripExpenseTotalsByBlockedId = useMemo(() => {
+    const m = new Map<string, number>();
+    expenses.forEach((e) => {
+      if (e.blocked_date_id) {
+        m.set(e.blocked_date_id, (m.get(e.blocked_date_id) || 0) + (e.amount ?? 0));
+      }
+    });
+    return m;
+  }, [expenses]);
 
   // Maintenance costs (all completed maintenance records show as expenses, filtered by date range)
   const maintenanceCosts = useMemo((): UnifiedExpense[] => {
@@ -471,7 +500,12 @@ export default function AdminFinancesPage() {
   const filteredExpenses = useMemo(
     (): UnifiedExpense[] => expenses
       .filter((e) => e.date >= dateRange.from && e.date <= dateRange.to)
-      .map((e) => ({ ...e, description: e.description ?? null, source: "manual" as const })),
+      .map((e) => ({
+        ...e,
+        description: e.description ?? null,
+        source: "manual" as const,
+        blocked_date_id: e.blocked_date_id ?? null,
+      })),
     [expenses, dateRange]
   );
 
@@ -539,10 +573,19 @@ export default function AdminFinancesPage() {
       const key = b.pickup_date.substring(0, 7); // "YYYY-MM"
       if (months[key]) months[key].income += b.total_price ?? 0;
     });
-    turoRevenueEntries.forEach((entry) => {
-      const key = entry.date.substring(0, 7);
-      if (months[key]) months[key].income += entry.revenue;
-    });
+    blockedDates
+      .filter(
+        (b) =>
+          b.source === "turo-email" &&
+          b.start_date <= dateRange.to &&
+          b.end_date >= dateRange.from
+      )
+      .forEach((block) => {
+        const R = resolveTuroTripRevenue(block);
+        forEachProratedTuroDay(block, R, (_dayStr, monthKey, amt) => {
+          if (months[monthKey]) months[monthKey].income += amt;
+        });
+      });
 
     allExpenses.forEach((e) => {
       const key = e.date.substring(0, 7);
@@ -555,7 +598,7 @@ export default function AdminFinancesPage() {
       expenses: Math.round(m.expenses),
       net: Math.round(m.income - m.expenses),
     }));
-  }, [revenueBookings, turoRevenueEntries, allExpenses, dateRange]);
+  }, [revenueBookings, blockedDates, allExpenses, dateRange]);
 
   // Daily earnings (within selected date range, max 30 days shown)
   const dailyEarningsData = useMemo(() => {
@@ -585,10 +628,17 @@ export default function AdminFinancesPage() {
       const idx = dayMap.get(b.pickup_date);
       if (idx !== undefined) days[idx].revenue += b.total_price ?? 0;
     });
-    turoRevenueEntries.forEach((entry) => {
-      const idx = dayMap.get(entry.date);
-      if (idx !== undefined) days[idx].revenue += entry.revenue;
-    });
+    blockedDates
+      .filter(
+        (b) =>
+          b.source === "turo-email" &&
+          b.start_date <= dateRange.to &&
+          b.end_date >= dateRange.from
+      )
+      .forEach((block) => {
+        const R = resolveTuroTripRevenue(block);
+        addProratedTuroRevenueByDay(block, R, dayMap, days);
+      });
 
     allExpenses.forEach((e) => {
       const idx = dayMap.get(e.date);
@@ -600,7 +650,7 @@ export default function AdminFinancesPage() {
       revenue: Math.round(d.revenue),
       expenses: Math.round(d.expenses),
     }));
-  }, [revenueBookings, turoRevenueEntries, allExpenses, dateRange]);
+  }, [revenueBookings, blockedDates, allExpenses, dateRange]);
 
   // Expense by category (includes maintenance + financing costs)
   const expenseCategoryData = useMemo(() => {
@@ -703,18 +753,25 @@ export default function AdminFinancesPage() {
         months[key].bookings += 1;
       }
     });
-    turoRevenueEntries.forEach((entry) => {
-      const key = entry.date.substring(0, 7);
-      if (months[key]) {
-        months[key].revenue += entry.revenue;
-      }
-    });
+    blockedDates
+      .filter(
+        (b) =>
+          b.source === "turo-email" &&
+          b.start_date <= dateRange.to &&
+          b.end_date >= dateRange.from
+      )
+      .forEach((block) => {
+        const R = resolveTuroTripRevenue(block);
+        forEachProratedTuroDay(block, R, (_dayStr, monthKey, amt) => {
+          if (months[monthKey]) months[monthKey].revenue += amt;
+        });
+      });
 
     return Object.values(months).map((m) => ({
       ...m,
       revenue: Math.round(m.revenue),
     }));
-  }, [revenueBookings, turoRevenueEntries, dateRange]);
+  }, [revenueBookings, blockedDates, dateRange]);
 
   // Monthly profit data (revenue, expenses, profit — based on selected date range)
   const monthlyProfitData = useMemo(() => {
@@ -734,10 +791,19 @@ export default function AdminFinancesPage() {
       const key = b.pickup_date.substring(0, 7);
       if (months[key]) months[key].revenue += b.total_price ?? 0;
     });
-    turoRevenueEntries.forEach((entry) => {
-      const key = entry.date.substring(0, 7);
-      if (months[key]) months[key].revenue += entry.revenue;
-    });
+    blockedDates
+      .filter(
+        (b) =>
+          b.source === "turo-email" &&
+          b.start_date <= dateRange.to &&
+          b.end_date >= dateRange.from
+      )
+      .forEach((block) => {
+        const R = resolveTuroTripRevenue(block);
+        forEachProratedTuroDay(block, R, (_dayStr, monthKey, amt) => {
+          if (months[monthKey]) months[monthKey].revenue += amt;
+        });
+      });
 
     allExpenses.forEach((e) => {
       const key = e.date.substring(0, 7);
@@ -750,7 +816,7 @@ export default function AdminFinancesPage() {
       expenses: Math.round(m.expenses),
       profit: Math.round(m.revenue - m.expenses),
     }));
-  }, [revenueBookings, turoRevenueEntries, allExpenses, dateRange]);
+  }, [revenueBookings, blockedDates, allExpenses, dateRange]);
 
   // ─── Expense CRUD ───────────────────────────────────────────────
   const handleAddExpense = async () => {
@@ -770,6 +836,7 @@ export default function AdminFinancesPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           vehicleId: newExpense.vehicleId || null,
+          blockedDateId: newExpense.blockedDateId || undefined,
           category: newExpense.category,
           amount: parsedAmount,
           description: newExpense.description || null,
@@ -777,7 +844,14 @@ export default function AdminFinancesPage() {
         }),
       });
       if (!response.ok) throw new Error("Failed to create expense");
-      setNewExpense({ vehicleId: "", category: "maintenance", amount: "", description: "", date: new Date().toISOString().split("T")[0] });
+      setNewExpense({
+        vehicleId: "",
+        blockedDateId: "",
+        category: "maintenance",
+        amount: "",
+        description: "",
+        date: new Date().toISOString().split("T")[0],
+      });
       setAddingExpense(false);
       fetchData();
       setSuccess("Expense added successfully");
@@ -807,6 +881,7 @@ export default function AdminFinancesPage() {
         body: JSON.stringify({
           id: editingExpense.id,
           vehicleId: editingExpense.vehicle_id || null,
+          blockedDateId: editingExpense.blocked_date_id?.trim() || "",
           category: editingExpense.category,
           amount: parsedAmount,
           description: editingExpense.description || null,
@@ -1759,7 +1834,19 @@ export default function AdminFinancesPage() {
                       <Download className="h-4 w-4 mr-1" /> Export CSV
                     </Button>
                     <Button
-                      onClick={() => setAddingExpense(!addingExpense)}
+                      onClick={() => {
+                        if (addingExpense) {
+                          setNewExpense({
+                            vehicleId: "",
+                            blockedDateId: "",
+                            category: "maintenance",
+                            amount: "",
+                            description: "",
+                            date: new Date().toISOString().split("T")[0],
+                          });
+                        }
+                        setAddingExpense(!addingExpense);
+                      }}
                       size="sm"
                       className={addingExpense ? "bg-gray-600" : ""}
                     >
@@ -1771,6 +1858,20 @@ export default function AdminFinancesPage() {
 
                 {addingExpense && (
                   <div className="bg-gray-50 rounded-lg p-4 mb-4 space-y-3">
+                    {newExpense.blockedDateId ? (
+                      <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-teal-200 bg-teal-50/80 px-3 py-2 text-xs text-teal-900">
+                        <span>This expense will be linked to the selected Turo trip.</span>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          className="h-7 text-[11px] border-teal-300"
+                          onClick={() => setNewExpense((p) => ({ ...p, blockedDateId: "" }))}
+                        >
+                          Unlink trip
+                        </Button>
+                      </div>
+                    ) : null}
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       <div>
                         <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Category <span className="text-red-500">*</span></label>
@@ -2019,6 +2120,20 @@ export default function AdminFinancesPage() {
                                 onChange={(e) => setEditingExpense((p) => p ? { ...p, description: e.target.value } : p)}
                                 className="focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                               />
+                              {editingExpense.blocked_date_id ? (
+                                <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-teal-800">
+                                  <span>Linked to a Turo trip (vehicle must match the trip).</span>
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="h-7 text-[11px]"
+                                    onClick={() => setEditingExpense((p) => (p ? { ...p, blocked_date_id: null } : p))}
+                                  >
+                                    Unlink trip
+                                  </Button>
+                                </div>
+                              ) : null}
                               <div className="flex gap-2">
                                 <Button onClick={handleUpdateExpense} size="sm" disabled={savingExpenseId === editingExpense?.id}>
                                   {savingExpenseId === editingExpense?.id ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : null}Save
@@ -2045,6 +2160,11 @@ export default function AdminFinancesPage() {
                                     {vehicle.year} {vehicle.make} {vehicle.model}
                                   </Badge>
                                 )}
+                                {exp.blocked_date_id && (
+                                  <Badge variant="outline" className="text-[10px] text-teal-700 border-teal-200">
+                                    Turo trip
+                                  </Badge>
+                                )}
                               </div>
                               {exp.description && <p className="text-xs text-gray-500 truncate">{exp.description}</p>}
                             </div>
@@ -2062,6 +2182,7 @@ export default function AdminFinancesPage() {
                                     description: exp.description || "",
                                     date: exp.date,
                                     vehicle_id: exp.vehicle_id,
+                                    blocked_date_id: exp.blocked_date_id ?? null,
                                   })
                                 }
                                 aria-label="Edit expense"
@@ -2167,6 +2288,78 @@ export default function AdminFinancesPage() {
                         <Bar dataKey="revenue" fill="#10B981" radius={[8, 8, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Turo trips in range — revenue from earnings/reason; trip-level expenses */}
+            <Card className="rounded-2xl">
+              <CardContent className="p-4 sm:p-5">
+                <SectionHeader
+                  title="Turo trips"
+                  subtitle={`${turoRevenueEntries.length} in date range — add gas, rideshare, or other trip costs`}
+                />
+                {turoRevenueEntries.length === 0 ? (
+                  <p className="text-sm text-gray-500 text-center py-8">No Turo blocks in this range</p>
+                ) : (
+                  <div className="space-y-2 max-h-80 overflow-y-auto">
+                    {turoRevenueEntries.map((trip) => {
+                      const vehicle = vehicleMap.get(trip.vehicle_id);
+                      const tripCosts = tripExpenseTotalsByBlockedId.get(trip.id) || 0;
+                      const net = trip.revenue - tripCosts;
+                      return (
+                        <div
+                          key={trip.id}
+                          className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 p-3 rounded-xl bg-teal-50/80 border border-teal-100"
+                        >
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm font-semibold text-gray-900 truncate">
+                              {vehicle ? getVehicleDisplayName(vehicle) : trip.vehicle_id}
+                            </p>
+                            <p className="text-xs text-gray-600">
+                              {formatDate(trip.start_date)} – {formatDate(trip.end_date)}
+                            </p>
+                            {trip.revenue <= 0 && (
+                              <p className="text-[11px] text-amber-700 mt-0.5">No payout parsed — check blocked date reason text</p>
+                            )}
+                          </div>
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+                            <div className="text-right text-xs sm:text-sm">
+                              <span className="text-gray-500">Revenue </span>
+                              <span className="font-semibold text-green-700">${trip.revenue.toFixed(2)}</span>
+                              <span className="text-gray-400 mx-1">·</span>
+                              <span className="text-gray-500">Costs </span>
+                              <span className="font-semibold text-red-600">${tripCosts.toFixed(2)}</span>
+                              <span className="text-gray-400 mx-1">·</span>
+                              <span className="text-gray-500">Net </span>
+                              <span className={`font-bold ${net >= 0 ? "text-teal-800" : "text-red-700"}`}>${net.toFixed(2)}</span>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="text-xs border-teal-300 text-teal-800 hover:bg-teal-100"
+                              onClick={() => {
+                                setNewExpense({
+                                  vehicleId: trip.vehicle_id,
+                                  blockedDateId: trip.id,
+                                  category: "fuel",
+                                  amount: "",
+                                  description: "",
+                                  date: trip.start_date,
+                                });
+                                setActiveTab("expenses");
+                                setAddingExpense(true);
+                              }}
+                            >
+                              <Plus className="h-3 w-3 mr-1" />
+                              Add expense
+                            </Button>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 )}
               </CardContent>

@@ -42,12 +42,19 @@ export default function AdminCalendarPage() {
     return today;
   });
 
-  // Calendar state
-  const [calendarMonth, setCalendarMonth] = useState<Date>(() => {
+  // Calendar tab: anchor moves day-by-day on scroll so the grid follows dates, not whole-month jumps
+  const [calendarViewDate, setCalendarViewDate] = useState<Date>(() => {
     const today = new Date();
+    today.setHours(0, 0, 0, 0);
     today.setDate(1);
     return today;
   });
+  const calendarMonthStart = useMemo(() => {
+    const d = new Date(calendarViewDate);
+    d.setHours(0, 0, 0, 0);
+    d.setDate(1);
+    return d;
+  }, [calendarViewDate]);
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   // Booking detail panel state
@@ -95,9 +102,9 @@ export default function AdminCalendarPage() {
     bookingsAbortControllerRef.current = new AbortController();
     // Build date range for API filtering (3 months window around current view)
     const pad = (n: number) => String(n).padStart(2, "0");
-    const from = new Date(view === "timeline" ? timelineStart : calendarMonth);
+    const from = new Date(view === "timeline" ? timelineStart : calendarMonthStart);
     from.setMonth(from.getMonth() - 1);
-    const to = new Date(view === "timeline" ? timelineStart : calendarMonth);
+    const to = new Date(view === "timeline" ? timelineStart : calendarMonthStart);
     to.setMonth(to.getMonth() + 2);
     const fromStr = `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`;
     const toStr = `${to.getFullYear()}-${pad(to.getMonth() + 1)}-${pad(to.getDate())}`;
@@ -118,7 +125,7 @@ export default function AdminCalendarPage() {
       if (error instanceof Error && error.name === "AbortError") return;
       logger.error("Failed to fetch bookings:", error);
     }
-  }, [view, timelineStart, calendarMonth, bookingsEndpoint]);
+  }, [view, timelineStart, calendarMonthStart, bookingsEndpoint]);
 
   const fetchAuxiliaryData = useCallback(async () => {
     const [vehiclesRes, blockedRes] = await Promise.all([
@@ -191,28 +198,39 @@ export default function AdminCalendarPage() {
   };
 
   const wheelThrottleRef = React.useRef(0);
+  const WHEEL_DAY_THROTTLE_MS = 85;
   const handleTimelineWheelShift = useCallback((direction: number) => {
     const now = Date.now();
-    if (now - wheelThrottleRef.current < 220) return;
+    if (now - wheelThrottleRef.current < WHEEL_DAY_THROTTLE_MS) return;
     wheelThrottleRef.current = now;
     setTimelineStart((prev) => {
       const next = new Date(prev);
-      next.setDate(next.getDate() + (direction > 0 ? 9 : -9));
+      next.setDate(next.getDate() + (direction > 0 ? 1 : -1));
       return next;
     });
   }, []);
 
   const handleCalendarWheelShift = useCallback((direction: number) => {
     const now = Date.now();
-    if (now - wheelThrottleRef.current < 220) return;
+    if (now - wheelThrottleRef.current < WHEEL_DAY_THROTTLE_MS) return;
     wheelThrottleRef.current = now;
-    setCalendarMonth((prev) => {
+    setCalendarViewDate((prev) => {
       const next = new Date(prev);
-      next.setMonth(next.getMonth() + (direction > 0 ? 1 : -1));
+      next.setHours(0, 0, 0, 0);
+      next.setDate(next.getDate() + (direction > 0 ? 1 : -1));
       return next;
     });
-    setSelectedDay(null);
   }, []);
+
+  useEffect(() => {
+    if (!selectedDay) return;
+    const y = calendarMonthStart.getFullYear();
+    const m = String(calendarMonthStart.getMonth() + 1).padStart(2, "0");
+    const prefix = `${y}-${m}`;
+    if (!selectedDay.startsWith(prefix)) {
+      setSelectedDay(null);
+    }
+  }, [calendarMonthStart, selectedDay]);
 
   return (
     <>
@@ -378,17 +396,17 @@ export default function AdminCalendarPage() {
             <CalendarView
               bookings={filteredBookings}
               blockedDates={blockedDates}
-              currentMonth={calendarMonth}
+              currentMonth={calendarMonthStart}
               onPreviousMonth={() => {
-                const newMonth = new Date(calendarMonth);
-                newMonth.setMonth(newMonth.getMonth() - 1);
-                setCalendarMonth(newMonth);
+                const d = new Date(calendarMonthStart);
+                d.setMonth(d.getMonth() - 1);
+                setCalendarViewDate(d);
                 setSelectedDay(null);
               }}
               onNextMonth={() => {
-                const newMonth = new Date(calendarMonth);
-                newMonth.setMonth(newMonth.getMonth() + 1);
-                setCalendarMonth(newMonth);
+                const d = new Date(calendarMonthStart);
+                d.setMonth(d.getMonth() + 1);
+                setCalendarViewDate(d);
                 setSelectedDay(null);
               }}
               selectedDay={selectedDay}

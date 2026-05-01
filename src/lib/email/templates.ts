@@ -17,6 +17,8 @@ interface EmailData {
   needsPassword?: boolean;
   pickupLocationName?: string;
   returnLocationName?: string;
+  /** When set, "Booking Received" email uses staff-appropriate copy and a sign-agreement CTA */
+  pendingEmailVariant?: "default" | "staff";
 }
 
 interface ExtensionEmailData {
@@ -265,17 +267,32 @@ export function bookingPendingTemplate(data: EmailData): string {
   if (!data || !data.customerName || !data.bookingId) {
     throw new Error("Invalid email data: missing required fields");
   }
+  const agreementUrl = `${SITE_URL}/booking/agreement/${data.bookingId}`;
+  const isStaff = data.pendingEmailVariant === "staff";
   const result = bookingEmailTemplate(
     data,
-    {
-      subject: 'Booking Received',
-      heading: 'Booking Received',
-      message: "we've received your reservation. Here are your details:",
-      showConfirmationLink: false,
-      accountUrl: `${SITE_URL}/account`,
-      accountLinkText: 'View My Booking',
-      bottomNote: "You'll receive a confirmation once your payment is verified. Please bring a valid driver's license at pickup.",
-    }
+    isStaff
+      ? {
+          subject: "Booking Received",
+          heading: "Booking Received",
+          message: "we've set up your reservation. Please review and sign the rental agreement before pickup:",
+          showConfirmationLink: true,
+          confirmationUrl: agreementUrl,
+          accountUrl: `${SITE_URL}/account`,
+          accountLinkText: "Sign Rental Agreement",
+          bottomNote:
+            "Use the button above to sign. You can also view this booking anytime in your account. Please bring a valid driver's license at pickup.",
+        }
+      : {
+          subject: "Booking Received",
+          heading: "Booking Received",
+          message: "we've received your reservation. Here are your details:",
+          showConfirmationLink: false,
+          accountUrl: `${SITE_URL}/account`,
+          accountLinkText: "View My Booking",
+          bottomNote:
+            "You'll receive a confirmation once your payment is verified. Please bring a valid driver's license at pickup.",
+        }
   );
   return result.html;
 }

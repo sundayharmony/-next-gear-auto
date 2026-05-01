@@ -4,48 +4,227 @@ import React, { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import type { LucideIcon } from "lucide-react";
 import {
   Car, DollarSign, Calendar, CalendarDays, Users, TrendingUp, Clock,
   ArrowRight, Tag, Star, BarChart3, AlertCircle, ClipboardList, Wrench,
-  RefreshCw, CheckCircle2, Settings,
+  RefreshCw, CheckCircle2, Settings, Sparkles, MapPin,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
-import { statusColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
+import { getVehicleDisplayName } from "@/lib/types";
+
+interface BookingRow {
+  id: string;
+  customer_name: string;
+  vehicleName: string;
+  pickup_date: string;
+  return_date: string;
+  pickup_time?: string;
+  return_time?: string;
+  total_price: number;
+  deposit?: number;
+  status: string;
+  created_at: string;
+}
 
 interface DashboardData {
-  totalBookings: number;
   confirmedBookings: number;
   pendingBookings: number;
   activeBookings: number;
-  completedBookings: number;
   totalRevenue: number;
   totalDeposits: number;
-  recentBookings: Array<{
-    id: string;
-    customer_name: string;
-    vehicleName: string;
-    pickup_date: string;
-    return_date: string;
-    pickup_time?: string;
-    return_time?: string;
-    total_price: number;
-    status: string;
-    created_at: string;
-  }>;
+  recentBookings: BookingRow[];
+}
+
+interface BlockedDateRow {
+  id: string;
+  vehicle_id: string;
+  start_date: string;
+  end_date: string;
+  source?: string | null;
+  pickup_time?: string | null;
+}
+
+interface VehicleRow {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+}
+
+interface MaintenanceRow {
+  id: string;
+  title: string;
+  vehicleName: string;
+  scheduledDate: string;
+}
+
+interface TodayHighlightLists {
+  pickups: { key: string; label: string; sub: string; href: string }[];
+  returns: { key: string; label: string; sub: string; href: string }[];
+  maintenance: { key: string; label: string; sub: string; href: string }[];
 }
 
 function formatCurrency(amount: number): string {
   return amount.toLocaleString("en-US", { style: "currency", currency: "USD", minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
 
+async function fetchJsonData<T>(path: string, signal?: AbortSignal): Promise<T | null> {
+  try {
+    const res = await adminFetch(path, { signal });
+    if (!res.ok) return null;
+    const json = await res.json();
+    if (!json.success) return null;
+    return json.data as T;
+  } catch {
+    return null;
+  }
+}
+
+function buildHighlights(
+  todayStr: string,
+  bookings: BookingRow[],
+  blockedDates: BlockedDateRow[] | null,
+  maintenance: MaintenanceRow[] | null,
+  vehicles: VehicleRow[] | null
+): TodayHighlightLists {
+  const vehicleMap = new Map<string, string>();
+  (vehicles || []).forEach((v) => {
+    vehicleMap.set(v.id, getVehicleDisplayName({ year: v.year, make: v.make, model: v.model }));
+  });
+
+  const nonCancelled = bookings.filter((b) => b.status !== "cancelled");
+  const pickups: TodayHighlightLists["pickups"] = [];
+  const returns: TodayHighlightLists["returns"] = [];
+  const seen = new Set<string>();
+
+  for (const b of nonCancelled) {
+    if (b.pickup_date === todayStr) {
+      const key = `b-pu-${b.id}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        pickups.push({
+          key,
+          label: b.customer_name || "Customer",
+          sub: b.vehicleName || "Vehicle",
+          href: `/admin/bookings?booking=${b.id}`,
+        });
+      }
+    }
+    if (b.return_date === todayStr) {
+      const key = `b-rt-${b.id}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        returns.push({
+          key,
+          label: b.customer_name || "Customer",
+          sub: b.vehicleName || "Vehicle",
+          href: `/admin/bookings?booking=${b.id}`,
+        });
+      }
+    }
+  }
+
+  for (const block of blockedDates || []) {
+    const vname = vehicleMap.get(block.vehicle_id) || "Vehicle";
+    const turo = block.source === "turo-email";
+    const prefix = turo ? "Turo" : "Blocked";
+    if (block.start_date === todayStr) {
+      const key = `bd-pu-${block.id}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        const time = block.pickup_time ? ` · ${formatTime(block.pickup_time)}` : "";
+        pickups.push({
+          key,
+          label: `${prefix} pickup`,
+          sub: `${vname}${time}`,
+          href: "/admin/calendar",
+        });
+      }
+    }
+    if (block.end_date === todayStr) {
+      const key = `bd-rt-${block.id}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        returns.push({
+          key,
+          label: `${prefix} return`,
+          sub: vname,
+          href: "/admin/calendar",
+        });
+      }
+    }
+  }
+
+  const maintList: TodayHighlightLists["maintenance"] = (maintenance || []).map((m) => ({
+    key: `m-${m.id}`,
+    label: m.title || "Maintenance",
+    sub: m.vehicleName || "Vehicle",
+    href: "/admin/maintenance",
+  }));
+
+  return { pickups, returns, maintenance: maintList };
+}
+
+const QUICK_NAV = [
+  { label: "Bookings", href: "/admin/bookings", icon: ClipboardList },
+  { label: "Calendar", href: "/admin/calendar", icon: CalendarDays },
+  { label: "Vehicles", href: "/admin/vehicles", icon: Car },
+  { label: "Finances", href: "/admin/finances", icon: BarChart3 },
+  { label: "Customers", href: "/admin/customers", icon: Users },
+  { label: "Maintenance", href: "/admin/maintenance", icon: Wrench },
+  { label: "Promo Codes", href: "/admin/promo-codes", icon: Tag },
+  { label: "Reviews", href: "/admin/reviews", icon: Star },
+  { label: "Managers", href: "/admin/managers", icon: Settings },
+] as const;
+
+function HighlightColumn({
+  title,
+  icon: Icon,
+  items,
+  emptyText,
+}: {
+  title: string;
+  icon: LucideIcon;
+  items: { key: string; label: string; sub: string; href: string }[];
+  emptyText: string;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+      <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-gray-900">
+        <Icon className="h-4 w-4 text-purple-600 shrink-0" />
+        {title}
+      </div>
+      {items.length === 0 ? (
+        <p className="text-xs text-gray-500 py-2">{emptyText}</p>
+      ) : (
+        <ul className="space-y-2">
+          {items.map((item) => (
+            <li key={item.key}>
+              <Link
+                href={item.href}
+                className="block rounded-lg border border-transparent px-2 py-1.5 -mx-2 hover:border-purple-100 hover:bg-purple-50/60 transition-colors"
+              >
+                <p className="text-sm font-medium text-gray-900 truncate">{item.label}</p>
+                <p className="text-xs text-gray-500 truncate">{item.sub}</p>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function AdminDashboardPage() {
   const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [highlights, setHighlights] = useState<TodayHighlightLists | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
@@ -53,33 +232,62 @@ export default function AdminDashboardPage() {
     setLoading(true);
     setError(false);
     try {
-      const res = await adminFetch("/api/bookings", { signal });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const result = await res.json();
-      if (result.success) {
-        const allBookings = result.data || [];
-        const bookings = allBookings.filter((b: { status: string }) => b.status !== "cancelled");
-        const confirmed = bookings.filter((b: { status: string }) => b.status === "confirmed");
-        const pending = bookings.filter((b: { status: string }) => b.status === "pending");
-        const active = bookings.filter((b: { status: string }) => b.status === "active");
-        const completed = bookings.filter((b: { status: string }) => b.status === "completed");
-        const revenueBookings = bookings.filter((b: { status: string }) => ["confirmed", "active", "completed"].includes(b.status));
-        const totalRevenue = revenueBookings.reduce((sum: number, b: { total_price: number }) => sum + (b.total_price ?? 0), 0);
-        const totalDeposits = revenueBookings.reduce((sum: number, b: { deposit: number }) => sum + (b.deposit ?? 0), 0);
+      const todayStr = new Date().toISOString().split("T")[0];
 
-        setData({
-          totalBookings: bookings.length,
-          confirmedBookings: confirmed.length,
-          pendingBookings: pending.length,
-          activeBookings: active.length,
-          completedBookings: completed.length,
-          totalRevenue,
-          totalDeposits,
-          recentBookings: bookings.slice(0, 10),
-        });
-      } else {
+      const bookingsRes = await adminFetch("/api/bookings", { signal });
+      if (!bookingsRes.ok) throw new Error(`HTTP ${bookingsRes.status}`);
+      const result = await bookingsRes.json();
+      if (!result.success) {
         setError(true);
+        return;
       }
+
+      const allBookings: BookingRow[] = (result.data || []).map((b: Record<string, unknown>) => ({
+        id: String(b.id),
+        customer_name: String(b.customer_name ?? ""),
+        vehicleName: String(b.vehicleName ?? ""),
+        pickup_date: String(b.pickup_date ?? ""),
+        return_date: String(b.return_date ?? ""),
+        pickup_time: b.pickup_time ? String(b.pickup_time) : undefined,
+        return_time: b.return_time ? String(b.return_time) : undefined,
+        total_price: Number(b.total_price ?? 0),
+        deposit: b.deposit !== undefined && b.deposit !== null ? Number(b.deposit) : undefined,
+        status: String(b.status ?? ""),
+        created_at: String(b.created_at ?? ""),
+      }));
+
+      const [blockedDates, maintenanceRows, vehicles] = await Promise.all([
+        fetchJsonData<BlockedDateRow[]>("/api/admin/blocked-dates", signal),
+        fetchJsonData<MaintenanceRow[]>(
+          `/api/admin/maintenance?from=${encodeURIComponent(todayStr)}&to=${encodeURIComponent(todayStr)}`,
+          signal
+        ),
+        fetchJsonData<VehicleRow[]>("/api/admin/vehicles", signal),
+      ]);
+
+      const bookings = allBookings.filter((b) => b.status !== "cancelled");
+      const confirmed = bookings.filter((b) => b.status === "confirmed");
+      const pending = bookings.filter((b) => b.status === "pending");
+      const active = bookings.filter((b) => b.status === "active");
+      const revenueBookings = bookings.filter((b) => ["confirmed", "active", "completed"].includes(b.status));
+      const totalRevenue = revenueBookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
+      const totalDeposits = revenueBookings.reduce((sum, b) => sum + (b.deposit ?? 0), 0);
+
+      const pendingActive = bookings.filter((b) => b.status === "pending" || b.status === "active");
+      const recentBookings = [...pendingActive]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 10);
+
+      setHighlights(buildHighlights(todayStr, allBookings, blockedDates, maintenanceRows, vehicles));
+
+      setData({
+        confirmedBookings: confirmed.length,
+        pendingBookings: pending.length,
+        activeBookings: active.length,
+        totalRevenue,
+        totalDeposits,
+        recentBookings,
+      });
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return;
       logger.error("Failed to fetch dashboard data:", err);
@@ -97,7 +305,6 @@ export default function AdminDashboardPage() {
 
   return (
     <>
-      {/* Hero header — hidden on mobile since the sticky header shows the title */}
       <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <div>
@@ -133,10 +340,8 @@ export default function AdminDashboardPage() {
           </div>
         ) : data ? (
           <>
-            {/* Stats Grid */}
-            <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-6 mb-8">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 mb-8">
               {[
-                { label: "Total Bookings", value: data.totalBookings, icon: Calendar, color: "text-purple-600", bg: "bg-purple-50" },
                 { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600", bg: "bg-blue-50" },
                 { label: "Confirmed", value: data.confirmedBookings, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
                 { label: "Pending", value: data.pendingBookings, icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50" },
@@ -159,39 +364,52 @@ export default function AdminDashboardPage() {
               ))}
             </div>
 
-            {/* Management Quick Links */}
-            <h2 className="text-xl font-semibold text-gray-900 mb-4">Manage</h2>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-3 lg:grid-cols-4 mb-8">
-              {[
-                { label: "Bookings", desc: "All reservations", icon: ClipboardList, href: "/admin/bookings", color: "bg-purple-100 text-purple-700" },
-                { label: "Calendar", desc: "Trip timeline", icon: CalendarDays, href: "/admin/calendar", color: "bg-indigo-100 text-indigo-700" },
-                { label: "Vehicles", desc: "Manage fleet", icon: Car, href: "/admin/vehicles", color: "bg-blue-100 text-blue-700" },
-                { label: "Customers", desc: "View all users", icon: Users, href: "/admin/customers", color: "bg-sky-100 text-sky-700" },
-                { label: "Finances", desc: "Revenue & expenses", icon: BarChart3, href: "/admin/finances", color: "bg-emerald-100 text-emerald-700" },
-                { label: "Maintenance", desc: "Service records", icon: Wrench, href: "/admin/maintenance", color: "bg-orange-100 text-orange-700" },
-                { label: "Promo Codes", desc: "Discounts & coupons", icon: Tag, href: "/admin/promo-codes", color: "bg-green-100 text-green-700" },
-                { label: "Reviews", desc: "Moderate feedback", icon: Star, href: "/admin/reviews", color: "bg-amber-100 text-amber-700" },
-                { label: "Managers", desc: "Add, edit, or remove manager accounts", icon: Settings, href: "/admin/managers", color: "bg-violet-100 text-violet-700" },
-              ].map((item) => (
-                <Link key={item.href} href={item.href}>
-                  <Card className="group h-full cursor-pointer transition-all hover:shadow-md hover:border-purple-200 focus-within:ring-2 focus-within:ring-purple-500 focus-within:ring-offset-2 admin-card-press">
-                    <CardContent className="p-3 sm:p-5">
-                      <div className={`inline-flex rounded-lg p-2 sm:p-2.5 mb-2 sm:mb-3 ${item.color}`}>
-                        <item.icon className="h-4 w-4 sm:h-5 sm:w-5" />
-                      </div>
-                      <h3 className="text-sm sm:text-base font-semibold text-gray-900 group-hover:text-purple-600 transition-colors">{item.label}</h3>
-                      <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">{item.desc}</p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
+            <div className="mb-8">
+              <div className="flex items-center gap-2 mb-4">
+                <Sparkles className="h-5 w-5 text-amber-500" />
+                <h2 className="text-xl font-semibold text-gray-900">Today&apos;s highlights</h2>
+              </div>
+              {highlights && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
+                  <HighlightColumn
+                    title="Pickups today"
+                    icon={MapPin}
+                    items={highlights.pickups}
+                    emptyText="No pickups scheduled for today."
+                  />
+                  <HighlightColumn
+                    title="Returns today"
+                    icon={Calendar}
+                    items={highlights.returns}
+                    emptyText="No returns scheduled for today."
+                  />
+                  <HighlightColumn
+                    title="Maintenance today"
+                    icon={Wrench}
+                    items={highlights.maintenance}
+                    emptyText="No maintenance scheduled for today."
+                  />
+                </div>
+              )}
+              <div className="flex flex-wrap gap-2">
+                {QUICK_NAV.map((item) => (
+                  <Link key={item.href} href={item.href}>
+                    <Badge
+                      variant="secondary"
+                      className="cursor-pointer px-3 py-1.5 text-xs font-medium hover:bg-purple-100 hover:text-purple-900 transition-colors"
+                    >
+                      <item.icon className="h-3 w-3 mr-1 inline" />
+                      {item.label}
+                    </Badge>
+                  </Link>
+                ))}
+              </div>
             </div>
 
-            {/* Recent Bookings */}
             <div className="flex items-center justify-between mb-5">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900">Recent Bookings</h2>
-                <p className="text-xs text-gray-400 mt-0.5">{data.recentBookings.length} most recent</p>
+                <h2 className="text-xl font-semibold text-gray-900">Recent bookings</h2>
+                <p className="text-xs text-gray-400 mt-0.5">Pending &amp; active only, up to 10, newest first</p>
               </div>
               <Link href="/admin/bookings">
                 <Button variant="outline" size="sm" className="gap-1.5 text-purple-700 border-purple-200 hover:bg-purple-50 hover:border-purple-300">
@@ -204,8 +422,8 @@ export default function AdminDashboardPage() {
               <Card>
                 <CardContent className="py-16 text-center">
                   <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">No bookings yet</p>
-                  <p className="text-sm text-gray-400 mt-1">They&apos;ll show up here once customers start booking.</p>
+                  <p className="text-gray-500 font-medium">No pending or active rentals</p>
+                  <p className="text-sm text-gray-400 mt-1">When new bookings need action or vehicles are out, they will appear here.</p>
                 </CardContent>
               </Card>
             ) : (
@@ -239,7 +457,6 @@ export default function AdminDashboardPage() {
                       className={`group relative rounded-xl border border-gray-200 border-l-[3px] ${accent} bg-white hover:shadow-md hover:border-gray-300 transition-all duration-200 cursor-pointer overflow-hidden admin-card-press ${isPending ? "ring-1 ring-yellow-100" : ""}`}
                     >
                       <div className="px-4 py-3.5 sm:px-5">
-                        {/* Top row: Customer + Status + Price */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
                             <div className="flex items-center gap-2">
@@ -268,7 +485,6 @@ export default function AdminDashboardPage() {
                           </div>
                         </div>
 
-                        {/* Bottom row: Dates */}
                         <div className="mt-2.5 flex flex-wrap items-center gap-1.5 sm:gap-2 text-xs">
                           <div className="flex items-center gap-1 bg-gray-50 rounded-md px-2 py-1">
                             <Calendar className="h-3 w-3 text-gray-400" />
@@ -287,7 +503,6 @@ export default function AdminDashboardPage() {
                         </div>
                       </div>
 
-                      {/* Hover arrow indicator */}
                       <div className="absolute right-3 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity">
                         <ArrowRight className="h-4 w-4 text-purple-400" />
                       </div>

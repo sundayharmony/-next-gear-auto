@@ -33,7 +33,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
     vehicleFilter, setVehicleFilter,
     searchQuery, setSearchQuery,
     sortField, sortOrder, setSort,
-    fetchBookings, updateStatus, bulkUpdateStatus, updating,
+    fetchBookings, mergeBookingInList, updateStatus, bulkUpdateStatus, updating,
     todayPickups, todayReturns, overdueBookings,
   } = useBookings(config);
 
@@ -236,10 +236,14 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
     }
   }, [bookings, selectedBooking]);
 
-  const handleUpdateBookingInList = useCallback((updated: BookingRow) => {
-    setSelectedBooking(updated);
-    detailDirtyRef.current = true;
-  }, []);
+  const handleUpdateBookingInList = useCallback(
+    (updated: BookingRow) => {
+      mergeBookingInList(updated);
+      setSelectedBooking(updated);
+      detailDirtyRef.current = true;
+    },
+    [mergeBookingInList]
+  );
 
   const handleUpdateStatusFromDetail = useCallback(
     async (bookingId: string, newStatus: string) => {

@@ -112,6 +112,7 @@ interface BookingEmailData {
   totalPrice: number;
   deposit: number;
   needsPassword?: boolean;
+  pendingEmailVariant?: "default" | "staff";
 }
 
 async function enrichWithPasswordToken(data: BookingEmailData): Promise<BookingEmailData & { passwordToken?: string }> {

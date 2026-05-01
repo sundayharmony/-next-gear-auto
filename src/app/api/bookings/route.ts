@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import {
   sendBookingConfirmationWithAgreement,
   sendBookingPendingEmail,
+  sendBookingSignAgreement,
   sendAdminNewBooking,
   sendCancellationEmail,
 } from "@/lib/email/mailer";
@@ -481,14 +482,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Fetch vehicle name and check customer password in parallel
-    const emailRecipient = body.customerDetails?.email || body.customerEmail || null;
-    const emailName = body.customerDetails?.name || body.customerName || "Customer";
+    // Resolved customer email on the booking row (includes customerId lookup when body had no email)
+    const notifyEmail = bookingEmail?.trim() || null;
+    const displayName = (bookingName || body.customerDetails?.name || body.customerName || "Customer").slice(0, 100);
 
     let vehicleName = "Vehicle";
     let needsPassword = false;
 
-    if (body.vehicleId || emailRecipient) {
+    if (body.vehicleId || notifyEmail) {
       // Vehicle fetch
       const vehiclePromise = body.vehicleId
         ? Promise.resolve(
@@ -497,9 +498,9 @@ export async function POST(request: NextRequest) {
         : Promise.resolve(null as { year: string; make: string; model: string } | null);
 
       // Customer password check
-      const custPromise = emailRecipient
+      const custPromise = notifyEmail
         ? Promise.resolve(
-            supabase.from("customers").select("password_hash").eq("email", emailRecipient.toLowerCase().trim()).maybeSingle()
+            supabase.from("customers").select("password_hash").eq("email", notifyEmail.toLowerCase().trim()).maybeSingle()
           ).then((res) => res.data as { password_hash: string } | null)
         : Promise.resolve(null as { password_hash: string } | null);
 
@@ -516,15 +517,12 @@ export async function POST(request: NextRequest) {
       needsPassword = !cust?.password_hash;
     }
 
-    // Send emails for new bookings (only when email is provided)
-    // Support both nested (public flow) and flat (admin form) customer fields
-
-    if (emailRecipient) {
-
+    // Send emails for new bookings when we have a customer email (body or customer record)
+    if (notifyEmail) {
       const emailData = {
         bookingId,
-        customerName: emailName,
-        customerEmail: emailRecipient,
+        customerName: displayName,
+        customerEmail: notifyEmail,
         vehicleName,
         pickupDate: body.pickupDate,
         returnDate: body.returnDate,
@@ -533,10 +531,13 @@ export async function POST(request: NextRequest) {
         totalPrice: body.totalPrice ?? 0,
         deposit: body.deposit ?? 0,
         needsPassword,
+        pendingEmailVariant: (isAdminUser || isManagerUser ? "staff" : "default") as const,
       };
 
       // New bookings always start as pending
       sendBookingPendingEmail(emailData).catch(logger.error);
+      // Dedicated sign link + details (matches checkout / confirmation flows)
+      sendBookingSignAgreement(emailData).catch(logger.error);
       // Always notify admin of new booking
       sendAdminNewBooking(emailData).catch(logger.error);
     }

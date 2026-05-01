@@ -26,6 +26,8 @@ interface UseBookingsReturn {
   sortOrder: SortOrder;
   setSort: (field: SortField) => void;
   fetchBookings: () => Promise<void>;
+  /** Merge fields into the in-memory list row so detail-panel sync does not revert optimistic updates */
+  mergeBookingInList: (updated: BookingRow) => void;
   updateStatus: (bookingId: string, newStatus: string) => Promise<boolean>;
   bulkUpdateStatus: (ids: Set<string>, newStatus: string) => Promise<number>;
   updating: string | null;
@@ -89,6 +91,16 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
     }
     setLoading(false);
   }, [config.bookingsEndpoint, config.mode, statusFilter, vehicleFilter, searchQuery, sortField, sortOrder]);
+
+  const mergeBookingInList = useCallback((updated: BookingRow) => {
+    setBookings((prev) => {
+      const i = prev.findIndex((b) => b.id === updated.id);
+      if (i === -1) return prev;
+      const next = [...prev];
+      next[i] = { ...prev[i], ...updated };
+      return next;
+    });
+  }, []);
 
   const fetchVehicles = useCallback(async () => {
     try {
@@ -262,7 +274,7 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
     vehicleFilter, setVehicleFilter,
     searchQuery, setSearchQuery,
     sortField, sortOrder, setSort,
-    fetchBookings, updateStatus, bulkUpdateStatus, updating,
+    fetchBookings, mergeBookingInList, updateStatus, bulkUpdateStatus, updating,
     todayPickups, todayReturns, overdueBookings,
   };
 }
