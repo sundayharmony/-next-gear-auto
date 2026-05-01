@@ -24,6 +24,8 @@ import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
 
 type BookingRow = BookingDbRow;
 type Vehicle = VehicleListItem;
+const TIMELINE_WINDOW_DAYS = 180;
+const TIMELINE_NAV_STEP_DAYS = 30;
 
 export default function AdminCalendarPage() {
   const pathname = usePathname();
@@ -101,7 +103,7 @@ export default function AdminCalendarPage() {
       const start = new Date(timelineStart);
       start.setHours(0, 0, 0, 0);
       const end = new Date(start);
-      end.setDate(end.getDate() + 8);
+      end.setDate(end.getDate() + (TIMELINE_WINDOW_DAYS - 1));
       return { from: getLocalYmd(start), to: getLocalYmd(end) };
     }
     const y = calendarMonthStart.getFullYear();
@@ -414,14 +416,15 @@ export default function AdminCalendarPage() {
                   vehicles={vehicles}
                   blockedDates={blockedDates}
                   start={timelineStart}
+                  days={TIMELINE_WINDOW_DAYS}
                   onPrevious={() => {
                     const newStart = new Date(timelineStart);
-                    newStart.setDate(newStart.getDate() - 9);
+                    newStart.setDate(newStart.getDate() - TIMELINE_NAV_STEP_DAYS);
                     setTimelineStart(newStart);
                   }}
                   onNext={() => {
                     const newStart = new Date(timelineStart);
-                    newStart.setDate(newStart.getDate() + 9);
+                    newStart.setDate(newStart.getDate() + TIMELINE_NAV_STEP_DAYS);
                     setTimelineStart(newStart);
                   }}
                   onToday={() => {
@@ -1073,6 +1076,7 @@ interface TimelineViewProps {
   vehicles: Vehicle[];
   blockedDates: BlockedDateEntry[];
   start: Date;
+  days: number;
   onPrevious: () => void;
   onNext: () => void;
   onToday: () => void;
@@ -1085,13 +1089,13 @@ function TimelineView({
   vehicles,
   blockedDates,
   start,
+  days,
   onPrevious,
   onNext,
   onToday,
   onBookingClick,
   onBlockedDateClick,
 }: TimelineViewProps) {
-  const days = 9;
   const dateRange = Array.from({ length: days }, (_, i) => {
     const date = new Date(start);
     date.setDate(date.getDate() + i);
