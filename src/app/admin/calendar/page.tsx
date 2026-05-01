@@ -1207,8 +1207,8 @@ function TimelineView({
   }, [timelineScrollEl]);
 
   return (
-    <Card className="shadow-sm">
-      <CardContent className="p-6">
+    <Card className="min-w-0 shadow-sm">
+      <CardContent className="min-w-0 p-6">
         {/* Date Navigation */}
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -1246,16 +1246,22 @@ function TimelineView({
           </div>
         </div>
 
-        {/* Timeline Table */}
+        {/* Never pair overflow-x-auto with overflow-hidden here — overflow shorthand wins and can kill horizontal scroll. minWidth max(100%, …) forces scrollWidth > clientWidth on typical admin widths. */}
         <div
           ref={(node) => setTimelineScrollEl(node)}
-          className="overflow-x-auto border border-gray-200 rounded-xl shadow-sm overflow-hidden overscroll-x-contain overscroll-y-none"
+          className="max-w-full min-w-0 overflow-x-auto overflow-y-hidden border border-gray-200 rounded-xl shadow-sm overscroll-x-contain overscroll-y-none"
         >
-          <table className="w-full border-collapse" style={{ tableLayout: "fixed" }}>
+          <table
+            className="w-full border-collapse"
+            style={{
+              tableLayout: "fixed",
+              minWidth: `max(100%, ${170 + days * 118}px)`,
+            }}
+          >
             <colgroup>
               <col style={{ width: "170px", minWidth: "170px" }} />
               {dateRange.map((_, i) => (
-                <col key={i} style={{ minWidth: "72px" }} />
+                <col key={i} style={{ minWidth: "118px" }} />
               ))}
             </colgroup>
             <thead>
