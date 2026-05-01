@@ -12,6 +12,15 @@ import { getCsrfToken } from "./csrf-fetch";
 
 const MAX_RETRIES = 1; // Maximum retry attempts to prevent infinite loops
 
+/** After failed session refresh, send user to the staff area they were using (not always /admin). */
+function getStaffLoginRedirectPath(): string {
+  if (typeof window === "undefined") return "/login";
+  const path = window.location.pathname || "";
+  if (path.startsWith("/manager")) return "/manager";
+  if (path.startsWith("/admin")) return "/admin";
+  return "/login";
+}
+
 export async function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
   // Validate URL to prevent open redirect/SSRF: must start with "/"
   if (!url.startsWith("/")) {
@@ -101,7 +110,7 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
       // Refresh failed — clear state and redirect to login
       if (res.status === 401) {
         localStorage.removeItem("nga_user");
-        window.location.href = "/admin";
+        window.location.href = getStaffLoginRedirectPath();
         return res;
       }
     }

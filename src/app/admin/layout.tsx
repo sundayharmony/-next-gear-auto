@@ -4,9 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
-  LayoutDashboard, Calendar, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Ticket, Bell, MapPin, ShieldBan, Loader2, Moon, Sun, MessageSquare
+  LayoutDashboard, CalendarDays, Car, Users, Tag, Star, DollarSign, Menu, X, ChevronRight, LogOut, Wrench, Ticket, Bell, MapPin, ShieldBan, Loader2, Moon, Sun, MessageSquare
 } from "lucide-react";
-import { Instagram } from "@/components/icons/instagram";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/auth-context";
 import { ThemeProvider, useTheme } from "@/lib/context/theme-context";
@@ -16,31 +15,14 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
 import { BottomTabBar } from "@/components/admin/bottom-tab-bar";
 import { SwipeBack } from "@/components/admin/swipe-back";
-import { buildPageTitleMap, getAdminNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
+import { buildPageTitleMap, getAdminNavItems } from "@/lib/admin/panel-navigation";
+import { staffPanelIconMap } from "@/lib/admin/staff-panel-icons";
 import { useStaffMessageUnreadCount } from "@/lib/hooks/use-staff-message-unread-count";
-
-const iconComponentMap: Record<PanelIconKey, React.ComponentType<{ className?: string }>> = {
-  dashboard: LayoutDashboard,
-  calendarDays: CalendarDays,
-  calendar: Calendar,
-  car: Car,
-  shieldBan: ShieldBan,
-  wrench: Wrench,
-  mapPin: MapPin,
-  dollarSign: DollarSign,
-  ticket: Ticket,
-  users: Users,
-  tag: Tag,
-  star: Star,
-  messageSquare: MessageSquare,
-  instagram: Instagram,
-  clipboard: Calendar,
-};
 
 const NAV_ITEMS = getAdminNavItems().map((item) => ({
   href: item.href,
   label: item.label,
-  icon: iconComponentMap[item.iconKey],
+  icon: staffPanelIconMap[item.iconKey],
 }));
 
 // Map pathnames to short page titles for mobile header
@@ -56,11 +38,15 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const [pendingCount, setPendingCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [recentBookings, setRecentBookings] = useState<Array<{ id: string; customer_name: string; created_at: string; total_price: number }>>([]);
-  const unreadMessages = useStaffMessageUnreadCount(isAuthenticated && user?.role === "admin");
+  const onMessagesRoute = pathname.startsWith("/admin/messages");
+  const unreadMessages = useStaffMessageUnreadCount(
+    isAuthenticated && user?.role === "admin" && !onMessagesRoute
+  );
 
   // Track abort controller for fetch cancellation
   const abortControllerRef = React.useRef<AbortController | null>(null);
   const bellButtonRef = React.useRef<HTMLButtonElement>(null);
+  const notificationsCloseRef = React.useRef<HTMLButtonElement>(null);
   const pollingIntervalRef = React.useRef<NodeJS.Timeout | null>(null);
 
   // Handle Escape key to close notifications dropdown
@@ -74,6 +60,12 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener("keydown", handleEscapeKey);
     };
+  }, [showNotifications]);
+
+  useEffect(() => {
+    if (!showNotifications) return;
+    const t = window.setTimeout(() => notificationsCloseRef.current?.focus(), 0);
+    return () => clearTimeout(t);
   }, [showNotifications]);
 
   const fetchPendingBookings = useCallback(async () => {
@@ -228,6 +220,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         <>
           <div className="fixed inset-0 z-[55]" onClick={() => setShowNotifications(false)} />
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-notifications-title"
             className="fixed w-80 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 z-[60] overflow-hidden"
             style={(() => {
               const rect = bellButtonRef.current?.getBoundingClientRect();
@@ -238,7 +233,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             })()}
           >
             <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-900">
+              <h3 id="admin-notifications-title" className="text-sm font-semibold text-gray-900">
                 Pending Bookings
                 {pendingCount > 0 && (
                   <span className="ml-2 inline-flex items-center justify-center bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full px-1.5 py-0.5">
@@ -247,6 +242,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                 )}
               </h3>
               <button
+                ref={notificationsCloseRef}
                 onClick={() => setShowNotifications(false)}
                 className="p-1.5 rounded-full hover:bg-gray-200 active:bg-gray-300 text-gray-400 hover:text-gray-600 transition-colors"
                 aria-label="Close notifications"

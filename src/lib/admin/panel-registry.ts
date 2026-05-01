@@ -6,7 +6,8 @@ export interface SyncException {
 export interface PanelFeature {
   key: string;
   label: string;
-  adminPath: string;
+  /** Present for routes that exist under /admin. Manager-only features omit this. */
+  adminPath?: string;
   managerPath?: string;
   sharedWithManager: boolean;
   syncException?: SyncException;
@@ -28,15 +29,21 @@ export const panelFeatureRegistry: PanelFeature[] = [
   { key: "promoCodes", label: "Promo Codes", adminPath: "/admin/promo-codes", managerPath: "/manager/promo-codes", sharedWithManager: true },
   { key: "reviews", label: "Reviews", adminPath: "/admin/reviews", managerPath: "/manager/reviews", sharedWithManager: true },
   { key: "instagram", label: "Instagram", adminPath: "/admin/instagram", managerPath: "/manager/instagram", sharedWithManager: true },
-  { key: "analytics", label: "Analytics", adminPath: "/admin/finances", managerPath: "/manager/analytics", sharedWithManager: false },
+  /** Manager-only: admin uses Finances at /admin/finances (see finances row). */
+  { key: "analytics", label: "Analytics", managerPath: "/manager/analytics", sharedWithManager: true },
 ];
 
-export function getAdminFeatures(): PanelFeature[] {
-  return panelFeatureRegistry.filter((feature) => Boolean(feature.adminPath));
+export function getAdminFeatures(): Array<PanelFeature & { adminPath: string }> {
+  return panelFeatureRegistry.filter(
+    (feature): feature is PanelFeature & { adminPath: string } => Boolean(feature.adminPath)
+  );
 }
 
-export function getManagerFeatures(): PanelFeature[] {
-  return panelFeatureRegistry.filter((feature) => feature.sharedWithManager && Boolean(feature.managerPath));
+export function getManagerFeatures(): Array<PanelFeature & { managerPath: string }> {
+  return panelFeatureRegistry.filter(
+    (feature): feature is PanelFeature & { managerPath: string } =>
+      feature.sharedWithManager && Boolean(feature.managerPath)
+  );
 }
 
 export function getCorrelatedFeatures(): PanelFeature[] {

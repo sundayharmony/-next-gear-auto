@@ -29,7 +29,10 @@ export function useStaffMessageUnreadCount(enabled = true, intervalMs = 15000) {
   useEffect(() => {
     if (!enabled) return;
     load();
-    const timer = setInterval(load, intervalMs);
+    const timer = setInterval(() => {
+      if (typeof document !== "undefined" && document.hidden) return;
+      load();
+    }, intervalMs);
     return () => clearInterval(timer);
   }, [enabled, intervalMs, load]);
 

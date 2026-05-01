@@ -5,24 +5,10 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
-  CalendarDays,
-  Calendar,
-  Car,
-  ShieldBan,
-  Wrench,
-  MapPin,
-  DollarSign,
-  Ticket,
-  Users,
-  Tag,
-  Star,
-  MessageSquare,
-  ClipboardList,
   LogOut,
   Loader2,
   Moon,
   Sun,
-  type LucideIcon,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout/page-container";
@@ -30,33 +16,15 @@ import { SwipeBack } from "@/components/admin/swipe-back";
 import { ThemeProvider, useTheme } from "@/lib/context/theme-context";
 import { useAuth } from "@/lib/context/auth-context";
 import { ManagerBottomTabBar } from "@/components/manager/bottom-tab-bar";
-import { getManagerNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
-import { Instagram } from "@/components/icons/instagram";
+import { getManagerNavItems } from "@/lib/admin/panel-navigation";
+import { staffPanelIconMap } from "@/lib/admin/staff-panel-icons";
 import { cn } from "@/lib/utils/cn";
 import { useStaffMessageUnreadCount } from "@/lib/hooks/use-staff-message-unread-count";
-
-const iconComponentMap: Record<PanelIconKey, LucideIcon> = {
-  dashboard: LayoutDashboard,
-  calendarDays: CalendarDays,
-  calendar: Calendar,
-  car: Car,
-  shieldBan: ShieldBan,
-  wrench: Wrench,
-  mapPin: MapPin,
-  dollarSign: DollarSign,
-  ticket: Ticket,
-  users: Users,
-  tag: Tag,
-  star: Star,
-  messageSquare: MessageSquare,
-  instagram: Instagram,
-  clipboard: ClipboardList,
-};
 
 const NAV_ITEMS = getManagerNavItems().map((item) => ({
   href: item.href,
   label: item.label,
-  icon: iconComponentMap[item.iconKey] || LayoutDashboard,
+  icon: staffPanelIconMap[item.iconKey] || LayoutDashboard,
 }));
 
 function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
@@ -64,7 +32,10 @@ function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const { isDark, toggleTheme } = useTheme();
-  const unreadMessages = useStaffMessageUnreadCount(isAuthenticated && hasRoleForMessages(user?.role));
+  const onMessagesRoute = pathname.startsWith("/manager/messages");
+  const unreadMessages = useStaffMessageUnreadCount(
+    isAuthenticated && hasRoleForMessages(user?.role) && !onMessagesRoute
+  );
   const [loggingOut, setLoggingOut] = React.useState(false);
 
   function hasRoleForMessages(role: string | undefined) {

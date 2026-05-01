@@ -8,15 +8,18 @@ const failures = [];
 const now = Date.now();
 
 const disallowedManagerSharedKeys = new Set(["finances", "vehicles"]);
-const managerUiSyncExemptKeys = new Set(["dashboard"]);
+/** Manager analytics is API-driven and does not re-export an admin page; exempt from shared UI import rule. */
+const managerUiSyncExemptKeys = new Set(["dashboard", "analytics"]);
 
-const featureRegex = /\{\s*key:\s*"([^"]+)",\s*label:\s*"([^"]+)",\s*adminPath:\s*"([^"]+)"(?:,\s*managerPath:\s*"([^"]+)")?,\s*sharedWithManager:\s*(true|false)/g;
+// Supports optional adminPath and optional managerPath (order: adminPath then managerPath when both present).
+const featureRegex =
+  /\{\s*key:\s*"([^"]+)",\s*label:\s*"([^"]+)",(?:\s*adminPath:\s*"([^"]+)",)?(?:\s*managerPath:\s*"([^"]+)",)?\s*sharedWithManager:\s*(true|false)/g;
 const features = [];
 for (const match of source.matchAll(featureRegex)) {
   features.push({
     key: match[1],
     label: match[2],
-    adminPath: match[3],
+    adminPath: match[3] || null,
     managerPath: match[4] || null,
     sharedWithManager: match[5] === "true",
   });

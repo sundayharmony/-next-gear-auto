@@ -3,39 +3,17 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard, Calendar, Car, Users, DollarSign,
-  CalendarDays, Tag, Star, Wrench, Ticket, MapPin, ShieldBan,
-  MoreHorizontal, X, Moon, Sun, MessageSquare,
-} from "lucide-react";
-import { Instagram } from "@/components/icons/instagram";
+import { MoreHorizontal, X, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/lib/context/theme-context";
 import { cn } from "@/lib/utils/cn";
-import { getAdminNavItems, type PanelIconKey } from "@/lib/admin/panel-navigation";
+import { getAdminNavItems } from "@/lib/admin/panel-navigation";
+import { staffPanelIconMap } from "@/lib/admin/staff-panel-icons";
 
 interface TabItem {
   href: string;
   label: string;
   icon: React.ComponentType<{ className?: string }>;
 }
-
-const iconComponentMap: Record<PanelIconKey, React.ComponentType<{ className?: string }>> = {
-  dashboard: LayoutDashboard,
-  calendarDays: CalendarDays,
-  calendar: Calendar,
-  car: Car,
-  shieldBan: ShieldBan,
-  wrench: Wrench,
-  mapPin: MapPin,
-  dollarSign: DollarSign,
-  ticket: Ticket,
-  users: Users,
-  tag: Tag,
-  star: Star,
-  messageSquare: MessageSquare,
-  instagram: Instagram,
-  clipboard: MoreHorizontal,
-};
 
 const adminNavItems = getAdminNavItems();
 
@@ -45,7 +23,7 @@ const PRIMARY_TABS: TabItem[] = adminNavItems
   .map((item) => ({
     href: item.href,
     label: item.key === "dashboard" ? "Home" : item.label,
-    icon: iconComponentMap[item.iconKey],
+    icon: staffPanelIconMap[item.iconKey],
   }));
 
 const MORE_ITEMS: TabItem[] = adminNavItems
@@ -53,7 +31,7 @@ const MORE_ITEMS: TabItem[] = adminNavItems
   .map((item) => ({
     href: item.href,
     label: item.label,
-    icon: iconComponentMap[item.iconKey],
+    icon: staffPanelIconMap[item.iconKey],
   }));
 
 export function BottomTabBar() {
@@ -145,11 +123,7 @@ export function BottomTabBar() {
       </div>
 
       {/* Bottom tab bar */}
-      <nav
-        className="fixed inset-x-0 bottom-0 shrink-0 z-[91] lg:hidden"
-        role="tablist"
-        aria-label="Admin navigation"
-      >
+      <nav className="fixed inset-x-0 bottom-0 shrink-0 z-[91] lg:hidden" aria-label="Admin navigation">
         <div className="bg-white/80 backdrop-blur-xl border-t border-gray-200/50 shadow-[0_-2px_20px_rgba(0,0,0,0.06)]">
           <div className="flex items-stretch justify-around px-2 pb-[calc(env(safe-area-inset-bottom,0px)+4px)]">
             {PRIMARY_TABS.map((tab) => {
@@ -158,8 +132,7 @@ export function BottomTabBar() {
                 <Link
                   key={tab.href}
                   href={tab.href}
-                  role="tab"
-                  aria-selected={active}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex min-h-[68px] flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 px-3 min-w-[64px] transition-all active:scale-90",
                     active ? "text-purple-600" : "text-gray-400"
@@ -183,8 +156,9 @@ export function BottomTabBar() {
 
             {/* More tab */}
             <button
-              role="tab"
-              aria-selected={moreIsActive}
+              type="button"
+              aria-expanded={showMore}
+              aria-label="More navigation"
               onClick={() => setShowMore(!showMore)}
               className={cn(
                 "flex min-h-[68px] flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 px-3 min-w-[64px] transition-all active:scale-90",

@@ -8,9 +8,10 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
-    "test": "npm run check:panel-sync && npm run test:messaging",
+    "test": "npm run check:panel-sync && npm run check:staff-quality && npm run test:messaging",
     "test:messaging": "tsx --test tests/staff-messaging.test.ts tests/booking-overlap.test.ts tests/booking-dates.test.ts tests/turo-blocked-date.test.ts tests/price-calculator.test.ts",
-    "check:panel-sync": "node ./scripts/check-panel-sync.mjs"
+    "check:panel-sync": "node ./scripts/check-panel-sync.mjs",
+    "check:staff-quality": "node ./scripts/staff-quality-gates.mjs"
   },
   "keywords": [],
   "author": "",
