@@ -190,8 +190,12 @@ export async function GET(request: NextRequest) {
       const limit = Math.min(Math.max(1, parseInt(limitParam, 10) || 50), 200);
       query = query.limit(limit);
     } else if (offset === null) {
-      // Default limit of 50 when no pagination params provided, max limit 200
-      query = query.limit(50);
+      // Calendar-style range queries need more rows than the default 50
+      if (fromDate && toDate && isAdmin) {
+        query = query.limit(200);
+      } else {
+        query = query.limit(50);
+      }
     }
 
     // Apply sorting (default: created_at DESC)

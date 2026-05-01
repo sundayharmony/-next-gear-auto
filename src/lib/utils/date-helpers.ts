@@ -76,6 +76,23 @@ export function isDateAfter(dateStr1: string | null | undefined, dateStr2: strin
   return d1 > d2;
 }
 
+/** Calendar date in the user's local timezone (not UTC). */
+export function getLocalYmd(date: Date = new Date()): string {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+/** Shift a local YYYY-MM-DD by a number of calendar days. */
+export function addDaysToYmd(ymd: string, deltaDays: number): string {
+  const parts = ymd.split("-").map(Number);
+  if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return ymd;
+  const dt = new Date(parts[0], parts[1] - 1, parts[2]);
+  dt.setDate(dt.getDate() + deltaDays);
+  return getLocalYmd(dt);
+}
+
 export function getMinPickupDate(): string {
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);

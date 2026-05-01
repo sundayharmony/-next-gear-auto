@@ -17,7 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { formatTime, formatDate } from "@/lib/utils/date-helpers";
+import { formatTime, formatDate, getLocalYmd, addDaysToYmd } from "@/lib/utils/date-helpers";
 import { statusColors, statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
 import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
@@ -42,7 +42,7 @@ export default function AdminCalendarPage() {
     return today;
   });
 
-  // Calendar tab: anchor moves day-by-day on scroll so the grid follows dates, not whole-month jumps
+  // Calendar tab: month grid follows calendarViewDate (buttons or optional wheel nudge). Timeline tab is where wheel = horizontal pan + stable booking loads.
   const [calendarViewDate, setCalendarViewDate] = useState<Date>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -67,6 +67,10 @@ export default function AdminCalendarPage() {
 
   // Track abort controller for fetch cancellation
   const bookingsAbortControllerRef = React.useRef<AbortController | null>(null);
+  /** Admin /api/bookings date window already loaded (YYYY-MM-DD). Manager route loads all in one shot — ref stays null. */
+  const bookingsRangeRef = React.useRef<{ from: string; to: string } | null>(null);
+  const bookingsEndpointRef = React.useRef(bookingsEndpoint);
+  const managerBookingsFetchedRef = React.useRef(false);
 
   const openBookingDetail = (booking: BookingRow) => {
     setSelectedBooking(booking);
@@ -92,40 +96,95 @@ export default function AdminCalendarPage() {
     }
   }, [showBookingDetail, closeBookingDetail]);
 
-  const fetchBookings = useCallback(async () => {
-    // Abort previous request if it's still pending
-    if (bookingsAbortControllerRef.current) {
-      bookingsAbortControllerRef.current.abort();
+  const visibleBounds = useMemo(() => {
+    if (view === "timeline") {
+      const start = new Date(timelineStart);
+      start.setHours(0, 0, 0, 0);
+      const end = new Date(start);
+      end.setDate(end.getDate() + 8);
+      return { from: getLocalYmd(start), to: getLocalYmd(end) };
     }
+    const y = calendarMonthStart.getFullYear();
+    const m = calendarMonthStart.getMonth();
+    const first = new Date(y, m, 1);
+    const last = new Date(y, m + 1, 0);
+    return { from: getLocalYmd(first), to: getLocalYmd(last) };
+  }, [view, timelineStart, calendarMonthStart]);
 
-    // Create new abort controller for this fetch
-    bookingsAbortControllerRef.current = new AbortController();
-    // Build date range for API filtering (3 months window around current view)
-    const pad = (n: number) => String(n).padStart(2, "0");
-    const from = new Date(view === "timeline" ? timelineStart : calendarMonthStart);
-    from.setMonth(from.getMonth() - 1);
-    const to = new Date(view === "timeline" ? timelineStart : calendarMonthStart);
-    to.setMonth(to.getMonth() + 2);
-    const fromStr = `${from.getFullYear()}-${pad(from.getMonth() + 1)}-${pad(from.getDate())}`;
-    const toStr = `${to.getFullYear()}-${pad(to.getMonth() + 1)}-${pad(to.getDate())}`;
+  const loadBookings = useCallback(
+    async (options?: { forceReplace?: boolean }) => {
+      const forceReplace = options?.forceReplace ?? false;
 
-    try {
-      const query = bookingsEndpoint === "/api/manager/bookings"
-        ? `${bookingsEndpoint}?status=all`
-        : `${bookingsEndpoint}?from=${fromStr}&to=${toStr}`;
-      const res = await adminFetch(query, {
-        signal: bookingsAbortControllerRef.current?.signal,
-      });
-      if (res.ok) {
-        const data = await res.json();
-        setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
+      if (bookingsEndpointRef.current !== bookingsEndpoint) {
+        bookingsEndpointRef.current = bookingsEndpoint;
+        bookingsRangeRef.current = null;
+        managerBookingsFetchedRef.current = false;
       }
-    } catch (error) {
-      // Ignore abort errors
-      if (error instanceof Error && error.name === "AbortError") return;
-      logger.error("Failed to fetch bookings:", error);
-    }
-  }, [view, timelineStart, calendarMonthStart, bookingsEndpoint]);
+      if (forceReplace) {
+        bookingsRangeRef.current = null;
+        managerBookingsFetchedRef.current = false;
+      }
+
+      if (bookingsAbortControllerRef.current) {
+        bookingsAbortControllerRef.current.abort();
+      }
+      bookingsAbortControllerRef.current = new AbortController();
+      const signal = bookingsAbortControllerRef.current.signal;
+
+      if (bookingsEndpoint === "/api/manager/bookings") {
+        if (!forceReplace && managerBookingsFetchedRef.current) {
+          return;
+        }
+        try {
+          const res = await adminFetch(`${bookingsEndpoint}?status=all`, { signal });
+          if (res.ok) {
+            const data = await res.json();
+            setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
+            managerBookingsFetchedRef.current = true;
+          }
+          bookingsRangeRef.current = null;
+        } catch (error) {
+          if (error instanceof Error && error.name === "AbortError") return;
+          logger.error("Failed to fetch bookings:", error);
+        }
+        return;
+      }
+
+      const needFrom = addDaysToYmd(visibleBounds.from, -120);
+      const needTo = addDaysToYmd(visibleBounds.to, 120);
+      const loaded = bookingsRangeRef.current;
+
+      if (
+        !forceReplace &&
+        loaded &&
+        needFrom >= loaded.from &&
+        needTo <= loaded.to
+      ) {
+        return;
+      }
+
+      const newFrom =
+        !loaded || forceReplace ? needFrom : needFrom < loaded.from ? needFrom : loaded.from;
+      const newTo =
+        !loaded || forceReplace ? needTo : needTo > loaded.to ? needTo : loaded.to;
+
+      try {
+        const res = await adminFetch(
+          `${bookingsEndpoint}?from=${newFrom}&to=${newTo}&limit=200`,
+          { signal }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
+          bookingsRangeRef.current = { from: newFrom, to: newTo };
+        }
+      } catch (error) {
+        if (error instanceof Error && error.name === "AbortError") return;
+        logger.error("Failed to fetch bookings:", error);
+      }
+    },
+    [bookingsEndpoint, visibleBounds]
+  );
 
   const fetchAuxiliaryData = useCallback(async () => {
     const [vehiclesRes, blockedRes] = await Promise.all([
@@ -142,37 +201,35 @@ export default function AdminCalendarPage() {
     }
   }, []);
 
-  // Fetch data on mount and when view/date range changes
+  const calendarAuxLoadedRef = React.useRef(false);
+
   useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+    let cancelled = false;
+    const run = async () => {
+      const firstPaint = !calendarAuxLoadedRef.current;
+      if (firstPaint) setLoading(true);
       try {
-        await Promise.all([
-          fetchBookings(),
-          fetchAuxiliaryData(),
-        ]);
+        await loadBookings();
+        if (!calendarAuxLoadedRef.current) {
+          await fetchAuxiliaryData();
+          calendarAuxLoadedRef.current = true;
+        }
       } catch (error) {
         logger.error("Failed to fetch calendar data:", error);
       } finally {
-        setLoading(false);
+        if (firstPaint && !cancelled) setLoading(false);
       }
     };
 
-    fetchData();
+    run();
 
     return () => {
-      // Abort fetch on unmount
+      cancelled = true;
       if (bookingsAbortControllerRef.current) {
         bookingsAbortControllerRef.current.abort();
       }
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fetchBookings, fetchAuxiliaryData]);
-
-  // Re-fetch bookings when navigating timeline or calendar
-  useEffect(() => {
-    fetchBookings();
-  }, [fetchBookings]);
+  }, [loadBookings, fetchAuxiliaryData]);
 
   // Filter bookings
   const filteredBookings = useMemo(() => {
@@ -186,10 +243,8 @@ export default function AdminCalendarPage() {
   const handleRefresh = async () => {
     setLoading(true);
     try {
-      await Promise.all([
-        fetchBookings(),
-        fetchAuxiliaryData(),
-      ]);
+      await loadBookings({ forceReplace: true });
+      await fetchAuxiliaryData();
     } catch (error) {
       logger.error("Failed to refresh calendar data:", error);
     } finally {
@@ -197,19 +252,9 @@ export default function AdminCalendarPage() {
     }
   };
 
+  /** Month grid only: optional wheel nudge (timeline uses horizontal wheel scroll instead). */
   const wheelThrottleRef = React.useRef(0);
   const WHEEL_DAY_THROTTLE_MS = 85;
-  const handleTimelineWheelShift = useCallback((direction: number) => {
-    const now = Date.now();
-    if (now - wheelThrottleRef.current < WHEEL_DAY_THROTTLE_MS) return;
-    wheelThrottleRef.current = now;
-    setTimelineStart((prev) => {
-      const next = new Date(prev);
-      next.setDate(next.getDate() + (direction > 0 ? 1 : -1));
-      return next;
-    });
-  }, []);
-
   const handleCalendarWheelShift = useCallback((direction: number) => {
     const now = Date.now();
     if (now - wheelThrottleRef.current < WHEEL_DAY_THROTTLE_MS) return;
@@ -362,7 +407,7 @@ export default function AdminCalendarPage() {
                   onBlockedDateClick={setSelectedBlocked}
                 />
               </div>
-              {/* Desktop: Timeline table */}
+              {/* Desktop: Timeline — vertical wheel pans horizontally; booking fetch uses wide range (see loadBookings). */}
               <div className="hidden sm:block">
                 <TimelineView
                   bookings={filteredBookings}
@@ -386,7 +431,6 @@ export default function AdminCalendarPage() {
                   }}
                   onBookingClick={openBookingDetail}
                   onBlockedDateClick={setSelectedBlocked}
-                  onRangeWheel={handleTimelineWheelShift}
                 />
               </div>
             </>
@@ -1010,7 +1054,6 @@ interface TimelineViewProps {
   onToday: () => void;
   onBookingClick: (booking: BookingRow) => void;
   onBlockedDateClick: (blocked: BlockedDateEntry) => void;
-  onRangeWheel: (direction: number) => void;
 }
 
 function TimelineView({
@@ -1023,7 +1066,6 @@ function TimelineView({
   onToday,
   onBookingClick,
   onBlockedDateClick,
-  onRangeWheel,
 }: TimelineViewProps) {
   const days = 9;
   const dateRange = Array.from({ length: days }, (_, i) => {
@@ -1076,7 +1118,7 @@ function TimelineView({
       .filter(Boolean) as { booking: BookingRow; startIdx: number; endIdx: number; extendsLeft: boolean; extendsRight: boolean; startFraction: number; endFraction: number }[];
   };
 
-  const today = toDateKey(new Date());
+  const today = getLocalYmd(new Date());
   const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6;
 
   // Calculate time-of-day as a percentage for the "now" marker position
@@ -1120,9 +1162,9 @@ function TimelineView({
       scroller.scrollLeft += amount;
       return;
     }
-    if (Math.abs(event.deltaY) < 12) return;
+    if (Math.abs(event.deltaY) < 1) return;
     event.preventDefault();
-    onRangeWheel(event.deltaY > 0 ? 1 : -1);
+    scroller.scrollLeft += event.deltaY;
   };
 
   return (
@@ -1467,7 +1509,7 @@ function CalendarView({
 
     const currentDate = new Date(pickupDateOnly);
     while (currentDate <= returnDateOnly) {
-      const dateKey = currentDate.toISOString().split("T")[0];
+      const dateKey = getLocalYmd(currentDate);
       if (!bookingsByDay[dateKey]) {
         bookingsByDay[dateKey] = [];
       }
@@ -1483,7 +1525,7 @@ function CalendarView({
     const current = new Date(start.getFullYear(), start.getMonth(), start.getDate());
     const endOnly = new Date(end.getFullYear(), end.getMonth(), end.getDate());
     while (current <= endOnly) {
-      const dateKey = current.toISOString().split("T")[0];
+      const dateKey = getLocalYmd(current);
       if (!blockedByDay[dateKey]) blockedByDay[dateKey] = [];
       blockedByDay[dateKey].push(block);
       current.setDate(current.getDate() + 1);
@@ -1537,11 +1579,11 @@ function CalendarView({
           <div className="grid grid-cols-7 gap-px bg-gray-200 p-px rounded-lg overflow-hidden">
             {calendarDays.map((day, index) => {
               const dateKey =
-                day && new Date(year, month, day).toISOString().split("T")[0];
+                day && getLocalYmd(new Date(year, month, day));
               const dayBookings = dateKey ? (bookingsByDay[dateKey] || []) : [];
               const dayBlocked = dateKey ? (blockedByDay[dateKey] || []) : [];
               const isSelected = dateKey === selectedDay;
-              const isToday = dateKey === new Date().toISOString().split("T")[0];
+              const isToday = dateKey === getLocalYmd(new Date());
 
               return (
                 <div

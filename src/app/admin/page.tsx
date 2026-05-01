@@ -14,7 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
-import { formatDate, formatTime } from "@/lib/utils/date-helpers";
+import { formatDate, formatTime, getLocalYmd } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 
@@ -232,7 +232,7 @@ export default function AdminDashboardPage() {
     setLoading(true);
     setError(false);
     try {
-      const todayStr = new Date().toISOString().split("T")[0];
+      const todayStr = getLocalYmd(new Date());
 
       const bookingsRes = await adminFetch("/api/bookings", { signal });
       if (!bookingsRes.ok) throw new Error(`HTTP ${bookingsRes.status}`);

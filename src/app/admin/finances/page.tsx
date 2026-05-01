@@ -42,7 +42,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
-import { formatDate } from "@/lib/utils/date-helpers";
+import { formatDate, getLocalYmd } from "@/lib/utils/date-helpers";
 import {
   resolveTuroTripRevenue,
   addProratedTuroRevenueByDay,
@@ -282,8 +282,8 @@ export default function AdminFinancesPage() {
   const [loading, setLoading] = useState(true);
   const { error, setError, success, setSuccess } = useAutoToast();
   const defaultDateRange = useMemo(() => ({
-    from: new Date(new Date().getFullYear(), 0, 1).toISOString().split("T")[0],
-    to: new Date().toISOString().split("T")[0],
+    from: getLocalYmd(new Date(new Date().getFullYear(), 0, 1)),
+    to: getLocalYmd(new Date()),
   }), []);
   // Applied date range — this is what drives data fetching
   const [dateRange, setDateRange] = useState(defaultDateRange);
@@ -297,7 +297,7 @@ export default function AdminFinancesPage() {
     category: "maintenance",
     amount: "",
     description: "",
-    date: new Date().toISOString().split("T")[0],
+    date: getLocalYmd(new Date()),
   });
   const [editingExpense, setEditingExpense] = useState<EditingExpense | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
@@ -455,7 +455,7 @@ export default function AdminFinancesPage() {
           const actualDay = Math.min(paymentDay, daysInMonth);
           const actualDate = new Date(payMonth.getFullYear(), payMonth.getMonth(), actualDay);
           if (isNaN(actualDate.getTime())) continue; // skip invalid dates
-          const dateStr = actualDate.toISOString().split("T")[0];
+          const dateStr = getLocalYmd(actualDate);
 
           // Only include financing payments within the selected date range
           if (dateStr >= dateRange.from && dateStr <= dateRange.to) {
@@ -489,7 +489,7 @@ export default function AdminFinancesPage() {
         category: "tickets" as const,
         amount: ticket.amount_due ?? 0,
         description: `${ticket.ticket_type || "Ticket"} — ${ticket.municipality || "Unknown"}, ${ticket.state || ""}`,
-        date: ticket.violation_date || ticket.created_at || new Date().toISOString().split("T")[0],
+        date: ticket.violation_date || ticket.created_at || getLocalYmd(new Date()),
         created_at: ticket.created_at || new Date().toISOString(),
         source: "ticket" as const,
       }))
@@ -613,7 +613,7 @@ export default function AdminFinancesPage() {
       const d = new Date(endD);
       d.setDate(d.getDate() - i);
       days.push({
-        date: d.toISOString().split("T")[0],
+        date: getLocalYmd(d),
         label: d.toLocaleDateString("en-US", { month: "short", day: "numeric" }),
         revenue: 0,
         expenses: 0,
@@ -850,7 +850,7 @@ export default function AdminFinancesPage() {
         category: "maintenance",
         amount: "",
         description: "",
-        date: new Date().toISOString().split("T")[0],
+        date: getLocalYmd(new Date()),
       });
       setAddingExpense(false);
       fetchData();
@@ -935,7 +935,7 @@ export default function AdminFinancesPage() {
         Source: expense.source,
       };
     });
-    exportToCSV(exportData, `expenses-export-${new Date().toISOString().split("T")[0]}`);
+    exportToCSV(exportData, `expenses-export-${getLocalYmd(new Date())}`);
   };
 
   // ─── Vehicle Detail View ────────────────────────────────────────
@@ -1842,7 +1842,7 @@ export default function AdminFinancesPage() {
                             category: "maintenance",
                             amount: "",
                             description: "",
-                            date: new Date().toISOString().split("T")[0],
+                            date: getLocalYmd(new Date()),
                           });
                         }
                         setAddingExpense(!addingExpense);

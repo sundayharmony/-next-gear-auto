@@ -27,6 +27,7 @@ import {
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
+import { getLocalYmd } from "@/lib/utils/date-helpers";
 
 interface BlockedDate {
   id: string;
@@ -407,7 +408,7 @@ export default function BlockedDatesPage() {
     ? blockedDates.filter((b) => b.vehicle_id === filterVehicleId)
     : blockedDates;
 
-  const today = useMemo(() => new Date().toISOString().split("T")[0], []);
+  const today = useMemo(() => getLocalYmd(new Date()), []);
 
   return (
     <>
