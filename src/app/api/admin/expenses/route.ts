@@ -17,6 +17,12 @@ const VALID_CATEGORIES = [
 
 const MAX_EXPENSE_AMOUNT = 1000000;
 
+function isMissingBlockedDateColumnError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const maybeMessage = "message" in error ? String((error as { message?: unknown }).message ?? "") : "";
+  return maybeMessage.toLowerCase().includes("blocked_date_id");
+}
+
 function validateExpenseInput(
   category: unknown,
   amount: unknown
@@ -82,31 +88,49 @@ export async function GET(request: NextRequest) {
     const toDate = searchParams.get("to");
     const blockedDateId = searchParams.get("blocked_date_id");
 
-    let query = supabase
-      .from("expenses")
-      .select("id, vehicle_id, category, amount, description, date, created_at, blocked_date_id");
+    const applyFilters = <T extends { eq: (column: string, value: unknown) => T; gte: (column: string, value: string) => T; lte: (column: string, value: string) => T }>(baseQuery: T) => {
+      let query = baseQuery;
+      if (vehicleId) {
+        query = query.eq("vehicle_id", vehicleId);
+      }
+      if (blockedDateId) {
+        query = query.eq("blocked_date_id", blockedDateId);
+      }
+      if (category) {
+        query = query.eq("category", category);
+      }
+      if (fromDate) {
+        query = query.gte("date", fromDate);
+      }
+      if (toDate) {
+        query = query.lte("date", toDate);
+      }
+      return query;
+    };
 
-    if (vehicleId) {
-      query = query.eq("vehicle_id", vehicleId);
+    let { data, error } = await applyFilters(
+      supabase
+        .from("expenses")
+        .select("id, vehicle_id, category, amount, description, date, created_at, blocked_date_id")
+    ).order("date", { ascending: false });
+
+    // Backward compatibility for environments that have not deployed blocked_date_id yet.
+    if (error && isMissingBlockedDateColumnError(error)) {
+      logger.warn("expenses.blocked_date_id column missing; falling back to legacy select");
+      if (blockedDateId) {
+        return NextResponse.json(
+          { success: false, message: "Filtering by blocked date is not available in this environment yet." },
+          { status: 400 }
+        );
+      }
+      const fallback = await applyFilters(
+        supabase
+          .from("expenses")
+          .select("id, vehicle_id, category, amount, description, date, created_at")
+      ).order("date", { ascending: false });
+      data = fallback.data;
+      error = fallback.error;
     }
-
-    if (blockedDateId) {
-      query = query.eq("blocked_date_id", blockedDateId);
-    }
-
-    if (category) {
-      query = query.eq("category", category);
-    }
-
-    if (fromDate) {
-      query = query.gte("date", fromDate);
-    }
-
-    if (toDate) {
-      query = query.lte("date", toDate);
-    }
-
-    const { data, error } = await query.order("date", { ascending: false });
 
     if (error) {
       logger.error("Error fetching expenses:", error);
@@ -254,11 +278,22 @@ export async function PUT(request: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    const { data: existing } = await supabase
+    let existing: { vehicle_id?: string | null; blocked_date_id?: string | null } | null = null;
+    const primaryExisting = await supabase
       .from("expenses")
       .select("vehicle_id, blocked_date_id")
       .eq("id", id)
       .maybeSingle();
+    if (primaryExisting.error && isMissingBlockedDateColumnError(primaryExisting.error)) {
+      const legacyExisting = await supabase
+        .from("expenses")
+        .select("vehicle_id")
+        .eq("id", id)
+        .maybeSingle();
+      existing = (legacyExisting.data as { vehicle_id?: string | null } | null) ?? null;
+    } else {
+      existing = (primaryExisting.data as { vehicle_id?: string | null; blocked_date_id?: string | null } | null) ?? null;
+    }
 
     const updates: Record<string, unknown> = {};
     if (vehicleId !== undefined) updates.vehicle_id = vehicleId || null;
