@@ -1,12 +1,15 @@
 "use client";
 
 import React, { useEffect, useLayoutEffect, useState, useMemo, useCallback } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import type { BookingDbRow, VehicleListItem } from "@/lib/types";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
 import { statusColors, statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
+import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { getVisibleEventSpan, type BlockedDateEntry } from "./calendar-model";
 
 type BookingRow = BookingDbRow;
@@ -57,6 +60,7 @@ export function TimelineView({
   onBookingClick,
   onBlockedDateClick,
 }: TimelineViewProps) {
+  const pathname = usePathname();
   const dateRange = Array.from({ length: days }, (_, i) => {
     const date = new Date(start);
     date.setDate(date.getDate() + i);
@@ -334,9 +338,13 @@ export function TimelineView({
                     <td className="sticky left-0 z-10 bg-white border-b border-r border-gray-200 p-3 group-hover:bg-purple-50/50 transition-colors">
                       <div className="flex items-center justify-between gap-2">
                         <div className="min-w-0">
-                          <p className="text-sm font-semibold text-gray-900 truncate">
+                          <Link
+                            href={getStaffVehicleDetailsHref(vehicle.id, pathname)}
+                            className="text-sm font-semibold text-gray-900 truncate hover:text-purple-700 hover:underline"
+                            onClick={(e) => e.stopPropagation()}
+                          >
                             {vehicle.make} {vehicle.model}
-                          </p>
+                          </Link>
                           <p className="text-[11px] text-gray-400">{vehicle.year}</p>
                         </div>
                         {count > 0 && (

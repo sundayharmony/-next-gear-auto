@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   X,
   Pencil,
@@ -53,6 +55,7 @@ import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { calculateRentalHours, calculatePricing } from "@/lib/utils/price-calculator";
 import { getVehicleDisplayName } from "@/lib/types";
+import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { logger } from "@/lib/utils/logger";
 import { Location } from "@/lib/types";
 
@@ -84,6 +87,7 @@ interface BookingDetailPanelProps {
 }
 
 export function BookingDetailPanel(props: BookingDetailPanelProps) {
+  const pathname = usePathname();
   const {
     booking,
     vehicles,
@@ -1095,7 +1099,14 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 ))}
               </Select>
             ) : (
-              <p className="text-sm text-gray-700">{vehicleLabel}</p>
+              <p className="text-sm text-gray-700">
+                <Link
+                  href={getStaffVehicleDetailsHref(booking.vehicle_id, pathname)}
+                  className="hover:text-purple-700 hover:underline"
+                >
+                  {vehicleLabel}
+                </Link>
+              </p>
             )}
           </div>
 

@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { compressImage } from "@/lib/utils/compress-image";
@@ -35,6 +37,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { PageContainer } from "@/components/layout/page-container";
 import { Vehicle, VehicleCategory, getVehicleDisplayName } from "@/lib/types";
+import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { logger } from "@/lib/utils/logger";
 
 const CATEGORIES: VehicleCategory[] = [
@@ -105,6 +108,7 @@ interface FormState extends Omit<Vehicle, "id"> {
 }
 
 export default function AdminVehiclesPage() {
+  const pathname = usePathname();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -1553,7 +1557,12 @@ export default function AdminVehiclesPage() {
                 <CardContent className="p-4">
                   {/* Title */}
                   <h3 className="font-semibold text-gray-900 mb-2 text-lg truncate" title={getVehicleDisplayName(vehicle)}>
-                    {getVehicleDisplayName(vehicle)}
+                    <Link
+                      href={getStaffVehicleDetailsHref(vehicle.id, pathname)}
+                      className="hover:text-purple-700 hover:underline"
+                    >
+                      {getVehicleDisplayName(vehicle)}
+                    </Link>
                   </h3>
 
                   {/* Description snippet */}
@@ -1688,6 +1697,11 @@ export default function AdminVehiclesPage() {
 
                   {/* Actions */}
                   <div className="flex gap-2">
+                    <Link href={getStaffVehicleDetailsHref(vehicle.id, pathname)} className="flex-1">
+                      <Button size="sm" type="button" variant="outline" className="w-full">
+                        View
+                      </Button>
+                    </Link>
                     <Button
                       size="sm"
                       variant={editingId === vehicle.id ? "default" : "outline"}

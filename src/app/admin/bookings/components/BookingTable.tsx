@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useRef, useEffect } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { ArrowUp, ArrowDown, FileText, Shield, Check, AlertTriangle, StickyNote, Calendar, MapPin } from "lucide-react";
 import { BookingRow, SortField, SortOrder } from "../types";
 import { formatDate, formatTime, formatDateShort } from "@/lib/utils/date-helpers";
@@ -9,6 +11,7 @@ import { calculateRentalDays } from "@/lib/utils/price-calculator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 
 interface BookingTableProps {
   bookings: BookingRow[];
@@ -39,6 +42,7 @@ export default function BookingTable({
   onSort,
   capabilities,
 }: BookingTableProps) {
+  const pathname = usePathname();
   const canSeePricingByDefault = capabilities?.canSeePricingByDefault ?? true;
   const getOriginLabel = (origin?: string) => {
     if (origin === "manager_panel") return "Manager";
@@ -173,7 +177,15 @@ export default function BookingTable({
               </div>
 
               {/* Vehicle */}
-              <p className="text-sm text-gray-700 mb-2 truncate">{booking.vehicleName || "Unknown Vehicle"}</p>
+              <p className="text-sm text-gray-700 mb-2 truncate">
+                <Link
+                  href={getStaffVehicleDetailsHref(booking.vehicle_id, pathname)}
+                  className="hover:text-purple-700 hover:underline"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {booking.vehicleName || "Unknown Vehicle"}
+                </Link>
+              </p>
 
               {/* Dates row */}
               <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
@@ -316,7 +328,15 @@ export default function BookingTable({
 
                   {/* Vehicle */}
                   <td className="px-4 py-3">
-                    <div className="truncate text-gray-700">{booking.vehicleName || "Unknown Vehicle"}</div>
+                    <div className="truncate text-gray-700">
+                      <Link
+                        href={getStaffVehicleDetailsHref(booking.vehicle_id, pathname)}
+                        className="hover:text-purple-700 hover:underline"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {booking.vehicleName || "Unknown Vehicle"}
+                      </Link>
+                    </div>
                   </td>
 
                   {/* Dates */}

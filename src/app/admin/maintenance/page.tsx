@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { compressImage } from "@/lib/utils/compress-image";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -32,6 +34,7 @@ import { Vehicle, getVehicleDisplayName } from "@/lib/types";
 import { MaintenancePhotoGallery } from "@/components/maintenance-photo-gallery";
 import { logger } from "@/lib/utils/logger";
 import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
+import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 
 interface MaintenanceRecord {
   id: string;
@@ -64,6 +67,7 @@ const emptyRecord: Omit<MaintenanceRecord, "id" | "createdAt"> = {
 interface FormState extends Omit<MaintenanceRecord, "id" | "createdAt"> {}
 
 export default function AdminMaintenancePage() {
+  const pathname = usePathname();
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -941,7 +945,17 @@ export default function AdminMaintenancePage() {
                     >
                       <td className="px-6 py-3 max-w-[180px]">
                         <span className="font-medium text-gray-900 truncate block" title={record.vehicleName || undefined}>
-                          {record.vehicleName || "—"}
+                          {record.vehicleId ? (
+                            <Link
+                              href={getStaffVehicleDetailsHref(record.vehicleId, pathname)}
+                              className="hover:text-purple-700 hover:underline"
+                              onClick={(e) => e.stopPropagation()}
+                            >
+                              {record.vehicleName || "—"}
+                            </Link>
+                          ) : (
+                            record.vehicleName || "—"
+                          )}
                         </span>
                       </td>
                       <td className="px-6 py-3 text-gray-700 max-w-[200px]">
@@ -998,7 +1012,18 @@ export default function AdminMaintenancePage() {
                   {detailEditMode ? `Edit: ${selectedRecord.title}` : selectedRecord.title}
                 </h2>
                 {!detailEditMode && selectedRecord.vehicleName && (
-                  <p className="text-sm text-gray-500 truncate">{selectedRecord.vehicleName}</p>
+                  <p className="text-sm text-gray-500 truncate">
+                    {selectedRecord.vehicleId ? (
+                      <Link
+                        href={getStaffVehicleDetailsHref(selectedRecord.vehicleId, pathname)}
+                        className="hover:text-purple-700 hover:underline"
+                      >
+                        {selectedRecord.vehicleName}
+                      </Link>
+                    ) : (
+                      selectedRecord.vehicleName
+                    )}
+                  </p>
                 )}
               </div>
               <div className="flex items-center gap-2">

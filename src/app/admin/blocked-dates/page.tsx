@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { PageContainer } from "@/components/layout/page-container";
@@ -28,6 +30,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
+import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 
 interface BlockedDate {
   id: string;
@@ -68,6 +71,7 @@ interface ParseResult {
 }
 
 export default function BlockedDatesPage() {
+  const pathname = usePathname();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -854,7 +858,13 @@ export default function BlockedDatesPage() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-gray-900 truncate">
-                        {getVehicleName(block.vehicle_id)}
+                        <Link
+                          href={getStaffVehicleDetailsHref(block.vehicle_id, pathname)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:text-purple-700 hover:underline"
+                        >
+                          {getVehicleName(block.vehicle_id)}
+                        </Link>
                       </p>
                       <p className="text-xs text-gray-500 mt-0.5">
                         {formatDateShort(block.start_date)}
@@ -947,7 +957,14 @@ export default function BlockedDatesPage() {
               <div className="p-5 space-y-4">
                 <div>
                   <p className="text-xs text-gray-500">Vehicle</p>
-                  <p className="font-semibold">{getVehicleName(selectedBlockDetail.vehicle_id)}</p>
+                  <p className="font-semibold">
+                    <Link
+                      href={getStaffVehicleDetailsHref(selectedBlockDetail.vehicle_id, pathname)}
+                      className="hover:text-purple-700 hover:underline"
+                    >
+                      {getVehicleName(selectedBlockDetail.vehicle_id)}
+                    </Link>
+                  </p>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useLayoutEffect, useState, useMemo, useCallback } from "react";
+import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { BookingDbRow, VehicleListItem } from "@/lib/types";
 import {
@@ -21,6 +22,7 @@ import { formatTime, formatDate, getLocalYmd, addDaysToYmd } from "@/lib/utils/d
 import { statusColors, statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
 import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
+import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { TimelineView } from "./timeline-view";
 import { getVisibleEventSpan, type BlockedDateEntry } from "./calendar-model";
 
@@ -1228,7 +1230,13 @@ function CalendarView({
                         {booking.customer_name || "Unknown"}
                       </div>
                       <div className="text-xs sm:text-sm text-gray-500 truncate">
-                        {booking.vehicleName || "Unknown Vehicle"}
+                        <Link
+                          href={getStaffVehicleDetailsHref(booking.vehicle_id, pathname)}
+                          onClick={(e) => e.stopPropagation()}
+                          className="hover:text-purple-700 hover:underline"
+                        >
+                          {booking.vehicleName || "Unknown Vehicle"}
+                        </Link>
                       </div>
                     </div>
                     <div className="flex flex-col items-end gap-1 shrink-0 ml-3">

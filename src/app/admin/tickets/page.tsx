@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import type { VehicleListItem, BookingDbRow } from "@/lib/types";
@@ -33,6 +35,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
+import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 
 // ─── Types ────────────────────────────────────────────────────
 interface TicketRecord {
@@ -75,6 +78,7 @@ const TYPE_COLORS: Record<string, string> = {
 
 // ─── Main Component ───────────────────────────────────────────
 export default function AdminTicketsPage() {
+  const pathname = usePathname();
   const [tickets, setTickets] = useState<TicketRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -480,7 +484,18 @@ export default function AdminTicketsPage() {
                   {selectedTicket.vehicleName && (
                     <div className="flex justify-between">
                       <span className="text-gray-500">Vehicle</span>
-                      <span className="font-medium">{selectedTicket.vehicleName}</span>
+                      <span className="font-medium">
+                        {selectedTicket.vehicleId ? (
+                          <Link
+                            href={getStaffVehicleDetailsHref(selectedTicket.vehicleId, pathname)}
+                            className="hover:text-purple-700 hover:underline"
+                          >
+                            {selectedTicket.vehicleName}
+                          </Link>
+                        ) : (
+                          selectedTicket.vehicleName
+                        )}
+                      </span>
                     </div>
                   )}
                   {selectedTicket.customerName && (
@@ -883,7 +898,22 @@ export default function AdminTicketsPage() {
                       <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
                         {t.municipality && <span className="flex items-center gap-0.5"><MapPin className="h-3 w-3" />{t.municipality}{t.state ? `, ${t.state}` : ""}</span>}
                         <span className="flex items-center gap-0.5"><Calendar className="h-3 w-3" />{formatDate(t.violationDate)}</span>
-                        {t.vehicleName && <span className="flex items-center gap-0.5"><Car className="h-3 w-3" />{t.vehicleName}</span>}
+                        {t.vehicleName && (
+                          <span className="flex items-center gap-0.5">
+                            <Car className="h-3 w-3" />
+                            {t.vehicleId ? (
+                              <Link
+                                href={getStaffVehicleDetailsHref(t.vehicleId, pathname)}
+                                className="hover:text-purple-700 hover:underline"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                {t.vehicleName}
+                              </Link>
+                            ) : (
+                              t.vehicleName
+                            )}
+                          </span>
+                        )}
                         {t.customerName && <span>Driver: {t.customerName}</span>}
                         {t.licensePlate && <span className="font-mono">{t.licensePlate}</span>}
                       </div>
