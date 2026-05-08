@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { parseTuroEmail } from "@/lib/utils/turo-email-parser";
 import { logger } from "@/lib/utils/logger";
-
-function isMissingColumnError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const anyErr = error as { code?: string; message?: string };
-  return anyErr.code === "42703" || /column\s+.+\s+does\s+not\s+exist/i.test(anyErr.message || "");
-}
+import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 
 /**
  * POST /api/webhooks/turo-email

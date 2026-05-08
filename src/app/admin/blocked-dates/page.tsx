@@ -237,9 +237,13 @@ export default function BlockedDatesPage() {
     }
     setSavingEmail(true);
     try {
-      const reason = parseResult.guestName
-        ? `Turo booking — ${parseResult.guestName}`
-        : "Turo booking (from email)";
+      const guest = (parseResult.guestName || "").trim() || "Guest";
+      const amt =
+        typeof parseResult.earnings === "number" && Number.isFinite(parseResult.earnings) && parseResult.earnings > 0
+          ? parseResult.earnings
+          : null;
+      const reason =
+        amt != null ? `Turo: ${guest} — $${amt.toFixed(2)}` : `Turo: ${guest}`;
 
       const res = await adminFetch("/api/admin/blocked-dates", {
         method: "POST",

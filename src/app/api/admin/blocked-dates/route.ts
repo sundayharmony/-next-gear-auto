@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
-
-function isMissingColumnError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const anyErr = error as { code?: string; message?: string };
-  return anyErr.code === "42703" || /column\s+.+\s+does\s+not\s+exist/i.test(anyErr.message || "");
-}
+import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 
 /**
  * GET /api/admin/blocked-dates?vehicleId=...
@@ -21,6 +16,8 @@ export async function GET(req: NextRequest) {
     const supabase = getServiceSupabase();
     const { searchParams } = new URL(req.url);
     const vehicleId = searchParams.get("vehicleId");
+    const from = searchParams.get("from");
+    const to = searchParams.get("to");
 
     let query = supabase
       .from("blocked_dates")
@@ -29,6 +26,12 @@ export async function GET(req: NextRequest) {
 
     if (vehicleId) {
       query = query.eq("vehicle_id", vehicleId);
+    }
+    if (from) {
+      query = query.gte("end_date", from);
+    }
+    if (to) {
+      query = query.lte("start_date", to);
     }
 
     let { data, error } = await query;
@@ -41,6 +44,12 @@ export async function GET(req: NextRequest) {
 
       if (vehicleId) {
         fallbackQuery = fallbackQuery.eq("vehicle_id", vehicleId);
+      }
+      if (from) {
+        fallbackQuery = fallbackQuery.gte("end_date", from);
+      }
+      if (to) {
+        fallbackQuery = fallbackQuery.lte("start_date", to);
       }
 
       const fallbackRes = await fallbackQuery;

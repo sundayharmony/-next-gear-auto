@@ -465,7 +465,7 @@ export function TimelineView({
                                   title={bd.reason || `Blocked (${bd.source})`}
                                 >
                                   <span className="text-[10px] text-gray-500 font-medium truncate">
-                                    {bd.source === "turo-email" ? "Turo" : "Blocked"}
+                                    {bd.source === "turo-email" ? "Turo Trip" : "Blocked"}
                                     {bd.reason ? ` — ${bd.reason}` : ""}
                                   </span>
                                 </div>
@@ -510,7 +510,7 @@ export function TimelineView({
             ))}
           <div className="flex items-center gap-1.5">
             <div className="w-3 h-3 rounded-sm bg-gray-300/50 border border-dashed border-gray-400" />
-            <span className="text-gray-600">Blocked</span>
+            <span className="text-gray-600">Blocks (Turo / manual)</span>
           </div>
         </div>
       </CardContent>

@@ -159,40 +159,63 @@ export async function fetchVehicleSummary(
   vehicleId: string,
   role: StaffRole
 ) {
-  const [blocked, maintenance, tickets, expenses, reviews] = await Promise.all([
-    supabase
-      .from("blocked_dates")
-      .select("id, start_date, end_date, source, reason", { count: "exact" })
-      .eq("vehicle_id", vehicleId)
-      .order("start_date", { ascending: false })
-      .limit(3),
-    supabase
-      .from("maintenance_records")
-      .select("id, title, status, scheduled_date, created_at", { count: "exact" })
-      .eq("vehicle_id", vehicleId)
-      .order("created_at", { ascending: false })
-      .limit(3),
-    supabase
-      .from("tickets")
-      .select("id, ticket_type, amount_due, status, violation_date, created_at", { count: "exact" })
-      .eq("vehicle_id", vehicleId)
-      .order("created_at", { ascending: false })
-      .limit(3),
-    role === "admin"
-      ? supabase
-          .from("expenses")
-          .select("id, category, amount, date, description, created_at", { count: "exact" })
-          .eq("vehicle_id", vehicleId)
-          .order("date", { ascending: false })
-          .limit(3)
-      : Promise.resolve({ data: [], count: 0, error: null }),
-    supabase
-      .from("reviews")
-      .select("id, customer_name, rating, status, created_at", { count: "exact" })
-      .eq("vehicle_id", vehicleId)
-      .order("created_at", { ascending: false })
-      .limit(3),
-  ]);
+  const [bookingsRes, turoRes, manualRes, manualLatest, turoLatest, maintenance, tickets, expenses, reviews] =
+    await Promise.all([
+      supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("vehicle_id", vehicleId),
+      supabase
+        .from("blocked_dates")
+        .select("id", { count: "exact", head: true })
+        .eq("vehicle_id", vehicleId)
+        .eq("source", "turo-email"),
+      supabase
+        .from("blocked_dates")
+        .select("id", { count: "exact", head: true })
+        .eq("vehicle_id", vehicleId)
+        .eq("source", "manual"),
+      supabase
+        .from("blocked_dates")
+        .select("id, start_date, end_date, source, reason")
+        .eq("vehicle_id", vehicleId)
+        .eq("source", "manual")
+        .order("start_date", { ascending: false })
+        .limit(3),
+      supabase
+        .from("blocked_dates")
+        .select("id, start_date, end_date, source, reason")
+        .eq("vehicle_id", vehicleId)
+        .eq("source", "turo-email")
+        .order("start_date", { ascending: false })
+        .limit(3),
+      supabase
+        .from("maintenance_records")
+        .select("id, title, status, scheduled_date, created_at", { count: "exact" })
+        .eq("vehicle_id", vehicleId)
+        .order("created_at", { ascending: false })
+        .limit(3),
+      supabase
+        .from("tickets")
+        .select("id, ticket_type, amount_due, status, violation_date, created_at", { count: "exact" })
+        .eq("vehicle_id", vehicleId)
+        .order("created_at", { ascending: false })
+        .limit(3),
+      role === "admin"
+        ? supabase
+            .from("expenses")
+            .select("id, category, amount, date, description, created_at", { count: "exact" })
+            .eq("vehicle_id", vehicleId)
+            .order("date", { ascending: false })
+            .limit(3)
+        : Promise.resolve({ data: [], count: 0, error: null }),
+      supabase
+        .from("reviews")
+        .select("id, customer_name, rating, status, created_at", { count: "exact" })
+        .eq("vehicle_id", vehicleId)
+        .order("created_at", { ascending: false })
+        .limit(3),
+    ]);
 
   const reviewsAvg = ((reviews.data as Array<{ rating?: number }>) || []).reduce(
     (sum, r) => sum + Number(r.rating || 0),
@@ -200,16 +223,24 @@ export async function fetchVehicleSummary(
   );
   const reviewsCount = reviews.count || 0;
 
+  const bookingCount = bookingsRes.count || 0;
+  const turoCount = turoRes.count || 0;
+  const manualCount = manualRes.count || 0;
+
   return {
     counts: {
-      blockedDates: blocked.count || 0,
+      /** Website/manager bookings + Turo trips (occupancy). */
+      bookingsAndTuro: bookingCount + turoCount,
+      /** Manual blocked date ranges only. */
+      manualBlocks: manualCount,
       maintenance: maintenance.count || 0,
       tickets: tickets.count || 0,
       expenses: role === "admin" ? expenses.count || 0 : 0,
       reviews: reviewsCount,
     },
     latest: {
-      blockedDates: blocked.data || [],
+      manualBlockedDates: manualLatest.data || [],
+      turoTrips: turoLatest.data || [],
       maintenance: maintenance.data || [],
       tickets: tickets.data || [],
       expenses: role === "admin" ? (expenses.data || []) : [],

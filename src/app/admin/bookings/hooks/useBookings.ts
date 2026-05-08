@@ -67,6 +67,7 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
       if (searchQuery.trim()) params.set("search", searchQuery.trim());
       params.set("sort", sortField);
       params.set("order", sortOrder);
+      params.set("includeTuro", "true");
 
       const url = `${config.bookingsEndpoint}${params.toString() ? `?${params}` : ""}`;
       const res = await adminFetch(url, { signal: abortControllerRef.current?.signal });
@@ -162,6 +163,10 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
   }, [sortField]);
 
   const updateStatus = useCallback(async (bookingId: string, newStatus: string): Promise<boolean> => {
+    if (bookingId.startsWith("turo:")) {
+      setError("Turo trips cannot be updated from the bookings list.");
+      return false;
+    }
     const booking = bookings.find((b) => b.id === bookingId);
     if (config.mode === "manager" && booking && booking.canManage === false) {
       setError("You can only manage bookings you created.");
@@ -202,10 +207,11 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
   const bulkUpdateStatus = useCallback(async (ids: Set<string>, newStatus: string): Promise<number> => {
     const targetIds = config.mode === "manager"
       ? Array.from(ids).filter((id) => {
+          if (id.startsWith("turo:")) return false;
           const booking = bookings.find((b) => b.id === id);
           return booking?.canManage !== false;
         })
-      : Array.from(ids);
+      : Array.from(ids).filter((id) => !id.startsWith("turo:"));
 
     if (targetIds.length === 0) {
       setError("No selectable bookings can be updated.");
@@ -250,20 +256,27 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
 
   // Computed: today's pickups, returns, overdue
   // Note: Don't memoize 'today' as it causes stale values past midnight
+  const isWebsiteBooking = (b: BookingRow) =>
+    b.occupancy_kind !== "turo" && !b.id.startsWith("turo:");
+
   const todayPickups = useMemo(() => {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    return bookings.filter((b) => b.pickup_date === todayStr && ["confirmed"].includes(b.status));
+    return bookings.filter(
+      (b) => isWebsiteBooking(b) && b.pickup_date === todayStr && ["confirmed"].includes(b.status)
+    );
   }, [bookings]);
 
   const todayReturns = useMemo(() => {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    return bookings.filter((b) => b.return_date === todayStr && ["active"].includes(b.status));
+    return bookings.filter(
+      (b) => isWebsiteBooking(b) && b.return_date === todayStr && ["active"].includes(b.status)
+    );
   }, [bookings]);
 
   const overdueBookings = useMemo(
-    () => bookings.filter((b) => b.is_overdue),
+    () => bookings.filter((b) => isWebsiteBooking(b) && b.is_overdue),
     [bookings]
   );
 

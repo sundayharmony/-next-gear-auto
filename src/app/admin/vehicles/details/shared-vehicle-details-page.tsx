@@ -39,7 +39,8 @@ interface VehicleDetails {
 
 interface SummaryResponse {
   counts: {
-    blockedDates: number;
+    bookingsAndTuro: number;
+    manualBlocks: number;
     maintenance: number;
     tickets: number;
     expenses: number;
@@ -54,11 +55,14 @@ interface SummaryResponse {
 interface VehicleBookingsResponse {
   data: Array<{
     id: string;
+    kind?: "booking" | "turo";
     customer_name: string;
     pickup_date: string;
     return_date: string;
     total_price: number | null;
+    earnings?: number | null;
     status: string;
+    canViewPricing?: boolean;
   }>;
   total: number;
   page: number;
@@ -185,8 +189,8 @@ export function SharedVehicleDetailsPage() {
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-        <Card><CardContent className="p-4"><div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-purple-600" /><span className="text-sm">Bookings</span></div><p className="text-xl font-bold mt-1">{bookings?.total ?? 0}</p></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-2"><Car className="h-4 w-4 text-purple-600" /><span className="text-sm">Blocked dates</span></div><p className="text-xl font-bold mt-1">{summary?.counts.blockedDates ?? 0}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-2"><CalendarDays className="h-4 w-4 text-purple-600" /><span className="text-sm">Bookings</span></div><p className="text-xl font-bold mt-1">{summary?.counts.bookingsAndTuro ?? bookings?.total ?? 0}</p></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-2"><Car className="h-4 w-4 text-purple-600" /><span className="text-sm">Manual blocks</span></div><p className="text-xl font-bold mt-1">{summary?.counts.manualBlocks ?? 0}</p></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-2"><Wrench className="h-4 w-4 text-purple-600" /><span className="text-sm">Maintenance</span></div><p className="text-xl font-bold mt-1">{summary?.counts.maintenance ?? 0}</p></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-2"><Ticket className="h-4 w-4 text-purple-600" /><span className="text-sm">Tickets</span></div><p className="text-xl font-bold mt-1">{summary?.counts.tickets ?? 0}</p></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-2"><Star className="h-4 w-4 text-purple-600" /><span className="text-sm">Reviews</span></div><p className="text-xl font-bold mt-1">{summary?.reviews.total ?? 0}</p></CardContent></Card>
@@ -217,22 +221,37 @@ export function SharedVehicleDetailsPage() {
           </div>
 
           <div className="mt-4 space-y-2">
-            {(bookings?.data || []).map((b) => (
-              <div key={b.id} className="rounded-lg border border-gray-200 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
-                <div>
-                  <p className="font-medium text-gray-900">{b.customer_name || "Guest"}</p>
-                  <p className="text-xs text-gray-500">
-                    {formatDate(b.pickup_date)} {"->"} {formatDate(b.return_date)}
-                  </p>
+            {(bookings?.data || []).map((b) => {
+              const isTuro = b.kind === "turo";
+              const canPrice = b.canViewPricing !== false;
+              const amount =
+                typeof b.total_price === "number"
+                  ? b.total_price
+                  : isTuro && typeof b.earnings === "number" && b.earnings > 0
+                    ? b.earnings
+                    : null;
+              const priceLabel =
+                amount !== null && amount >= 0 && canPrice ? `$${amount.toFixed(2)}` : "Hidden";
+              return (
+                <div key={b.id} className="rounded-lg border border-gray-200 px-4 py-3 flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Badge className={isTuro ? "bg-teal-100 text-teal-800" : "bg-gray-100 text-gray-700"}>
+                      {isTuro ? "Turo" : "Reservation"}
+                    </Badge>
+                    <div>
+                      <p className="font-medium text-gray-900">{b.customer_name || "Guest"}</p>
+                      <p className="text-xs text-gray-500">
+                        {formatDate(b.pickup_date)} {"->"} {formatDate(b.return_date)}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Badge>{b.status || "unknown"}</Badge>
+                    <span className="text-sm font-semibold text-gray-800">{priceLabel}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Badge>{b.status || "unknown"}</Badge>
-                  <span className="text-sm font-semibold text-gray-800">
-                    {typeof b.total_price === "number" ? `$${b.total_price.toFixed(2)}` : "Hidden"}
-                  </span>
-                </div>
-              </div>
-            ))}
+              );
+            })}
             {bookings?.data?.length === 0 ? (
               <p className="text-sm text-gray-500">No bookings found for this filter.</p>
             ) : null}

@@ -45,14 +45,20 @@ export default function BookingTable({
   const pathname = usePathname();
   const canSeePricingByDefault = capabilities?.canSeePricingByDefault ?? true;
   const getOriginLabel = (origin?: string) => {
+    if (origin === "turo") return "Turo";
     if (origin === "manager_panel") return "Manager";
     if (origin === "admin_panel") return "Admin";
     if (origin === "public_checkout") return "Public";
     return "Unknown";
   };
 
-  const allSelected = bookings.length > 0 && selectedIds.size === bookings.length;
-  const someSelected = selectedIds.size > 0 && selectedIds.size < bookings.length;
+  const isTuroOccupancy = (booking: BookingRow) =>
+    booking.occupancy_kind === "turo" || booking.id.startsWith("turo:");
+
+  const selectableBookings = bookings.filter((b) => !isTuroOccupancy(b));
+  const allSelected =
+    selectableBookings.length > 0 && selectableBookings.every((b) => selectedIds.has(b.id));
+  const someSelected = selectedIds.size > 0 && !allSelected;
 
   const selectAllRef = useRef<HTMLInputElement>(null);
 
@@ -142,12 +148,18 @@ export default function BookingTable({
         </div>
 
         {bookings.map((booking) => {
+          const turoRow = isTuroOccupancy(booking);
           const isSelected = selectedIds.has(booking.id);
           const rentalDays = calculateRentalDays(booking.pickup_date, booking.return_date);
-          const statusActions = getCanManage(booking) ? getStatusActions(booking.status) : [];
+          const statusActions =
+            !turoRow && getCanManage(booking) ? getStatusActions(booking.status) : [];
           const canViewPricing = getCanViewPricing(booking);
-          const balance = (booking.total_price ?? 0) - (booking.deposit ?? 0);
-          const balanceColor = getBalanceColor(booking.total_price ?? 0, booking.deposit ?? 0);
+          const displayTotal =
+            typeof booking.total_price === "number" && booking.total_price > 0
+              ? booking.total_price
+              : 0;
+          const balance = displayTotal - (booking.deposit ?? 0);
+          const balanceColor = getBalanceColor(displayTotal, booking.deposit ?? 0);
 
           return (
             <Card
@@ -161,9 +173,11 @@ export default function BookingTable({
                   <input
                     type="checkbox"
                     checked={isSelected}
+                    disabled={turoRow}
+                    title={turoRow ? "Turo trips cannot be selected for bulk actions" : undefined}
                     onChange={() => onToggleSelect(booking.id)}
                     onClick={(e) => e.stopPropagation()}
-                    className="rounded border-gray-300 cursor-pointer accent-purple-600 shrink-0 mt-0.5"
+                    className="rounded border-gray-300 cursor-pointer accent-purple-600 shrink-0 mt-0.5 disabled:opacity-40"
                   />
                   <div className="min-w-0">
                     <p className="font-semibold text-gray-900 text-sm truncate">{booking.customer_name || "Unknown"}</p>
@@ -211,12 +225,16 @@ export default function BookingTable({
               {/* Bottom row: price + balance + doc icons + actions */}
               <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-gray-100">
                 <div className="flex items-center gap-3">
-                  {canViewPricing ? (
+                  {canViewPricing && (displayTotal > 0 || !turoRow) ? (
                     <>
-                      <span className="font-semibold text-gray-900 text-sm">${(booking.total_price ?? 0).toFixed(2)}</span>
-                      <span className={`text-xs font-medium ${balanceColor}`}>
-                        {balance === 0 ? "Paid" : `$${balance.toFixed(2)} due`}
+                      <span className="font-semibold text-gray-900 text-sm">
+                        ${displayTotal.toFixed(2)}
                       </span>
+                      {!turoRow ? (
+                        <span className={`text-xs font-medium ${balanceColor}`}>
+                          {balance === 0 ? "Paid" : `$${balance.toFixed(2)} due`}
+                        </span>
+                      ) : null}
                     </>
                   ) : (
                     <span className="text-xs font-medium text-gray-500">Pricing hidden</span>
@@ -292,12 +310,18 @@ export default function BookingTable({
           </thead>
           <tbody>
             {bookings.map((booking) => {
+              const turoRow = isTuroOccupancy(booking);
               const isSelected = selectedIds.has(booking.id);
               const rentalDays = calculateRentalDays(booking.pickup_date, booking.return_date);
-              const statusActions = getCanManage(booking) ? getStatusActions(booking.status) : [];
+              const statusActions =
+                !turoRow && getCanManage(booking) ? getStatusActions(booking.status) : [];
               const canViewPricing = getCanViewPricing(booking);
-              const balance = (booking.total_price ?? 0) - (booking.deposit ?? 0);
-              const balanceColor = getBalanceColor(booking.total_price ?? 0, booking.deposit ?? 0);
+              const displayTotal =
+                typeof booking.total_price === "number" && booking.total_price > 0
+                  ? booking.total_price
+                  : 0;
+              const balance = displayTotal - (booking.deposit ?? 0);
+              const balanceColor = getBalanceColor(displayTotal, booking.deposit ?? 0);
 
               return (
                 <tr
@@ -312,8 +336,10 @@ export default function BookingTable({
                     <input
                       type="checkbox"
                       checked={isSelected}
+                      disabled={turoRow}
+                      title={turoRow ? "Turo trips cannot be selected for bulk actions" : undefined}
                       onChange={() => onToggleSelect(booking.id)}
-                      className="rounded border-gray-300 cursor-pointer accent-purple-600"
+                      className="rounded border-gray-300 cursor-pointer accent-purple-600 disabled:opacity-40"
                     />
                   </td>
 
@@ -363,8 +389,8 @@ export default function BookingTable({
 
                   {/* Total */}
                   <td className="px-4 py-3">
-                    {canViewPricing ? (
-                      <div className="font-semibold text-gray-900">${((booking.total_price ?? 0)).toFixed(2)}</div>
+                    {canViewPricing && (displayTotal > 0 || !turoRow) ? (
+                      <div className="font-semibold text-gray-900">${displayTotal.toFixed(2)}</div>
                     ) : (
                       <div className="text-xs text-gray-500">Hidden</div>
                     )}
@@ -372,7 +398,9 @@ export default function BookingTable({
 
                   {/* Balance */}
                   <td className="px-4 py-3">
-                    {canViewPricing ? (
+                    {turoRow ? (
+                      <div className="text-xs text-gray-400">—</div>
+                    ) : canViewPricing ? (
                       <div className={`font-semibold ${balanceColor}`}>${(balance ?? 0).toFixed(2)}</div>
                     ) : (
                       <div className="text-xs text-gray-500">Hidden</div>

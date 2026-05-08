@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { fetchBookingsByVehicle } from "@/lib/admin/vehicle-details-queries";
+import { fetchVehicleOccupancy } from "@/lib/admin/vehicle-occupancy";
 
 export async function GET(
   req: NextRequest,
@@ -20,7 +20,7 @@ export async function GET(
   const limit = Number(searchParams.get("limit") || 25);
 
   const supabase = getServiceSupabase();
-  const result = await fetchBookingsByVehicle(supabase, vehicleId, auth.role, auth.userId, {
+  const result = await fetchVehicleOccupancy(supabase, vehicleId, auth.role, auth.userId, {
     status: searchParams.get("status"),
     from: searchParams.get("from"),
     to: searchParams.get("to"),

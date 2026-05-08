@@ -16,6 +16,7 @@ import { TodaySummary } from "./components/TodaySummary";
 import BookingFilters from "./components/BookingFilters";
 import BookingTable from "./components/BookingTable";
 import { BookingDetailPanel } from "./components/BookingDetailPanel";
+import { TuroTripDetailPanel } from "./components/TuroTripDetailPanel";
 import CreateBookingForm from "./components/CreateBookingForm";
 import type { BookingRow } from "./types";
 import type { BookingsPageConfig } from "./config";
@@ -126,7 +127,12 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
 
   const toggleSelectAll = useCallback(() => {
     const currentPageIds = paginatedBookings
-      .filter((b) => config.capabilities.canBulkUpdate || b.canManage !== false)
+      .filter(
+        (b) =>
+          !b.id.startsWith("turo:") &&
+          b.occupancy_kind !== "turo" &&
+          (config.capabilities.canBulkUpdate || b.canManage !== false)
+      )
       .map((b) => b.id);
     const allSelected = currentPageIds.length > 0 && currentPageIds.every((id) => selectedIds.has(id));
     setSelectedIds((prev) => {
@@ -371,24 +377,28 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
       </PageContainer>
 
       {showDetail && selectedBooking && (
-        <BookingDetailPanel
-          booking={selectedBooking}
-          vehicles={vehicles}
-          onClose={handleCloseDetail}
-          onUpdateBooking={handleUpdateBookingInList}
-          onUpdateStatus={handleUpdateStatusFromDetail}
-          onError={setError}
-          onSuccess={setSuccess}
-          capabilities={{
-            canSendBookingEmail: config.capabilities.canSendBookingEmail,
-            canViewAdminNotes: config.capabilities.canViewAdminNotes,
-            canViewActivityTimeline: config.capabilities.canViewActivityTimeline,
-            canManagePayments: config.capabilities.canManagePayments,
-            canExtendBooking: config.capabilities.canExtendBooking,
-            customerDetailsBasePath: config.customerDetailsBasePath,
-            ticketsPagePath: config.ticketsPagePath,
-          }}
-        />
+        selectedBooking.occupancy_kind === "turo" || selectedBooking.id.startsWith("turo:") ? (
+          <TuroTripDetailPanel booking={selectedBooking} onClose={handleCloseDetail} />
+        ) : (
+          <BookingDetailPanel
+            booking={selectedBooking}
+            vehicles={vehicles}
+            onClose={handleCloseDetail}
+            onUpdateBooking={handleUpdateBookingInList}
+            onUpdateStatus={handleUpdateStatusFromDetail}
+            onError={setError}
+            onSuccess={setSuccess}
+            capabilities={{
+              canSendBookingEmail: config.capabilities.canSendBookingEmail,
+              canViewAdminNotes: config.capabilities.canViewAdminNotes,
+              canViewActivityTimeline: config.capabilities.canViewActivityTimeline,
+              canManagePayments: config.capabilities.canManagePayments,
+              canExtendBooking: config.capabilities.canExtendBooking,
+              customerDetailsBasePath: config.customerDetailsBasePath,
+              ticketsPagePath: config.ticketsPagePath,
+            }}
+          />
+        )
       )}
     </>
   );

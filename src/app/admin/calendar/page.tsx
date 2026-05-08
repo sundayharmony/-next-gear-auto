@@ -76,6 +76,7 @@ export default function AdminCalendarPage() {
   const bookingsRangeRef = React.useRef<{ from: string; to: string } | null>(null);
   const bookingsEndpointRef = React.useRef(bookingsEndpoint);
   const managerBookingsFetchedRef = React.useRef(false);
+  const vehiclesLoadedRef = React.useRef(false);
 
   const openBookingDetail = (booking: BookingRow) => {
     setSelectedBooking(booking);
@@ -141,7 +142,7 @@ export default function AdminCalendarPage() {
           return;
         }
         try {
-          const res = await adminFetch(`${bookingsEndpoint}?status=all`, { signal });
+          const res = await adminFetch(`${bookingsEndpoint}?status=all&includeTuro=true`, { signal });
           if (res.ok) {
             const data = await res.json();
             setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
@@ -175,7 +176,7 @@ export default function AdminCalendarPage() {
 
       try {
         const res = await adminFetch(
-          `${bookingsEndpoint}?from=${newFrom}&to=${newTo}&limit=200`,
+          `${bookingsEndpoint}?from=${newFrom}&to=${newTo}&limit=200&includeTuro=true`,
           { signal }
         );
         if (res.ok) {
@@ -192,19 +193,26 @@ export default function AdminCalendarPage() {
   );
 
   const fetchAuxiliaryData = useCallback(async () => {
-    const [vehiclesRes, blockedRes] = await Promise.all([
-      adminFetch("/api/admin/vehicles"),
-      adminFetch("/api/admin/blocked-dates"),
-    ]);
-    if (vehiclesRes.ok) {
+    const needFrom = addDaysToYmd(visibleBounds.from, -120);
+    const needTo = addDaysToYmd(visibleBounds.to, 120);
+    const blockedUrl = `/api/admin/blocked-dates?from=${encodeURIComponent(needFrom)}&to=${encodeURIComponent(needTo)}`;
+    const requests: Promise<Response>[] = [adminFetch(blockedUrl)];
+    if (!vehiclesLoadedRef.current) {
+      requests.unshift(adminFetch("/api/admin/vehicles"));
+    }
+    const results = await Promise.all(requests);
+    const vehiclesRes = !vehiclesLoadedRef.current ? results[0] : null;
+    const blockedRes = !vehiclesLoadedRef.current ? results[1] : results[0];
+    if (vehiclesRes?.ok) {
       const data = await vehiclesRes.json();
       setVehicles(data.data || []);
+      vehiclesLoadedRef.current = true;
     }
     if (blockedRes.ok) {
       const data = await blockedRes.json();
       setBlockedDates(data.data || []);
     }
-  }, []);
+  }, [visibleBounds]);
 
   const calendarAuxLoadedRef = React.useRef(false);
 
@@ -235,6 +243,21 @@ export default function AdminCalendarPage() {
       }
     };
   }, [loadBookings, fetchAuxiliaryData]);
+
+  useEffect(() => {
+    if (!calendarAuxLoadedRef.current) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        await fetchAuxiliaryData();
+      } catch (e) {
+        if (!cancelled) logger.error("Failed to refresh blocked dates:", e);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [visibleBounds, fetchAuxiliaryData]);
 
   // Filter bookings
   const filteredBookings = useMemo(() => {
@@ -969,7 +992,7 @@ function MobileAgendaView({
                 <div className="w-1 self-stretch rounded-full bg-gray-300 shrink-0" />
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-500">
-                    {bd.source === "turo-email" ? "Turo Block" : "Blocked"}
+                    {bd.source === "turo-email" ? "Turo Trip" : "Manual block"}
                     {bd.reason ? ` — ${bd.reason}` : ""}
                   </p>
                   <p className="text-xs text-gray-400 truncate">
@@ -1011,6 +1034,7 @@ function CalendarView({
   onBlockedDateClick,
   onMonthWheel,
 }: CalendarViewProps) {
+  const pathname = usePathname();
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 

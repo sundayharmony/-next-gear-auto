@@ -16,6 +16,12 @@ export interface BookingRow extends Omit<BookingDbRow, "total_price" | "deposit"
   deposit: number | null;
   canViewPricing?: boolean;
   canManage?: boolean;
+  /** Unified occupancy: website booking vs Turo blocked_dates trip */
+  occupancy_kind?: "booking" | "turo";
+  blocked_date_id?: string;
+  turo_reason?: string | null;
+  turo_location?: string | null;
+  turo_is_extension?: boolean;
 }
 
 // ─── Booking-module-specific types (not shared elsewhere) ─────────

@@ -14,6 +14,11 @@ import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { isManagerFeatureEnabled } from "@/lib/config/feature-flags";
 import { regenerateSignedAgreementForBooking } from "@/lib/agreement/signed-agreement";
+import {
+  fetchGlobalOccupancy,
+  occupancyToBookingRowCompat,
+  sortOccupancyEntries,
+} from "@/lib/admin/vehicle-occupancy";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -139,6 +144,112 @@ export async function GET(request: NextRequest) {
         { success: false, message: "Authentication required" },
         { status: 401 }
       );
+    }
+
+    const includeTuro = searchParams.get("includeTuro") === "true";
+    if (includeTuro && (isAdmin || isManager) && auth.sub) {
+      let bq = supabase.from("bookings").select("*, vehicles(year, make, model)");
+      if (isAdmin) {
+        if (customerId && customerEmail) {
+          bq = bq.or(
+            `customer_id.eq.${encodeURIComponent(customerId)},customer_email.ilike.${encodeURIComponent(customerEmail)}`
+          );
+        } else if (customerId) {
+          bq = bq.eq("customer_id", customerId);
+        } else if (customerEmail) {
+          bq = bq.ilike("customer_email", customerEmail);
+        }
+      } else if (isManager) {
+        bq = bq.eq("origin_channel", "manager_panel").eq("created_by_user_id", auth.sub);
+        const todayStr = new Date().toISOString().split("T")[0];
+        bq = bq.not("status", "in", "(cancelled,completed)").gte("return_date", todayStr);
+      }
+      if (fromDate) {
+        bq = bq.gte("return_date", fromDate);
+      }
+      if (toDate) {
+        bq = bq.lte("pickup_date", toDate);
+      }
+      bq = bq.order(sortColumn, { ascending: isAscending }).limit(2000);
+      const { data: bookingRowsRaw, error: bqErr } = await bq;
+      if (bqErr) {
+        logger.error("Bookings includeTuro fetch error:", bqErr);
+        return NextResponse.json(
+          { success: false, message: "Failed to fetch bookings" },
+          { status: 500 }
+        );
+      }
+      const role = isAdmin ? "admin" : "manager";
+      let merged = await fetchGlobalOccupancy(supabase, role, auth.sub, {
+        bookingRows: (bookingRowsRaw || []) as Record<string, unknown>[],
+        status,
+        from: fromDate,
+        to: toDate,
+      });
+      if (search) {
+        const safeSearch = (search || "").slice(0, 100);
+        const sanitized = safeSearch.replace(/[%_*(),.<>!=&|]/g, "");
+        if (sanitized) {
+          const low = sanitized.toLowerCase();
+          merged = merged.filter((e) => {
+            const idHay = `${e.id} ${e.blocked_date_id || ""}`.toLowerCase();
+            const nameHay = e.customer_name.toLowerCase();
+            const emailHay = (e.customer_email || "").toLowerCase();
+            return (
+              idHay.includes(low) ||
+              nameHay.includes(low) ||
+              emailHay.includes(low)
+            );
+          });
+        }
+      }
+      merged = sortOccupancyEntries(merged, sortColumn, isAscending);
+      const today = new Date().toISOString().split("T")[0];
+      const rawList = (bookingRowsRaw || []) as Record<string, unknown>[];
+      const enriched = merged.map((e) => {
+        const base = occupancyToBookingRowCompat(e) as Record<string, unknown>;
+        if (e.kind === "booking") {
+          const raw = rawList.find((x) => String(x.id) === e.id);
+          if (raw) {
+            const v = raw.vehicles as { year?: number; make?: string; model?: string } | null;
+            const { vehicles: _v, ...rest } = raw;
+            return {
+              ...rest,
+              ...base,
+              vehicleName: v ? getVehicleDisplayName(v) : (base.vehicleName as string),
+              customerName: (rest.customer_name as string) || "Guest",
+              is_overdue: e.return_date < today && e.status === "active",
+            };
+          }
+        }
+        base.is_overdue =
+          e.kind === "booking" ? e.return_date < today && e.status === "active" : false;
+        return base;
+      });
+      if (page !== null && offset !== null) {
+        const total = enriched.length;
+        const pageSlice = enriched.slice(offset, offset + perPage);
+        const totalPages = Math.max(1, Math.ceil(total / perPage));
+        return NextResponse.json(
+          {
+            data: pageSlice,
+            success: true,
+            total,
+            page,
+            totalPages,
+          },
+          {
+            headers: {
+              "Cache-Control": "no-store",
+            },
+          }
+        );
+      }
+      return NextResponse.json({ data: enriched, success: true }, {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      });
     }
 
     let query = supabase
@@ -787,12 +898,13 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    // If status changed to cancelled, delete blocked dates for this vehicle in the booking's date range
+    // If status changed to cancelled, delete manual blocked dates only (do not remove Turo trips).
     if (updateFields.status === "cancelled" && booking.vehicle_id && booking.pickup_date && booking.return_date) {
       const { error: blockedErr } = await supabase
         .from("blocked_dates")
         .delete()
         .eq("vehicle_id", booking.vehicle_id)
+        .eq("source", "manual")
         .gte("end_date", booking.pickup_date)
         .lte("start_date", booking.return_date);
       if (blockedErr) {
