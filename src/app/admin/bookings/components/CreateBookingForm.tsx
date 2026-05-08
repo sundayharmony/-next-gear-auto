@@ -20,6 +20,11 @@ import {
   TIME_SLOTS,
 } from "../types";
 import { Location } from "@/lib/types";
+import {
+  upsertRecurringBookingMeta,
+  WEEKLY_DUE_DAY_OPTIONS,
+  type WeeklyDueDay,
+} from "@/lib/utils/recurring-booking";
 
 /* ── Section header component ── */
 function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle?: string }) {
@@ -64,6 +69,8 @@ const emptyForm = {
   status: "pending",
   selectedExtras: [] as string[],
   paymentMethod: "stripe",
+  isRecurringLongTerm: false,
+  weeklyDueDay: "",
 };
 
 export default function CreateBookingForm({
@@ -397,6 +404,10 @@ export default function CreateBookingForm({
       onError("Total price must be greater than zero");
       return false;
     }
+    if (form.isRecurringLongTerm && !form.weeklyDueDay) {
+      onError("Weekly due day is required for recurring long-term bookings");
+      return false;
+    }
     return true;
   };
 
@@ -430,6 +441,12 @@ export default function CreateBookingForm({
         pickup_location_name: pickupLoc?.name || null,
         return_location_name: returnLoc?.name || null,
         location_surcharge: pickupSurcharge + returnSurcharge,
+        adminNotes: form.isRecurringLongTerm
+          ? upsertRecurringBookingMeta("", {
+              isRecurringLongTerm: true,
+              weeklyDueDay: form.weeklyDueDay as WeeklyDueDay,
+            })
+          : "",
       };
 
       const res = await adminFetch("/api/bookings", {
@@ -930,6 +947,45 @@ export default function CreateBookingForm({
           <div className="flex items-center gap-2 px-3.5 py-2.5 bg-indigo-50 border border-indigo-100 rounded-lg text-sm text-indigo-700">
             <Shield className="w-4 h-4 shrink-0" />
             <span>Status: <strong>Pending</strong> — confirm after the customer signs the rental agreement</span>
+          </div>
+        </section>
+
+        {/* ═══ SECTION 6: Recurring Long-Term ═══ */}
+        <section className="space-y-4">
+          <SectionHeader icon={CalendarDays} title="Recurring Long-Term (Optional)" subtitle="Enable for week-to-week long-term renters" />
+
+          <label className="flex items-center gap-2 text-sm text-gray-700">
+            <input
+              type="checkbox"
+              checked={form.isRecurringLongTerm}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  isRecurringLongTerm: e.target.checked,
+                  weeklyDueDay: e.target.checked ? form.weeklyDueDay : "",
+                })
+              }
+              className="rounded border-gray-300 accent-purple-600"
+            />
+            Mark this booking as recurring long-term
+          </label>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
+                Weekly Due Day {form.isRecurringLongTerm ? <span className="text-red-500">*</span> : null}
+              </label>
+              <Select
+                value={form.weeklyDueDay}
+                onChange={(e) => setForm({ ...form, weeklyDueDay: e.target.value })}
+                disabled={!form.isRecurringLongTerm}
+              >
+                <option value="">Select due day...</option>
+                {WEEKLY_DUE_DAY_OPTIONS.map((day) => (
+                  <option key={day} value={day}>{day}</option>
+                ))}
+              </Select>
+            </div>
           </div>
         </section>
 

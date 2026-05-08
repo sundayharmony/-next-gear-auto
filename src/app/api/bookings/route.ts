@@ -14,6 +14,7 @@ import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { isManagerFeatureEnabled } from "@/lib/config/feature-flags";
 import { regenerateSignedAgreementForBooking } from "@/lib/agreement/signed-agreement";
+import { parseRecurringBookingMeta, upsertRecurringBookingMeta } from "@/lib/utils/recurring-booking";
 import {
   fetchGlobalOccupancy,
   occupancyToBookingRowCompat,
@@ -561,6 +562,16 @@ export async function POST(request: NextRequest) {
         : "public_checkout";
     const createdByRole = auth?.role || "customer";
     const createdByUserId = auth?.sub || null;
+    const rawAdminNotes = typeof body.adminNotes === "string" ? body.adminNotes.trim() : "";
+    const normalizedNotes = rawAdminNotes
+      ? (() => {
+          const existingMeta = parseRecurringBookingMeta(rawAdminNotes);
+          return upsertRecurringBookingMeta(rawAdminNotes, {
+            isRecurringLongTerm: existingMeta.isRecurringLongTerm,
+            weeklyDueDay: existingMeta.weeklyDueDay,
+          });
+        })()
+      : null;
 
     const { error } = await supabase.from("bookings").insert({
       id: bookingId,
@@ -584,6 +595,7 @@ export async function POST(request: NextRequest) {
       pickup_location_id: body.pickup_location_id || body.pickupLocationId || null,
       return_location_id: body.return_location_id || body.returnLocationId || null,
       location_surcharge: body.location_surcharge || body.locationSurcharge || 0,
+      admin_notes: normalizedNotes,
       origin_channel: originChannel,
       created_by_role: createdByRole,
       created_by_user_id: createdByUserId,
