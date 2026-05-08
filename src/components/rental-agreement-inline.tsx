@@ -22,6 +22,7 @@ interface RentalAgreementInlineProps {
   totalPrice?: number;
   totalDays?: number;
   deposit?: number;
+  agreementType?: "standard" | "weeklyRecurring";
   /** Which page to display (1, 2, or 3). If omitted, shows all pages (scrollable). */
   currentPage?: number;
 }
@@ -63,9 +64,10 @@ const Field = ({ value, width = "auto" }: { value?: string | number | null; widt
 );
 
 /* ── PAGE 1 ── */
-function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit }: RentalAgreementInlineProps) {
+function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit, agreementType = "standard" }: RentalAgreementInlineProps) {
   const depositAmount = deposit ?? (totalPrice || 0);
   const balanceDue = (totalPrice || 0) - depositAmount;
+  const isWeeklyRecurring = agreementType === "weeklyRecurring";
 
   return (
     <div className="p-6 pb-4">
@@ -76,7 +78,9 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
             <span className="text-purple-700 font-bold text-sm tracking-wider">NEXTGEARAUTO</span>
           </div>
         </div>
-        <h2 className="text-xl font-bold text-gray-900 mb-1">VEHICLE RENTAL AGREEMENT</h2>
+        <h2 className="text-xl font-bold text-gray-900 mb-1">
+          {isWeeklyRecurring ? "WEEK-TO-WEEK LONG-TERM RENTAL AGREEMENT" : "VEHICLE RENTAL AGREEMENT"}
+        </h2>
         <p className="text-sm text-gray-600">Next Gear Auto LLC</p>
         <p className="text-sm text-gray-600">92 Forrest Street, Jersey City, NJ 07304</p>
         <p className="text-sm text-gray-600">
@@ -126,7 +130,9 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
 
       {/* Section 2 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">2. RENTAL PERIOD & LATE FEES</h3>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">
+          {isWeeklyRecurring ? "2. WEEKLY RENTAL TERM, RENEWAL & LATE FEES" : "2. RENTAL PERIOD & LATE FEES"}
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-6 gap-y-2 mb-2">
           <div>
             <span className="font-semibold">Rental Pickup:</span>{" "}<Field value={formatDate(pickupDate)} width="120px" />
@@ -137,7 +143,14 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
             <span className="ml-2 font-semibold">at:</span>{" "}<Field value={formatTime(returnTime)} width="120px" />
           </div>
         </div>
-        <p className="font-semibold text-gray-900">Late Fee Policy: $75 per hour. Any time after 59 minutes late will be charged as a full additional rental day.</p>
+        {isWeeklyRecurring ? (
+          <p className="text-gray-700">
+            This agreement is structured for recurring 7-day terms. Each weekly rebooking uses the same rate unless updated in writing before renewal.
+            <span className="font-semibold text-gray-900"> Late Fee Policy: $75 per hour. Any time after 59 minutes late may be charged as a full additional rental day.</span>
+          </p>
+        ) : (
+          <p className="font-semibold text-gray-900">Late Fee Policy: $75 per hour. Any time after 59 minutes late will be charged as a full additional rental day.</p>
+        )}
       </div>
 
       {/* Section 3 */}
@@ -152,13 +165,26 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
 
       {/* Section 4 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">4. RENTAL RATES & PAYMENT TERMS</h3>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">
+          {isWeeklyRecurring ? "4. WEEKLY RECURRING RATE & PAYMENT TERMS" : "4. RENTAL RATES & PAYMENT TERMS"}
+        </h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-6 gap-y-2 mb-2">
-          <div><span className="font-semibold">Total Rental Price: $</span>{" "}<Field value={totalPrice && Number.isFinite(totalPrice) ? totalPrice.toFixed(2) : "0.00"} width="100px" /></div>
-          <div><span className="font-semibold">Total Days:</span>{" "}<Field value={totalDays} width="60px" /></div>
+          <div>
+            <span className="font-semibold">{isWeeklyRecurring ? "Weekly Recurring Price: $" : "Total Rental Price: $"}</span>{" "}
+            <Field value={totalPrice && Number.isFinite(totalPrice) ? totalPrice.toFixed(2) : "0.00"} width="100px" />
+          </div>
+          <div>
+            <span className="font-semibold">{isWeeklyRecurring ? "Weekly Term (Days):" : "Total Days:"}</span>{" "}
+            <Field value={isWeeklyRecurring ? 7 : totalDays} width="60px" />
+          </div>
           <div><span className="font-semibold">Security Deposit:</span> ${Number.isFinite(depositAmount) ? depositAmount.toFixed(2) : "0.00"}</div>
           <div><span className="font-semibold">Balance Due at Pickup: $</span>{" "}<Field value={balanceDue && Number.isFinite(balanceDue) && balanceDue > 0 ? balanceDue.toFixed(2) : "0.00"} width="100px" /></div>
         </div>
+        {isWeeklyRecurring && (
+          <p className="text-gray-700 mb-2">
+            Renewal Billing: Weekly recurring payment is due at the start of each new 7-day term.
+          </p>
+        )}
         <div className="mb-2">
           <span className="font-semibold">Payment Method:</span>{" "}
           <span className="inline-flex gap-3 ml-2">
@@ -355,9 +381,10 @@ export function RentalAgreementInline({
   totalPrice,
   totalDays,
   deposit,
+  agreementType = "standard",
   currentPage,
 }: RentalAgreementInlineProps) {
-  const pageProps = { vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit };
+  const pageProps = { vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit, agreementType };
 
   // If no currentPage specified, show the page-based view with page 1 default
   const page = currentPage || 1;

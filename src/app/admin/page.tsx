@@ -8,7 +8,7 @@ import type { LucideIcon } from "lucide-react";
 import {
   Car, DollarSign, Calendar, CalendarDays, Users, TrendingUp, Clock,
   ArrowRight, Tag, Star, BarChart3, AlertCircle, ClipboardList, Wrench,
-  RefreshCw, CheckCircle2, Settings, Sparkles, MapPin,
+  RefreshCw, CheckCircle2, Settings, Sparkles, MapPin, FileText,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -146,6 +146,7 @@ const QUICK_NAV = [
   { label: "Promo Codes", href: "/admin/promo-codes", icon: Tag },
   { label: "Reviews", href: "/admin/reviews", icon: Star },
   { label: "Managers", href: "/admin/managers", icon: Settings },
+  { label: "Week-to-Week Contract", href: "/week-to-week-contract", icon: FileText },
 ] as const;
 
 function HighlightColumn({
