@@ -23,6 +23,7 @@ interface RentalAgreementInlineProps {
   totalDays?: number;
   deposit?: number;
   agreementType?: "standard" | "weeklyRecurring";
+  weeklyDueDay?: string;
   /** Which page to display (1, 2, or 3). If omitted, shows all pages (scrollable). */
   currentPage?: number;
 }
@@ -64,7 +65,7 @@ const Field = ({ value, width = "auto" }: { value?: string | number | null; widt
 );
 
 /* ── PAGE 1 ── */
-function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit, agreementType = "standard" }: RentalAgreementInlineProps) {
+function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit, agreementType = "standard", weeklyDueDay }: RentalAgreementInlineProps) {
   const depositAmount = deposit ?? (totalPrice || 0);
   const balanceDue = (totalPrice || 0) - depositAmount;
   const isWeeklyRecurring = agreementType === "weeklyRecurring";
@@ -183,6 +184,11 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
         {isWeeklyRecurring && (
           <p className="text-gray-700 mb-2">
             Renewal Billing: Weekly recurring payment is due at the start of each new 7-day term.
+          </p>
+        )}
+        {isWeeklyRecurring && weeklyDueDay && (
+          <p className="text-gray-700 mb-2">
+            Weekly payment due every <span className="font-semibold text-gray-900">{weeklyDueDay}</span>.
           </p>
         )}
         <div className="mb-2">
@@ -382,9 +388,10 @@ export function RentalAgreementInline({
   totalDays,
   deposit,
   agreementType = "standard",
+  weeklyDueDay,
   currentPage,
 }: RentalAgreementInlineProps) {
-  const pageProps = { vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit, agreementType };
+  const pageProps = { vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit, agreementType, weeklyDueDay };
 
   // If no currentPage specified, show the page-based view with page 1 default
   const page = currentPage || 1;

@@ -58,6 +58,13 @@ import { getVehicleDisplayName } from "@/lib/types";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { logger } from "@/lib/utils/logger";
 import { Location } from "@/lib/types";
+import {
+  parseRecurringBookingMeta,
+  stripRecurringBookingMeta,
+  upsertRecurringBookingMeta,
+  WEEKLY_DUE_DAY_OPTIONS,
+  type WeeklyDueDay,
+} from "@/lib/utils/recurring-booking";
 
 /** Ensure URL is safe (no javascript: protocol) */
 function safeHref(url: string | undefined | null): string | undefined {
@@ -261,12 +268,50 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     }
   }, [booking, editMode]);
 
+  const recurringMeta = parseRecurringBookingMeta(
+    typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes
+  );
+  const visibleAdminNotes = stripRecurringBookingMeta(
+    typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes
+  );
+
+  const openWeekToWeekContract = () => {
+    const params = new URLSearchParams({ bookingId: booking.id });
+    if (recurringMeta.weeklyDueDay) {
+      params.set("weeklyDueDay", recurringMeta.weeklyDueDay);
+    }
+    window.open(`/week-to-week-contract?${params.toString()}`, "_blank", "noopener,noreferrer");
+  };
+  const canGenerateWeekToWeekContract =
+    recurringMeta.isRecurringLongTerm &&
+    (booking.status === "confirmed" || booking.status === "active");
+
   // Handle edit mode toggle
   const toggleEditMode = () => {
     if (!editMode) {
       setEditData(JSON.parse(JSON.stringify(booking)));
     }
     setEditMode(!editMode);
+  };
+
+  const updateRecurringMeta = (
+    next: Partial<{ isRecurringLongTerm: boolean; weeklyDueDay: WeeklyDueDay | undefined }>
+  ) => {
+    const current = parseRecurringBookingMeta(
+      typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes
+    );
+    const merged = {
+      isRecurringLongTerm: next.isRecurringLongTerm ?? current.isRecurringLongTerm,
+      weeklyDueDay: next.weeklyDueDay ?? current.weeklyDueDay,
+    };
+    if (!merged.isRecurringLongTerm) {
+      merged.weeklyDueDay = undefined;
+    }
+    const updatedNotes = upsertRecurringBookingMeta(
+      typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes,
+      merged
+    );
+    setEditData({ ...editData, admin_notes: updatedNotes });
   };
 
   // Handle status step click
@@ -1716,6 +1761,87 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           )}
 
           {/* Admin Notes */}
+          <div className="space-y-3 border-t border-gray-200 pt-4">
+            <h3 className="text-sm font-semibold flex items-center gap-2">
+              <CalendarPlus className="w-4 h-4" />
+              Recurring Long-Term
+            </h3>
+
+            {editMode ? (
+              <div className="space-y-3">
+                <label className="flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={recurringMeta.isRecurringLongTerm}
+                    onChange={(e) =>
+                      updateRecurringMeta({ isRecurringLongTerm: e.target.checked })
+                    }
+                    className="rounded border-gray-300 accent-purple-600"
+                  />
+                  Mark this booking as recurring long-term
+                </label>
+
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
+                    Weekly Due Day
+                  </label>
+                  <Select
+                    value={recurringMeta.weeklyDueDay || ""}
+                    onChange={(e) =>
+                      updateRecurringMeta({
+                        weeklyDueDay: (e.target.value || undefined) as WeeklyDueDay | undefined,
+                      })
+                    }
+                    disabled={!recurringMeta.isRecurringLongTerm}
+                  >
+                    <option value="">Select due day</option>
+                    {WEEKLY_DUE_DAY_OPTIONS.map((day) => (
+                      <option key={day} value={day}>
+                        {day}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {recurringMeta.isRecurringLongTerm ? (
+                  <>
+                    <Badge className="bg-purple-100 text-purple-800">
+                      Recurring Long-Term: Enabled
+                    </Badge>
+                    <p className="text-sm text-gray-600">
+                      Weekly due day:{" "}
+                      <span className="font-medium text-gray-800">
+                        {recurringMeta.weeklyDueDay || "Not set"}
+                      </span>
+                    </p>
+                    {canGenerateWeekToWeekContract ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                        onClick={openWeekToWeekContract}
+                      >
+                        <FileText className="w-3 h-3 mr-1" />
+                        Open Week-to-Week Contract
+                      </Button>
+                    ) : (
+                      <p className="text-xs text-amber-700">
+                        Week-to-week contract is available after booking is confirmed or active.
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500">
+                    Not marked as recurring long-term.
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Admin Notes */}
           {canViewAdminNotes && (
             <div className="space-y-2">
             <button
@@ -1735,11 +1861,12 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             {showNotes && (
               <div className="space-y-2 pl-2">
                 <Textarea
-                  value={editData.admin_notes || ""}
+                  value={visibleAdminNotes}
                   onChange={(e) => {
+                    const updatedNotes = upsertRecurringBookingMeta(e.target.value, recurringMeta);
                     setEditData({
                       ...editData,
-                      admin_notes: e.target.value,
+                      admin_notes: updatedNotes,
                     });
                   }}
                   onBlur={handleNotesBlur}

@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
+import { parseRecurringBookingMeta } from "@/lib/utils/recurring-booking";
 
 interface BookingTableProps {
   bookings: BookingRow[];
@@ -84,6 +85,15 @@ export default function BookingTable({
   };
 
   const getCanManage = (booking: BookingRow): boolean => booking.canManage !== false;
+  const getWeekToWeekContractHref = (booking: BookingRow): string | null => {
+    const meta = parseRecurringBookingMeta(booking.admin_notes);
+    if (!meta.isRecurringLongTerm) return null;
+    const params = new URLSearchParams({ bookingId: booking.id });
+    if (meta.weeklyDueDay) {
+      params.set("weeklyDueDay", meta.weeklyDueDay);
+    }
+    return `/week-to-week-contract?${params.toString()}`;
+  };
   const getCanViewPricing = (booking: BookingRow): boolean => {
     if (booking.canViewPricing === true) return true;
     if (booking.canViewPricing === false) return false;
@@ -153,7 +163,13 @@ export default function BookingTable({
           const rentalDays = calculateRentalDays(booking.pickup_date, booking.return_date);
           const statusActions =
             !turoRow && getCanManage(booking) ? getStatusActions(booking.status) : [];
+          const recurringMeta = parseRecurringBookingMeta(booking.admin_notes);
+          const showRecurringBadge = recurringMeta.isRecurringLongTerm;
           const canViewPricing = getCanViewPricing(booking);
+          const weekToWeekContractHref =
+            booking.status === "confirmed" || booking.status === "active"
+              ? getWeekToWeekContractHref(booking)
+              : null;
           const displayTotal =
             typeof booking.total_price === "number" && booking.total_price > 0
               ? booking.total_price
@@ -183,6 +199,11 @@ export default function BookingTable({
                     <p className="font-semibold text-gray-900 text-sm truncate">{booking.customer_name || "Unknown"}</p>
                     <p className="text-xs text-gray-500 truncate">{booking.customer_email || "No email"}</p>
                     <p className="text-[10px] text-gray-400 uppercase tracking-wide mt-0.5">Origin: {getOriginLabel(booking.origin_channel)}</p>
+                    {showRecurringBadge && (
+                      <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0 bg-purple-100 text-purple-800">
+                        Recurring LT
+                      </Badge>
+                    )}
                   </div>
                 </div>
                 <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${statusColors[booking.status || "pending"] || "bg-gray-200 text-gray-800"}`}>
@@ -252,8 +273,15 @@ export default function BookingTable({
                   </div>
 
                   {/* Quick action buttons */}
-                  {statusActions.length > 0 && (
+                  {(statusActions.length > 0 || weekToWeekContractHref) && (
                     <div className="flex flex-wrap gap-1" onClick={(e) => e.stopPropagation()}>
+                      {weekToWeekContractHref && (
+                        <Link href={weekToWeekContractHref} target="_blank" rel="noopener noreferrer">
+                          <Button size="sm" variant="outline" className="text-xs h-7 px-2">
+                            W2W Contract
+                          </Button>
+                        </Link>
+                      )}
                       {statusActions.map((action) => (
                         <Button
                           key={action}
@@ -315,7 +343,13 @@ export default function BookingTable({
               const rentalDays = calculateRentalDays(booking.pickup_date, booking.return_date);
               const statusActions =
                 !turoRow && getCanManage(booking) ? getStatusActions(booking.status) : [];
+              const recurringMeta = parseRecurringBookingMeta(booking.admin_notes);
+              const showRecurringBadge = recurringMeta.isRecurringLongTerm;
               const canViewPricing = getCanViewPricing(booking);
+              const weekToWeekContractHref =
+                booking.status === "confirmed" || booking.status === "active"
+                  ? getWeekToWeekContractHref(booking)
+                  : null;
               const displayTotal =
                 typeof booking.total_price === "number" && booking.total_price > 0
                   ? booking.total_price
@@ -349,6 +383,11 @@ export default function BookingTable({
                       <div className="font-semibold text-gray-900 truncate">{booking.customer_name || "Unknown"}</div>
                       <div className="text-xs text-gray-500 truncate">{booking.customer_email || "No email"}</div>
                       <div className="text-[10px] text-gray-400 uppercase tracking-wide mt-0.5">Origin: {getOriginLabel(booking.origin_channel)}</div>
+                      {showRecurringBadge && (
+                        <Badge variant="secondary" className="mt-1 text-[10px] px-1.5 py-0 bg-purple-100 text-purple-800">
+                          Recurring LT
+                        </Badge>
+                      )}
                     </div>
                   </td>
 
@@ -434,6 +473,19 @@ export default function BookingTable({
                   {/* Actions */}
                   <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex gap-1">
+                      {weekToWeekContractHref && (
+                        <Link href={weekToWeekContractHref} target="_blank" rel="noopener noreferrer">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={(e: React.MouseEvent<HTMLButtonElement>) => e.stopPropagation()}
+                            className="text-xs"
+                            aria-label={`Open week-to-week contract for booking ${booking.id}`}
+                          >
+                            W2W
+                          </Button>
+                        </Link>
+                      )}
                       {statusActions.map((action) => (
                         <Button
                           key={action}

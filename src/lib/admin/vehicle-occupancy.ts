@@ -1,5 +1,5 @@
 import { getVehicleDisplayName } from "@/lib/types";
-import { getTuroDriverFromReason, resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
+import { resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import type { StaffRole } from "@/lib/admin/vehicle-details-queries";
 
@@ -140,16 +140,16 @@ function mapTuroBlock(
   _userId: string
 ): OccupancyEntry {
   const n = normalizeBlockedRow(row);
-  const driver = getTuroDriverFromReason(n.reason);
   const revenue = resolveTuroTripRevenue({ earnings: n.earnings, reason: n.reason });
   const canViewPricing = role === "admin";
   const status = deriveTuroOccupancyStatus(n.start_date, n.end_date);
+  const turoTripName = `${vehicleName || "Unknown Vehicle"} on TURO`;
   return {
     id: `turo:${n.id}`,
     kind: "turo",
     vehicle_id: n.vehicle_id,
     vehicleName,
-    customer_name: driver || "Turo",
+    customer_name: turoTripName,
     customer_email: undefined,
     pickup_date: n.start_date,
     return_date: n.end_date,

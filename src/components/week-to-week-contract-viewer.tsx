@@ -6,17 +6,37 @@ import { Button } from "@/components/ui/button";
 import { RentalAgreementInline } from "@/components/rental-agreement-inline";
 
 interface WeekToWeekContractViewerProps {
+  vehicle?: {
+    make: string;
+    model: string;
+    year: number;
+    licensePlate?: string;
+    vin?: string;
+    color?: string;
+    mileage?: number;
+  } | null;
   weeklyPrice?: number;
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
+  pickupDate?: string;
+  returnDate?: string;
+  pickupTime?: string | null;
+  returnTime?: string | null;
+  weeklyDueDay?: string;
 }
 
 export function WeekToWeekContractViewer({
+  vehicle,
   weeklyPrice = 0,
   customerName,
   customerEmail,
   customerPhone,
+  pickupDate,
+  returnDate,
+  pickupTime,
+  returnTime,
+  weeklyDueDay,
 }: WeekToWeekContractViewerProps) {
   const [page, setPage] = React.useState(1);
 
@@ -24,11 +44,17 @@ export function WeekToWeekContractViewer({
     <div>
       <RentalAgreementInline
         agreementType="weeklyRecurring"
+        vehicle={vehicle}
         customerName={customerName}
         customerEmail={customerEmail}
         customerPhone={customerPhone}
+        pickupDate={pickupDate}
+        returnDate={returnDate}
+        pickupTime={pickupTime}
+        returnTime={returnTime}
         totalPrice={weeklyPrice}
         totalDays={7}
+        weeklyDueDay={weeklyDueDay}
         currentPage={page}
       />
 

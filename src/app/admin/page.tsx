@@ -8,12 +8,11 @@ import type { LucideIcon } from "lucide-react";
 import {
   Car, DollarSign, Calendar, CalendarDays, Users, TrendingUp, Clock,
   ArrowRight, Tag, Star, BarChart3, AlertCircle, ClipboardList, Wrench,
-  RefreshCw, CheckCircle2, Settings, Sparkles, MapPin, FileText, ExternalLink,
+  RefreshCw, CheckCircle2, Settings, Sparkles, MapPin, FileText,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Input } from "@/components/ui/input";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate, formatTime, getLocalYmd } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
@@ -147,7 +146,6 @@ const QUICK_NAV = [
   { label: "Promo Codes", href: "/admin/promo-codes", icon: Tag },
   { label: "Reviews", href: "/admin/reviews", icon: Star },
   { label: "Managers", href: "/admin/managers", icon: Settings },
-  { label: "Week-to-Week Contract", href: "/week-to-week-contract", icon: FileText },
 ] as const;
 
 function HighlightColumn({
@@ -194,25 +192,6 @@ export default function AdminDashboardPage() {
   const [highlights, setHighlights] = useState<TodayHighlightLists | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const [weeklyPrice, setWeeklyPrice] = useState("");
-  const [contractCustomerName, setContractCustomerName] = useState("");
-  const [contractCustomerEmail, setContractCustomerEmail] = useState("");
-  const [contractCustomerPhone, setContractCustomerPhone] = useState("");
-
-  const weekToWeekContractHref = React.useMemo(() => {
-    const params = new URLSearchParams();
-
-    const parsedPrice = Number(weeklyPrice);
-    if (weeklyPrice.trim() && Number.isFinite(parsedPrice) && parsedPrice >= 0) {
-      params.set("weeklyPrice", String(parsedPrice));
-    }
-    if (contractCustomerName.trim()) params.set("customerName", contractCustomerName.trim());
-    if (contractCustomerEmail.trim()) params.set("customerEmail", contractCustomerEmail.trim());
-    if (contractCustomerPhone.trim()) params.set("customerPhone", contractCustomerPhone.trim());
-
-    const query = params.toString();
-    return query ? `/week-to-week-contract?${query}` : "/week-to-week-contract";
-  }, [weeklyPrice, contractCustomerName, contractCustomerEmail, contractCustomerPhone]);
 
   const fetchData = useCallback(async (signal?: AbortSignal) => {
     setLoading(true);
@@ -393,48 +372,17 @@ export default function AdminDashboardPage() {
                 <div className="flex items-center gap-2 mb-2">
                   <FileText className="h-4 w-4 text-purple-600" />
                   <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                    Generate Week-to-Week Contract Link
+                    Week-to-Week Contracts
                   </h2>
                 </div>
-                <p className="text-xs sm:text-sm text-gray-500 mb-4">
-                  Enter renter details and weekly recurring price, then open a prefilled week-to-week contract.
+                <p className="text-xs sm:text-sm text-gray-500 mb-3">
+                  Open a booking and mark it as <strong>Recurring Long-Term</strong> to generate the week-to-week contract from that booking.
                 </p>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-4">
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={weeklyPrice}
-                    onChange={(e) => setWeeklyPrice(e.target.value)}
-                    placeholder="Weekly price (e.g., 525)"
-                  />
-                  <Input
-                    value={contractCustomerName}
-                    onChange={(e) => setContractCustomerName(e.target.value)}
-                    placeholder="Customer full name"
-                  />
-                  <Input
-                    type="email"
-                    value={contractCustomerEmail}
-                    onChange={(e) => setContractCustomerEmail(e.target.value)}
-                    placeholder="Customer email"
-                  />
-                  <Input
-                    value={contractCustomerPhone}
-                    onChange={(e) => setContractCustomerPhone(e.target.value)}
-                    placeholder="Customer phone"
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-2">
-                  <a href={weekToWeekContractHref} target="_blank" rel="noopener noreferrer">
-                    <Button className="gap-1.5">
-                      Open Prefilled Contract <ExternalLink className="h-3.5 w-3.5" />
-                    </Button>
-                  </a>
-                  <p className="text-xs text-gray-500 break-all">{weekToWeekContractHref}</p>
-                </div>
+                <Link href="/admin/bookings">
+                  <Button variant="outline" className="text-xs sm:text-sm">
+                    Go to Bookings
+                  </Button>
+                </Link>
               </CardContent>
             </Card>
 
