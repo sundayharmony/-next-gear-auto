@@ -8,18 +8,32 @@ import {
   REFRESH_COOKIE,
 } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
-import { isAppRole } from "@/lib/auth/roles";
+import { isAppRole, isStaffRole } from "@/lib/auth/roles";
+
+const ACCESS_TOKEN_EXPIRES_IN_SEC = 3600;
 
 /**
  * Token refresh endpoint.
- * Reads the refresh token from cookies, issues a new access + refresh pair.
- * Implements sliding-window refresh token rotation.
+ * Reads the refresh token from cookies (web) or JSON body `{ refreshToken }` (native),
+ * issues a new access + refresh pair (rotation).
  */
 export async function POST(req: NextRequest) {
   try {
-    const refreshTokenCookie = req.cookies.get(REFRESH_COOKIE)?.value;
+    let refreshRaw = req.cookies.get(REFRESH_COOKIE)?.value;
+    let body: { refreshToken?: string; client?: string } | undefined;
 
-    if (!refreshTokenCookie) {
+    if (!refreshRaw) {
+      try {
+        body = await req.json();
+        if (typeof body?.refreshToken === "string") {
+          refreshRaw = body.refreshToken;
+        }
+      } catch {
+        // no JSON body
+      }
+    }
+
+    if (!refreshRaw) {
       const response = NextResponse.json(
         { success: false, message: "No refresh token." },
         { status: 401 }
@@ -27,7 +41,15 @@ export async function POST(req: NextRequest) {
       return clearAuthCookies(response);
     }
 
-    const payload = await verifyToken(refreshTokenCookie);
+    const nativeClient =
+      req.headers.get("x-nga-client") === "native" ||
+      body?.client === "native" ||
+      body?.client === "android";
+
+    const cookiePresent = Boolean(req.cookies.get(REFRESH_COOKIE)?.value);
+    const refreshedViaBodyOnly = !cookiePresent && typeof body?.refreshToken === "string";
+
+    const payload = await verifyToken(refreshRaw);
 
     // Ensure this is actually a refresh token, not an access token being reused
     if (!payload || !payload.sub || !payload.role || !payload.email || payload.type !== "refresh") {
@@ -58,7 +80,22 @@ export async function POST(req: NextRequest) {
       email: payload.email as string,
     });
 
-    const response = NextResponse.json({ success: true });
+    const includeTokensInJson =
+      isStaffRole(role) && (nativeClient || refreshedViaBodyOnly);
+
+    const jsonPayload = includeTokensInJson
+      ? {
+          success: true as const,
+          tokens: {
+            accessToken,
+            refreshToken,
+            tokenType: "Bearer" as const,
+            expiresIn: ACCESS_TOKEN_EXPIRES_IN_SEC,
+          },
+        }
+      : { success: true as const };
+
+    const response = NextResponse.json(jsonPayload);
     return setAuthCookies(response, accessToken, refreshToken);
   } catch (err) {
     logger.error("Token refresh error:", err);

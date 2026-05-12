@@ -20,6 +20,10 @@ import {
   occupancyToBookingRowCompat,
   sortOccupancyEntries,
 } from "@/lib/admin/vehicle-occupancy";
+import {
+  validateStatusTransition,
+  validateConfirmRequiresAgreement,
+} from "@/lib/bookings";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -658,7 +662,7 @@ export async function POST(request: NextRequest) {
         totalPrice: body.totalPrice ?? 0,
         deposit: body.deposit ?? 0,
         needsPassword,
-        pendingEmailVariant: (isAdminUser || isManagerUser ? "staff" : "default") as const,
+        pendingEmailVariant: isAdminUser || isManagerUser ? ("staff" as const) : ("default" as const),
       };
 
       // New bookings always start as pending
@@ -680,15 +684,6 @@ export async function POST(request: NextRequest) {
     );
   }
 }
-
-// ─── Valid status transitions (Bug 17) ──────────────────────────────
-const VALID_TRANSITIONS: Record<string, string[]> = {
-  pending: ["confirmed", "cancelled"],
-  confirmed: ["active", "cancelled"],
-  active: ["completed", "cancelled"],
-  completed: [],
-  cancelled: [],
-};
 
 // PATCH - Update booking (status change OR field edits)
 export async function PATCH(request: NextRequest) {
@@ -834,30 +829,20 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Validate status transitions (Bug 17)
+    // Validate status transitions (Bug 17) — shared rules in @/lib/bookings/lifecycle
     if (updateFields.status && updateFields.status !== booking.status) {
-      const currentStatus = booking.status;
-      const newStatus = updateFields.status;
-      const allowedTransitions = VALID_TRANSITIONS[currentStatus] || [];
-
-      if (!allowedTransitions.includes(newStatus)) {
-        return NextResponse.json(
-          { success: false, message: `Cannot transition from ${currentStatus} to ${newStatus}` },
-          { status: 400 }
-        );
+      const transition = validateStatusTransition(booking.status, updateFields.status);
+      if (!transition.ok) {
+        return NextResponse.json({ success: false, message: transition.message }, { status: 400 });
       }
-    }
-
-    // Block confirming a booking if the rental agreement hasn't been signed yet
-    if (
-      updateFields.status === "confirmed" &&
-      booking.status === "pending" &&
-      !booking.agreement_signed_at
-    ) {
-      return NextResponse.json(
-        { success: false, message: "Cannot confirm booking — the rental agreement has not been signed yet." },
-        { status: 400 }
-      );
+      const confirmRule = validateConfirmRequiresAgreement({
+        currentStatus: booking.status,
+        newStatus: updateFields.status,
+        agreementSignedAt: booking.agreement_signed_at,
+      });
+      if (!confirmRule.ok) {
+        return NextResponse.json({ success: false, message: confirmRule.message }, { status: 400 });
+      }
     }
 
     const isAdminEditor = auth.role === "admin";

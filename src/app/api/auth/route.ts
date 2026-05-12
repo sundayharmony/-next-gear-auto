@@ -6,11 +6,39 @@ import { createAccessToken, createRefreshToken, setAuthCookies, clearAuthCookies
 import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
-import { isAppRole, type AppRole } from "@/lib/auth/roles";
+import { isAppRole, isStaffRole, type AppRole } from "@/lib/auth/roles";
 
 function normalizeRole(role: unknown): AppRole {
   if (isAppRole(role)) return role;
   return "customer";
+}
+
+/** Native apps (Android/iOS) store Bearer tokens; optional tokens are included in JSON when client asks. */
+function isNativeClient(body: { client?: unknown }, request: Request): boolean {
+  const c = body?.client;
+  if (c === "native" || c === "android") return true;
+  return request.headers.get("x-nga-client") === "native";
+}
+
+const ACCESS_TOKEN_EXPIRES_IN_SEC = 3600;
+
+function attachStaffBearerTokens(
+  json: Record<string, unknown>,
+  role: AppRole,
+  accessToken: string,
+  refreshToken: string,
+  nativeClient: boolean,
+): Record<string, unknown> {
+  if (!nativeClient || !isStaffRole(role)) return json;
+  return {
+    ...json,
+    tokens: {
+      accessToken,
+      refreshToken,
+      tokenType: "Bearer",
+      expiresIn: ACCESS_TOKEN_EXPIRES_IN_SEC,
+    },
+  };
 }
 
 // GET: Validate current session and return user data from JWT
@@ -89,6 +117,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Invalid request body" }, { status: 400 });
     }
     const { email, password, action } = body;
+    const nativeClient = isNativeClient(body, request);
 
     // Use service role for server-side operations (bypasses RLS)
     const adminDb = getServiceSupabase();
@@ -126,21 +155,29 @@ export async function POST(request: Request) {
         const accessToken = await createAccessToken({ userId: admin.id, role: "admin", email: admin.email });
         const refreshToken = await createRefreshToken({ userId: admin.id, role: "admin", email: admin.email });
 
-        const response = NextResponse.json({
-          data: {
-            id: admin.id,
-            name: admin.name,
-            email: admin.email,
-            phone: admin.phone || "",
-            dob: "",
-            driverLicense: null,
-            paymentMethods: [],
-            bookings: [],
-            createdAt: admin.created_at,
-            role: "admin",
+        const payload = attachStaffBearerTokens(
+          {
+            data: {
+              id: admin.id,
+              name: admin.name,
+              email: admin.email,
+              phone: admin.phone || "",
+              dob: "",
+              driverLicense: null,
+              paymentMethods: [],
+              bookings: [],
+              createdAt: admin.created_at,
+              role: "admin",
+            },
+            success: true,
           },
-          success: true,
-        });
+          "admin",
+          accessToken,
+          refreshToken,
+          nativeClient,
+        );
+
+        const response = NextResponse.json(payload);
 
         // Add rate limit info to response headers (reuse initial check)
         response.headers.set("X-RateLimit-Remaining", String(rateCheck.remaining));
@@ -204,7 +241,15 @@ export async function POST(request: Request) {
       const accessToken = await createAccessToken({ userId: customer.id, role: customerRole, email: customer.email });
       const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
 
-      const response = NextResponse.json({ data: mapped, success: true });
+      const payload = attachStaffBearerTokens(
+        { data: mapped, success: true },
+        customerRole,
+        accessToken,
+        refreshToken,
+        nativeClient,
+      );
+
+      const response = NextResponse.json(payload);
 
       // Add rate limit info to response headers (reuse initial check)
       response.headers.set("X-RateLimit-Remaining", String(rateCheck.remaining));
