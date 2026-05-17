@@ -17,6 +17,8 @@ import {
   STAFF_ATTACHMENT_ALLOWED_MIMES,
   STAFF_ATTACHMENT_MAX_BYTES,
 } from "@/lib/messaging/staff-attachment-allowlist";
+import { escapeHtml } from "@/lib/utils/validation";
+import DOMPurify from "isomorphic-dompurify";
 
 interface ThreadRow {
   id: string;
@@ -58,13 +60,11 @@ const MAX_TOAST_DEDUPE_IDS = 400;
 const MAX_MESSAGE_ATTACHMENTS = 6;
 const MAX_MESSAGE_BODY_CHARS = 4000;
 
-function escapeHtml(input: string): string {
-  return input
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+function sanitizeEditorHtml(html: string): string {
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS: ["b", "strong", "i", "em", "br", "div", "p"],
+    ALLOWED_ATTR: [],
+  });
 }
 
 function applyMarkdownMarkers(text: string, bold: boolean, italic: boolean): string {
@@ -78,7 +78,7 @@ function applyMarkdownMarkers(text: string, bold: boolean, italic: boolean): str
 function editorHtmlToMarkdown(html: string): string {
   if (!html) return "";
   const root = document.createElement("div");
-  root.innerHTML = html;
+  root.innerHTML = sanitizeEditorHtml(html);
 
   const walk = (node: Node, fmt: { bold: boolean; italic: boolean }): string => {
     if (node.nodeType === Node.TEXT_NODE) {
@@ -1042,7 +1042,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                     )}
                     onInput={(e) => {
                       const editor = e.currentTarget as HTMLDivElement;
-                      const html = editor.innerHTML;
+                      const html = sanitizeEditorHtml(editor.innerHTML);
                       const markdownRaw = editorHtmlToMarkdown(html);
                       const tooLong = markdownRaw.length > MAX_MESSAGE_BODY_CHARS;
                       const markdown = tooLong

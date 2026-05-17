@@ -50,6 +50,17 @@ export const nameRule: ValidationRule = {
   message: "Please enter your full name",
 };
 
+/** Decode common HTML entities from scraped meta tag content. */
+export function decodeHtmlEntities(s: string): string {
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&#x27;/gi, "'");
+}
+
 /** Escape HTML special characters to prevent XSS injection */
 export function escapeHtml(s: string): string {
   return s

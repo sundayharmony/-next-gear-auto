@@ -12,6 +12,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
+import { validateInstagramPostUrl } from "@/lib/utils/safe-url";
 
 interface InstaPost {
   id: string;
@@ -256,7 +257,7 @@ export default function AdminInstagramPage() {
                 )}
                 <div className="flex-1 min-w-0">
                   <a
-                    href={post.url}
+                    href={validateInstagramPostUrl(post.url) ?? "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     title={post.url}

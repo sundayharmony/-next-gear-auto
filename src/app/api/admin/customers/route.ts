@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
 
 // GET: Return all customers with optional search
 export async function GET(req: NextRequest) {
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
       .order("created_at", { ascending: false });
 
     if (search) {
-      const sanitized = search.replace(/[%_,().*]/g, "");
+      const sanitized = sanitizePostgrestSearch(search);
       if (sanitized) {
         query = query.or(`name.ilike.%${sanitized}%,email.ilike.%${sanitized}%`);
       }

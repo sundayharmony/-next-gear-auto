@@ -78,12 +78,9 @@ export default async function HomePage() {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(generateLocalBusinessSchema()),
-        }}
-      />
+      <script type="application/ld+json" suppressHydrationWarning>
+        {JSON.stringify(generateLocalBusinessSchema())}
+      </script>
 
       {/* Hero Section */}
       <section className="relative bg-gradient-to-br from-purple-900 via-purple-800 to-gray-900 text-white">

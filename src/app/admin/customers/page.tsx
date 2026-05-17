@@ -3,6 +3,7 @@
 import React, { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { isAllowedExternalHref } from "@/lib/utils/safe-url";
 import type { BookingDbRow } from "@/lib/types";
 import {
   Search,
@@ -802,6 +803,8 @@ export default function AdminCustomersPage() {
   // Get document URLs: prefer customer-level docs, fall back to booking-level
   const latestIdUrl = selectedCustomer?.idDocumentUrl || customerBookings.find((b) => b.id_document_url)?.id_document_url;
   const latestInsuranceUrl = customerBookings.find((b) => b.insurance_proof_url)?.insurance_proof_url;
+  const safeLatestIdHref = latestIdUrl ? isAllowedExternalHref(latestIdUrl) : undefined;
+  const safeLatestInsuranceHref = latestInsuranceUrl ? isAllowedExternalHref(latestInsuranceUrl) : undefined;
   const profilePhotoInput = (
     <input
       ref={profileImageFileInputRef}
@@ -1280,7 +1283,7 @@ export default function AdminCustomersPage() {
                             <ImageIcon className="h-4 w-4" /> ID Document
                           </span>
                           {latestIdUrl ? (
-                            <a href={latestIdUrl} target="_blank" rel="noopener noreferrer">
+                            <a href={safeLatestIdHref ?? "#"} target="_blank" rel="noopener noreferrer">
                               <Badge className="bg-green-100 text-green-700 cursor-pointer hover:bg-green-200">
                                 <CheckCircle2 className="h-3 w-3 mr-1" /> Uploaded
                               </Badge>
@@ -1427,7 +1430,7 @@ export default function AdminCustomersPage() {
                               <Crop className="h-3 w-3 mr-1" /> Crop Profile Pic
                             </Button>
                           </div>
-                          <a href={latestIdUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border">
+                          <a href={safeLatestIdHref ?? "#"} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={latestIdUrl}
@@ -1944,7 +1947,4 @@ export default function AdminCustomersPage() {
 
       {showAddCustomerModal && <AddCustomerModal />}
       {cropModal}
-      {profilePhotoInput}
-    </>
-  );
-}
+      {profilePho

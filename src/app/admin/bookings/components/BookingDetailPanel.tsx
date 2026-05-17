@@ -71,13 +71,7 @@ import {
   type WeeklyDueDay,
 } from "@/lib/utils/recurring-booking";
 
-/** Ensure URL is safe (no javascript: protocol) */
-function safeHref(url: string | undefined | null): string | undefined {
-  if (!url) return undefined;
-  const trimmed = url.trim().toLowerCase();
-  if (trimmed.startsWith("javascript:") || trimmed.startsWith("data:")) return undefined;
-  return url;
-}
+import { isAllowedExternalHref } from "@/lib/utils/safe-url";
 
 interface BookingDetailPanelProps {
   booking: BookingRow;
@@ -1141,7 +1135,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             {booking.id_document_url ? (
               <div className="space-y-2">
                 <a
-                  href={safeHref(booking.id_document_url) || "#"}
+                  href={isAllowedExternalHref(booking.id_document_url) || "#"}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
@@ -1402,7 +1396,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 </Badge>
                 {booking.insurance_proof_url ? (
                   <a
-                    href={booking.insurance_proof_url}
+                    href={isAllowedExternalHref(booking.insurance_proof_url) || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
@@ -1826,7 +1820,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       </p>
                       {extendResult.paymentUrl && (
                         <a
-                          href={extendResult.paymentUrl}
+                          href={isAllowedExternalHref(extendResult.paymentUrl) ?? "#"}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="mt-2 inline-block text-xs text-purple-600 underline hover:text-purple-700"
@@ -1983,7 +1977,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 )}
                 {booking.rental_agreement_url && (
                   <a
-                    href={safeHref(booking.rental_agreement_url) || "#"}
+                    href={isAllowedExternalHref(booking.rental_agreement_url) || "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="text-blue-600 hover:text-blue-700 text-xs flex items-center gap-1"

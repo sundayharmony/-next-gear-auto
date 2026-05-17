@@ -11,6 +11,7 @@ import {
 } from "@/lib/admin/vehicle-occupancy";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { enrichBookingOverdueFields } from "@/lib/utils/recurring-booking";
+import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
 
 const sortColumnMap: Record<string, string> = {
   customer_name: "customer_name",
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
       }
       if (search) {
         const safeSearch = (search || "").slice(0, 100);
-        const sanitized = safeSearch.replace(/[%_*(),.<>!=&|]/g, "");
+        const sanitized = sanitizePostgrestSearch(safeSearch);
         if (sanitized) {
           const escapedSearch = encodeURIComponent(sanitized);
           bq = bq.or(
@@ -123,7 +124,7 @@ export async function GET(req: NextRequest) {
 
     if (search) {
       const safeSearch = (search || "").slice(0, 100);
-      const sanitized = safeSearch.replace(/[%_*(),.<>!=&|]/g, "");
+      const sanitized = sanitizePostgrestSearch(safeSearch);
       if (sanitized) {
         const escapedSearch = encodeURIComponent(sanitized);
         query = query.or(

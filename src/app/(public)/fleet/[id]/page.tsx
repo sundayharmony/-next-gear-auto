@@ -190,10 +190,9 @@ export default async function VehicleDetailPage({ params }: PageProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
-      />
+      <script type="application/ld+json" suppressHydrationWarning>
+        {JSON.stringify(productSchema)}
+      </script>
 
       {/* Breadcrumb header */}
       <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-8 text-white">

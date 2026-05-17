@@ -24,12 +24,9 @@ export function Breadcrumbs({ items }: BreadcrumbsProps) {
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{
-          __html: JSON.stringify(generateBreadcrumbSchema(schemaItems)),
-        }}
-      />
+      <script type="application/ld+json" suppressHydrationWarning>
+        {JSON.stringify(generateBreadcrumbSchema(schemaItems))}
+      </script>
       <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm">
         <Link
           href="/"

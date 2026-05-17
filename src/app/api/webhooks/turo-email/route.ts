@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const emailText: string = body.emailText || body.email_text || "";
+    const emailText: string = String(body.emailText || body.email_text || "").slice(0, 65536);
 
     if (!emailText || emailText.length < 20) {
       return NextResponse.json(
@@ -94,11 +94,8 @@ export async function POST(req: NextRequest) {
     let matchScore = 0;
     let secondBestScore = 0;
 
-    // Escape special regex characters in a string
-    const escapeRegex = (str: string) => str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-
     const desc = (parsed.vehicleDescription || "").toLowerCase();
-    const fullText = emailText.toLowerCase();
+    const fullText = emailText.slice(0, 65536).toLowerCase();
 
     for (const v of vehicles) {
       let score = 0;
@@ -140,18 +137,11 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Bonus when year appears near make/model tokens.
-      if (year) {
-        const alts = [make, model].filter(Boolean).map(escapeRegex);
-        if (make && aliases[make]) alts.push(...aliases[make].map(escapeRegex));
-        if (alts.length > 0) {
-          const altsPattern = alts.join("|");
-          const yearNearVehicle = new RegExp(
-            `${escapeRegex(year)}\\s{1,8}(?:${altsPattern})|(?:${altsPattern})\\s{1,8}${escapeRegex(year)}`,
-            "i"
-          );
-          if (yearNearVehicle.test(fullText)) score += 3;
-        }
+      // Bonus when year appears in the same email as make/model (no dynamic RegExp on body).
+      if (year && fullText.includes(year)) {
+        if (make && fullText.includes(make)) score += 3;
+        if (model && fullText.includes(model)) score += 3;
+        if (make && aliases[make]?.some((alias) => fullText.includes(alias))) score += 1;
       }
 
       if (score > matchScore) {

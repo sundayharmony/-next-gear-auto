@@ -2,8 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import { decodeHtmlEntities } from "@/lib/utils/validation";
+import {
+  fetchInstagramOgHtml,
+  validateInstagramPostUrl,
+} from "@/lib/utils/safe-url";
 
-// Fetch thumbnail from Instagram post by scraping og:image meta tag
 async function fetchThumbnail(postUrl: string): Promise<{
   thumbnail_url: string | null;
   title: string | null;
@@ -11,56 +15,19 @@ async function fetchThumbnail(postUrl: string): Promise<{
 }> {
   const media_type = postUrl.includes("/reel") ? "video" : "image";
   try {
-    // Clean URL — remove query params and ensure trailing slash
-    let cleanUrl = postUrl.split("?")[0];
-    if (!cleanUrl.endsWith("/")) cleanUrl += "/";
+    const html = await fetchInstagramOgHtml(postUrl);
+    if (!html) return { thumbnail_url: null, title: null, media_type };
 
-    const abortController = new AbortController();
-    const timeoutId = setTimeout(() => abortController.abort(), 10000);
-
-    try {
-      const res = await fetch(cleanUrl, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-          Accept: "text/html",
-        },
-        redirect: "follow",
-        signal: abortController.signal,
-      });
-
-      clearTimeout(timeoutId);
-      if (!res.ok) return { thumbnail_url: null, title: null, media_type };
-
-      const html = await res.text();
-
-      // Extract og:image
-      const ogImageMatch = html.match(
-        /property="og:image"\s+content="([^"]+)"/
-      );
-      let thumbnail_url: string | null = null;
-      if (ogImageMatch?.[1]) {
-        // Decode HTML entities (&amp; -> &)
-        thumbnail_url = ogImageMatch[1]
-          .replace(/&amp;/g, "&")
-          .replace(/&lt;/g, "<")
-          .replace(/&gt;/g, ">")
-          .replace(/&quot;/g, '"');
-      }
-
-      // Extract og:title or description for caption
-      const ogTitleMatch = html.match(
-        /property="og:title"\s+content="([^"]+)"/
-      );
-      const title = ogTitleMatch?.[1]
-        ? ogTitleMatch[1].replace(/&amp;/g, "&").replace(/&quot;/g, '"')
-        : null;
-
-      return { thumbnail_url, title, media_type };
-    } catch (fetchErr) {
-      clearTimeout(timeoutId);
-      throw fetchErr;
+    const ogImageMatch = html.match(/property="og:image"\s+content="([^"]+)"/);
+    let thumbnail_url: string | null = null;
+    if (ogImageMatch?.[1]) {
+      thumbnail_url = decodeHtmlEntities(ogImageMatch[1]);
     }
+
+    const ogTitleMatch = html.match(/property="og:title"\s+content="([^"]+)"/);
+    const title = ogTitleMatch?.[1] ? decodeHtmlEntities(ogTitleMatch[1]) : null;
+
+    return { thumbnail_url, title, media_type };
   } catch (err) {
     logger.error("Instagram thumbnail fetch failed:", err);
     return { thumbnail_url: null, title: null, media_type };
@@ -99,17 +66,16 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const { url, caption } = body;
 
-    if (!url || !url.includes("instagram.com")) {
+    const normalizedUrl = typeof url === "string" ? validateInstagramPostUrl(url) : null;
+    if (!normalizedUrl) {
       return NextResponse.json(
-        { success: false, error: "A valid Instagram URL is required" },
+        { success: false, error: "A valid Instagram post or reel URL is required" },
         { status: 400 }
       );
     }
 
-    // Fetch thumbnail from Instagram page OG tags
-    const meta = await fetchThumbnail(url.trim());
+    const meta = await fetchThumbnail(normalizedUrl);
 
-    // Get current max sort_order
     const { data: existing } = await supabase
       .from("instagram_posts")
       .select("sort_order")
@@ -121,7 +87,7 @@ export async function POST(req: NextRequest) {
     const id = `ig_${crypto.randomUUID()}`;
     const { error } = await supabase.from("instagram_posts").insert({
       id,
-      url: url.trim(),
+      url: normalizedUrl,
       caption: caption?.trim() || meta.title || null,
       thumbnail_url: meta.thumbnail_url,
       media_type: meta.media_type,
@@ -137,10 +103,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      data: { id, thumbnail_url: meta.thumbnail_url },
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        success: true,
+        data: { id, thumbnail_url: meta.thumbnail_url },
+      },
+      { status: 201 }
+    );
   } catch {
     return NextResponse.json(
       { success: false, error: "Invalid request" },
@@ -166,7 +135,6 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Get the post URL
     const { data: post } = await supabase
       .from("instagram_posts")
       .select("url")
@@ -180,8 +148,15 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    // Re-fetch thumbnail
-    const meta = await fetchThumbnail(post.url);
+    const normalizedUrl = validateInstagramPostUrl(post.url);
+    if (!normalizedUrl) {
+      return NextResponse.json(
+        { success: false, error: "Stored URL is not a valid Instagram post link" },
+        { status: 400 }
+      );
+    }
+
+    const meta = await fetchThumbnail(normalizedUrl);
     if (meta.thumbnail_url) {
       await supabase
         .from("instagram_posts")

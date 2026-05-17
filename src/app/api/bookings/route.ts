@@ -25,6 +25,7 @@ import {
   sortOccupancyEntries,
 } from "@/lib/admin/vehicle-occupancy";
 import { validateBookingStatusPatch } from "@/lib/bookings";
+import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -194,7 +195,7 @@ export async function GET(request: NextRequest) {
       });
       if (search) {
         const safeSearch = (search || "").slice(0, 100);
-        const sanitized = safeSearch.replace(/[%_*(),.<>!=&|]/g, "");
+        const sanitized = sanitizePostgrestSearch(safeSearch);
         if (sanitized) {
           const low = sanitized.toLowerCase();
           merged = merged.filter((e) => {
@@ -321,7 +322,7 @@ export async function GET(request: NextRequest) {
       // Limit search length to 100 characters
       const safeSearch = (search || "").slice(0, 100);
       // Sanitize search to prevent PostgREST filter injection - strip all special PostgREST characters
-      const sanitized = safeSearch.replace(/[%_*(),.<>!=&|]/g, "");
+      const sanitized = sanitizePostgrestSearch(safeSearch);
       if (sanitized) {
         // Use proper parameter escaping with encodeURIComponent
         const escapedSearch = encodeURIComponent(sanitized);
