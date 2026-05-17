@@ -1299,7 +1299,7 @@ export default function AdminCustomersPage() {
                             <Shield className="h-4 w-4" /> Insurance Proof
                           </span>
                           {latestInsuranceUrl ? (
-                            <a href={latestInsuranceUrl} target="_blank" rel="noopener noreferrer">
+                            <a href={safeLatestInsuranceHref ?? "#"} target="_blank" rel="noopener noreferrer">
                               <Badge className="bg-green-100 text-green-700 cursor-pointer hover:bg-green-200">
                                 <CheckCircle2 className="h-3 w-3 mr-1" /> Uploaded
                               </Badge>
@@ -1456,7 +1456,7 @@ export default function AdminCustomersPage() {
                               <Crop className="h-3 w-3 mr-1" /> Crop Profile Pic
                             </Button>
                           </div>
-                          <a href={latestInsuranceUrl} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border">
+                          <a href={safeLatestInsuranceHref ?? "#"} target="_blank" rel="noopener noreferrer" className="block overflow-hidden rounded-lg border">
                             {/* eslint-disable-next-line @next/next/no-img-element */}
                             <img
                               src={latestInsuranceUrl}
@@ -1947,4 +1947,7 @@ export default function AdminCustomersPage() {
 
       {showAddCustomerModal && <AddCustomerModal />}
       {cropModal}
-      {profilePho
+      {profilePhotoInput}
+    </>
+  );
+}
