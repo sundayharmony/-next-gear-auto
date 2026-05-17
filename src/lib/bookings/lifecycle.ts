@@ -1,6 +1,6 @@
 /**
  * Booking status lifecycle — single source of truth for PATCH /api/bookings validation.
- * Used by API routes; Android and other clients should rely on server responses, not duplicate rules.
+ * Used by API routes; clients should rely on server responses, not duplicate rules.
  */
 
 export const BOOKING_STATUSES = ["pending", "confirmed", "active", "completed", "cancelled", "no-show"] as const;

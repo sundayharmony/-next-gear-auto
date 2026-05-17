@@ -1,6 +1,0 @@
-# Maestro flow template — run against a staging build with Maestro installed.
-# See docs/staging-e2e-maestro.md
-appId: com.nextgearauto.admin
----
-- launchApp
-- assertVisible: "NGA Admin"

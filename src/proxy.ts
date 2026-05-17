@@ -85,15 +85,10 @@ export async function proxy(req: NextRequest) {
   }
 
   // ── CSRF Validation on mutating API requests ────────────────────
-  // Bearer-only clients (native apps) do not use cookie CSRF; rely on Authorization instead.
-  const authorizationHeader = req.headers.get("authorization") ?? "";
-  const usesBearerAuth = authorizationHeader.startsWith("Bearer ");
-
   const mutatingMethods = ["POST", "PUT", "PATCH", "DELETE"];
   if (
     pathname.startsWith("/api/") &&
     mutatingMethods.includes(req.method) &&
-    !usesBearerAuth &&
     // Exempt webhook endpoints, cron, and auth POST only (login/signup needs to work without CSRF)
     !pathname.startsWith("/api/webhooks/") &&
     !(pathname.startsWith("/api/auth") && req.method === "POST") &&

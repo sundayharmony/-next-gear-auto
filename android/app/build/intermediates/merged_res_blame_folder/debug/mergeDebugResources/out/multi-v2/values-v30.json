@@ -1,0 +1,19 @@
+{
+    "logs": [
+        {
+            "outputFile": "com.nextgearauto.admin.app-mergeDebugResources-53:/values-v30/values-v30.xml",
+            "map": [
+                {
+                    "source": "C:\\Users\\Mac\\.gradle\\caches\\9.4.1\\transforms\\8655af437397e100a23be5726be8c4fc\\transformed\\material3-release\\res\\values-v30\\values-v30.xml",
+                    "from": {
+                        "startLines": "2",
+                        "startColumns": "4",
+                        "startOffsets": "55",
+                        "endColumns": "72",
+                        "endOffsets": "123"
+                    }
+                }
+            ]
+        }
+    ]
+}

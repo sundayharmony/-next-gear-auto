@@ -1,4 +1,4 @@
-/** Booking document upload — shared limits for `/api/bookings/upload` and native clients. */
+/** Booking document upload — shared limits for `/api/bookings/upload`. */
 
 export const BOOKING_UPLOAD_MAX_BYTES = 5 * 1024 * 1024;
 

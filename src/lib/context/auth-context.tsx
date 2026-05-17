@@ -51,7 +51,7 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
 }
 
 interface LoginOptions {
-  /** When true, customer accounts cannot sign in (staff PWA / native). */
+  /** When true, customer accounts cannot sign in (staff PWA). */
   staffOnly?: boolean;
 }
 

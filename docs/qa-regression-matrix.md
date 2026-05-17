@@ -1,4 +1,4 @@
-# QA regression matrix (staff / NGA Admin)
+# QA regression matrix (staff PWA)
 
 Run **full** matrix before major releases; **smoke** (bold rows) weekly on staging.
 
