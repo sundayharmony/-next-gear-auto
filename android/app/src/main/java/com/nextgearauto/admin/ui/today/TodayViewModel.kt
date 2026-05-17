@@ -72,7 +72,7 @@ class TodayViewModel(
             today: String,
         ): TodayBuckets {
             val overdue = active.filter {
-                it.status == "active" && (it.return_date ?: "") < today
+                it.status == "active" && it.is_overdue == true
             }.distinctBy { it.id }
 
             val overdueIds = overdue.map { it.id }.toSet()

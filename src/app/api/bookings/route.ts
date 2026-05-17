@@ -11,10 +11,14 @@ import { logger } from "@/lib/utils/logger";
 import { getAuthFromRequest, type TokenPayload } from "@/lib/auth/jwt";
 import { getVehicleDisplayName } from "@/lib/types";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
-import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
+import { formatYyyyMmDdLocal, isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { isManagerFeatureEnabled } from "@/lib/config/feature-flags";
 import { regenerateSignedAgreementForBooking } from "@/lib/agreement/signed-agreement";
-import { parseRecurringBookingMeta, upsertRecurringBookingMeta } from "@/lib/utils/recurring-booking";
+import {
+  enrichBookingOverdueFields,
+  parseRecurringBookingMeta,
+  upsertRecurringBookingMeta,
+} from "@/lib/utils/recurring-booking";
 import {
   fetchGlobalOccupancy,
   occupancyToBookingRowCompat,
@@ -163,7 +167,7 @@ export async function GET(request: NextRequest) {
         }
       } else if (isManager) {
         bq = bq.eq("origin_channel", "manager_panel").eq("created_by_user_id", auth.sub);
-        const todayStr = new Date().toISOString().split("T")[0];
+        const todayStr = formatYyyyMmDdLocal(new Date());
         bq = bq.not("status", "in", "(cancelled,completed)").gte("return_date", todayStr);
       }
       if (fromDate) {
@@ -206,7 +210,7 @@ export async function GET(request: NextRequest) {
         }
       }
       merged = sortOccupancyEntries(merged, sortColumn, isAscending);
-      const today = new Date().toISOString().split("T")[0];
+      const today = formatYyyyMmDdLocal(new Date());
       const rawList = (bookingRowsRaw || []) as Record<string, unknown>[];
       const enriched = merged.map((e) => {
         const base = occupancyToBookingRowCompat(e) as Record<string, unknown>;
@@ -215,17 +219,32 @@ export async function GET(request: NextRequest) {
           if (raw) {
             const v = raw.vehicles as { year?: number; make?: string; model?: string } | null;
             const { vehicles: _v, ...rest } = raw;
+            const overdueFields = enrichBookingOverdueFields(
+              {
+                return_date: String(rest.return_date ?? e.return_date),
+                status: String(rest.status ?? e.status),
+                admin_notes: (rest.admin_notes as string | null) ?? null,
+              },
+              today
+            );
             return {
               ...rest,
               ...base,
               vehicleName: v ? getVehicleDisplayName(v) : (base.vehicleName as string),
               customerName: (rest.customer_name as string) || "Guest",
-              is_overdue: e.return_date < today && e.status === "active",
+              ...overdueFields,
             };
           }
         }
-        base.is_overdue =
-          e.kind === "booking" ? e.return_date < today && e.status === "active" : false;
+        if (e.kind === "booking") {
+          const overdueFields = enrichBookingOverdueFields(
+            { return_date: e.return_date, status: e.status, admin_notes: null },
+            today
+          );
+          Object.assign(base, overdueFields);
+        } else {
+          base.is_overdue = false;
+        }
         return base;
       });
       if (page !== null && offset !== null) {
@@ -329,18 +348,24 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = formatYyyyMmDdLocal(new Date());
 
     const enriched = (bookings || []).map((b) => {
       const v = b.vehicles as unknown as { year: number; make: string; model: string } | null;
       const { vehicles: _v, ...rest } = b;
-      // Check if overdue: return_date < today AND status === 'active'
-      const isOverdue = b.return_date < today && b.status === "active";
+      const overdueFields = enrichBookingOverdueFields(
+        {
+          return_date: b.return_date,
+          status: b.status,
+          admin_notes: b.admin_notes,
+        },
+        today
+      );
       return {
         ...rest,
         vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
         customerName: b.customer_name || "Guest",
-        is_overdue: isOverdue,
+        ...overdueFields,
       };
     });
 

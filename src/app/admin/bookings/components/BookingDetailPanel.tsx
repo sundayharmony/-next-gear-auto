@@ -60,6 +60,7 @@ import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { logger } from "@/lib/utils/logger";
 import { Location } from "@/lib/types";
 import {
+  getDisplayReturnDate,
   parseRecurringBookingMeta,
   stripRecurringBookingMeta,
   upsertRecurringBookingMeta,
@@ -271,6 +272,11 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   const recurringMeta = parseRecurringBookingMeta(
     typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes
+  );
+  const displayReturnDate = getDisplayReturnDate(
+    booking.return_date,
+    booking.admin_notes,
+    booking.effective_return_date
   );
   const visibleAdminNotes = stripRecurringBookingMeta(
     typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes
@@ -1288,7 +1294,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   </div>
                   <div>
                     <p className="text-gray-500 text-xs mb-1">Return</p>
-                    <p className="font-medium">{booking.return_date ? formatDate(booking.return_date) : "—"}</p>
+                    <p className="font-medium">{displayReturnDate ? formatDate(displayReturnDate) : "—"}</p>
                     {booking.return_time && (
                       <p className="text-gray-600 text-xs">
                         {formatTime(booking.return_time)}
@@ -1674,7 +1680,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
               {showExtend && (
                 <div className="mt-3 space-y-3 rounded-lg border border-gray-200 bg-gray-50 p-4">
                   <p className="text-xs text-gray-500">
-                    Current return: <span className="font-medium text-gray-700">{formatDate(booking.return_date)}</span>
+                    Current return: <span className="font-medium text-gray-700">{formatDate(displayReturnDate)}</span>
                     {booking.return_time && ` at ${formatTime(booking.return_time)}`}
                   </p>
 

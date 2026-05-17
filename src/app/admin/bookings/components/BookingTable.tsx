@@ -12,7 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
-import { parseRecurringBookingMeta } from "@/lib/utils/recurring-booking";
+import {
+  getDisplayReturnDate,
+  parseRecurringBookingMeta,
+} from "@/lib/utils/recurring-booking";
 
 interface BookingTableProps {
   bookings: BookingRow[];
@@ -160,7 +163,12 @@ export default function BookingTable({
         {bookings.map((booking) => {
           const turoRow = isTuroOccupancy(booking);
           const isSelected = selectedIds.has(booking.id);
-          const rentalDays = calculateRentalDays(booking.pickup_date, booking.return_date);
+          const displayReturnDate = getDisplayReturnDate(
+            booking.return_date,
+            booking.admin_notes,
+            booking.effective_return_date
+          );
+          const rentalDays = calculateRentalDays(booking.pickup_date, displayReturnDate);
           const statusActions =
             !turoRow && getCanManage(booking) ? getStatusActions(booking.status) : [];
           const recurringMeta = parseRecurringBookingMeta(booking.admin_notes);
@@ -225,7 +233,7 @@ export default function BookingTable({
               {/* Dates row */}
               <div className="flex items-center gap-2 text-sm text-gray-600 mb-2">
                 <Calendar className="w-3.5 h-3.5 text-gray-400 shrink-0" />
-                <span>{formatDateShort(booking.pickup_date)} → {formatDateShort(booking.return_date)}</span>
+                <span>{formatDateShort(booking.pickup_date)} → {formatDateShort(displayReturnDate)}</span>
                 <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{rentalDays}d</Badge>
               </div>
 
@@ -340,7 +348,12 @@ export default function BookingTable({
             {bookings.map((booking) => {
               const turoRow = isTuroOccupancy(booking);
               const isSelected = selectedIds.has(booking.id);
-              const rentalDays = calculateRentalDays(booking.pickup_date, booking.return_date);
+              const displayReturnDate = getDisplayReturnDate(
+                booking.return_date,
+                booking.admin_notes,
+                booking.effective_return_date
+              );
+              const rentalDays = calculateRentalDays(booking.pickup_date, displayReturnDate);
               const statusActions =
                 !turoRow && getCanManage(booking) ? getStatusActions(booking.status) : [];
               const recurringMeta = parseRecurringBookingMeta(booking.admin_notes);
@@ -409,7 +422,7 @@ export default function BookingTable({
                     <div className="flex items-center gap-2">
                       <div>
                         <div className="text-gray-900">
-                          {formatDateShort(booking.pickup_date)} → {formatDateShort(booking.return_date)}
+                          {formatDateShort(booking.pickup_date)} → {formatDateShort(displayReturnDate)}
                         </div>
                         <div className="text-xs text-gray-500">
                           {booking.pickup_time && formatTime(booking.pickup_time)}

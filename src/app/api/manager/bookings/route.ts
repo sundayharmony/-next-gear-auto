@@ -9,6 +9,8 @@ import {
   occupancyToBookingRowCompat,
   sortOccupancyEntries,
 } from "@/lib/admin/vehicle-occupancy";
+import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
+import { enrichBookingOverdueFields } from "@/lib/utils/recurring-booking";
 
 const sortColumnMap: Record<string, string> = {
   customer_name: "customer_name",
@@ -39,7 +41,7 @@ export async function GET(req: NextRequest) {
   const isAscending = orderParam === "asc";
 
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = formatYyyyMmDdLocal(new Date());
     const includeTuro = req.nextUrl.searchParams.get("includeTuro") === "true";
 
     if (includeTuro) {
@@ -84,8 +86,17 @@ export async function GET(req: NextRequest) {
           row.total_price = canViewPricing ? raw?.total_price : null;
           row.deposit = canViewPricing ? raw?.deposit : null;
           row.location_surcharge = canViewPricing ? raw?.location_surcharge : null;
-          row.is_overdue =
-            e.kind === "booking" && e.return_date < today && e.status === "active";
+          if (e.kind === "booking") {
+            const overdueFields = enrichBookingOverdueFields(
+              {
+                return_date: e.return_date,
+                status: e.status,
+                admin_notes: (raw?.admin_notes as string | null) ?? null,
+              },
+              today
+            );
+            Object.assign(row, overdueFields);
+          }
         }
         return row;
       });

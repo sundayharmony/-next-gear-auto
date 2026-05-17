@@ -307,6 +307,8 @@ export interface BookingDbRow {
   promo_code?: string;
   discount_amount?: number;
   is_overdue?: boolean;
+  /** Rolled weekly due date for recurring long-term rentals (API-enriched). */
+  effective_return_date?: string;
   pickup_location_id?: string;
   pickup_location_name?: string;
   return_location_id?: string;

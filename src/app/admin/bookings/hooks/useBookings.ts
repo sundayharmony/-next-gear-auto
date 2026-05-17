@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { logger } from "@/lib/utils/logger";
+import { getDisplayReturnDate } from "@/lib/utils/recurring-booking";
 import type { BookingRow, Vehicle, CustomerOption, SortField, SortOrder } from "../types";
 import type { BookingsPageConfig } from "../config";
 
@@ -270,9 +271,15 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
   const todayReturns = useMemo(() => {
     const today = new Date();
     const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
-    return bookings.filter(
-      (b) => isWebsiteBooking(b) && b.return_date === todayStr && ["active"].includes(b.status)
-    );
+    return bookings.filter((b) => {
+      if (!isWebsiteBooking(b) || !["active"].includes(b.status)) return false;
+      const returnDate = getDisplayReturnDate(
+        b.return_date,
+        b.admin_notes,
+        b.effective_return_date
+      );
+      return returnDate === todayStr;
+    });
   }, [bookings]);
 
   const overdueBookings = useMemo(
