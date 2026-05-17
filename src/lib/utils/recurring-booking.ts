@@ -151,6 +151,44 @@ export function isActiveBookingOverdue(
   return storedReturnDate < todayYyyyMmDd;
 }
 
+export function getBookingDisplayTotal(
+  booking: {
+    total_price?: number | null;
+    effective_total_price?: number | null;
+  }
+): number {
+  if (
+    typeof booking.effective_total_price === "number" &&
+    booking.effective_total_price > 0
+  ) {
+    return booking.effective_total_price;
+  }
+  return Math.max(0, Number(booking.total_price) || 0);
+}
+
+export function getBookingBalanceDue(
+  booking: {
+    total_price?: number | null;
+    deposit?: number | null;
+    effective_total_price?: number | null;
+    admin_notes?: string | null;
+    pickup_date?: string;
+  }
+): number {
+  const billing =
+    booking.pickup_date != null
+      ? getRecurringBillingSummary({
+          pickup_date: booking.pickup_date,
+          total_price: booking.total_price,
+          deposit: booking.deposit,
+          admin_notes: booking.admin_notes,
+        })
+      : null;
+  if (billing) return billing.balanceDue;
+  const total = getBookingDisplayTotal(booking);
+  return Math.max(0, total - (Number(booking.deposit) || 0));
+}
+
 /** Return date to show in admin lists (rolled forward for recurring LT). */
 export function getDisplayReturnDate(
   storedReturnDate: string,
@@ -160,22 +198,108 @@ export function getDisplayReturnDate(
   return effectiveReturnDate ?? getEffectiveReturnDate(storedReturnDate, adminNotes);
 }
 
+export interface RecurringBillingSummary {
+  weeklyRate: number;
+  weeksDue: number;
+  contractTotalToDate: number;
+  amountReceived: number;
+  balanceDue: number;
+}
+
+/** Count weekly payment due dates from pickup through today (inclusive). */
+export function countRecurringWeeklyPaymentsDue(
+  pickupDate: string,
+  weeklyDueDay: WeeklyDueDay,
+  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+): number {
+  let count = 0;
+  let due = nextWeeklyDueOnOrAfter(pickupDate, weeklyDueDay);
+  let guard = 0;
+  while (due <= todayYyyyMmDd && guard < 520) {
+    count++;
+    due = nextWeeklyDueOnOrAfter(addCalendarDaysYyyyMmDd(due, 1), weeklyDueDay);
+    guard++;
+  }
+  return Math.max(1, count);
+}
+
+export function getRecurringBillingSummary(
+  booking: {
+    pickup_date: string;
+    total_price: number | null | undefined;
+    deposit?: number | null;
+    admin_notes?: string | null;
+  },
+  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+): RecurringBillingSummary | null {
+  const meta = parseRecurringBookingMeta(booking.admin_notes);
+  if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) return null;
+
+  const weeklyRate = Math.max(0, Number(booking.total_price) || 0);
+  const weeksDue = countRecurringWeeklyPaymentsDue(
+    booking.pickup_date,
+    meta.weeklyDueDay,
+    todayYyyyMmDd
+  );
+  const contractTotalToDate = Math.round(weeklyRate * weeksDue * 100) / 100;
+  const amountReceived = Math.max(0, Number(booking.deposit) || 0);
+  const balanceDue = Math.max(0, Math.round((contractTotalToDate - amountReceived) * 100) / 100);
+
+  return {
+    weeklyRate,
+    weeksDue,
+    contractTotalToDate,
+    amountReceived,
+    balanceDue,
+  };
+}
+
 export function enrichBookingOverdueFields(
   booking: {
+    pickup_date?: string;
     return_date: string;
     status: string;
+    total_price?: number | null;
+    deposit?: number | null;
     admin_notes?: string | null;
   },
   todayYyyyMmDd: string
-): { effective_return_date?: string; is_overdue: boolean } {
+): {
+  effective_return_date?: string;
+  effective_total_price?: number;
+  recurring_weeks_due?: number;
+  recurring_weekly_rate?: number;
+  is_overdue: boolean;
+} {
   const meta = parseRecurringBookingMeta(booking.admin_notes);
   const effectiveReturn = getEffectiveReturnDate(
     booking.return_date,
     booking.admin_notes,
     todayYyyyMmDd
   );
+
+  const billing =
+    meta.isRecurringLongTerm && booking.pickup_date
+      ? getRecurringBillingSummary(
+          {
+            pickup_date: booking.pickup_date,
+            total_price: booking.total_price,
+            deposit: booking.deposit,
+            admin_notes: booking.admin_notes,
+          },
+          todayYyyyMmDd
+        )
+      : null;
+
   return {
     ...(meta.isRecurringLongTerm ? { effective_return_date: effectiveReturn } : {}),
+    ...(billing
+      ? {
+          effective_total_price: billing.contractTotalToDate,
+          recurring_weeks_due: billing.weeksDue,
+          recurring_weekly_rate: billing.weeklyRate,
+        }
+      : {}),
     is_overdue: isActiveBookingOverdue(
       booking.return_date,
       booking.admin_notes,

@@ -89,8 +89,11 @@ export async function GET(req: NextRequest) {
           if (e.kind === "booking") {
             const overdueFields = enrichBookingOverdueFields(
               {
+                pickup_date: e.pickup_date,
                 return_date: e.return_date,
                 status: e.status,
+                total_price: canViewPricing ? (raw?.total_price as number | null) : null,
+                deposit: canViewPricing ? (raw?.deposit as number | null) : null,
                 admin_notes: (raw?.admin_notes as string | null) ?? null,
               },
               today

@@ -8,6 +8,11 @@ import { PageContainer } from "@/components/layout/page-container";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { exportToCSV } from "@/lib/utils/csv-export";
 import { formatDate } from "@/lib/utils/date-helpers";
+import {
+  getBookingBalanceDue,
+  getBookingDisplayTotal,
+  getDisplayReturnDate,
+} from "@/lib/utils/recurring-booking";
 import { getVehicleDisplayName } from "@/lib/types";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 
@@ -212,11 +217,17 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
       Email: b.customer_email,
       Vehicle: b.vehicleName,
       "Pickup Date": formatDate(b.pickup_date),
-      "Return Date": formatDate(b.return_date),
+      "Return Date": formatDate(
+        getDisplayReturnDate(b.return_date, b.admin_notes, b.effective_return_date)
+      ),
       Status: b.status,
-      "Total Amount": b.canViewPricing === false ? "Hidden" : `$${(b.total_price ?? 0).toFixed(2)}`,
+      "Total Amount":
+        b.canViewPricing === false
+          ? "Hidden"
+          : `$${getBookingDisplayTotal(b).toFixed(2)}`,
       Paid: b.canViewPricing === false ? "Hidden" : `$${(b.deposit ?? 0).toFixed(2)}`,
-      Balance: b.canViewPricing === false ? "Hidden" : `$${((b.total_price ?? 0) - (b.deposit ?? 0)).toFixed(2)}`,
+      Balance:
+        b.canViewPricing === false ? "Hidden" : `$${getBookingBalanceDue(b).toFixed(2)}`,
       "Payment Method": b.payment_method || "stripe",
       "Created Date": formatDate(b.created_at),
     }));

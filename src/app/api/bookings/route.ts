@@ -221,8 +221,11 @@ export async function GET(request: NextRequest) {
             const { vehicles: _v, ...rest } = raw;
             const overdueFields = enrichBookingOverdueFields(
               {
+                pickup_date: String(rest.pickup_date ?? e.pickup_date),
                 return_date: String(rest.return_date ?? e.return_date),
                 status: String(rest.status ?? e.status),
+                total_price: rest.total_price as number | null,
+                deposit: rest.deposit as number | null,
                 admin_notes: (rest.admin_notes as string | null) ?? null,
               },
               today
@@ -238,7 +241,14 @@ export async function GET(request: NextRequest) {
         }
         if (e.kind === "booking") {
           const overdueFields = enrichBookingOverdueFields(
-            { return_date: e.return_date, status: e.status, admin_notes: null },
+            {
+              pickup_date: e.pickup_date,
+              return_date: e.return_date,
+              status: e.status,
+              total_price: null,
+              deposit: null,
+              admin_notes: null,
+            },
             today
           );
           Object.assign(base, overdueFields);
@@ -355,8 +365,11 @@ export async function GET(request: NextRequest) {
       const { vehicles: _v, ...rest } = b;
       const overdueFields = enrichBookingOverdueFields(
         {
+          pickup_date: b.pickup_date,
           return_date: b.return_date,
           status: b.status,
+          total_price: b.total_price,
+          deposit: b.deposit,
           admin_notes: b.admin_notes,
         },
         today

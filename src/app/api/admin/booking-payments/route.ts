@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { sumBookingPaymentAmounts } from "@/lib/bookings/payments";
+import { syncRecurringPaymentsToDate } from "@/lib/bookings/recurring-payments";
 import { logger } from "@/lib/utils/logger";
 
 // GET: Fetch booking payments
@@ -64,7 +65,24 @@ export async function POST(request: NextRequest) {
 
   try {
     const body = await request.json();
-    const { booking_id, amount, method, note } = body;
+    const { booking_id, amount, method, note, sync_recurring_weeks } = body;
+
+    if (sync_recurring_weeks === true) {
+      if (!booking_id) {
+        return NextResponse.json(
+          { success: false, message: "booking_id is required" },
+          { status: 400 }
+        );
+      }
+      const supabase = getServiceSupabase();
+      try {
+        const result = await syncRecurringPaymentsToDate(supabase, booking_id);
+        return NextResponse.json({ success: true, data: result });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "Sync failed";
+        return NextResponse.json({ success: false, message }, { status: 400 });
+      }
+    }
 
     // Validation
     if (!booking_id) {

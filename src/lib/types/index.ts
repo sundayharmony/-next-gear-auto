@@ -309,6 +309,10 @@ export interface BookingDbRow {
   is_overdue?: boolean;
   /** Rolled weekly due date for recurring long-term rentals (API-enriched). */
   effective_return_date?: string;
+  /** Cumulative contract total through today for recurring LT (weeks due × weekly rate). */
+  effective_total_price?: number;
+  recurring_weeks_due?: number;
+  recurring_weekly_rate?: number;
   pickup_location_id?: string;
   pickup_location_name?: string;
   return_location_id?: string;

@@ -25,6 +25,13 @@ import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { TimelineView } from "./timeline-view";
 import { getVisibleEventSpan, type BlockedDateEntry } from "./calendar-model";
+import {
+  bookingActiveOnDateKey,
+  bookingOverlapsDateRange,
+  filterTimelineVehicles,
+  getCalendarPickupDateKey,
+  getCalendarReturnDateKey,
+} from "./calendar-booking-display";
 
 type BookingRow = BookingDbRow;
 type Vehicle = VehicleListItem;
@@ -268,6 +275,11 @@ export default function AdminCalendarPage() {
     });
   }, [bookings, statusFilter, vehicleFilter]);
 
+  const timelineVehicles = useMemo(
+    () => filterTimelineVehicles(vehicles),
+    [vehicles]
+  );
+
   const handleRefresh = async () => {
     setLoading(true);
     try {
@@ -399,7 +411,7 @@ export default function AdminCalendarPage() {
                 onChange={(e) => setVehicleFilter(e.target.value)}
               >
                 <option value="all">All Vehicles</option>
-                {vehicles.map((vehicle) => (
+                {timelineVehicles.map((vehicle) => (
                   <option key={vehicle.id} value={vehicle.id}>
                     {vehicle.year} {vehicle.make} {vehicle.model}
                   </option>
@@ -421,7 +433,7 @@ export default function AdminCalendarPage() {
               <div className="sm:hidden">
                 <MobileAgendaView
                   bookings={filteredBookings}
-                  vehicles={vehicles}
+                  vehicles={timelineVehicles}
                   blockedDates={blockedDates}
                   start={timelineStart}
                   onPrevious={() => {
@@ -447,7 +459,7 @@ export default function AdminCalendarPage() {
               <div className="hidden sm:block">
                 <TimelineView
                   bookings={filteredBookings}
-                  vehicles={vehicles}
+                  vehicles={timelineVehicles}
                   blockedDates={blockedDates}
                   start={timelineStart}
                   days={TIMELINE_WINDOW_DAYS}
@@ -560,7 +572,9 @@ export default function AdminCalendarPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-500">Return Date</p>
-                  <p className="text-lg font-bold text-gray-900">{formatDate(selectedBooking.return_date)}</p>
+                  <p className="text-lg font-bold text-gray-900">
+                    {formatDate(getCalendarReturnDateKey(selectedBooking))}
+                  </p>
                   <p className="text-xs text-gray-500 mt-1">Time</p>
                   <p className="text-xl font-bold text-purple-500">{formatTime(selectedBooking.return_time)}</p>
                 </div>
@@ -772,11 +786,7 @@ function MobileAgendaView({
 
   // Bookings active on a specific date
   const bookingsForDate = useMemo(() => {
-    return bookings.filter((b) => {
-      const pk = (b.pickup_date || "").split("T")[0];
-      const rk = (b.return_date || "").split("T")[0];
-      return pk <= selectedDateKey && rk >= selectedDateKey;
-    });
+    return bookings.filter((b) => bookingActiveOnDateKey(b, selectedDateKey));
   }, [bookings, selectedDateKey]);
 
   // Blocked dates for selected day
@@ -789,11 +799,7 @@ function MobileAgendaView({
     const counts: Record<string, number> = {};
     dateRange.forEach((d) => {
       const k = toKey(d);
-      counts[k] = bookings.filter((b) => {
-        const pk = (b.pickup_date || "").split("T")[0];
-        const rk = (b.return_date || "").split("T")[0];
-        return pk <= k && rk >= k;
-      }).length;
+      counts[k] = bookings.filter((b) => bookingActiveOnDateKey(b, k)).length;
     });
     return counts;
   }, [bookings, dateRange]);
@@ -893,8 +899,8 @@ function MobileAgendaView({
       <div className="space-y-2.5">
         {bookingsForDate.map((booking) => {
           const vehicle = vehicleMap[booking.vehicle_id];
-          const pickupKey = (booking.pickup_date || "").split("T")[0];
-          const returnKey = (booking.return_date || "").split("T")[0];
+          const pickupKey = getCalendarPickupDateKey(booking);
+          const returnKey = getCalendarReturnDateKey(booking);
           const totalDays = pickupKey && returnKey
             ? Math.ceil((new Date(returnKey).getTime() - new Date(pickupKey).getTime()) / 86400000) + 1
             : 1;
@@ -1057,8 +1063,8 @@ function CalendarView({
   // Get bookings for each day
   const bookingsByDay: Record<string, BookingRow[]> = {};
   bookings.forEach((booking) => {
-    const pickupDate = new Date(booking.pickup_date + "T00:00:00");
-    const returnDate = new Date(booking.return_date + "T00:00:00");
+    const pickupDate = new Date(getCalendarPickupDateKey(booking) + "T00:00:00");
+    const returnDate = new Date(getCalendarReturnDateKey(booking) + "T00:00:00");
     const pickupDateOnly = new Date(
       pickupDate.getFullYear(),
       pickupDate.getMonth(),
@@ -1273,10 +1279,10 @@ function CalendarView({
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
-                    <span>{formatDate(booking.pickup_date)}</span>
+                    <span>{formatDate(getCalendarPickupDateKey(booking))}</span>
                     <span className="font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
                     <span className="text-gray-400">→</span>
-                    <span>{formatDate(booking.return_date)}</span>
+                    <span>{formatDate(getCalendarReturnDateKey(booking))}</span>
                     <span className="font-bold text-purple-600">{formatTime(booking.return_time)}</span>
                   </div>
                 </button>

@@ -11,6 +11,11 @@ import { getLocalYmd } from "@/lib/utils/date-helpers";
 import { statusColors, statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { getVisibleEventSpan, type BlockedDateEntry } from "./calendar-model";
+import {
+  bookingOverlapsDateRange,
+  getCalendarPickupDateKey,
+  getCalendarReturnDateKey,
+} from "./calendar-booking-display";
 
 type BookingRow = BookingDbRow;
 type Vehicle = VehicleListItem;
@@ -101,8 +106,8 @@ export function TimelineView({
     const vehicleBookings = bookingsByVehicle[vehicleId] || [];
     return vehicleBookings
       .map((booking) => {
-        const pickupKey = booking.pickup_date.split("T")[0];
-        const returnKey = booking.return_date.split("T")[0];
+        const pickupKey = getCalendarPickupDateKey(booking);
+        const returnKey = getCalendarReturnDateKey(booking);
         const span = getVisibleEventSpan(
           pickupKey,
           returnKey,
@@ -140,11 +145,9 @@ export function TimelineView({
     const rangeEnd = dateKeys[days - 1];
     vehicles.forEach((v) => {
       const vBookings = bookingsByVehicle[v.id] || [];
-      counts[v.id] = vBookings.filter((b) => {
-        const pk = (b.pickup_date || "").split("T")[0];
-        const rk = (b.return_date || "").split("T")[0];
-        return !(rk < rangeStart || pk > rangeEnd);
-      }).length;
+      counts[v.id] = vBookings.filter((b) =>
+        bookingOverlapsDateRange(b, rangeStart, rangeEnd)
+      ).length;
     });
     return counts;
   }, [bookingsByVehicle, vehicles, dateKeys, days]);
@@ -388,8 +391,8 @@ export function TimelineView({
                             // Dynamic rounding: flat edge if booking extends beyond view
                             const roundLeft = extendsLeft ? "rounded-l-none" : "rounded-l-lg";
                             const roundRight = extendsRight ? "rounded-r-none" : "rounded-r-lg";
-                            const pickupDate = booking.pickup_date ? booking.pickup_date.split("T")[0] : "";
-                            const returnDate = booking.return_date ? booking.return_date.split("T")[0] : "";
+                            const pickupDate = getCalendarPickupDateKey(booking);
+                            const returnDate = getCalendarReturnDateKey(booking);
                             const daysTotal = pickupDate && returnDate ? Math.ceil(
                               (new Date(returnDate).getTime() - new Date(pickupDate).getTime()) / 86400000
                             ) + 1 : 1;

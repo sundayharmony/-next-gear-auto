@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import {
+  getBookingDisplayTotal,
   getDisplayReturnDate,
   parseRecurringBookingMeta,
 } from "@/lib/utils/recurring-booking";
@@ -178,10 +179,7 @@ export default function BookingTable({
             booking.status === "confirmed" || booking.status === "active"
               ? getWeekToWeekContractHref(booking)
               : null;
-          const displayTotal =
-            typeof booking.total_price === "number" && booking.total_price > 0
-              ? booking.total_price
-              : 0;
+          const displayTotal = getBookingDisplayTotal(booking);
           const balance = displayTotal - (booking.deposit ?? 0);
           const balanceColor = getBalanceColor(displayTotal, booking.deposit ?? 0);
 
@@ -363,10 +361,7 @@ export default function BookingTable({
                 booking.status === "confirmed" || booking.status === "active"
                   ? getWeekToWeekContractHref(booking)
                   : null;
-              const displayTotal =
-                typeof booking.total_price === "number" && booking.total_price > 0
-                  ? booking.total_price
-                  : 0;
+              const displayTotal = getBookingDisplayTotal(booking);
               const balance = displayTotal - (booking.deposit ?? 0);
               const balanceColor = getBalanceColor(displayTotal, booking.deposit ?? 0);
 

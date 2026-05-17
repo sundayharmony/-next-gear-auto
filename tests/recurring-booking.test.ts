@@ -1,7 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  countRecurringWeeklyPaymentsDue,
   getEffectiveReturnDate,
+  getRecurringBillingSummary,
   isActiveBookingOverdue,
   nextWeeklyDueOnOrAfter,
   upsertRecurringBookingMeta,
@@ -43,4 +45,31 @@ test("never marks recurring LT with weekly due day as return overdue", () => {
     isActiveBookingOverdue("2026-05-14", RECURRING_NOTES, "active", "2026-05-29"),
     false
   );
+});
+
+test("counts weekly payments due from pickup through today", () => {
+  assert.equal(
+    countRecurringWeeklyPaymentsDue("2026-05-07", "Thursday", "2026-05-16"),
+    2
+  );
+  assert.equal(
+    countRecurringWeeklyPaymentsDue("2026-05-07", "Thursday", "2026-05-21"),
+    3
+  );
+});
+
+test("recurring billing summary multiplies weekly rate by weeks due", () => {
+  const summary = getRecurringBillingSummary(
+    {
+      pickup_date: "2026-05-07",
+      total_price: 325,
+      deposit: 325,
+      admin_notes: RECURRING_NOTES,
+    },
+    "2026-05-16"
+  );
+  assert.ok(summary);
+  assert.equal(summary!.weeksDue, 2);
+  assert.equal(summary!.contractTotalToDate, 650);
+  assert.equal(summary!.balanceDue, 325);
 });

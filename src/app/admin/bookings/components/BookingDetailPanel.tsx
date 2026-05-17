@@ -60,7 +60,10 @@ import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { logger } from "@/lib/utils/logger";
 import { Location } from "@/lib/types";
 import {
+  getBookingBalanceDue,
+  getBookingDisplayTotal,
   getDisplayReturnDate,
+  getRecurringBillingSummary,
   parseRecurringBookingMeta,
   stripRecurringBookingMeta,
   upsertRecurringBookingMeta,
@@ -278,6 +281,12 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     booking.admin_notes,
     booking.effective_return_date
   );
+  const recurringBilling = getRecurringBillingSummary({
+    pickup_date: booking.pickup_date,
+    total_price: booking.total_price,
+    deposit: booking.deposit,
+    admin_notes: booking.admin_notes,
+  });
   const visibleAdminNotes = stripRecurringBookingMeta(
     typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes
   );
@@ -621,6 +630,41 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     if (saving) return;
     setSaving(true);
     try {
+      if (markPaid && recurringBilling) {
+        const response = await adminFetch(`/api/admin/booking-payments`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            booking_id: booking.id,
+            sync_recurring_weeks: true,
+          }),
+        });
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => ({}));
+          throw new Error(errBody.message || "Failed to sync recurring payments");
+        }
+        const result = await response.json();
+        const newDeposit = result.data?.new_deposit ?? recurringBilling.contractTotalToDate;
+        const listRes = await adminFetch(`/api/admin/booking-payments?booking_id=${booking.id}`);
+        if (listRes.ok) {
+          const listJson = await listRes.json();
+          setPayments(listJson.data ?? listJson ?? []);
+        }
+        const updated = {
+          ...booking,
+          deposit: newDeposit,
+          effective_total_price: recurringBilling.contractTotalToDate,
+        };
+        onUpdateBooking(updated);
+        setEditData(updated);
+        onSuccess(
+          result.data?.payments_added
+            ? `Marked caught up through ${recurringBilling.weeksDue} week(s)`
+            : "Already caught up on weekly payments"
+        );
+        return;
+      }
+
       const newDeposit = markPaid ? (booking.total_price ?? 0) : 0;
       const response = await adminFetch(`/api/bookings`, {
         method: "PATCH",
@@ -636,7 +680,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       onSuccess(markPaid ? "Marked as fully paid" : "Marked as unpaid");
     } catch (err) {
       logger.error("Failed to toggle payment status", err);
-      onError("Failed to update payment status");
+      onError(err instanceof Error ? err.message : "Failed to update payment status");
     } finally {
       setSaving(false);
     }
@@ -738,8 +782,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     onSuccess("Booking data copied to clipboard");
   };
 
-  // Calculate balance due
-  const balanceDue = Math.max(0, (booking.total_price ?? 0) - (booking.deposit ?? 0));
+  const displayTotalPrice = getBookingDisplayTotal(booking);
+  const balanceDue = getBookingBalanceDue(booking);
 
   // Get vehicle name
   const vehicleObj = vehicles.find((v) => v.id === booking.vehicle_id);
@@ -753,14 +797,13 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     booking.payment_method ||
     "Not specified";
 
-  const totalPrice = booking.total_price ?? 0;
-  const paymentPercentage = totalPrice > 0
-    ? Math.min(100, Math.round(((booking.deposit ?? 0) / totalPrice) * 100))
+  const paymentPercentage = displayTotalPrice > 0
+    ? Math.min(100, Math.round(((booking.deposit ?? 0) / displayTotalPrice) * 100))
     : 0;
 
   // Computed payment status
   const paymentStatus: "paid" | "partial" | "unpaid" =
-    (booking.deposit ?? 0) >= (booking.total_price ?? 0) && (booking.total_price ?? 0) > 0
+    balanceDue <= 0 && displayTotalPrice > 0
       ? "paid"
       : (booking.deposit ?? 0) > 0
         ? "partial"
@@ -1473,17 +1516,32 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             ) : (
               <div className="space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Total Price</span>
+                  <span className="text-gray-600">
+                    {recurringBilling ? "Weekly rate" : "Total Price"}
+                  </span>
                   {canViewPricing ? (
                     <span className="font-semibold">
-                      ${(booking.total_price ?? 0).toFixed(2)}
+                      ${(recurringBilling?.weeklyRate ?? booking.total_price ?? 0).toFixed(2)}
                     </span>
                   ) : (
                     <span className="font-semibold text-gray-500">Hidden</span>
                   )}
                 </div>
+                {recurringBilling && (
+                  <div className="flex justify-between text-sm">
+                    <span className="text-gray-600">
+                      Contract to date ({recurringBilling.weeksDue} week
+                      {recurringBilling.weeksDue === 1 ? "" : "s"})
+                    </span>
+                    {canViewPricing ? (
+                      <span className="font-semibold">${displayTotalPrice.toFixed(2)}</span>
+                    ) : (
+                      <span className="font-semibold text-gray-500">Hidden</span>
+                    )}
+                  </div>
+                )}
                 <div className="flex justify-between text-sm">
-                  <span className="text-gray-600">Amount Paid</span>
+                  <span className="text-gray-600">Amount Received</span>
                   {canViewPricing ? (
                     <span className="font-semibold">
                       ${(booking.deposit ?? 0).toFixed(2)}
@@ -1569,7 +1627,9 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       className="flex-1 text-xs text-green-700 border-green-300 hover:bg-green-50"
                     >
                       <Check className="w-3 h-3 mr-1" />
-                      Mark Fully Paid
+                      {recurringBilling
+                        ? "Mark weekly payments caught up"
+                        : "Mark Fully Paid"}
                     </Button>
                   ) : (
                     <Button
@@ -1593,7 +1653,17 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={() => setShowRecordPayment(true)}
+                      onClick={() => {
+                        const weeklyDefault = recurringBilling?.weeklyRate;
+                        setPaymentForm((prev) => ({
+                          ...prev,
+                          amount:
+                            weeklyDefault && weeklyDefault > 0
+                              ? weeklyDefault.toFixed(2)
+                              : prev.amount,
+                        }));
+                        setShowRecordPayment(true);
+                      }}
                       className="w-full text-xs"
                     >
                       <Plus className="w-3 h-3 mr-1" />
