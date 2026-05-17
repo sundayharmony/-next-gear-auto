@@ -4,7 +4,7 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { isAllowedExternalHref } from "@/lib/utils/safe-url";
-import { safeBlobImageSrc } from "@/lib/utils/validation";
+import { safeDataImageSrc } from "@/lib/utils/validation";
 import type { BookingDbRow } from "@/lib/types";
 import {
   Search,
@@ -94,7 +94,7 @@ export default function AdminCustomersPage() {
 
   // Profile picture crop state
   const [showCropModal, setShowCropModal] = useState(false);
-  const [cropBlobUrl, setCropBlobUrl] = useState<string | null>(null);
+  const [cropDataUrl, setCropDataUrl] = useState<string | null>(null);
   const [cropPreview, setCropPreview] = useState<string | null>(null);
   const [savingProfilePic, setSavingProfilePic] = useState(false);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string | null>(null);
@@ -433,12 +433,17 @@ export default function AdminCustomersPage() {
 
   // --- Profile Picture Crop Functions ---
 
-  // Clean up blob URL when modal closes or component unmounts
-  useEffect(() => {
-    return () => {
-      if (cropBlobUrl) URL.revokeObjectURL(cropBlobUrl);
-    };
-  }, [cropBlobUrl]);
+  const readBlobAsDataImageUrl = (blob: Blob): Promise<string> =>
+    new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        const src = safeDataImageSrc(typeof reader.result === "string" ? reader.result : null);
+        if (src) resolve(src);
+        else reject(new Error("Invalid image data"));
+      };
+      reader.onerror = () => reject(reader.error ?? new Error("Failed to read image"));
+      reader.readAsDataURL(blob);
+    });
 
   const initializeCropFromBlob = async (blob: Blob, sourceLabel: string) => {
     setCropSourceLabel(sourceLabel);
@@ -451,15 +456,12 @@ export default function AdminCustomersPage() {
     setCropLoading(true);
     setShowCropModal(true);
 
-    if (cropBlobUrl) URL.revokeObjectURL(cropBlobUrl);
-
     try {
-      const blobUrl = URL.createObjectURL(blob);
-      setCropBlobUrl(blobUrl);
+      const dataUrl = await readBlobAsDataImageUrl(blob);
+      setCropDataUrl(dataUrl);
 
-      // Load the blob URL into an Image to get dimensions and do face detection
       const img = new Image();
-      img.src = blobUrl;
+      img.src = dataUrl;
       await new Promise<void>((resolve, reject) => {
         img.onload = () => resolve();
         img.onerror = () => reject(new Error("Image decode failed"));
@@ -673,10 +675,7 @@ export default function AdminCustomersPage() {
     setShowCropModal(false);
     setCropPreview(null);
     setCropError(null);
-    if (cropBlobUrl) {
-      URL.revokeObjectURL(cropBlobUrl);
-      setCropBlobUrl(null);
-    }
+    setCropDataUrl(null);
   };
 
   const saveProfilePicture = async () => {
@@ -816,6 +815,8 @@ export default function AdminCustomersPage() {
     />
   );
 
+  const cropDisplaySrc = safeDataImageSrc(cropDataUrl);
+
   const cropModal = showCropModal && (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
       <Card className="w-full max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -844,7 +845,7 @@ export default function AdminCustomersPage() {
               <RefreshCw className="h-6 w-6 animate-spin text-purple-600" />
               <span className="ml-2 text-sm text-gray-500">Loading image...</span>
             </div>
-          ) : cropBlobUrl ? (
+          ) : cropDisplaySrc ? (
             <>
               <p className="text-sm text-gray-500 mb-4">
                 Source: {cropSourceLabel}. Drag the crop area over the face, then click &quot;Preview Crop&quot; and save.
@@ -858,7 +859,7 @@ export default function AdminCustomersPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   ref={cropImageRef}
-                  src={safeBlobImageSrc(cropBlobUrl) ?? ""}
+                  src={cropDisplaySrc}
                   alt={`${cropSourceLabel} to crop`}
                   className="w-full h-auto"
                   draggable={false}

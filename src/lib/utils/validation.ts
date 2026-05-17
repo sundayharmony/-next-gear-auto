@@ -188,6 +188,23 @@ export function safeBlobImageSrc(url: string | null | undefined): string | undef
   return url.startsWith("blob:") ? url : undefined;
 }
 
+const SAFE_DATA_IMAGE_PREFIXES = [
+  "data:image/jpeg;base64,",
+  "data:image/jpg;base64,",
+  "data:image/png;base64,",
+  "data:image/webp;base64,",
+  "data:image/gif;base64,",
+] as const;
+
+/** Only allow data-URL image sources created locally (e.g. FileReader), not arbitrary strings. */
+export function safeDataImageSrc(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  for (const prefix of SAFE_DATA_IMAGE_PREFIXES) {
+    if (url.startsWith(prefix)) return url;
+  }
+  return undefined;
+}
+
 /** Escape HTML entities and strip CRLF (for SMTP header injection prevention) */
 export function cleanInput(s: string): string {
   let trimmed = s.trim();

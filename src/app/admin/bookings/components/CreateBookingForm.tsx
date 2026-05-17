@@ -11,6 +11,7 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { logger } from "@/lib/utils/logger";
 import { calculatePricing, calculateRentalHours } from "@/lib/utils/price-calculator";
+import { isValidEmailFormat } from "@/lib/utils/validation";
 import {
   Vehicle,
   CustomerOption,
@@ -362,8 +363,7 @@ export default function CreateBookingForm({
       onError("Customer email is required");
       return false;
     }
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (form.customerEmail && !emailRegex.test(form.customerEmail)) {
+    if (form.customerEmail && !isValidEmailFormat(form.customerEmail)) {
       onError("Please enter a valid email address");
       return false;
     }

@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
+import { isValidEmailFormat } from "@/lib/utils/validation";
 
 // GET: Return all customers with optional search
 export async function GET(req: NextRequest) {
@@ -101,9 +102,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Validate email format
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(email)) {
+    if (!isValidEmailFormat(email)) {
       return NextResponse.json(
         { success: false, message: "Invalid email format" },
         { status: 400 }
@@ -197,8 +196,7 @@ export async function PATCH(req: NextRequest) {
           { status: 400 }
         );
       }
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(email)) {
+      if (!isValidEmailFormat(email)) {
         return NextResponse.json(
           { success: false, message: "Invalid email format" },
           { status: 400 }

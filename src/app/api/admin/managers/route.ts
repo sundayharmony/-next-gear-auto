@@ -4,6 +4,7 @@ import { verifyAdmin } from "@/lib/auth/admin-check";
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
 import { sendPasswordResetLink } from "@/lib/email/mailer";
+import { isValidEmailFormat } from "@/lib/utils/validation";
 
 function isRoleConstraintError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -58,8 +59,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Name and email are required" }, { status: 400 });
   }
 
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  if (!emailRegex.test(email)) {
+  if (!isValidEmailFormat(email)) {
     return NextResponse.json({ success: false, message: "Invalid email format" }, { status: 400 });
   }
 

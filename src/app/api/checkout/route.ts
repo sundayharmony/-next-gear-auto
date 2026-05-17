@@ -186,7 +186,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate email format
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customerDetails.email)) {
+    if (!isValidEmailFormat(customerDetails.email)) {
       return NextResponse.json(
         { success: false, message: "Invalid email address" },
         { status: 400 }

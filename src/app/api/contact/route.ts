@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getTransporter } from "@/lib/email/mailer";
 import { contactLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/utils/logger";
-import { cleanInput } from "@/lib/utils/validation";
+import { cleanInput, isValidEmailFormat } from "@/lib/utils/validation";
 
 const SMTP_USER = process.env.SMTP_USER || "contact@rentnextgearauto.com";
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || "contact@rentnextgearauto.com";
@@ -34,8 +34,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Email format validation: requires at least 2 characters in TLD
-    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(email)) {
+    if (!isValidEmailFormat(email)) {
       return NextResponse.json(
         { success: false, message: "Invalid email address." },
         { status: 400 }

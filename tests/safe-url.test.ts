@@ -10,6 +10,7 @@ import {
   escapeHtml,
   isValidEmailFormat,
   parseDisplayPrice,
+  safeDataImageSrc,
   stripHtmlAngleBrackets,
 } from "../src/lib/utils/validation";
 
@@ -58,4 +59,10 @@ test("stripHtmlAngleBrackets removes tags", () => {
 
 test("parseDisplayPrice parses currency display", () => {
   assert.equal(parseDisplayPrice("$1,234.50"), 1234.5);
+});
+
+test("safeDataImageSrc allows only image data URLs", () => {
+  assert.equal(safeDataImageSrc("data:image/png;base64,abc"), "data:image/png;base64,abc");
+  assert.equal(safeDataImageSrc("javascript:alert(1)"), undefined);
+  assert.equal(safeDataImageSrc("data:text/html;base64,abc"), undefined);
 });

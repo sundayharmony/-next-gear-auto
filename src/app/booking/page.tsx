@@ -32,6 +32,7 @@ import {
   wholeCalendarDaysBetween,
 } from "@/lib/utils/booking-dates";
 import { calculateRentalHours } from "@/lib/utils/price-calculator";
+import { isValidEmailFormat } from "@/lib/utils/validation";
 
 const STEPS = [
   { num: 1, label: "Search", icon: Search },
@@ -503,9 +504,7 @@ function BookingPageInner() {
         if (age < 18) {
           return false;
         }
-        // Email validation: basic format check
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!emailRegex.test(details.email)) {
+        if (!isValidEmailFormat(details.email)) {
           return false;
         }
         return true;

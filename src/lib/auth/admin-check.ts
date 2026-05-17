@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { loginLimiter, getClientIp } from "@/lib/security/rate-limit";
 import { isAdminRole, isStaffJwtRole } from "@/lib/auth/roles";
+import { isValidEmailFormat } from "@/lib/utils/validation";
 
 /**
  * Verify the request comes from an authenticated admin.
@@ -67,8 +68,7 @@ export async function verifyAdmin(
 
   // Validate adminId format: UUID or email
   const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-  if (!uuidRegex.test(adminId) && !emailRegex.test(adminId)) {
+  if (!uuidRegex.test(adminId) && !isValidEmailFormat(adminId)) {
     return {
       authorized: false,
       response: NextResponse.json(

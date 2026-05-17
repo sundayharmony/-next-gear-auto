@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
+import { isValidEmailFormat } from "@/lib/utils/validation";
 
 type Params = { params: Promise<{ managerId: string }> };
 
@@ -89,8 +90,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   if (hasEmail) {
     const email = typeof emailRaw === "string" ? emailRaw.trim().toLowerCase() : "";
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailRegex.test(email) || email.length > 255) {
+    if (!email || !isValidEmailFormat(email) || email.length > 255) {
       return NextResponse.json({ success: false, message: "Invalid email" }, { status: 400 });
     }
 
