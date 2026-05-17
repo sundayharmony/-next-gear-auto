@@ -7,7 +7,8 @@ import com.nextgearauto.admin.network.ProactiveRefreshInterceptor
 import com.nextgearauto.admin.network.TokenRefreshInterceptor
 import com.nextgearauto.admin.reliability.CorrelationIdInterceptor
 import com.nextgearauto.admin.reliability.GetRetryInterceptor
-import kotlinx.serialization.json.Jsonimport okhttp3.MediaType.Companion.toMediaType
+import kotlinx.serialization.json.Json
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Retrofit
@@ -30,17 +31,13 @@ class AppGraph(context: Context) {
         .addInterceptor(TokenRefreshInterceptor(tokenStore, json))
         .addInterceptor(BearerInterceptor(tokenStore))
         .apply {
-            // BuildConfig might be unresolved until a successful build.
-            // Using a safe check or just disabling logging for now if it fails to compile.
-            try {
-                if (BuildConfig.DEBUG) {
-                    addInterceptor(
-                        HttpLoggingInterceptor().apply {
-                            level = HttpLoggingInterceptor.Level.BASIC
-                        },
-                    )
-                }
-            } catch (e: Exception) {}
+            if (BuildConfig.DEBUG) {
+                addInterceptor(
+                    HttpLoggingInterceptor().apply {
+                        level = HttpLoggingInterceptor.Level.BASIC
+                    },
+                )
+            }
         }
         .build()
 

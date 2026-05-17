@@ -24,8 +24,12 @@ android {
 
     buildTypes {
         debug {
-            // Emulator → host machine Next.js dev server (`npm run dev` on port 3000)
-            buildConfigField("String", "API_BASE_URL", "\"http://10.0.2.2:3000/\"")
+            // Emulator default: 10.0.2.2 → host :3000. Physical device: set ngaDebugApiUrl in local.properties.
+            val debugUrl = (project.findProperty("ngaDebugApiUrl") as String?)
+                ?.trim()
+                ?.trimEnd('/')
+                ?: "http://10.0.2.2:3000"
+            buildConfigField("String", "API_BASE_URL", "\"${debugUrl}/\"")
         }
         release {
             isMinifyEnabled = false
