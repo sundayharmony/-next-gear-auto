@@ -5,7 +5,11 @@ import { sendBookingConfirmationWithAgreement, sendBookingPendingEmail, sendAdmi
 import { logger } from "@/lib/utils/logger";
 import { calculateRentalHours, calculatePricing, applyDiscount } from "@/lib/utils/price-calculator";
 import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
-import { escapeHtml } from "@/lib/utils/validation";
+import {
+  escapeHtml,
+  isValidEmailFormat,
+  stripHtmlAngleBrackets,
+} from "@/lib/utils/validation";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import extrasData from "@/data/extras.json";
@@ -191,7 +195,7 @@ export async function POST(request: NextRequest) {
 
     // Sanitize customer name
     // Fix 8: Check for empty string after sanitization
-    const safeName = escapeHtml((customerDetails.name || "").replace(/<[^>]*>/g, "").trim()).slice(0, 100);
+    const safeName = escapeHtml(stripHtmlAngleBrackets(customerDetails.name || "").trim()).slice(0, 100);
 
     // Ensure name is not empty after sanitization
     if (!safeName) {

@@ -1,3 +1,5 @@
+import { stripRichHtmlToText } from "@/lib/utils/validation";
+
 /**
  * Parses Turo booking confirmation email text to extract trip details.
  *
@@ -388,19 +390,7 @@ function to24Hour(timeStr: string): string {
  * Strip HTML tags and decode common entities.
  */
 function stripHtml(text: string): string {
-  return text
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/(?:p|div|tr|li|h\d)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .replace(/&lt;/gi, "<")
-    .replace(/&gt;/gi, ">")
-    .replace(/&quot;/gi, '"')
-    .replace(/&#39;/gi, "'")
-    .replace(/[^\S\n]+/g, " ")
-    .replace(/ \n/g, "\n")
-    .trim();
+  return stripRichHtmlToText(text);
 }
 
 /**

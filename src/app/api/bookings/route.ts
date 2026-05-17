@@ -26,6 +26,7 @@ import {
 } from "@/lib/admin/vehicle-occupancy";
 import { validateBookingStatusPatch } from "@/lib/bookings";
 import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
+import { isValidEmailFormat } from "@/lib/utils/validation";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -801,8 +802,7 @@ export async function PATCH(request: NextRequest) {
     if (body.customer_name !== undefined) updateFields.customer_name = body.customer_name;
     if (body.customer_email !== undefined) {
       // Validate email format before updating
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(body.customer_email)) {
+      if (!isValidEmailFormat(body.customer_email)) {
         return NextResponse.json(
           { success: false, message: "Invalid email format" },
           { status: 400 }

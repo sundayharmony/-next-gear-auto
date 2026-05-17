@@ -1,6 +1,6 @@
 import nodemailer from "nodemailer";
 import { logger } from "@/lib/utils/logger";
-import { escapeHtml } from "@/lib/utils/validation";
+import { escapeHtml, stripRichHtmlToText } from "@/lib/utils/validation";
 import {
   bookingConfirmationTemplate,
   bookingPendingTemplate,
@@ -57,14 +57,7 @@ export function getTransporter() {
 
 // Strip HTML tags for plain text fallback
 function stripHtmlTags(html: string): string {
-  return html
-    .replace(/<[^>]*>/g, "")
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/\s+/g, " ")
-    .trim();
+  return stripRichHtmlToText(html);
 }
 
 // Retry logic for transient email errors

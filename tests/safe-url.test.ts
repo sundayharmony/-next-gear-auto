@@ -5,6 +5,13 @@ import {
   sanitizePostgrestSearch,
   validateInstagramPostUrl,
 } from "../src/lib/utils/safe-url";
+import {
+  decodeHtmlEntities,
+  escapeHtml,
+  isValidEmailFormat,
+  parseDisplayPrice,
+  stripHtmlAngleBrackets,
+} from "../src/lib/utils/validation";
 
 test("validateInstagramPostUrl accepts canonical post and reel URLs", () => {
   assert.equal(
@@ -33,4 +40,22 @@ test("isAllowedExternalHref requires https and blocks javascript", () => {
   assert.equal(isAllowedExternalHref("javascript:alert(1)"), undefined);
   assert.equal(isAllowedExternalHref("http://example.com/x"), undefined);
   assert.equal(isAllowedExternalHref("https://127.0.0.1/internal"), undefined);
+});
+
+test("escapeHtml and decodeHtmlEntities round-trip named entities", () => {
+  assert.equal(escapeHtml("<a & b>"), "&lt;a &amp; b&gt;");
+  assert.equal(decodeHtmlEntities("&lt;test&gt;"), "<test>");
+});
+
+test("isValidEmailFormat accepts common addresses", () => {
+  assert.equal(isValidEmailFormat("user@example.com"), true);
+  assert.equal(isValidEmailFormat("not-an-email"), false);
+});
+
+test("stripHtmlAngleBrackets removes tags", () => {
+  assert.equal(stripHtmlAngleBrackets("<b>hi</b>"), "hi");
+});
+
+test("parseDisplayPrice parses currency display", () => {
+  assert.equal(parseDisplayPrice("$1,234.50"), 1234.5);
 });

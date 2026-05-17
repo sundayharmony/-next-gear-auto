@@ -75,7 +75,7 @@ export default function AdminInstagramPage() {
       setError("Please enter an Instagram URL.");
       return;
     }
-    if (!newUrl.includes("instagram.com")) {
+    if (!validateInstagramPostUrl(newUrl.trim())) {
       setError("Please enter a valid Instagram URL (e.g., https://www.instagram.com/p/...).");
       return;
     }

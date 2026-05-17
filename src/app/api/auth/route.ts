@@ -8,6 +8,7 @@ import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rat
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
 import { isAppRole, isStaffRole, type AppRole } from "@/lib/auth/roles";
+import { isValidEmailFormat } from "@/lib/utils/validation";
 
 function normalizeRole(role: unknown): AppRole {
   if (isAppRole(role)) return role;
@@ -251,8 +252,7 @@ export async function POST(request: Request) {
 
       // Validate email format BEFORE checking database existence
       // This prevents unnecessary database queries for obviously invalid emails
-      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      if (!emailRegex.test(body.email)) {
+      if (!isValidEmailFormat(body.email)) {
         return NextResponse.json(
           { success: false, message: "Invalid email format" },
           { status: 400 }

@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { useVehicles } from "@/lib/hooks/useVehicles";
 import { logger } from "@/lib/utils/logger";
+import { parseDisplayPrice } from "@/lib/utils/validation";
 import type { Vehicle } from "@/lib/types";
 
 function ComparisonContent() {
@@ -148,16 +149,14 @@ function ComparisonContent() {
               </tr>
               {priceRows.map((row) => {
                 const lowestValue = Math.min(
-                  ...selectedVehicles.map((v) =>
-                    parseFloat((row.getValue(v) || "").replace("$", "").replace(",", "") || "0")
-                  )
+                  ...selectedVehicles.map((v) => parseDisplayPrice(row.getValue(v) || ""))
                 );
                 return (
                   <tr key={row.label} className="border-b border-gray-100">
                     <td className="p-3 text-sm text-gray-500">{row.label}</td>
                     {selectedVehicles.map((v) => {
                       const value = row.getValue(v) || "";
-                      const numValue = parseFloat(value.replace("$", "").replace(",", "") || "0");
+                      const numValue = parseDisplayPrice(value);
                       const isLowest = numValue <= lowestValue && numValue > 0;
                       return (
                         <td

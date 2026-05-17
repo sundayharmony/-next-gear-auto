@@ -4,6 +4,7 @@ import React, { useEffect, useState, useMemo, useRef, useCallback } from "react"
 import { useSearchParams, useRouter } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { isAllowedExternalHref } from "@/lib/utils/safe-url";
+import { safeBlobImageSrc } from "@/lib/utils/validation";
 import type { BookingDbRow } from "@/lib/types";
 import {
   Search,
@@ -857,7 +858,7 @@ export default function AdminCustomersPage() {
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   ref={cropImageRef}
-                  src={cropBlobUrl}
+                  src={safeBlobImageSrc(cropBlobUrl) ?? ""}
                   alt={`${cropSourceLabel} to crop`}
                   className="w-full h-auto"
                   draggable={false}
