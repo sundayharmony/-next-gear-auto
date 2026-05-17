@@ -43,6 +43,8 @@ The codebase is organized by technical layer and feature:
 
   Run `npm run dev:lan` from the web repo root (same Wi‑Fi as the device). The debug login screen shows the configured `API:` URL and warns if `10.0.2.2` is still set.
 
+  **Production:** use `https://www.rentnextgearauto.com` (with **`www`**). `https://rentnextgearauto.com` redirects POST requests and login fails with HTTP 400.
+
 - **Release:** set **`ngaReleaseApiUrl`** in [`gradle.properties`](gradle.properties) or `local.properties`.
 
 ## Open in Android Studio

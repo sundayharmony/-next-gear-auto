@@ -47,7 +47,7 @@ android {
         release {
             isMinifyEnabled = false
             val releaseUrl = ngaProp("ngaReleaseApiUrl")?.trimEnd('/')
-                ?: "https://YOUR_PRODUCTION_DOMAIN"
+                ?: "https://www.rentnextgearauto.com"
             buildConfigField("String", "API_BASE_URL", "\"${releaseUrl}/\"")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),

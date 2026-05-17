@@ -9,5 +9,5 @@ sdk.dir=C\:\\Users\\YourName\\AppData\\Local\\Android\\Sdk
 # Then: npm run dev:lan  (from the NGA website repo root)
 ngaDebugApiUrl=http://192.168.1.100:3000
 
-# Or use production without local dev:
-# ngaDebugApiUrl=https://rentnextgearauto.com
+# Or use production without local dev (use www — bare domain redirects POST and breaks login):
+# ngaDebugApiUrl=https://www.rentnextgearauto.com

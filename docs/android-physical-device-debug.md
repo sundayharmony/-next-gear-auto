@@ -20,7 +20,7 @@ The debug APK defaults to **`http://10.0.2.2:3000/`**, which only works on the *
    ```
 
    - No trailing slash on the URL.
-   - To hit **production** instead of local dev: `ngaDebugApiUrl=https://rentnextgearauto.com`
+   - To hit **production** instead of local dev: `ngaDebugApiUrl=https://www.rentnextgearauto.com` (**include `www`** — the bare domain redirects POST and causes HTTP 400)
 
 3. **Android Studio:** click the **Gradle elephant** (Sync Project with Gradle Files) → **Build → Rebuild Project** → Run on the device.
 

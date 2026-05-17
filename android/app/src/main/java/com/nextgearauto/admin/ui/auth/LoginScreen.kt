@@ -28,6 +28,7 @@ import androidx.compose.ui.unit.dp
 import com.nextgearauto.admin.BuildConfig
 import com.nextgearauto.admin.LocalAppGraph
 import com.nextgearauto.admin.api.LoginRequest
+import com.nextgearauto.admin.api.formatLoginFailure
 import kotlinx.coroutines.launch
 
 @Composable
@@ -55,12 +56,14 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
         if (BuildConfig.DEBUG) {
             val apiBase = BuildConfig.API_BASE_URL
             val emulatorOnly = apiBase.contains("10.0.2.2")
+            val missingWww =
+                apiBase.contains("rentnextgearauto.com") && !apiBase.contains("www.rentnextgearauto.com")
             Text(
                 "API: $apiBase",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
-            if (emulatorOnly) {
+            if (emulatorOnly || missingWww) {
                 Card(
                     modifier = Modifier.fillMaxWidth(),
                     colors = CardDefaults.cardColors(
@@ -68,7 +71,12 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                     ),
                 ) {
                     Text(
-                        "Physical device cannot use 10.0.2.2. Add ngaDebugApiUrl=http://YOUR_PC_IP:3000 to android/local.properties, sync Gradle, rebuild. Use npm run dev:lan on your PC.",
+                        when {
+                            emulatorOnly ->
+                                "Physical device cannot use 10.0.2.2. Add ngaDebugApiUrl=http://YOUR_PC_IP:3000 to android/local.properties, sync Gradle, rebuild. Use npm run dev:lan on your PC."
+                            else ->
+                                "Use https://www.rentnextgearauto.com (with www). The bare domain redirects POST requests and login returns HTTP 400."
+                        },
                         modifier = Modifier.padding(12.dp),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onErrorContainer,
@@ -124,13 +132,7 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                         graph.tokenStore.saveStaffRole(r.data?.role)
                         onLoggedIn()
                     } catch (e: Exception) {
-                        val msg = e.message.orEmpty()
-                        error = when {
-                            msg.contains("10.0.2.2") ->
-                                "10.0.2.2 only works on the emulator. On a real device, set ngaDebugApiUrl=http://YOUR_PC_LAN_IP:3000 in android/local.properties, sync Gradle, rebuild, and run npm run dev on your PC (same Wi‑Fi)."
-                            msg.isBlank() -> "Network error — check API URL and that the server is running."
-                            else -> msg
-                        }
+                        error = formatLoginFailure(e)
                     } finally {
                         loading = false
                     }
