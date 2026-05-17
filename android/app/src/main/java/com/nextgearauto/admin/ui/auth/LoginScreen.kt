@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
@@ -23,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
+import com.nextgearauto.admin.BuildConfig
 import com.nextgearauto.admin.LocalAppGraph
 import com.nextgearauto.admin.api.LoginRequest
 import kotlinx.coroutines.launch
@@ -49,6 +52,30 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (BuildConfig.DEBUG) {
+            val apiBase = BuildConfig.API_BASE_URL
+            val emulatorOnly = apiBase.contains("10.0.2.2")
+            Text(
+                "API: $apiBase",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+            if (emulatorOnly) {
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer,
+                    ),
+                ) {
+                    Text(
+                        "Physical device cannot use 10.0.2.2. Add ngaDebugApiUrl=http://YOUR_PC_IP:3000 to android/local.properties, sync Gradle, rebuild. Use npm run dev:lan on your PC.",
+                        modifier = Modifier.padding(12.dp),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
+            }
+        }
 
         OutlinedTextField(
             value = email,
@@ -97,7 +124,13 @@ fun LoginScreen(onLoggedIn: () -> Unit) {
                         graph.tokenStore.saveStaffRole(r.data?.role)
                         onLoggedIn()
                     } catch (e: Exception) {
-                        error = e.message ?: "Network error"
+                        val msg = e.message.orEmpty()
+                        error = when {
+                            msg.contains("10.0.2.2") ->
+                                "10.0.2.2 only works on the emulator. On a real device, set ngaDebugApiUrl=http://YOUR_PC_LAN_IP:3000 in android/local.properties, sync Gradle, rebuild, and run npm run dev on your PC (same Wi‑Fi)."
+                            msg.isBlank() -> "Network error — check API URL and that the server is running."
+                            else -> msg
+                        }
                     } finally {
                         loading = false
                     }

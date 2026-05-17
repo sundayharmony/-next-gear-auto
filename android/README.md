@@ -32,13 +32,18 @@ The codebase is organized by technical layer and feature:
 
 ## Base URL (debug vs release)
 
-- **Debug** builds default to `http://10.0.2.2:3000/` (emulator → host `npm run dev`). Run `npm run dev` in the web repo on the host.
-- **Physical device (debug):** add to **`local.properties`** (gitignored):
+- **Emulator (debug):** default `http://10.0.2.2:3000/` — run `npm run dev` on the host PC.
+- **Physical phone/tablet (debug):** set **`ngaDebugApiUrl`** in **`local.properties`** (gitignored), then sync Gradle and rebuild.
+
+  **Step-by-step:** [`docs/android-physical-device-debug.md`](../docs/android-physical-device-debug.md)
+
   ```properties
-  ngaDebugApiUrl=http://YOUR_PC_LAN_IP:3000
+  ngaDebugApiUrl=http://192.168.1.42:3000
   ```
-  Then **Build → Rebuild** so `BuildConfig.API_BASE_URL` updates. Debug builds allow HTTP via `src/debug/res/xml/network_security_config.xml`.
-- **Release** base URL: set Gradle property **`ngaReleaseApiUrl`** (see [`gradle.properties`](gradle.properties)), or it falls back to `https://YOUR_PRODUCTION_DOMAIN/`.
+
+  Run `npm run dev:lan` from the web repo root (same Wi‑Fi as the device). The debug login screen shows the configured `API:` URL and warns if `10.0.2.2` is still set.
+
+- **Release:** set **`ngaReleaseApiUrl`** in [`gradle.properties`](gradle.properties) or `local.properties`.
 
 ## Open in Android Studio
 

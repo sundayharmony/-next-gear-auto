@@ -1,8 +1,23 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("org.jetbrains.kotlin.plugin.serialization")
+}
+
+val ngaLocalProperties = Properties().apply {
+    val file = rootProject.file("local.properties")
+    if (file.exists()) {
+        file.inputStream().use { load(it) }
+    }
+}
+
+fun ngaProp(name: String): String? {
+    val fromGradle = (findProperty(name) as String?)?.trim()?.takeIf { it.isNotEmpty() }
+    if (fromGradle != null) return fromGradle
+    return ngaLocalProperties.getProperty(name)?.trim()?.takeIf { it.isNotEmpty() }
 }
 
 android {
@@ -24,18 +39,14 @@ android {
 
     buildTypes {
         debug {
-            // Emulator default: 10.0.2.2 → host :3000. Physical device: set ngaDebugApiUrl in local.properties.
-            val debugUrl = (project.findProperty("ngaDebugApiUrl") as String?)
-                ?.trim()
-                ?.trimEnd('/')
-                ?: "http://10.0.2.2:3000"
+            // Emulator: 10.0.2.2. Physical device: ngaDebugApiUrl in android/local.properties (see docs/android-physical-device-debug.md).
+            val debugUrl = ngaProp("ngaDebugApiUrl")?.trimEnd('/') ?: "http://10.0.2.2:3000"
+            logger.lifecycle("NGA Admin debug API_BASE_URL = ${debugUrl}/")
             buildConfigField("String", "API_BASE_URL", "\"${debugUrl}/\"")
         }
         release {
             isMinifyEnabled = false
-            val releaseUrl = (project.findProperty("ngaReleaseApiUrl") as String?)
-                ?.trim()
-                ?.trimEnd('/')
+            val releaseUrl = ngaProp("ngaReleaseApiUrl")?.trimEnd('/')
                 ?: "https://YOUR_PRODUCTION_DOMAIN"
             buildConfigField("String", "API_BASE_URL", "\"${releaseUrl}/\"")
             proguardFiles(
