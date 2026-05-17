@@ -1,6 +1,13 @@
 # NGA Admin Mobile API Notes
 
-Native Android uses **Bearer JWT** against the same Next.js `/api/*` routes as the web app. Cookie-based CSRF does not apply when `Authorization: Bearer <access_token>` is present.
+Native Android uses **Bearer JWT** against the same Next.js `/api/*` routes as the web app. Cookie-based CSRF does not apply when `Authorization: Bearer <access_token>` is present (see [`src/proxy.ts`](../src/proxy.ts)).
+
+**Machine-readable contract:** [`mobile-openapi.yaml`](./mobile-openapi.yaml) (OpenAPI 3 subset). **TypeScript helpers:** [`src/lib/mobile-api/types.ts`](../src/lib/mobile-api/types.ts).
+
+Optional headers (recommended for support / analytics, not required for auth):
+
+- `X-NGA-Client: native`
+- `X-NGA-Client-Version: <semver>` — echoed by Android builds via `BuildConfig.MOBILE_CLIENT_VERSION`.
 
 ## Login (staff tokens in JSON)
 

@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
-
-function hasPanelAccess(role: string | null | undefined): boolean {
-  return role === "admin" || role === "manager";
-}
+import { isStaffJwtRole } from "@/lib/auth/roles";
 
 /**
  * Server-side geocoding proxy.
@@ -17,7 +14,7 @@ function hasPanelAccess(role: string | null | undefined): boolean {
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthFromRequest(request);
-    if (!auth || !hasPanelAccess(auth.role)) {
+    if (!auth || !isStaffJwtRole(auth.role)) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }

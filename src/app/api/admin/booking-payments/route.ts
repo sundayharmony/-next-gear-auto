@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { sumBookingPaymentAmounts } from "@/lib/bookings/payments";
 import { logger } from "@/lib/utils/logger";
 
 // GET: Fetch booking payments
@@ -140,10 +141,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const newDeposit = (allPayments || []).reduce(
-      (sum: number, p: { amount: number | null }) => sum + (p.amount ?? 0),
-      0
-    );
+    const newDeposit = sumBookingPaymentAmounts(allPayments || []);
 
     // Update booking deposit
     const { error: updateError } = await supabase
@@ -240,10 +238,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const newDeposit = (remainingPayments || []).reduce(
-      (sum: number, p: { amount: number | null }) => sum + (p.amount ?? 0),
-      0
-    );
+    const newDeposit = sumBookingPaymentAmounts(remainingPayments || []);
 
     // Update booking deposit
     const { error: updateError } = await supabase

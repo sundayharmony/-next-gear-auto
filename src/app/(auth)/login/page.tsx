@@ -1,22 +1,42 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { Suspense, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Car, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/context/auth-context";
 
-export default function LoginPage() {
+function LoginFormInner() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login, isLoading, error } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState("");
   const [forgotPasswordMsg, setForgotPasswordMsg] = useState("");
+
+  const staffOnly = searchParams.get("staff") === "1";
+  const redirectAfter = searchParams.get("redirect");
+  const nextPath = searchParams.get("next");
+
+  const resolvePostLoginPath = (role: string | undefined) => {
+    if (role === "admin") {
+      if (nextPath?.startsWith("/admin")) return nextPath;
+      return "/admin";
+    }
+    if (role === "manager") {
+      if (nextPath?.startsWith("/manager")) return nextPath;
+      return "/manager";
+    }
+    if (redirectAfter && redirectAfter.startsWith("/") && !redirectAfter.startsWith("//")) {
+      return redirectAfter;
+    }
+    return "/account";
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -32,14 +52,9 @@ export default function LoginPage() {
     }
 
     try {
-      const user = await login(email, password);
-      // Redirect admin users to admin dashboard, customers to account page
-      if (user?.role === "admin") {
-        router.push("/admin");
-      } else if (user?.role === "manager") {
-        router.push("/manager");
-      } else {
-        router.push("/account");
+      const user = await login(email, password, { staffOnly });
+      if (user) {
+        router.push(resolvePostLoginPath(user.role));
       }
     } catch {
       // Error is handled by the auth context
@@ -49,7 +64,6 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-[80vh] items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-md">
-        {/* Logo */}
         <div className="mb-8 text-center">
           <Link href="/" className="inline-flex items-center gap-2">
             <Car className="h-10 w-10 text-purple-600" />
@@ -57,22 +71,20 @@ export default function LoginPage() {
               Next<span className="text-purple-600">Gear</span>Auto
             </span>
           </Link>
-          <p className="mt-2 text-gray-500">Sign in to manage your rentals</p>
+          <p className="mt-2 text-gray-500">
+            {staffOnly ? "Staff sign in (admin or manager)" : "Sign in to manage your rentals"}
+          </p>
         </div>
 
         <Card>
           <CardContent className="p-6">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {/* Error messages */}
               {(error || localError) && (
                 <div className="rounded-lg bg-red-50 p-3 text-sm text-red-600 border border-red-200">
                   {localError || error}
                 </div>
               )}
 
-              {/* Welcome message */}
-
-              {/* Email */}
               <div>
                 <label htmlFor="email" className="mb-1.5 block text-sm font-medium text-gray-700">
                   Email Address
@@ -94,7 +106,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Password */}
               <div>
                 <label htmlFor="password" className="mb-1.5 block text-sm font-medium text-gray-700">
                   Password
@@ -124,7 +135,6 @@ export default function LoginPage() {
                 </div>
               </div>
 
-              {/* Remember + Forgot */}
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 text-sm">
                   <input type="checkbox" className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2" />
@@ -135,32 +145,54 @@ export default function LoginPage() {
                 </button>
               </div>
 
-              {/* Forgot Password Message */}
               {forgotPasswordMsg && (
                 <div className="rounded-lg bg-blue-50 p-3 text-sm text-blue-600 border border-blue-200">
                   {forgotPasswordMsg}
                 </div>
               )}
 
-              {/* Submit */}
               <Button type="submit" className="w-full" size="lg" disabled={isLoading}>
                 {isLoading && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                 {isLoading ? "Signing in..." : "Sign In"}
                 {!isLoading && <ArrowRight className="h-4 w-4" />}
               </Button>
             </form>
-
           </CardContent>
         </Card>
 
-        {/* Sign up link */}
-        <p className="mt-6 text-center text-sm text-gray-500">
-          Don&apos;t have an account?{" "}
-          <Link href="/signup" className="font-medium text-purple-600 hover:text-purple-700">
-            Create one now
-          </Link>
-        </p>
+        {!staffOnly ? (
+          <p className="mt-6 text-center text-sm text-gray-500">
+            Don&apos;t have an account?{" "}
+            <Link href="/signup" className="font-medium text-purple-600 hover:text-purple-700">
+              Create one now
+            </Link>
+          </p>
+        ) : (
+          <p className="mt-6 text-center text-sm text-gray-500">
+            <Link href="/login" className="font-medium text-purple-600 hover:text-purple-700">
+              Customer sign in
+            </Link>
+            {" · "}
+            <Link href="/staff" className="font-medium text-purple-600 hover:text-purple-700">
+              Staff home
+            </Link>
+          </p>
+        )}
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[80vh] items-center justify-center bg-gray-50 px-4">
+          <Loader2 className="h-10 w-10 animate-spin text-purple-600" aria-label="Loading" />
+        </div>
+      }
+    >
+      <LoginFormInner />
+    </Suspense>
   );
 }

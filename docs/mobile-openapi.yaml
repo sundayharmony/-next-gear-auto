@@ -1,0 +1,171 @@
+openapi: 3.0.3
+info:
+  title: NGA Admin Mobile API (subset)
+  version: "1.0.0"
+  description: |
+    Staff native clients use Bearer JWT on the same Next.js `/api/*` hosts as the web app.
+    Optional header `X-NGA-Client-Version` identifies app builds for server logs.
+servers:
+  - url: https://{host}
+    variables:
+      host:
+        default: example.com
+tags:
+  - name: auth
+  - name: bookings
+  - name: admin
+paths:
+  /api/auth:
+    post:
+      tags: [auth]
+      summary: Login or other auth actions
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, email, password]
+              properties:
+                action: { type: string, example: login }
+                email: { type: string, format: email }
+                password: { type: string }
+                client: { type: string, enum: [native, android] }
+      responses:
+        "200":
+          description: Success; staff may include `tokens` when client is native
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+  /api/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate tokens (native body)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [refreshToken, client]
+              properties:
+                refreshToken: { type: string }
+                client: { type: string, example: native }
+      responses:
+        "200":
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RefreshResponse"
+  /api/bookings:
+    get:
+      tags: [bookings]
+      summary: List or single booking
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: id
+          schema: { type: string }
+        - in: query
+          name: page
+          schema: { type: integer }
+        - in: query
+          name: per_page
+          schema: { type: integer }
+        - in: query
+          name: from
+          schema: { type: string, format: date }
+        - in: query
+          name: to
+          schema: { type: string, format: date }
+      responses:
+        "200":
+          description: List or detail envelope
+    patch:
+      tags: [bookings]
+      summary: Update booking (status, etc.)
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                bookingId: { type: string }
+                status: { type: string }
+      responses:
+        "200": { description: OK }
+        "400": { description: Validation / illegal transition }
+  /api/bookings/upload:
+    post:
+      tags: [bookings]
+      summary: Multipart document upload
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file, bookingId, type]
+              properties:
+                file: { type: string, format: binary }
+                bookingId: { type: string }
+                type: { type: string, enum: [id_document, insurance_proof] }
+      responses:
+        "200": { description: Stored }
+        "400": { description: Type/size/MIME error }
+  /api/admin/booking-payments:
+    get:
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - in: query
+          name: booking_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: Rows }
+    post:
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      summary: Record payment (admin JWT)
+      responses:
+        "201": { description: Created }
+  /api/admin/vehicles:
+    get:
+      tags: [admin]
+      security: [{ bearerAuth: [] }]
+      summary: List vehicles (admin or manager scoping on server)
+      responses:
+        "200":
+          description: success + data array
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    TokenBundle:
+      type: object
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        tokenType: { type: string, example: Bearer }
+        expiresIn: { type: integer, example: 3600 }
+    LoginResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        data: { type: object }
+        tokens:
+          $ref: "#/components/schemas/TokenBundle"
+        message: { type: string }
+    RefreshResponse:
+      type: object
+      properties:
+        success: { type: boolean }
+        tokens:
+          $ref: "#/components/schemas/TokenBundle"
+        message: { type: string }

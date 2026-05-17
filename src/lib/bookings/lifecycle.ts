@@ -3,16 +3,17 @@
  * Used by API routes; Android and other clients should rely on server responses, not duplicate rules.
  */
 
-export const BOOKING_STATUSES = ["pending", "confirmed", "active", "completed", "cancelled"] as const;
+export const BOOKING_STATUSES = ["pending", "confirmed", "active", "completed", "cancelled", "no-show"] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
 /** Directed edges: from -> allowed next statuses */
 export const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
   pending: ["confirmed", "cancelled"],
-  confirmed: ["active", "cancelled"],
-  active: ["completed", "cancelled"],
+  confirmed: ["active", "cancelled", "no-show"],
+  active: ["completed", "cancelled", "no-show"],
   completed: [],
   cancelled: [],
+  "no-show": [],
 };
 
 export function isBookingStatus(value: string): value is BookingStatus {
@@ -65,4 +66,23 @@ export function validateConfirmRequiresAgreement(args: {
     };
   }
   return { ok: true };
+}
+
+/**
+ * Single entry point for PATCH status validation (transitions + agreement rule).
+ * Use from API routes and web admin UI before calling PATCH.
+ */
+export function validateBookingStatusPatch(args: {
+  currentStatus: string;
+  newStatus: string;
+  agreementSignedAt: string | null | undefined;
+}): TransitionValidation {
+  if (args.newStatus === args.currentStatus) return { ok: true };
+  const transition = validateStatusTransition(args.currentStatus, args.newStatus);
+  if (!transition.ok) return transition;
+  return validateConfirmRequiresAgreement({
+    currentStatus: args.currentStatus,
+    newStatus: args.newStatus,
+    agreementSignedAt: args.agreementSignedAt,
+  });
 }

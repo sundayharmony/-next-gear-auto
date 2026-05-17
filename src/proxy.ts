@@ -141,9 +141,11 @@ export async function proxy(req: NextRequest) {
         }
       }
 
-      if (!authenticated) {
-        // Check legacy header fallback
-        const legacyId = req.headers.get("x-admin-id");
+        if (!authenticated) {
+        const legacyId =
+          process.env.ALLOW_LEGACY_ADMIN_HEADER === "true"
+            ? req.headers.get("x-admin-id")
+            : null;
         if (!legacyId) {
           const loginUrl = new URL("/admin", req.url);
           loginUrl.searchParams.set("redirect", pathname);

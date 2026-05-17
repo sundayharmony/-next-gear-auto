@@ -27,6 +27,9 @@ interface NgaApi {
     @GET("api/bookings")
     suspend fun getBooking(@Query("id") id: String): BookingDetailResponse
 
+    @GET("api/admin/vehicles")
+    suspend fun listAdminVehicles(): AdminVehiclesListResponse
+
     @GET("api/admin/booking-payments")
     suspend fun listBookingPayments(@Query("booking_id") bookingId: String): BookingPaymentsResponse
 

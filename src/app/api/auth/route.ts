@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
 import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
 import { createAccessToken, createRefreshToken, setAuthCookies, clearAuthCookies, getAuthFromRequest } from "@/lib/auth/jwt";
+import { isManagerPanelAccessEnabled } from "@/lib/auth/manager-access";
 import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
@@ -76,9 +77,19 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    const { data: customer } = await supabase.from("customers").select("id, name, email, phone, dob, driver_license, created_at, role").eq("id", auth.sub).maybeSingle();
+    const { data: customer } = await supabase
+      .from("customers")
+      .select("id, name, email, phone, dob, driver_license, created_at, role, manager_access_enabled")
+      .eq("id", auth.sub)
+      .maybeSingle();
     if (!customer) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
+    }
+
+    const resolvedRole = normalizeRole(customer.role);
+    if (resolvedRole === "manager" && !isManagerPanelAccessEnabled(customer)) {
+      const cleared = clearAuthCookies(NextResponse.json({ success: false, message: "Manager access has been revoked." }, { status: 401 }));
+      return cleared;
     }
 
     return NextResponse.json({
@@ -93,7 +104,7 @@ export async function GET(request: NextRequest) {
         paymentMethods: [],
         bookings: [],
         createdAt: customer.created_at,
-        role: customer.role || "customer",
+        role: resolvedRole,
       },
     });
   } catch {
@@ -117,6 +128,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Invalid request body" }, { status: 400 });
     }
     const { email, password, action } = body;
+    const staffOnly = body.staffOnly === true;
     const nativeClient = isNativeClient(body, request);
 
     // Use service role for server-side operations (bypasses RLS)
@@ -189,7 +201,7 @@ export async function POST(request: Request) {
       // Then check customers table
       const { data: customer, error } = await adminDb
         .from("customers")
-        .select("id, name, email, phone, dob, driver_license, created_at, role, password_hash")
+        .select("id, name, email, phone, dob, driver_license, created_at, role, password_hash, manager_access_enabled")
         .eq("email", normalizedEmail)
         .maybeSingle();
 
@@ -218,7 +230,25 @@ export async function POST(request: Request) {
         );
       }
 
-      auditLog("LOGIN_SUCCESS", { ip, userId: customer.id, email: normalizedEmail, details: { role: "customer" } });
+      const customerRole = normalizeRole(customer.role || "customer");
+
+      if (staffOnly && !isStaffRole(customerRole)) {
+        auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Staff-only login rejected", role: customerRole } });
+        return NextResponse.json(
+          { success: false, message: "This sign-in is for staff only. Use the main site to access your account." },
+          { status: 403 }
+        );
+      }
+
+      if (customerRole === "manager" && !isManagerPanelAccessEnabled(customer)) {
+        auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Manager access disabled", role: "manager" } });
+        return NextResponse.json(
+          { success: false, message: "Manager access is not enabled for this account." },
+          { status: 403 }
+        );
+      }
+
+      auditLog("LOGIN_SUCCESS", { ip, userId: customer.id, email: normalizedEmail, details: { role: customerRole } });
 
       // Map DB fields to frontend expected format
       const mapped = {
@@ -231,13 +261,10 @@ export async function POST(request: Request) {
         paymentMethods: [],
         bookings: [],
         createdAt: customer.created_at,
-        role: customer.role || "customer",
+        role: customerRole,
       };
 
       // Issue JWT tokens
-      // Validate role type before casting to prevent type errors
-      const roleValue = customer.role || "customer";
-      const customerRole = normalizeRole(roleValue);
       const accessToken = await createAccessToken({ userId: customer.id, role: customerRole, email: customer.email });
       const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
 

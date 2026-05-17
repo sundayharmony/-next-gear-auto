@@ -2,6 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
+import {
+  BOOKING_UPLOAD_ALLOWED_MIME_TYPES,
+  BOOKING_UPLOAD_DOC_TYPES,
+  BOOKING_UPLOAD_MAX_BYTES,
+} from "@/lib/bookings/upload-limits";
 
 export async function POST(request: NextRequest) {
   try {
@@ -33,7 +38,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate docType
-    if (!["id_document", "insurance_proof"].includes(docType)) {
+    if (!(BOOKING_UPLOAD_DOC_TYPES as readonly string[]).includes(docType)) {
       return NextResponse.json(
         { success: false, error: "Invalid document type" },
         { status: 400 }
@@ -57,13 +62,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "application/pdf",
-    ];
-    if (!allowedTypes.includes(file.type)) {
+    if (!(BOOKING_UPLOAD_ALLOWED_MIME_TYPES as readonly string[]).includes(file.type)) {
       return NextResponse.json(
         {
           success: false,
@@ -84,7 +83,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Validate file size (5MB max)
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > BOOKING_UPLOAD_MAX_BYTES) {
       return NextResponse.json(
         { success: false, error: "File too large. Maximum 5MB." },
         { status: 400 }

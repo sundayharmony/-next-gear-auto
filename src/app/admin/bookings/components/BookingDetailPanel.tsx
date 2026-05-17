@@ -51,6 +51,7 @@ import {
   AVAILABLE_EXTRAS,
 } from "../types";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { validateBookingStatusPatch } from "@/lib/bookings";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { calculateRentalHours, calculatePricing } from "@/lib/utils/price-calculator";
@@ -332,9 +333,13 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       return;
     }
 
-    // Block confirming if the rental agreement hasn't been signed
-    if (newStatus === "confirmed" && !booking.agreement_signed_at) {
-      onError("Cannot confirm — the customer has not signed the rental agreement yet.");
+    const patch = validateBookingStatusPatch({
+      currentStatus: booking.status,
+      newStatus,
+      agreementSignedAt: booking.agreement_signed_at,
+    });
+    if (!patch.ok) {
+      onError(patch.message);
       return;
     }
 

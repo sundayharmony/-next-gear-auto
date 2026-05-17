@@ -146,8 +146,7 @@ export function clearAuthCookies(response: NextResponse): NextResponse {
   return response;
 }
 
-/** Extract and verify the JWT from an incoming request's cookies or Authorization header.
- *  Also supports the legacy x-admin-id header for backward compatibility during migration. */
+/** Extract and verify the JWT from an incoming request's cookies or Authorization header. */
 export async function getAuthFromRequest(
   req: NextRequest
 ): Promise<TokenPayload | null> {

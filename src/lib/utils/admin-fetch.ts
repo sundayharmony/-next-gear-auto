@@ -5,8 +5,7 @@
  * This wrapper handles:
  *   - CSRF token (via shared getCsrfToken)
  *   - Automatic token refresh on 401 responses
- *   - Redirect to admin login if refresh fails
- *   - Legacy x-admin-id header (will be removed after full migration)
+ *   - Redirect to staff login if refresh fails
  */
 import { getCsrfToken } from "./csrf-fetch";
 
@@ -43,25 +42,6 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
   const csrf = getCsrfToken();
   if (csrf) {
     headers.set("x-csrf-token", csrf);
-  }
-
-  // Legacy fallback: still send x-admin-id header during migration period
-  if (typeof window !== "undefined") {
-    try {
-      const stored = localStorage.getItem("nga_user");
-      if (stored) {
-        try {
-          const parsed = JSON.parse(stored);
-          if (typeof parsed === "object" && parsed !== null && typeof parsed.id === "string" && parsed.id) {
-            headers.set("x-admin-id", parsed.id);
-          }
-        } catch {
-          // ignore malformed JSON
-        }
-      }
-    } catch {
-      // ignore localStorage errors
-    }
   }
 
   let retryCount = 0;

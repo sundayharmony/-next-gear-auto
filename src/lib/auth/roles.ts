@@ -17,3 +17,8 @@ export function isAdminRole(role: AppRole): boolean {
 export function isManagerRole(role: AppRole): boolean {
   return role === "manager";
 }
+
+/** JWT / DB role string is staff (admin or manager). */
+export function isStaffJwtRole(role: unknown): role is Extract<AppRole, "admin" | "manager"> {
+  return isAppRole(role) && isStaffRole(role);
+}

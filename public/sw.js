@@ -1,9 +1,32 @@
+const ICON_CACHE = "nga-staff-icons-v1";
+
 self.addEventListener("install", () => {
   self.skipWaiting();
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
+});
+
+/** Cache-first for same-origin PWA icons only (no HTML/API caching). */
+self.addEventListener("fetch", (event) => {
+  const req = event.request;
+  if (req.method !== "GET") return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin) return;
+  if (!url.pathname.startsWith("/images/icons/")) return;
+
+  event.respondWith(
+    caches.open(ICON_CACHE).then((cache) =>
+      cache.match(req).then((cached) => {
+        if (cached) return cached;
+        return fetch(req).then((res) => {
+          if (res.ok) cache.put(req, res.clone());
+          return res;
+        });
+      })
+    )
+  );
 });
 
 self.addEventListener("push", (event) => {

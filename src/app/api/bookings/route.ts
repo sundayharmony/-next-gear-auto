@@ -20,10 +20,7 @@ import {
   occupancyToBookingRowCompat,
   sortOccupancyEntries,
 } from "@/lib/admin/vehicle-occupancy";
-import {
-  validateStatusTransition,
-  validateConfirmRequiresAgreement,
-} from "@/lib/bookings";
+import { validateBookingStatusPatch } from "@/lib/bookings";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -48,10 +45,10 @@ export async function GET(request: NextRequest) {
   let auth: TokenPayload | null = null;
   try { auth = await getAuthFromRequest(request); } catch { /* unauthenticated */ }
 
-  // Legacy fallback: x-admin-id header (matches verifyAdmin behavior)
+  // Legacy fallback: x-admin-id header (opt-in; matches verifyAdmin)
   let isAdmin = auth?.role === "admin";
   const isManager = auth?.role === "manager";
-  if (!auth) {
+  if (!auth && process.env.ALLOW_LEGACY_ADMIN_HEADER === "true") {
     const legacyAdminId = request.headers.get("x-admin-id");
     if (legacyAdminId) {
       try {
@@ -829,19 +826,15 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    // Validate status transitions (Bug 17) — shared rules in @/lib/bookings/lifecycle
+    // Validate status transitions — shared rules in @/lib/bookings
     if (updateFields.status && updateFields.status !== booking.status) {
-      const transition = validateStatusTransition(booking.status, updateFields.status);
-      if (!transition.ok) {
-        return NextResponse.json({ success: false, message: transition.message }, { status: 400 });
-      }
-      const confirmRule = validateConfirmRequiresAgreement({
+      const patch = validateBookingStatusPatch({
         currentStatus: booking.status,
         newStatus: updateFields.status,
         agreementSignedAt: booking.agreement_signed_at,
       });
-      if (!confirmRule.ok) {
-        return NextResponse.json({ success: false, message: confirmRule.message }, { status: 400 });
+      if (!patch.ok) {
+        return NextResponse.json({ success: false, message: patch.message }, { status: 400 });
       }
     }
 

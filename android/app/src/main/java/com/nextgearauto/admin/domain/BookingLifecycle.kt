@@ -7,10 +7,11 @@ package com.nextgearauto.admin.domain
 object BookingLifecycle {
     private val transitions: Map<String, List<String>> = mapOf(
         "pending" to listOf("confirmed", "cancelled"),
-        "confirmed" to listOf("active", "cancelled"),
-        "active" to listOf("completed", "cancelled"),
+        "confirmed" to listOf("active", "cancelled", "no-show"),
+        "active" to listOf("completed", "cancelled", "no-show"),
         "completed" to emptyList(),
         "cancelled" to emptyList(),
+        "no-show" to emptyList(),
     )
 
     fun allowedNextStatuses(current: String?): List<String> {
@@ -24,6 +25,7 @@ object BookingLifecycle {
         "active" -> "Active"
         "completed" -> "Completed"
         "cancelled" -> "Cancelled"
+        "no-show" -> "No-show"
         else -> status
     }
 }

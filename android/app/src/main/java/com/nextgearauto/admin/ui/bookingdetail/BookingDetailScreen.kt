@@ -18,6 +18,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -100,6 +102,7 @@ private fun enqueueUpload(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BookingDetailScreen(
     viewModel: BookingDetailViewModel,
@@ -155,7 +158,7 @@ fun BookingDetailScreen(
     }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
+@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
 private fun BookingDetailBody(
     viewModel: BookingDetailViewModel,

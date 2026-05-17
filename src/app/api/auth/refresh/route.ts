@@ -8,7 +8,9 @@ import {
   REFRESH_COOKIE,
 } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
-import { isAppRole, isStaffRole } from "@/lib/auth/roles";
+import { isAppRole, isManagerRole, isStaffRole } from "@/lib/auth/roles";
+import { getServiceSupabase } from "@/lib/db/supabase";
+import { fetchCustomerManagerAccessRow, isManagerPanelAccessEnabled } from "@/lib/auth/manager-access";
 
 const ACCESS_TOKEN_EXPIRES_IN_SEC = 3600;
 
@@ -60,7 +62,6 @@ export async function POST(req: NextRequest) {
       return clearAuthCookies(response);
     }
 
-    // Issue new token pair (rotation)
     if (!isAppRole(payload.role)) {
       const response = NextResponse.json(
         { success: false, message: "Invalid role in refresh token." },
@@ -69,6 +70,20 @@ export async function POST(req: NextRequest) {
       return clearAuthCookies(response);
     }
     const role = payload.role;
+
+    if (isManagerRole(role)) {
+      const supabase = getServiceSupabase();
+      const row = await fetchCustomerManagerAccessRow(supabase, payload.sub);
+      if (!row || row.role !== "manager" || !isManagerPanelAccessEnabled(row)) {
+        const response = NextResponse.json(
+          { success: false, message: "Manager access is no longer valid." },
+          { status: 401 }
+        );
+        return clearAuthCookies(response);
+      }
+    }
+
+    // Issue new token pair (rotation)
     const accessToken = await createAccessToken({
       userId: payload.sub,
       role,

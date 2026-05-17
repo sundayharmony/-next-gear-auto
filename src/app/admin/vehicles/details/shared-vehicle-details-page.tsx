@@ -3,7 +3,8 @@
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useParams, usePathname } from "next/navigation";
-import { ArrowLeft, CalendarDays, Car, Wrench, Ticket, DollarSign, Star } from "lucide-react";
+import { ArrowLeft, CalendarDays, Car, Wrench, Ticket, DollarSign, Star, FileText } from "lucide-react";
+import { SellVehicleDialog, type VehicleSaleSummary } from "@/app/admin/vehicles/details/SellVehicleDialog";
 import { PageContainer } from "@/components/layout/page-container";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -83,7 +84,11 @@ export function SharedVehicleDetailsPage() {
   const [page, setPage] = useState(1);
 
   const panelBase = pathname.startsWith("/manager") ? "/manager" : "/admin";
+  const isAdminPanel = panelBase === "/admin";
   const backHref = `${panelBase}/vehicles`;
+
+  const [sale, setSale] = useState<VehicleSaleSummary | null>(null);
+  const [sellDialogOpen, setSellDialogOpen] = useState(false);
 
   useEffect(() => {
     if (!vehicleId) return;
@@ -128,6 +133,31 @@ export function SharedVehicleDetailsPage() {
     };
   }, [vehicleId, statusFilter, page]);
 
+  useEffect(() => {
+    if (!vehicleId || !isAdminPanel) {
+      setSale(null);
+      return;
+    }
+    let active = true;
+    (async () => {
+      try {
+        const res = await adminFetch(`/api/admin/vehicles/${encodeURIComponent(vehicleId)}/sell`);
+        const json = await res.json();
+        if (!active) return;
+        if (res.ok && json.success && json.data) {
+          setSale(json.data as VehicleSaleSummary);
+        } else {
+          setSale(null);
+        }
+      } catch {
+        if (active) setSale(null);
+      }
+    })();
+    return () => {
+      active = false;
+    };
+  }, [vehicleId, isAdminPanel, vehicle?.isPublished, vehicle?.isAvailable]);
+
   const statusFilters = useMemo(
     () => ["all", "pending", "confirmed", "active", "completed", "cancelled"],
     []
@@ -169,13 +199,43 @@ export function SharedVehicleDetailsPage() {
               <h1 className="text-2xl font-bold text-gray-900">{vehicle.displayName}</h1>
               <p className="text-sm text-gray-500 mt-1">{vehicle.category || "Uncategorized"}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {sale ? (
+                <Badge className="bg-slate-800 text-white">Sold {formatDate(sale.saleDate)}</Badge>
+              ) : null}
               <Badge className={vehicle.isAvailable ? "bg-green-100 text-green-700" : "bg-gray-200 text-gray-700"}>
                 {vehicle.isAvailable ? "Available" : "Unavailable"}
               </Badge>
               <Badge className={vehicle.isPublished ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}>
                 {vehicle.isPublished ? "Published" : "Draft"}
               </Badge>
+              {isAdminPanel && !sale ? (
+                <Button type="button" size="sm" onClick={() => setSellDialogOpen(true)}>
+                  Sell vehicle
+                </Button>
+              ) : null}
+              {isAdminPanel && sale ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={async () => {
+                    if (!vehicleId) return;
+                    const res = await adminFetch(
+                      `/api/admin/vehicles/${encodeURIComponent(vehicleId)}/sell`,
+                    );
+                    const json = await res.json();
+                    const url = json?.data?.pdfDownloadUrl as string | undefined;
+                    if (url) {
+                      setSale((s) => (s ? { ...s, pdfDownloadUrl: url } : s));
+                      window.open(url, "_blank", "noopener,noreferrer");
+                    }
+                  }}
+                >
+                  <FileText className="h-3.5 w-3.5 mr-1" />
+                  Bill of sale
+                </Button>
+              ) : null}
             </div>
           </div>
           <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
@@ -298,6 +358,23 @@ export function SharedVehicleDetailsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {isAdminPanel && vehicleId ? (
+        <SellVehicleDialog
+          vehicleId={vehicleId}
+          vehicleMileage={vehicle.mileage}
+          open={sellDialogOpen}
+          onClose={() => setSellDialogOpen(false)}
+          onSold={(sold) => {
+            setSale(sold);
+            setVehicle((v) =>
+              v
+                ? { ...v, isAvailable: false, isPublished: false }
+                : v,
+            );
+          }}
+        />
+      ) : null}
     </PageContainer>
   );
 }

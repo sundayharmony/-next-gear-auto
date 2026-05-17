@@ -50,8 +50,13 @@ function authReducer(state: AuthState, action: AuthAction): AuthState {
   }
 }
 
+interface LoginOptions {
+  /** When true, customer accounts cannot sign in (staff PWA / native). */
+  staffOnly?: boolean;
+}
+
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<Customer | null>;
+  login: (email: string, password: string, options?: LoginOptions) => Promise<Customer | null>;
   logout: () => Promise<void>;
   signup: (data: { name: string; email: string; password: string; phone: string }) => Promise<boolean>;
   updateProfile: (data: Partial<Customer>) => void;
@@ -130,14 +135,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   }, [state.user]);
 
-  const login = useCallback(async (email: string, password: string): Promise<Customer | null> => {
+  const login = useCallback(async (email: string, password: string, options?: LoginOptions): Promise<Customer | null> => {
     dispatch({ type: "LOGIN_START" });
     try {
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ email, password, action: "login" }),
+        body: JSON.stringify({
+          email,
+          password,
+          action: "login",
+          ...(options?.staffOnly ? { staffOnly: true } : {}),
+        }),
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => null);

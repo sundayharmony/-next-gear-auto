@@ -15,6 +15,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -38,9 +39,12 @@ import com.nextgearauto.admin.ui.bookings.BookingsListContent
 import com.nextgearauto.admin.ui.bookings.BookingsViewModel
 import com.nextgearauto.admin.ui.calendar.CalendarScreen
 import com.nextgearauto.admin.ui.calendar.CalendarViewModel
+import com.nextgearauto.admin.ui.maintenance.MaintenancePlaceholderScreen
 import com.nextgearauto.admin.ui.payments.PaymentsOverviewScreen
 import com.nextgearauto.admin.ui.today.TodayScreen
 import com.nextgearauto.admin.ui.today.TodayViewModel
+import com.nextgearauto.admin.ui.vehicles.VehiclesScreen
+import com.nextgearauto.admin.ui.vehicles.VehiclesViewModel
 
 private sealed class MainTab(val route: String, val label: String) {
     data object Today : MainTab("today", "Today")
@@ -53,13 +57,18 @@ private val tabs =
     listOf(MainTab.Today, MainTab.Bookings, MainTab.Calendar, MainTab.More)
 
 private const val ROUTE_BOOKING_DETAIL = "booking_detail/{bookingId}"
+private const val ROUTE_VEHICLES = "vehicles"
+private const val ROUTE_MAINTENANCE = "maintenance"
 
 @Composable
 fun AdminAppShell(onLogout: () -> Unit) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentRoute = navBackStackEntry?.destination?.route.orEmpty()
-    val showBottomBar = !currentRoute.startsWith("booking_detail")
+    val showBottomBar =
+        !currentRoute.startsWith("booking_detail") &&
+            currentRoute != ROUTE_VEHICLES &&
+            currentRoute != ROUTE_MAINTENANCE
 
     Scaffold(
         bottomBar = {
@@ -156,6 +165,18 @@ fun AdminAppShell(onLogout: () -> Unit) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(top = 24.dp),
                     )
+                    OutlinedButton(
+                        onClick = { navController.navigate(ROUTE_VEHICLES) },
+                        modifier = Modifier.padding(top = 16.dp),
+                    ) {
+                        Text("Vehicles (fleet list)")
+                    }
+                    OutlinedButton(
+                        onClick = { navController.navigate(ROUTE_MAINTENANCE) },
+                        modifier = Modifier.padding(top = 8.dp),
+                    ) {
+                        Text("Maintenance (web parity roadmap)")
+                    }
                     Button(
                         onClick = onLogout,
                         modifier = Modifier.padding(top = 24.dp),
@@ -163,6 +184,19 @@ fun AdminAppShell(onLogout: () -> Unit) {
                         Text("Log out")
                     }
                 }
+            }
+            composable(ROUTE_VEHICLES) {
+                val graph = LocalAppGraph.current
+                val vm: VehiclesViewModel = viewModel(factory = VehiclesViewModel.Factory(graph.api))
+                LaunchedEffect(Unit) { vm.load() }
+                VehiclesScreen(
+                    state = vm.uiState,
+                    onRetry = { vm.load() },
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable(ROUTE_MAINTENANCE) {
+                MaintenancePlaceholderScreen(onBack = { navController.popBackStack() })
             }
             composable(
                 route = ROUTE_BOOKING_DETAIL,

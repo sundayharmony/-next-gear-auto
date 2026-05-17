@@ -1,6 +1,6 @@
 # NGA Admin (Android)
 
-Kotlin + Jetpack Compose client for staff/admin. API contracts: [`docs/mobile-api.md`](../docs/mobile-api.md).
+Kotlin + Jetpack Compose client for staff/admin. API contracts: [`docs/mobile-api.md`](../docs/mobile-api.md), OpenAPI subset [`docs/mobile-openapi.yaml`](../docs/mobile-openapi.yaml).
 
 ## What works today
 
@@ -57,7 +57,19 @@ gradlew.bat :app:assembleDebug
 
 Requires `JAVA_HOME` pointing at a JDK 17 install.
 
-## Next steps
+## Testing
 
-- Status actions on booking detail (PATCH `/api/bookings`), calendar sync, document camera capture + `/api/bookings/upload`.
-- Optional: Firebase Crashlytics, certificate pinning, offline cache.
+- **Unit (JVM):** `src/test/...` — e.g. `BookingLifecycleTest` (run with **Run tests** on that class in Android Studio).
+- **Instrumented:** `src/androidTest/...` — `MainActivitySmokeTest` (requires device/emulator).
+- **Staging E2E:** see [`../docs/staging-e2e-maestro.md`](../docs/staging-e2e-maestro.md) and `maestro/flows/`.
+
+## Reliability hooks
+
+- **GET retry** on transient 5xx/408 (`GetRetryInterceptor`).
+- **Correlation id** + **`X-NGA-Client-Version`** (`CorrelationIdInterceptor`, `BuildConfig.MOBILE_CLIENT_VERSION`).
+- **`PendingWriteQueue`** no-op placeholder for future offline writes.
+
+## Roadmap
+
+- Firebase Crashlytics / certificate pinning when you standardize release keys.
+- Expand Maestro flows for login → bookings → detail on staging.

@@ -159,3 +159,20 @@ data class BookingListItemDto(
 
     fun displayVehicle(): String = vehicleName ?: "—"
 }
+
+@Serializable
+data class AdminVehicleDto(
+    val id: String,
+    val year: Int = 0,
+    val make: String = "",
+    val model: String = "",
+    val maintenanceStatus: String? = null,
+    val dailyRate: Double? = null,
+)
+
+@Serializable
+data class AdminVehiclesListResponse(
+    val success: Boolean,
+    val data: List<AdminVehicleDto> = emptyList(),
+    val message: String? = null,
+)

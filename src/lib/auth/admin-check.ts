@@ -2,14 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { loginLimiter, getClientIp } from "@/lib/security/rate-limit";
-import { isAdminRole } from "@/lib/auth/roles";
+import { isAdminRole, isStaffJwtRole } from "@/lib/auth/roles";
 
 /**
  * Verify the request comes from an authenticated admin.
  *
  * Authentication methods (checked in order):
  *   1. JWT in HTTP-only cookie or Authorization header (preferred)
- *   2. Legacy x-admin-id header (backward compat — will be removed)
+ *   2. Legacy x-admin-id header (opt-in via ALLOW_LEGACY_ADMIN_HEADER=true)
  *
  * Returns the admin ID if valid, or a 401/403 response if not.
  */
@@ -31,8 +31,17 @@ export async function verifyAdmin(
     return { authorized: true, adminId: tokenPayload.sub };
   }
 
-  // ── Method 2: Legacy header-based auth (backward compat) ──────────
-  // Rate-limit legacy header to prevent brute force attacks
+  // ── Method 2: Legacy header-based auth (opt-in) ───────────────────
+  if (process.env.ALLOW_LEGACY_ADMIN_HEADER !== "true") {
+    return {
+      authorized: false,
+      response: NextResponse.json(
+        { success: false, message: "Authentication required" },
+        { status: 401 }
+      ),
+    };
+  }
+
   const clientIp = getClientIp(req);
   const rateCheck = loginLimiter.check(`admin-legacy:${clientIp}`);
   if (!rateCheck.allowed) {
@@ -103,7 +112,7 @@ export async function verifyAdminOrManager(
   req: NextRequest
 ): Promise<{ authorized: true; userId: string; role: "admin" | "manager" } | { authorized: false; response: NextResponse }> {
   const tokenPayload = await getAuthFromRequest(req);
-  if (!tokenPayload || (tokenPayload.role !== "admin" && tokenPayload.role !== "manager")) {
+  if (!tokenPayload || !isStaffJwtRole(tokenPayload.role)) {
     return {
       authorized: false,
       response: NextResponse.json(
