@@ -671,10 +671,10 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
         ))}
       </ToastContainer>
 
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
+      <section className="page-hero page-hero--compact text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h1 className="text-2xl sm:text-3xl font-bold">{panelTitle}</h1>
-          <p className="mt-1 text-purple-200">Unread messages: {unreadCount}</p>
+          <p className="mt-1 page-hero-subtitle">Unread messages: {unreadCount}</p>
         </div>
       </section>
 

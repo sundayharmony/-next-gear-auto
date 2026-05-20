@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { Shield, Plus, RefreshCw, Pencil, Trash2 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { Shield, Plus, RefreshCw, Pencil, Trash2, CheckCircle2, Clock } from "lucide-react";
+import { AdminPageHeader, AdminPageBody, AdminCard } from "@/components/admin/admin-shell";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -19,6 +19,7 @@ interface ManagerRow {
   manager_access_enabled: boolean;
   manager_access_granted_at?: string | null;
   manager_access_revoked_at?: string | null;
+  account_activated: boolean;
 }
 
 export default function AdminManagersPage() {
@@ -165,32 +166,27 @@ export default function AdminManagersPage() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Managers</h1>
-            <p className="mt-1 text-sm sm:text-base text-purple-200">
-              Add, edit, or remove manager accounts. Removing a manager keeps their customer account.
-            </p>
-          </div>
+      <AdminPageHeader
+        title="Managers"
+        subtitle="Add, edit, or remove manager accounts. Activation means they have set a password and can sign in."
+        actions={
           <Button
             variant="outline"
             size="sm"
-            className="border-purple-400 text-purple-200 hover:bg-purple-800 hidden sm:inline-flex"
+            className="page-hero-btn-outline hidden sm:inline-flex"
             onClick={fetchManagers}
           >
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
           </Button>
-        </div>
-      </section>
+        }
+      />
 
-      <PageContainer className="py-6 sm:py-8 space-y-6">
+      <AdminPageBody>
         {error ? <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} /> : null}
         {success ? <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} /> : null}
 
-        <Card>
-          <CardContent className="p-5">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <AdminCard>
+            <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Plus className="h-4 w-4 text-purple-600" /> Add manager
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -214,12 +210,10 @@ export default function AdminManagersPage() {
                 {saving && !editingId ? "Saving…" : "Create"}
               </Button>
             </div>
-          </CardContent>
-        </Card>
+          </AdminCard>
 
-        <Card>
-          <CardContent className="p-5">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
+        <AdminCard>
+            <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
               <Shield className="h-4 w-4 text-purple-600" /> Current managers
             </h2>
             {loading ? (
@@ -234,7 +228,7 @@ export default function AdminManagersPage() {
             ) : (
               <div className="space-y-3">
                 {managers.map((manager) => (
-                  <div key={manager.id} className="rounded-lg border border-gray-200 p-4">
+                  <div key={manager.id} className="rounded-xl border border-gray-200/80 bg-gray-50/40 p-4 transition-colors hover:border-purple-200/80 hover:bg-purple-50/25">
                     {editingId === manager.id ? (
                       <div className="space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -267,8 +261,26 @@ export default function AdminManagersPage() {
                     ) : (
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
-                          <p className="font-semibold text-gray-900">{manager.name}</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="font-semibold text-gray-900">{manager.name}</p>
+                            {manager.account_activated ? (
+                              <Badge className="bg-green-100 text-green-800 border-green-200">
+                                <CheckCircle2 className="h-3 w-3 mr-1" aria-hidden />
+                                Activated
+                              </Badge>
+                            ) : (
+                              <Badge className="bg-amber-100 text-amber-900 border-amber-200">
+                                <Clock className="h-3 w-3 mr-1" aria-hidden />
+                                Pending activation
+                              </Badge>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500 truncate">{manager.email}</p>
+                          {!manager.account_activated ? (
+                            <p className="text-xs text-amber-700 mt-1">
+                              Has not set a password yet — resend the setup email from Customers if needed.
+                            </p>
+                          ) : null}
                           {manager.phone ? (
                             <p className="text-sm text-gray-600 mt-0.5">{manager.phone}</p>
                           ) : (
@@ -303,9 +315,8 @@ export default function AdminManagersPage() {
                 ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </PageContainer>
+          </AdminCard>
+      </AdminPageBody>
     </>
   );
 }

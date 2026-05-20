@@ -83,18 +83,18 @@ export default async function HomePage() {
       </script>
 
       {/* Hero Section */}
-      <section className="relative bg-gradient-to-br from-purple-900 via-purple-800 to-gray-900 text-white">
+      <section className="page-hero page-hero--home relative text-white">
         <div className="absolute inset-0 bg-[url('/images/hero-pattern.svg')] opacity-10" />
         <div className="relative mx-auto max-w-7xl px-4 py-20 sm:px-6 sm:py-28 lg:px-8">
           <div className="max-w-2xl">
-            <Badge className="mb-4 bg-purple-500/20 text-purple-200 border border-purple-400/30">
+            <Badge className="mb-4 bg-purple-500/20 page-hero-subtitle border border-purple-400/30">
               Trusted Local Rentals
             </Badge>
             <h1 className="text-4xl font-bold tracking-tight sm:text-5xl lg:text-6xl">
               Your Journey{" "}
               <span className="text-purple-300">Starts Here</span>
             </h1>
-            <p className="mt-4 text-lg text-purple-100/80 sm:text-xl">
+            <p className="mt-4 text-lg page-hero-subtitle sm:text-xl">
               Premium vehicles at competitive prices. From compact cars to powerful trucks,
               find the perfect ride for any occasion.
             </p>
@@ -124,7 +124,7 @@ export default async function HomePage() {
               <div key={stat.label} className="rounded-xl bg-white/10 p-4 backdrop-blur-sm">
                 <stat.icon className="h-6 w-6 text-purple-300 mb-2" />
                 <div className="text-2xl font-bold">{stat.value}</div>
-                <div className="text-sm text-purple-200">{stat.label}</div>
+                <div className="text-sm page-hero-subtitle">{stat.label}</div>
               </div>
             ))}
           </div>
@@ -161,7 +161,7 @@ export default async function HomePage() {
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center">
-                          <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
+                          <Car className="h-20 w-20 text-purple-300/70 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
                         </div>
                       )}
                       <Badge className="absolute top-3 left-3" variant="default">

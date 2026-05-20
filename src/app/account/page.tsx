@@ -274,7 +274,7 @@ export default function AccountPage() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-12 text-white">
+      <section className="page-hero page-hero--md text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
@@ -283,18 +283,18 @@ export default function AccountPage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold">Welcome back, {(user?.name || "User").split(" ")[0]}</h1>
-                <p className="text-purple-200">Manage your rentals and account settings</p>
+                <p className="page-hero-subtitle">Manage your rentals and account settings</p>
               </div>
             </div>
             <div className="flex items-center gap-3">
               {user.role === "admin" && (
                 <Link href="/admin">
-                  <Button size="sm" variant="outline" className="border-purple-400 text-purple-200 hover:bg-purple-800">
+                  <Button size="sm" variant="outline" className="page-hero-btn-outline">
                     <Shield className="h-4 w-4 mr-1" /> Admin Dashboard
                   </Button>
                 </Link>
               )}
-              <Button size="sm" variant="outline" className="border-purple-400 text-purple-200 hover:bg-purple-800" onClick={handleLogout}>
+              <Button size="sm" variant="outline" className="page-hero-btn-outline" onClick={handleLogout}>
                 <LogOut className="h-4 w-4 mr-1" /> Sign Out
               </Button>
             </div>

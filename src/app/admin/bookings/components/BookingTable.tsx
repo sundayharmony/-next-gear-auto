@@ -11,6 +11,7 @@ import { calculateRentalDays } from "@/lib/utils/price-calculator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { adminCardClass } from "@/components/admin/admin-shell";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import {
   getBookingDisplayTotal,
@@ -310,7 +311,7 @@ export default function BookingTable({
       </div>
 
       {/* ─── DESKTOP TABLE VIEW (>= md) ─── */}
-      <Card className="hidden md:block overflow-x-auto">
+      <Card className={`${adminCardClass} hidden md:block overflow-hidden admin-table-wrap`}>
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">

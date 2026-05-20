@@ -35,7 +35,8 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageHeader, AdminPageBody } from "@/components/admin/admin-shell";
+import { AdminStatusBanner } from "@/components/admin/ui-feedback";
 import { Vehicle, VehicleCategory, getVehicleDisplayName } from "@/lib/types";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { logger } from "@/lib/utils/logger";
@@ -1261,47 +1262,38 @@ export default function AdminVehiclesPage() {
   return (
     <>
       {/* Header Section */}
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Fleet Management</h1>
-              <p className="mt-1 text-purple-200">
-                Manage your rental vehicle fleet{vehicles.length > 0 && ` · ${vehicles.length} vehicle${vehicles.length !== 1 ? "s" : ""}`}
-              </p>
-            </div>
-            <Button
-              onClick={() => {
-                if (showAddForm) {
-                  setNewVehicle(emptyVehicle);
-                }
-                setShowAddForm(!showAddForm);
-                setEditingId(null);
-              }}
-              className="bg-white text-purple-900 hover:bg-gray-100"
-            >
-              {showAddForm ? (
-                <><X className="h-4 w-4 mr-2" /> Cancel</>
-                ) : (
-                  <><Plus className="h-4 w-4 mr-2" /> Add Vehicle</>
-                )}
-              </Button>
-          </div>
-        </div>
-      </section>
+      <AdminPageHeader
+        title="Fleet Management"
+        subtitle={`Manage your rental vehicle fleet${vehicles.length > 0 ? ` · ${vehicles.length} vehicle${vehicles.length !== 1 ? "s" : ""}` : ""}`}
+        actions={
+          <Button
+            onClick={() => {
+              if (showAddForm) {
+                setNewVehicle(emptyVehicle);
+              }
+              setShowAddForm(!showAddForm);
+              setEditingId(null);
+            }}
+            className="bg-white text-purple-900 hover:bg-gray-100"
+          >
+            {showAddForm ? (
+              <><X className="h-4 w-4 mr-2" /> Cancel</>
+            ) : (
+              <><Plus className="h-4 w-4 mr-2" /> Add Vehicle</>
+            )}
+          </Button>
+        }
+      />
 
-      <PageContainer className="py-8">
+      <AdminPageBody>
         {/* Success Banner */}
-        {success && (
-          <div className="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center justify-between">
-            <span className="flex items-center gap-2"><Check className="h-4 w-4" />{success}</span>
-            <button onClick={() => setSuccess(null)} aria-label="Dismiss success message" className="text-green-500 hover:text-green-700"><X className="h-4 w-4" /></button>
-          </div>
-        )}
+        {success ? (
+          <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} />
+        ) : null}
 
         {/* Error Banner */}
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+        {error ? (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
             <span>{error}</span>
             <div className="flex items-center gap-2">
               <button onClick={() => fetchVehicles()} className="ml-2 text-red-600 underline text-xs hover:text-red-700">Retry</button>
@@ -1314,7 +1306,7 @@ export default function AdminVehiclesPage() {
               </button>
             </div>
           </div>
-        )}
+        ) : null}
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
@@ -1749,7 +1741,7 @@ export default function AdminVehiclesPage() {
             ))}
           </div>
         )}
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

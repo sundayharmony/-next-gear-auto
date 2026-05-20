@@ -81,10 +81,10 @@ function FleetContent() {
   return (
     <>
       {/* Page Header */}
-      <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-16 text-white">
+      <section className="page-hero page-hero--lg text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h1 className="text-2xl sm:text-4xl font-bold">Our Fleet</h1>
-          <p className="mt-2 text-lg text-purple-200">
+          <p className="mt-2 text-lg page-hero-subtitle">
             Choose from our selection of well-maintained vehicles for any occasion.
           </p>
         </div>
@@ -233,7 +233,7 @@ function FleetContent() {
                               const fallback = document.createElement("div");
                               fallback.className = "fallback-icon absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-50 to-gray-100";
                               const icon = document.createElement("div");
-                              icon.innerHTML = '<svg class="h-20 w-20 text-purple-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8m-4-4h4m-4-4h4m-10 8a2 2 0 100-4 2 2 0 000 4zm0-6a3 3 0 00-3 3v4a3 3 0 003 3h8a3 3 0 003-3v-4a3 3 0 00-3-3h-8z"></path></svg>';
+                              icon.innerHTML = '<svg class="h-20 w-20 page-hero-subtitle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8m-4-4h4m-4-4h4m-10 8a2 2 0 100-4 2 2 0 000 4zm0-6a3 3 0 00-3 3v4a3 3 0 003 3h8a3 3 0 003-3v-4a3 3 0 00-3-3h-8z"></path></svg>';
                               fallback.appendChild(icon);
                               parent.appendChild(fallback);
                             }
@@ -241,7 +241,7 @@ function FleetContent() {
                         />
                       ) : (
                         <div className="flex h-full items-center justify-center">
-                          <Car className="h-20 w-20 text-purple-200 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
+                          <Car className="h-20 w-20 text-purple-300/70 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
                         </div>
                       )}
                       <Badge className="absolute top-3 left-3">{vehicle.category}</Badge>

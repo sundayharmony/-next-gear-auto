@@ -1104,7 +1104,7 @@ export default function AdminFinancesPage() {
           </div>
 
           {/* Financing header */}
-          <div className="bg-gradient-to-br from-gray-900 to-purple-900 rounded-xl p-4 sm:p-6 text-white">
+          <div className="page-hero-card p-4 sm:p-6 text-white">
             <div className={`grid grid-cols-1 sm:grid-cols-2 ${financingInfo ? "md:grid-cols-4" : "md:grid-cols-3"} gap-4 sm:gap-6`}>
               <div>
                 <p className="text-gray-300 text-xs font-medium uppercase tracking-wider">
@@ -1281,18 +1281,18 @@ export default function AdminFinancesPage() {
   return (
     <>
       {/* Header */}
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
+      <section className="page-hero page-hero--compact text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Finances</h1>
-              <p className="text-purple-200 mt-1 hidden sm:block">Track revenue, expenses, and profitability</p>
+              <p className="page-hero-subtitle mt-1 hidden sm:block">Track revenue, expenses, and profitability</p>
             </div>
             <Button
               onClick={fetchData}
               variant="outline"
               size="sm"
-              className="border-purple-400 text-purple-200 hover:bg-purple-800 hover:text-white hidden sm:inline-flex"
+              className="page-hero-btn-outline hidden sm:inline-flex"
             >
               <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
               Refresh
@@ -1817,7 +1817,7 @@ export default function AdminFinancesPage() {
                   )}
                 </div>
               ))}
-              <div className="bg-gradient-to-br from-gray-900 to-purple-900 rounded-xl p-4 text-white">
+              <div className="page-hero-card p-4 text-white">
                 <p className="text-xs font-medium text-gray-300 uppercase tracking-wider mb-2">Total Expenses</p>
                 <p className="text-xl font-bold">{fmtCurrency(allExpenses.reduce((s, e) => s + (e.amount ?? 0), 0))}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{allExpenses.length} total entries</p>

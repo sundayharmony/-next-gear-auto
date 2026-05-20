@@ -24,7 +24,7 @@ export function AdminStatusBanner({
     <div
       role={type === "error" ? "alert" : "status"}
       aria-live="polite"
-      className={`mb-4 rounded-lg border px-4 py-3 text-sm flex items-center justify-between gap-3 ${styles} ${className}`}
+      className={`mb-4 rounded-xl border px-4 py-3 text-sm flex items-center justify-between gap-3 ${styles} ${className}`}
     >
       <div className="flex items-center gap-2 min-w-0">
         <Icon className="h-4 w-4 shrink-0" />
@@ -51,7 +51,7 @@ interface AdminEmptyStateProps {
 
 export function AdminEmptyState({ title, description, action }: AdminEmptyStateProps) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white px-6 py-10 text-center">
+    <div className="rounded-xl border border-gray-200/80 bg-white shadow-sm px-6 py-10 text-center">
       <Inbox className="mx-auto h-8 w-8 text-gray-300" />
       <h3 className="mt-3 text-sm font-semibold text-gray-900">{title}</h3>
       {description ? <p className="mt-1 text-sm text-gray-500">{description}</p> : null}

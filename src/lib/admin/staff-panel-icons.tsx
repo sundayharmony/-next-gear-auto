@@ -16,6 +16,7 @@ import {
   Star,
   MessageSquare,
   ClipboardList,
+  Megaphone,
 } from "lucide-react";
 import { Instagram } from "@/components/icons/instagram";
 import type { PanelIconKey } from "@/lib/admin/panel-navigation";
@@ -40,4 +41,5 @@ export const staffPanelIconMap: Record<PanelIconKey, LucideIcon> = {
   messageSquare: MessageSquare,
   instagram: Instagram,
   clipboard: ClipboardList,
+  megaphone: Megaphone,
 };

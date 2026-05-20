@@ -41,13 +41,13 @@ export default function ManagerDashboardPage() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
+      <section className="page-hero page-hero--compact text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold">Manager Dashboard</h1>
-            <p className="mt-1 text-sm sm:text-base text-purple-200">Operational metrics scoped to manager-created bookings.</p>
+            <p className="mt-1 text-sm sm:text-base page-hero-subtitle">Operational metrics scoped to manager-created bookings.</p>
           </div>
-          <Button variant="outline" size="sm" className="border-purple-400 text-purple-200 hover:bg-purple-800 hidden sm:inline-flex" onClick={fetchDashboard}>
+          <Button variant="outline" size="sm" className="page-hero-btn-outline hidden sm:inline-flex" onClick={fetchDashboard}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
           </Button>
         </div>

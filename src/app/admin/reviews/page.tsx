@@ -6,6 +6,7 @@ import { Star, Trash2, CheckCircle, XCircle, RefreshCw, Filter, Loader2, Message
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { AdminPageBody } from "@/components/admin/admin-shell";
 import { PageContainer } from "@/components/layout/page-container";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -116,12 +117,12 @@ export default function AdminReviewsPage() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
+      <section className="page-hero page-hero--compact text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Reviews</h1>
-              <p className="mt-1 text-purple-200">
+              <p className="mt-1 page-hero-subtitle">
                 {reviews.length} reviews{pendingCount > 0 ? ` · ${pendingCount} pending` : ""}
               </p>
             </div>
@@ -129,7 +130,7 @@ export default function AdminReviewsPage() {
         </div>
       </section>
 
-      <PageContainer className="py-8">
+      <AdminPageBody>
         {/* Error Banner */}
         {error ? <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} /> : null}
 
@@ -229,7 +230,7 @@ export default function AdminReviewsPage() {
             ))}
           </div>
         )}
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

@@ -151,7 +151,7 @@ export function WeekToWeekContractPageClient() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-14 text-white">
+      <section className="page-hero page-hero--xl text-white">
         <div className="mx-auto max-w-5xl px-4 text-center">
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-purple-500/20">
             <FileText className="h-6 w-6 text-purple-200" />

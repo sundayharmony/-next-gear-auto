@@ -87,9 +87,11 @@ interface BookingDetailPanelProps {
     canViewActivityTimeline: boolean;
     canManagePayments: boolean;
     canExtendBooking: boolean;
+    canSignAgreementInPerson: boolean;
     customerDetailsBasePath: string;
     ticketsPagePath: string;
   };
+  onStartInPersonSign?: () => void;
 }
 
 export function BookingDetailPanel(props: BookingDetailPanelProps) {
@@ -103,16 +105,25 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     onError,
     onSuccess,
     capabilities,
+    onStartInPersonSign,
   } = props;
   const canSendBookingEmail = capabilities?.canSendBookingEmail ?? true;
   const canViewAdminNotes = capabilities?.canViewAdminNotes ?? true;
   const canViewActivityTimeline = capabilities?.canViewActivityTimeline ?? true;
   const canManagePayments = capabilities?.canManagePayments ?? true;
   const canExtendBooking = capabilities?.canExtendBooking ?? true;
+  const canSignAgreementInPerson = capabilities?.canSignAgreementInPerson ?? false;
   const customerDetailsBasePath = capabilities?.customerDetailsBasePath ?? "/admin/customers";
   const ticketsPagePath = capabilities?.ticketsPagePath ?? "/admin/tickets";
   const canViewPricing = booking.canViewPricing !== false;
   const canManageRow = booking.canManage !== false;
+  const showInPersonSign =
+    canSignAgreementInPerson &&
+    canManageRow &&
+    !booking.agreement_signed_at &&
+    booking.status !== "cancelled" &&
+    booking.status !== "completed" &&
+    Boolean(onStartInPersonSign);
 
   // Edit mode state
   const [editMode, setEditMode] = useState(false);
@@ -2000,6 +2011,21 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             ) : (
               <div className="space-y-2">
                 <p className="text-sm text-gray-500">Not yet signed</p>
+                {showInPersonSign && (
+                  <Button
+                    size="sm"
+                    onClick={onStartInPersonSign}
+                    className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs min-h-10"
+                  >
+                    <PenLine className="w-3 h-3 mr-1" />
+                    Sign in person
+                  </Button>
+                )}
+                {showInPersonSign && (
+                  <p className="text-xs text-gray-500">
+                    Review agreement with customer on this device
+                  </p>
+                )}
                 {canOverrideAgreement && (
                   <Button
                     size="sm"
@@ -2146,6 +2172,20 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
               {canManageRow && booking.status !== "cancelled" && booking.status !== "completed" && (
                 <div className="space-y-2">
+                  {showInPersonSign && (
+                    <Button
+                      onClick={onStartInPersonSign}
+                      className="w-full bg-purple-600 hover:bg-purple-700 text-white text-xs min-h-11"
+                    >
+                      <PenLine className="w-3 h-3 mr-1" />
+                      Sign in person
+                    </Button>
+                  )}
+                  {showInPersonSign && (
+                    <p className="text-xs text-center text-gray-500 -mt-1">
+                      Review agreement with customer on this device
+                    </p>
+                  )}
                   {/* Next status button */}
                   {booking.status === "pending" && (
                     booking.agreement_signed_at ? (

@@ -17,12 +17,10 @@ export function Header() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
-  // Close mobile menu when pathname changes (Bug 37)
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
 
-  // Lock body scroll when mobile menu is open (Bug 4)
   useEffect(() => {
     if (isMobileMenuOpen) {
       document.body.style.overflow = "hidden";
@@ -34,7 +32,6 @@ export function Header() {
     };
   }, [isMobileMenuOpen]);
 
-  // Restore focus to hamburger button when menu closes
   useEffect(() => {
     if (!isMobileMenuOpen && menuButtonRef.current) {
       menuButtonRef.current.focus();
@@ -42,43 +39,45 @@ export function Header() {
   }, [isMobileMenuOpen]);
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80">
-      <a href="#main-content" className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-purple-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md">Skip to main content</a>
-      {/* Top bar */}
-      <div className="bg-purple-800 text-white">
+    <header className="site-header">
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:bg-purple-600 focus:text-white focus:px-4 focus:py-2 focus:rounded-md"
+      >
+        Skip to main content
+      </a>
+      <div className="site-header-ribbon">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-1.5 text-xs sm:px-6 lg:px-8">
-          <a href={`tel:${CONTACT_INFO.phone.replace(/[^\d+]/g, "")}`} className="flex items-center gap-2 hover:text-purple-200 transition-colors">
+          <a
+            href={`tel:${CONTACT_INFO.phone.replace(/[^\d+]/g, "")}`}
+            className="flex items-center gap-2"
+          >
             <Phone className="h-3 w-3" />
             <span>{CONTACT_INFO.phone}</span>
           </a>
-          <div className="hidden sm:block">
+          <div className="hidden sm:block text-purple-100/90">
             {CONTACT_INFO.hours.weekday} Mon-Fri
           </div>
         </div>
       </div>
 
-      {/* Main nav */}
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2">
-            <Car className="h-8 w-8 text-purple-600 flex-shrink-0" />
-            <span className="text-xl font-bold text-gray-900">
-              Next<span className="text-purple-600">Gear</span>Auto
+          <Link href="/" className="site-logo flex items-center gap-2">
+            <Car className="h-8 w-8 text-purple-600 flex-shrink-0 drop-shadow-sm" />
+            <span className="text-xl font-bold">
+              Next<span className="site-logo-accent">Gear</span>Auto
             </span>
           </Link>
 
-          {/* Desktop nav */}
           <nav className="hidden md:flex md:items-center md:gap-1">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "rounded-lg px-3 py-2 text-sm font-medium transition-colors focus-visible:text-purple-600 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none",
-                  pathname === item.href
-                    ? "bg-purple-50 text-purple-700"
-                    : "text-gray-600 hover:bg-gray-50 hover:text-gray-900"
+                  "nav-link rounded-lg px-3 py-2 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40",
+                  pathname === item.href && "nav-link--active"
                 )}
               >
                 {item.label}
@@ -86,38 +85,51 @@ export function Header() {
             ))}
           </nav>
 
-          {/* CTA + Mobile toggle */}
           <div className="flex items-center gap-3">
             <Link href="/booking" className="hidden sm:block">
               <Button size="sm">Book Now</Button>
             </Link>
-            {!authLoading && (isAuthenticated && user ? (
-              <div className="hidden sm:flex items-center gap-2">
-                {user.role === "admin" || user.role === "manager" ? (
-                  <Link href={user.role === "admin" ? "/admin" : "/manager"}>
-                    <Button variant="outline" size="sm">
-                      <Shield className="h-3.5 w-3.5 mr-1" /> {user.role === "admin" ? "Admin" : "Manager"}
-                    </Button>
-                  </Link>
-                ) : (
-                  <Link href="/account">
-                    <Button variant="outline" size="sm">
-                      <User className="h-3.5 w-3.5 mr-1" /> {(user.name || "Account").split(" ")[0]}
-                    </Button>
-                  </Link>
-                )}
-                <Button variant="outline" size="sm" onClick={async () => { setLoggingOut(true); await logout(); router.push("/"); }} disabled={loggingOut} aria-label="Sign out">
-                  <LogOut className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            ) : (
-              <Link href="/login" className="hidden sm:block">
-                <Button variant="outline" size="sm">Sign In</Button>
-              </Link>
-            ))}
+            {!authLoading &&
+              (isAuthenticated && user ? (
+                <div className="hidden sm:flex items-center gap-2">
+                  {user.role === "admin" || user.role === "manager" ? (
+                    <Link href={user.role === "admin" ? "/admin" : "/manager"}>
+                      <Button variant="outline" size="sm">
+                        <Shield className="h-3.5 w-3.5 mr-1" />{" "}
+                        {user.role === "admin" ? "Admin" : "Manager"}
+                      </Button>
+                    </Link>
+                  ) : (
+                    <Link href="/account">
+                      <Button variant="outline" size="sm">
+                        <User className="h-3.5 w-3.5 mr-1" /> {(user.name || "Account").split(" ")[0]}
+                      </Button>
+                    </Link>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={async () => {
+                      setLoggingOut(true);
+                      await logout();
+                      router.push("/");
+                    }}
+                    disabled={loggingOut}
+                    aria-label="Sign out"
+                  >
+                    <LogOut className="h-3.5 w-3.5" />
+                  </Button>
+                </div>
+              ) : (
+                <Link href="/login" className="hidden sm:block">
+                  <Button variant="outline" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+              ))}
             <button
               ref={menuButtonRef}
-              className="rounded-lg p-3 text-gray-600 hover:bg-gray-100 md:hidden"
+              className="site-header-icon-btn rounded-lg p-3 md:hidden"
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               aria-label="Toggle menu"
               aria-expanded={isMobileMenuOpen}
@@ -128,59 +140,65 @@ export function Header() {
         </div>
       </div>
 
-      {/* Mobile menu backdrop */}
       {isMobileMenuOpen && (
         <div
-          className="fixed inset-0 z-30 md:hidden"
+          className="fixed inset-0 z-30 md:hidden bg-purple-950/20 backdrop-blur-[2px]"
           onClick={() => setIsMobileMenuOpen(false)}
           aria-hidden="true"
         />
       )}
 
-      {/* Mobile menu */}
       {isMobileMenuOpen && (
-        <div className="relative z-40 border-t border-gray-200 bg-white md:hidden mobile-menu-enter">
+        <div className="relative z-40 site-header-mobile-menu md:hidden mobile-menu-enter">
           <div className="space-y-2 px-4 py-3">
             {NAV_ITEMS.map((item) => (
               <Link
                 key={item.href}
                 href={item.href}
                 className={cn(
-                  "block rounded-lg px-3 py-3 text-sm font-medium transition-colors focus-visible:text-purple-600 focus-visible:outline-2 focus-visible:outline-purple-600 outline-none",
-                  pathname === item.href
-                    ? "bg-purple-50 text-purple-700"
-                    : "text-gray-600 hover:bg-gray-50"
+                  "nav-link block rounded-lg px-3 py-3 text-sm font-medium outline-none focus-visible:ring-2 focus-visible:ring-purple-500/40",
+                  pathname === item.href && "nav-link--active"
                 )}
                 onClick={() => setIsMobileMenuOpen(false)}
               >
                 {item.label}
               </Link>
             ))}
-            <div className="flex gap-2 pt-3">
+            <div className="flex gap-2 pt-3 border-t border-purple-100/80">
               <Link href="/booking" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
-                <Button className="w-full" size="sm">Book Now</Button>
+                <Button className="w-full" size="sm">
+                  Book Now
+                </Button>
               </Link>
-              {!authLoading && (isAuthenticated && user ? (
-                <>
-                  {user.role === "admin" || user.role === "manager" ? (
-                    <Link href={user.role === "admin" ? "/admin" : "/manager"} className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full" size="sm">
-                        <Shield className="h-3.5 w-3.5 mr-1" /> {user.role === "admin" ? "Admin" : "Manager"}
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Link href="/account" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
-                      <Button variant="outline" className="w-full" size="sm">
-                        <User className="h-3.5 w-3.5 mr-1" /> Account
-                      </Button>
-                    </Link>
-                  )}
-                </>
-              ) : (
-                <Link href="/login" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
-                  <Button variant="outline" className="w-full" size="sm">Sign In</Button>
-                </Link>
-              ))}
+              {!authLoading &&
+                (isAuthenticated && user ? (
+                  <>
+                    {user.role === "admin" || user.role === "manager" ? (
+                      <Link
+                        href={user.role === "admin" ? "/admin" : "/manager"}
+                        className="flex-1"
+                        onClick={() => setIsMobileMenuOpen(false)}
+                      >
+                        <Button variant="outline" className="w-full" size="sm">
+                          <Shield className="h-3.5 w-3.5 mr-1" />{" "}
+                          {user.role === "admin" ? "Admin" : "Manager"}
+                        </Button>
+                      </Link>
+                    ) : (
+                      <Link href="/account" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
+                        <Button variant="outline" className="w-full" size="sm">
+                          <User className="h-3.5 w-3.5 mr-1" /> Account
+                        </Button>
+                      </Link>
+                    )}
+                  </>
+                ) : (
+                  <Link href="/login" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Button variant="outline" className="w-full" size="sm">
+                      Sign In
+                    </Button>
+                  </Link>
+                ))}
             </div>
           </div>
         </div>

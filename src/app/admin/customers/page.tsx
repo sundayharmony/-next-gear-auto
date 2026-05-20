@@ -48,6 +48,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
+import { AdminPageHeader, AdminPageBody } from "@/components/admin/admin-shell";
+import { AdminEmptyState } from "@/components/admin/ui-feedback";
 import { PageContainer } from "@/components/layout/page-container";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
@@ -991,7 +993,7 @@ export default function AdminCustomersPage() {
             {toastError}
           </div>
         )}
-        <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
+        <section className="page-hero page-hero--compact text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <button onClick={closeCustomer} className="flex items-center gap-1 text-sm text-purple-300 hover:text-white mb-2 transition-colors">
               <ArrowLeft className="h-4 w-4" /> Back to all customers
@@ -1021,7 +1023,7 @@ export default function AdminCustomersPage() {
                       </Badge>
                     )}
                   </h1>
-                  <div className="flex items-center gap-4 text-sm text-purple-200 mt-0.5">
+                  <div className="flex items-center gap-4 text-sm text-gray-500 mt-0.5">
                     <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {selectedCustomer.email || "No email"}</span>
                     {selectedCustomer.phone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> {selectedCustomer.phone}</span>}
                   </div>
@@ -1799,24 +1801,20 @@ export default function AdminCustomersPage() {
           {toastError}
         </div>
       )}
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Customers</h1>
-              <p className="mt-1 text-purple-200">{customers.length} total customers</p>
-            </div>
-            <Button
-              onClick={() => setShowAddCustomerModal(true)}
-              className="bg-purple-600 hover:bg-purple-700"
-            >
-              <Plus className="h-4 w-4 mr-2" /> Add Customer
-            </Button>
-          </div>
-        </div>
-      </section>
+      <AdminPageHeader
+        title="Customers"
+        subtitle={`${customers.length} total customers`}
+        actions={
+          <Button
+            onClick={() => setShowAddCustomerModal(true)}
+            className="bg-white text-purple-900 hover:bg-purple-50"
+          >
+            <Plus className="h-4 w-4 mr-2" /> Add Customer
+          </Button>
+        }
+      />
 
-      <PageContainer className="py-8">
+      <AdminPageBody>
         {/* Search */}
         <div className="flex gap-2 mb-4">
           <div className="relative flex-1 max-w-md">
@@ -1857,24 +1855,17 @@ export default function AdminCustomersPage() {
             <p className="mt-4 text-gray-500">Loading customers...</p>
           </div>
         ) : customers.length === 0 ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <Users className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-              <p className="text-gray-500 font-medium mb-1">
-                {searchInput ? "No customers match your search" : "No customers yet"}
-              </p>
-              <p className="text-gray-400 text-sm">
-                {searchInput ? "Try a different name or email" : "Customers will appear here after their first booking"}
-              </p>
-            </CardContent>
-          </Card>
+          <AdminEmptyState
+            title={searchInput ? "No customers match your search" : "No customers yet"}
+            description={searchInput ? "Try a different name or email" : "Customers will appear here after their first booking"}
+          />
         ) : (
           <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
             {paginateArray(customers).map((c) => (
               <Card
                 key={c.id}
-                className="hover:border-purple-300 hover:shadow-md transition-all"
+                className="rounded-xl border border-gray-200/80 shadow-sm hover:border-purple-300 hover:shadow-md transition-all"
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-2">
@@ -1945,7 +1936,7 @@ export default function AdminCustomersPage() {
           />
           </>
         )}
-      </PageContainer>
+      </AdminPageBody>
 
       {showAddCustomerModal && <AddCustomerModal />}
       {cropModal}

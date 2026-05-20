@@ -10,10 +10,15 @@ import {
   ArrowRight, Tag, Star, BarChart3, AlertCircle, ClipboardList, Wrench,
   RefreshCw, CheckCircle2, Settings, Sparkles, MapPin, FileText,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { PageContainer } from "@/components/layout/page-container";
+import {
+  AdminPageHeader,
+  AdminPageBody,
+  AdminCard,
+  AdminSection,
+  AdminStatCard,
+} from "@/components/admin/admin-shell";
 import { formatDate, formatTime, getLocalYmd } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
@@ -160,7 +165,7 @@ function HighlightColumn({
   emptyText: string;
 }) {
   return (
-    <div className="rounded-xl border border-gray-200 bg-white p-3 sm:p-4">
+    <AdminCard padding="sm">
       <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-gray-900">
         <Icon className="h-4 w-4 text-purple-600 shrink-0" />
         {title}
@@ -182,7 +187,7 @@ function HighlightColumn({
           ))}
         </ul>
       )}
-    </div>
+    </AdminCard>
   );
 }
 
@@ -266,26 +271,24 @@ export default function AdminDashboardPage() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Dashboard</h1>
-            <p className="mt-1 text-sm sm:text-base text-purple-200">Overview of your rental business.</p>
-          </div>
-          {data && (
+      <AdminPageHeader
+        title="Dashboard"
+        subtitle="Overview of your rental business."
+        actions={
+          data ? (
             <Button
               variant="outline"
               size="sm"
-              className="border-purple-400 text-purple-200 hover:bg-purple-800 hover:text-white hidden sm:inline-flex"
+              className="page-hero-btn-outline hidden sm:inline-flex"
               onClick={() => fetchData()}
             >
               <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
             </Button>
-          )}
-        </div>
-      </section>
+          ) : undefined
+        }
+      />
 
-      <PageContainer className="py-6 sm:py-8">
+      <AdminPageBody>
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" role="status" aria-label="Loading dashboard" />
@@ -309,27 +312,18 @@ export default function AdminDashboardPage() {
                 { label: "Revenue", value: formatCurrency(data.totalRevenue ?? 0), icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
                 { label: "Collected", value: formatCurrency(data.totalDeposits ?? 0), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
               ].map((stat) => (
-                <Card key={stat.label}>
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={`rounded-lg ${stat.bg} p-2.5 ${stat.color}`}>
-                        <stat.icon className="h-5 w-5" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-xl font-bold text-gray-900 truncate">{stat.value}</p>
-                        <p className="text-xs text-gray-500 truncate">{stat.label}</p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
+                <AdminStatCard
+                  key={stat.label}
+                  label={stat.label}
+                  value={stat.value}
+                  icon={stat.icon}
+                  iconClassName={stat.color}
+                  iconBgClassName={stat.bg}
+                />
               ))}
             </div>
 
-            <div className="mb-8">
-              <div className="flex items-center gap-2 mb-4">
-                <Sparkles className="h-5 w-5 text-amber-500" />
-                <h2 className="text-xl font-semibold text-gray-900">Today&apos;s highlights</h2>
-              </div>
+            <AdminSection title="Today's highlights" icon={Sparkles}>
               {highlights && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                   <HighlightColumn
@@ -365,47 +359,38 @@ export default function AdminDashboardPage() {
                   </Link>
                 ))}
               </div>
-            </div>
+            </AdminSection>
 
-            <Card className="mb-8 border-purple-100">
-              <CardContent className="p-4 sm:p-5">
-                <div className="flex items-center gap-2 mb-2">
-                  <FileText className="h-4 w-4 text-purple-600" />
-                  <h2 className="text-base sm:text-lg font-semibold text-gray-900">
-                    Week-to-Week Contracts
-                  </h2>
-                </div>
-                <p className="text-xs sm:text-sm text-gray-500 mb-3">
-                  Open a booking and mark it as <strong>Recurring Long-Term</strong> to generate the week-to-week contract from that booking.
-                </p>
-                <Link href="/admin/bookings">
-                  <Button variant="outline" className="text-xs sm:text-sm">
-                    Go to Bookings
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="text-xl font-semibold text-gray-900">Recent bookings</h2>
-                <p className="text-xs text-gray-400 mt-0.5">Pending &amp; active only, up to 10, newest first</p>
-              </div>
+            <AdminSection
+              title="Week-to-Week Contracts"
+              icon={FileText}
+              description="Open a booking and mark it as Recurring Long-Term to generate the week-to-week contract from that booking."
+            >
               <Link href="/admin/bookings">
-                <Button variant="outline" size="sm" className="gap-1.5 text-purple-700 border-purple-200 hover:bg-purple-50 hover:border-purple-300">
-                  View All <ArrowRight className="h-3.5 w-3.5" />
+                <Button variant="outline" className="text-xs sm:text-sm">
+                  Go to Bookings
                 </Button>
               </Link>
-            </div>
+            </AdminSection>
+
+            <AdminSection
+              title="Recent bookings"
+              description="Pending & active only, up to 10, newest first"
+              actions={
+                <Link href="/admin/bookings">
+                  <Button variant="outline" size="sm" className="gap-1.5 text-purple-700 border-purple-200 hover:bg-purple-50 hover:border-purple-300">
+                    View All <ArrowRight className="h-3.5 w-3.5" />
+                  </Button>
+                </Link>
+              }
+            >
 
             {data.recentBookings.length === 0 ? (
-              <Card>
-                <CardContent className="py-16 text-center">
-                  <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 font-medium">No pending or active rentals</p>
-                  <p className="text-sm text-gray-400 mt-1">When new bookings need action or vehicles are out, they will appear here.</p>
-                </CardContent>
-              </Card>
+              <AdminCard className="py-16 text-center">
+                <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" aria-hidden />
+                <p className="text-gray-500 font-medium">No pending or active rentals</p>
+                <p className="text-sm text-gray-400 mt-1">When new bookings need action or vehicles are out, they will appear here.</p>
+              </AdminCard>
             ) : (
               <div className="space-y-2.5">
                 {data.recentBookings.map((booking) => {
@@ -491,9 +476,10 @@ export default function AdminDashboardPage() {
                 })}
               </div>
             )}
+            </AdminSection>
           </>
         ) : null}
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

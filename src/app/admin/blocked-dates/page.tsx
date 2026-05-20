@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
+import { AdminPageBody } from "@/components/admin/admin-shell";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -421,12 +422,12 @@ export default function BlockedDatesPage() {
   return (
     <>
       {/* Header */}
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
+      <section className="page-hero page-hero--compact text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Blocked Dates</h1>
-              <p className="mt-1 text-purple-200">
+              <p className="mt-1 page-hero-subtitle">
                 Block dates manually or from Turo booking emails
               </p>
             </div>
@@ -449,7 +450,7 @@ export default function BlockedDatesPage() {
         </div>
       </section>
 
-      <PageContainer className="py-8">
+      <AdminPageBody>
         {/* Toasts */}
         {success && (
           <div className="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center justify-between">
@@ -1016,7 +1017,7 @@ export default function BlockedDatesPage() {
             </div>
           </div>
         )}
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

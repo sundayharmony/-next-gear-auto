@@ -29,6 +29,7 @@ export const panelFeatureRegistry: PanelFeature[] = [
   { key: "promoCodes", label: "Promo Codes", adminPath: "/admin/promo-codes", managerPath: "/manager/promo-codes", sharedWithManager: true },
   { key: "reviews", label: "Reviews", adminPath: "/admin/reviews", managerPath: "/manager/reviews", sharedWithManager: true },
   { key: "instagram", label: "Instagram", adminPath: "/admin/instagram", managerPath: "/manager/instagram", sharedWithManager: true },
+  { key: "marketing", label: "Marketing", adminPath: "/admin/marketing", sharedWithManager: false },
   /** Manager-only: admin uses Finances at /admin/finances (see finances row). */
   { key: "analytics", label: "Analytics", managerPath: "/manager/analytics", sharedWithManager: true },
 ];

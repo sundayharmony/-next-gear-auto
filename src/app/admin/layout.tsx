@@ -167,10 +167,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     <div className={cn("flex flex-col h-dvh lg:flex-row lg:h-auto lg:min-h-screen", isDark && "admin-dark")}>
       {/* ═══════ MOBILE STICKY HEADER BAR ═══════ */}
       <div className="relative z-[45] shrink-0 lg:hidden">
-        <div className="bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-sm pwa-safe-top">
+        <div className="nga-panel-header pwa-safe-top">
           <div className="flex items-center justify-between px-4 h-14">
             {/* Page title */}
-            <h1 className="text-[17px] font-semibold text-gray-900 truncate">
+            <h1 className="text-[17px] font-semibold text-gray-900 truncate tracking-tight">
               {currentTitle}
             </h1>
 
@@ -333,9 +333,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
               href={item.href}
               onClick={() => setSidebarOpen(false)}
               className={cn(
-                "flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                 isActive(item.href)
-                  ? "bg-purple-600 text-white"
+                  ? "bg-purple-600 text-white shadow-sm shadow-purple-900/20"
                   : isDark
                     ? "text-gray-300 hover:bg-[#1a1a1a] hover:text-white"
                     : "text-gray-400 hover:bg-gray-800 hover:text-white"

@@ -320,12 +320,12 @@ export default function AdminCalendarPage() {
   return (
     <>
       {/* Desktop header */}
-      <section className="hidden sm:block bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
+      <section className="hidden sm:block page-hero page-hero--compact text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Booking Calendar</h1>
-              <p className="mt-1 text-purple-200">Manage all vehicle reservations</p>
+              <p className="mt-1 page-hero-subtitle">Manage all vehicle reservations</p>
             </div>
             <Button
               onClick={handleRefresh}
@@ -333,7 +333,7 @@ export default function AdminCalendarPage() {
               variant="outline"
               size="sm"
               aria-label="Refresh calendar"
-              className="gap-2 border-purple-400 text-purple-200 hover:bg-purple-800 hover:text-white"
+              className="gap-2 page-hero-btn-outline"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
               Refresh

@@ -113,10 +113,10 @@ export default function FAQPage() {
       />
 
       {/* Hero */}
-      <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-16 text-white">
+      <section className="page-hero page-hero--lg text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <h1 className="text-4xl font-bold sm:text-5xl">FAQ & Policies</h1>
-          <p className="mt-3 text-lg text-purple-200">
+          <p className="mt-3 text-lg page-hero-subtitle">
             Everything you need to know about renting with NextGearAuto.
           </p>
         </div>

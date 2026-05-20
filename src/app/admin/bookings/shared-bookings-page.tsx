@@ -4,7 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageHeader, AdminPageBody } from "@/components/admin/admin-shell";
+import { AdminStatusBanner } from "@/components/admin/ui-feedback";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { exportToCSV } from "@/lib/utils/csv-export";
 import { formatDate } from "@/lib/utils/date-helpers";
@@ -21,6 +22,7 @@ import { TodaySummary } from "./components/TodaySummary";
 import BookingFilters from "./components/BookingFilters";
 import BookingTable from "./components/BookingTable";
 import { BookingDetailPanel } from "./components/BookingDetailPanel";
+import { InPersonAgreementSign } from "./components/InPersonAgreementSign";
 import { TuroTripDetailPanel } from "./components/TuroTripDetailPanel";
 import CreateBookingForm from "./components/CreateBookingForm";
 import type { BookingRow } from "./types";
@@ -51,6 +53,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
   const [bulkUpdating, setBulkUpdating] = useState(false);
   const [bulkSending, setBulkSending] = useState(false);
   const [prefillApplied, setPrefillApplied] = useState(false);
+  const [inPersonSignBooking, setInPersonSignBooking] = useState<BookingRow | null>(null);
   const detailDirtyRef = React.useRef(false);
 
   const { currentPage, pageSize, handlePageChange, handlePageSizeChange, resetPage, paginateArray } = usePagination(10);
@@ -283,7 +286,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
+      <section className="page-hero page-hero--compact text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
             <Link href={config.homeHref} className="text-purple-300 hover:text-white transition-colors">
@@ -291,25 +294,19 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
             </Link>
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">{config.title}</h1>
-              <p className="mt-1 text-sm sm:text-base text-purple-200">{config.subtitle}</p>
+              <p className="mt-1 text-sm sm:text-base page-hero-subtitle">{config.subtitle}</p>
             </div>
           </div>
         </div>
       </section>
 
-      <PageContainer className="py-5 sm:py-8">
-        {success && (
-          <div className="mb-4 rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 flex items-center justify-between">
-            <span className="flex items-center gap-2"><Check className="h-4 w-4" />{success}</span>
-            <button onClick={() => setSuccess(null)} aria-label="Dismiss success message" className="text-green-400 hover:text-green-600 ml-3">&times;</button>
-          </div>
-        )}
-        {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
-            <span>{error}</span>
-            <button onClick={() => setError(null)} aria-label="Dismiss error" className="text-red-400 hover:text-red-600 ml-3">&times;</button>
-          </div>
-        )}
+      <AdminPageBody>
+        {success ? (
+          <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} />
+        ) : null}
+        {error ? (
+          <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} />
+        ) : null}
 
         <TodaySummary
           todayPickups={todayPickups}
@@ -385,7 +382,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
           onPageChange={handlePageChange}
           onPageSizeChange={handlePageSizeChange}
         />
-      </PageContainer>
+      </AdminPageBody>
 
       {showDetail && selectedBooking && (
         selectedBooking.occupancy_kind === "turo" || selectedBooking.id.startsWith("turo:") ? (
@@ -405,11 +402,29 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
               canViewActivityTimeline: config.capabilities.canViewActivityTimeline,
               canManagePayments: config.capabilities.canManagePayments,
               canExtendBooking: config.capabilities.canExtendBooking,
+              canSignAgreementInPerson: config.capabilities.canSignAgreementInPerson,
               customerDetailsBasePath: config.customerDetailsBasePath,
               ticketsPagePath: config.ticketsPagePath,
             }}
+            onStartInPersonSign={() => setInPersonSignBooking(selectedBooking)}
           />
         )
+      )}
+
+      {inPersonSignBooking && (
+        <InPersonAgreementSign
+          booking={inPersonSignBooking}
+          vehicles={vehicles}
+          onClose={() => setInPersonSignBooking(null)}
+          onSigned={(fields) => {
+            const updated = { ...inPersonSignBooking, ...fields };
+            handleUpdateBookingInList(updated);
+            if (selectedBooking?.id === inPersonSignBooking.id) {
+              setSelectedBooking(updated);
+            }
+            setSuccess("Rental agreement signed in person.");
+          }}
+        />
       )}
     </>
   );

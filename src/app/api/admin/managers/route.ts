@@ -5,6 +5,7 @@ import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
 import { sendPasswordResetLink } from "@/lib/email/mailer";
 import { isValidEmailFormat } from "@/lib/utils/validation";
+import { MANAGER_DB_SELECT, toManagerPublic, toManagerPublicList } from "@/lib/admin/manager-api";
 
 function isRoleConstraintError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
   const supabase = getServiceSupabase();
   const { data, error } = await supabase
     .from("customers")
-    .select("id, name, email, phone, role, manager_access_enabled, manager_access_granted_at, manager_access_revoked_at, created_at")
+    .select(MANAGER_DB_SELECT)
     .eq("role", "manager")
     .order("created_at", { ascending: false });
 
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Failed to list managers" }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, data: data || [] });
+  return NextResponse.json({ success: true, data: toManagerPublicList(data) });
 }
 
 export async function POST(req: NextRequest) {
@@ -93,17 +94,7 @@ export async function POST(req: NextRequest) {
   }
 
   const now = new Date().toISOString();
-  let data: {
-    id: string;
-    name: string;
-    email: string;
-    phone: string | null;
-    role: string;
-    manager_access_enabled: boolean;
-    manager_access_granted_at: string | null;
-    manager_access_revoked_at: string | null;
-    created_at?: string;
-  } | null = null;
+  let managerRow: Parameters<typeof toManagerPublic>[0] | null = null;
   let inviteMessage = "";
 
   if (existingCustomer) {
@@ -118,7 +109,7 @@ export async function POST(req: NextRequest) {
         manager_access_revoked_at: null,
       })
       .eq("id", existingCustomer.id)
-      .select("id, name, email, phone, role, manager_access_enabled, manager_access_granted_at, manager_access_revoked_at, created_at")
+      .select(MANAGER_DB_SELECT)
       .maybeSingle();
 
     if (updateError) {
@@ -128,7 +119,7 @@ export async function POST(req: NextRequest) {
       }
       return NextResponse.json({ success: false, message: "Failed to create manager" }, { status: 500 });
     }
-    data = updated;
+    managerRow = updated;
 
     if (!existingCustomer.password_hash) {
       try {
@@ -159,7 +150,7 @@ export async function POST(req: NextRequest) {
         manager_access_granted_at: now,
         manager_access_revoked_at: null,
       })
-      .select("id, name, email, phone, role, manager_access_enabled, manager_access_granted_at, manager_access_revoked_at, created_at")
+      .select(MANAGER_DB_SELECT)
       .maybeSingle();
 
     if (insertError) {
@@ -169,7 +160,7 @@ export async function POST(req: NextRequest) {
       }
       return NextResponse.json({ success: false, message: "Failed to create manager" }, { status: 500 });
     }
-    data = inserted;
+    managerRow = inserted;
 
     try {
       await sendPasswordResetLink({
@@ -187,13 +178,17 @@ export async function POST(req: NextRequest) {
     userId: auth.adminId,
     details: {
       action: "manager_access_granted",
-      targetUserId: data?.id,
-      targetEmail: data?.email,
+      targetUserId: managerRow?.id,
+      targetEmail: managerRow?.email,
     },
   });
 
   return NextResponse.json(
-    { success: true, data, message: `Manager access created.${inviteMessage}`.trim() },
+    {
+      success: true,
+      data: managerRow ? toManagerPublic(managerRow) : null,
+      message: `Manager access created.${inviteMessage}`.trim(),
+    },
     { status: existingCustomer ? 200 : 201 }
   );
 }
@@ -231,7 +226,7 @@ export async function PATCH(req: NextRequest) {
     .from("customers")
     .update(updates)
     .eq("id", managerId)
-    .select("id, name, email, phone, role, manager_access_enabled, manager_access_granted_at, manager_access_revoked_at, created_at")
+    .select(MANAGER_DB_SELECT)
     .maybeSingle();
 
   if (error) {
@@ -250,5 +245,5 @@ export async function PATCH(req: NextRequest) {
     },
   });
 
-  return NextResponse.json({ success: true, data });
+  return NextResponse.json({ success: true, data: data ? toManagerPublic(data) : null });
 }

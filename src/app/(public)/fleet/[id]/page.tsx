@@ -195,7 +195,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
       </script>
 
       {/* Breadcrumb header */}
-      <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-8 text-white">
+      <section className="page-hero page-hero--sm text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Breadcrumbs
             items={[
@@ -205,7 +205,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
           />
           <div className="flex items-start justify-between">
             <div>
-              <Badge className="mb-2 bg-purple-500/20 text-purple-200 border border-purple-400/30">{vehicle.category}</Badge>
+              <Badge className="mb-2 bg-purple-500/20 page-hero-subtitle border border-purple-400/30">{vehicle.category}</Badge>
               <h1 className="text-3xl font-bold sm:text-4xl">{vehicleDisplayName}</h1>
               {avgRating && (
                 <div className="mt-2 flex items-center gap-2">
@@ -214,13 +214,13 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                       <Star key={i} className={`h-4 w-4 ${i < Math.floor(parseFloat(avgRating) || 0) ? "fill-amber-400 text-amber-400" : "text-gray-500"}`} aria-hidden="true" />
                     ))}
                   </div>
-                  <span className="text-sm text-purple-200">{avgRating}/5 ({vehicleReviews.length} reviews)</span>
+                  <span className="text-sm page-hero-subtitle">{avgRating}/5 ({vehicleReviews.length} reviews)</span>
                 </div>
               )}
             </div>
             <div className="text-right hidden sm:block">
               <div className="text-3xl font-bold">${vehicle.daily_rate}</div>
-              <div className="text-purple-200 text-sm">per day</div>
+              <div className="page-hero-subtitle text-sm">per day</div>
             </div>
           </div>
         </div>
@@ -392,7 +392,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
                             className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                           />
                         ) : (
-                          <Car className="h-16 w-16 text-purple-200 group-hover:text-purple-400 transition-colors" />
+                          <Car className="h-16 w-16 text-purple-300/70 group-hover:text-purple-400 transition-colors" />
                         )}
                       </div>
                       <CardContent className="p-5">

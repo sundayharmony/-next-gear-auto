@@ -4,6 +4,7 @@ import { verifyAdmin } from "@/lib/auth/admin-check";
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
 import { isValidEmailFormat } from "@/lib/utils/validation";
+import { MANAGER_DB_SELECT, toManagerPublic } from "@/lib/admin/manager-api";
 
 type Params = { params: Promise<{ managerId: string }> };
 
@@ -23,9 +24,6 @@ function schemaMismatchResponse() {
     { status: 409 }
   );
 }
-
-const SELECT_FIELDS =
-  "id, name, email, phone, role, manager_access_enabled, manager_access_granted_at, manager_access_revoked_at, created_at";
 
 /**
  * Update a manager's profile (name, email, phone). Target row must have role = manager.
@@ -127,7 +125,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     .update(updates)
     .eq("id", managerId)
     .eq("role", "manager")
-    .select(SELECT_FIELDS)
+    .select(MANAGER_DB_SELECT)
     .maybeSingle();
 
   if (error) {
@@ -151,7 +149,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     },
   });
 
-  return NextResponse.json({ success: true, data });
+  return NextResponse.json({ success: true, data: toManagerPublic(data) });
 }
 
 /**
@@ -192,7 +190,7 @@ export async function DELETE(req: NextRequest, { params }: Params) {
       role: "customer",
     })
     .eq("id", managerId)
-    .select(SELECT_FIELDS)
+    .select(MANAGER_DB_SELECT)
     .maybeSingle();
 
   if (error) {
@@ -212,5 +210,9 @@ export async function DELETE(req: NextRequest, { params }: Params) {
     },
   });
 
-  return NextResponse.json({ success: true, data, message: "Manager removed. Account is now a customer." });
+  return NextResponse.json({
+    success: true,
+    data: data ? toManagerPublic(data) : null,
+    message: "Manager removed. Account is now a customer.",
+  });
 }

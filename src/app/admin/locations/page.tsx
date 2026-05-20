@@ -302,12 +302,12 @@ export default function AdminLocationsPage() {
       )}
 
       {/* Header */}
-      <section className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 sm:py-8 text-white">
+      <section className="page-hero page-hero--compact text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Locations</h1>
-              <p className="mt-1 text-purple-200">Manage pickup and dropoff locations</p>
+              <p className="mt-1 page-hero-subtitle">Manage pickup and dropoff locations</p>
             </div>
             <Button onClick={() => { setEditId(null); setShowAdd(!showAdd); if (showAdd) setAddForm({ ...blank }); }}
               className="bg-white text-purple-900 hover:bg-gray-100">

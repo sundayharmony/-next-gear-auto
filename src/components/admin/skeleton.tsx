@@ -20,7 +20,7 @@ export function DashboardSkeleton() {
   return (
     <div className="animate-in fade-in duration-200">
       {/* Header skeleton */}
-      <div className="bg-gradient-to-br from-gray-900 to-purple-900 py-6 px-4">
+      <div className="page-hero page-hero--compact px-4">
         <Skeleton className="h-7 w-44 bg-white/10 rounded-lg" />
         <Skeleton className="h-4 w-56 bg-white/10 rounded-lg mt-2" />
       </div>

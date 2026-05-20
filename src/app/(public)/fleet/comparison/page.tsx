@@ -40,7 +40,7 @@ function ComparisonContent() {
   if (selectedVehicles.length < 2) {
     return (
       <>
-        <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-12 text-white">
+        <section className="page-hero page-hero--md text-white">
           <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <h1 className="text-3xl font-bold">Compare Vehicles</h1>
           </div>
@@ -86,7 +86,7 @@ function ComparisonContent() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-12 text-white">
+      <section className="page-hero page-hero--md text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <Link
             href="/fleet"
@@ -95,7 +95,7 @@ function ComparisonContent() {
             <ArrowLeft className="h-4 w-4" /> Back to Fleet
           </Link>
           <h1 className="text-3xl font-bold">Compare Vehicles</h1>
-          <p className="mt-2 text-purple-200">
+          <p className="mt-2 page-hero-subtitle">
             Comparing {selectedVehicles.length} vehicles side by side
           </p>
         </div>

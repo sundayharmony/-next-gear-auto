@@ -23,6 +23,7 @@ export interface BookingsPageConfig {
     canViewActivityTimeline: boolean;
     canManagePayments: boolean;
     canExtendBooking: boolean;
+    canSignAgreementInPerson: boolean;
   };
 }
 
@@ -47,6 +48,7 @@ export const adminBookingsConfig: BookingsPageConfig = {
     canViewActivityTimeline: true,
     canManagePayments: true,
     canExtendBooking: true,
+    canSignAgreementInPerson: true,
   },
 };
 
@@ -71,5 +73,6 @@ export const managerBookingsConfig: BookingsPageConfig = {
     canViewActivityTimeline: false,
     canManagePayments: false,
     canExtendBooking: false,
+    canSignAgreementInPerson: true,
   },
 };

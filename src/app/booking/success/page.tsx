@@ -146,7 +146,7 @@ function SuccessContent() {
 
   return (
     <>
-      <section className="bg-gradient-to-br from-green-700 to-green-900 py-16 text-white">
+      <section className="page-hero page-hero--success page-hero--lg text-white">
         <div className="mx-auto max-w-5xl px-4 text-center">
           <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-white/20 animate-bounce">
             <Check className="h-10 w-10 text-white" />

@@ -168,13 +168,13 @@ export default function SocialPage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-16 text-white">
+      <section className="page-hero page-hero--lg text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3 mb-2">
             <Instagram className="h-8 w-8 text-purple-300" />
             <h1 className="text-2xl sm:text-4xl font-bold">Follow the Ride</h1>
           </div>
-          <p className="mt-2 text-lg text-purple-200 max-w-2xl">
+          <p className="mt-2 text-lg page-hero-subtitle max-w-2xl">
             Check out our latest posts, reels, and behind-the-scenes content
             from NextGearAuto.
           </p>

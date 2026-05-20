@@ -824,10 +824,10 @@ function BookingPageInner() {
   return (
     <>
       {/* Header */}
-      <section className="bg-gradient-to-br from-purple-900 to-gray-900 py-8 text-white">
+      <section className="page-hero page-hero--sm text-white">
         <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl font-bold">Book Your Vehicle</h1>
-          <p className="mt-1 text-purple-200">Complete the steps below to reserve your rental.</p>
+          <p className="mt-1 page-hero-subtitle">Complete the steps below to reserve your rental.</p>
         </div>
       </section>
 
