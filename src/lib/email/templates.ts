@@ -134,6 +134,33 @@ function detailRow(label: string, value: string, bold = false): string {
   </tr>`;
 }
 
+/** Bold, larger renter name for greetings and inline copy. */
+function highlightRenterName(name: string): string {
+  const trimmed = (name || "").trim();
+  if (!trimmed) return "there";
+  return `<strong style="color: #111827; font-size: 17px; font-weight: 800;">${escapeHtml(trimmed)}</strong>`;
+}
+
+/** Centered greeting used in booking summary emails. */
+function renterGreetingCentered(customerName: string, message: string): string {
+  return `<p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${highlightRenterName(customerName)}, ${message}</p>`;
+}
+
+/** Left-aligned greeting for reminder/cancellation-style emails. */
+function renterGreetingLine(customerName: string): string {
+  return `<p style="margin: 0 0 6px; color: #111827; font-size: 16px; line-height: 1.5;">Hi ${highlightRenterName(customerName)},</p>`;
+}
+
+/** First row in booking detail tables — renter name stands out. */
+function renterDetailRow(customerName: string): string {
+  const trimmed = (customerName || "").trim();
+  if (!trimmed) return "";
+  return `<tr>
+    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #6b7280; font-size: 14px;">Renter</td>
+    <td style="padding: 12px 0; border-bottom: 1px solid #f3f4f6; color: #111827; font-size: 18px; font-weight: 800; text-align: right; line-height: 1.3;">${escapeHtml(trimmed)}</td>
+  </tr>`;
+}
+
 function dateTimeBlock(label: string, date: string, time: string | undefined, accentColor: string, bgGradient: string): string {
   const formattedDate = fmtDate(date);
   const formattedTime = fmtTime(time);
@@ -218,13 +245,14 @@ function bookingEmailTemplate(
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escapeHtml(data.customerName)}, ${opts.message}</p>
+        ${renterGreetingCentered(data.customerName, opts.message)}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
           <tr>
             <td style="padding: 20px 24px;">
               <p style="margin: 0 0 4px; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Booking ID</p>
               <p style="margin: 0 0 16px; color: #111827; font-size: 14px; font-weight: 600; font-family: monospace;">${data.bookingId}</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${renterDetailRow(data.customerName)}
                 ${detailRow('Vehicle', escapeHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
                 ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
@@ -330,7 +358,7 @@ export function adminNewBookingTemplate(data: EmailData): string {
     <tr>
       <td style="padding: 0 32px;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-          ${detailRow('Customer', escapeHtml(data.customerName), true)}
+          ${renterDetailRow(data.customerName)}
           ${detailRow('Email', escapeHtml(data.customerEmail))}
           ${detailRow('Vehicle', escapeHtml(data.vehicleName), true)}
         </table>
@@ -361,7 +389,7 @@ export function cancellationTemplate(data: EmailData): string {
     ${headerBlock('Booking Cancelled', 'Your reservation has been cancelled', '#DC2626', '#B91C1C')}
     <tr>
       <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escapeHtml(data.customerName)},</p>
+        ${renterGreetingLine(data.customerName)}
         <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Your booking <strong style="color: #111827;">${escapeHtml(data.bookingId)}</strong> for the <strong>${escapeHtml(data.vehicleName)}</strong> has been cancelled.</p>
       </td>
     </tr>
@@ -417,7 +445,7 @@ function reminderTemplate(
     ${headerBlock(headerTitle, headerSubtitle, headerBgColor, headerBgEnd)}
     <tr>
       <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escapeHtml(data.customerName)},</p>
+        ${renterGreetingLine(data.customerName)}
         <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">${message}</p>
       </td>
     </tr>
@@ -505,13 +533,14 @@ export function bookingSignAgreementTemplate(data: EmailData): string {
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escapeHtml(data.customerName)}, please review your details and sign the rental agreement before pickup.</p>
+        ${renterGreetingCentered(data.customerName, "please review your details and sign the rental agreement before pickup.")}
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; padding: 0; margin: 0 0 20px;">
           <tr>
             <td style="padding: 20px 24px;">
               <p style="margin: 0 0 4px; color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Booking ID</p>
               <p style="margin: 0 0 16px; color: #111827; font-size: 14px; font-weight: 600; font-family: monospace;">${data.bookingId}</p>
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${renterDetailRow(data.customerName)}
                 ${detailRow('Vehicle', escapeHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', `${fmtDate(data.pickupDate)}${data.pickupTime ? ' at ' + fmtTime(data.pickupTime) : ''}`)}
                 ${detailRow('Return', `${fmtDate(data.returnDate)}${data.returnTime ? ' at ' + fmtTime(data.returnTime) : ''}`)}
@@ -554,7 +583,7 @@ export function passwordResetTemplate(data: { customerName: string; customerEmai
     </tr>
     <tr>
       <td style="padding: 0 32px;">
-        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${escapeHtml(data.customerName)}, use the button below to set up your password for your NextGearAuto account.</p>
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${highlightRenterName(data.customerName)}, use the button below to set up your password for your NextGearAuto account.</p>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 20px;">
           <tr>
             <td align="center">
@@ -579,7 +608,7 @@ export function bookingExtendedTemplate(data: ExtensionEmailData): string {
     ${headerBlock('Trip Extended', 'Your rental has been extended', '#7C3AED', '#5B21B6')}
     <tr>
       <td style="padding: 32px 32px 0;">
-        <p style="margin: 0 0 6px; color: #111827; font-size: 18px; font-weight: 600;">Hi ${escapeHtml(data.customerName)},</p>
+        ${renterGreetingLine(data.customerName)}
         <p style="margin: 0; color: #6b7280; font-size: 14px; line-height: 1.7;">Great news! Your trip has been extended.</p>
       </td>
     </tr>
@@ -589,6 +618,7 @@ export function bookingExtendedTemplate(data: ExtensionEmailData): string {
           <tr>
             <td style="padding: 20px 24px;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${renterDetailRow(data.customerName)}
                 ${detailRow('Vehicle', escapeHtml(data.vehicleName), true)}
                 ${detailRow('Pick-up', fmtDate(data.pickupDate))}
                 ${detailRow('Original Return', `<span style="text-decoration: line-through; color: #9ca3af;">${fmtDate(data.originalReturnDate)}</span>`, false)}

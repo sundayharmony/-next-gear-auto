@@ -275,10 +275,12 @@ function agreementEmailTemplate(data: BookingEmailData): string {
     <p style="margin:8px 0 0;color:rgba(255,255,255,0.85);font-size:14px;">Booking ${bId}</p>
   </td></tr>
   <tr><td style="padding:32px 40px;">
-    <p style="margin:0 0 16px;font-size:16px;color:#1f2937;">Hi ${name},</p>
+    <p style="margin:0 0 16px;font-size:16px;color:#1f2937;">Hi <strong style="color:#111827;font-size:17px;font-weight:800;">${name}</strong>,</p>
     <p style="margin:0 0 24px;font-size:15px;color:#4b5563;">Your signed rental agreement is attached to this email as a PDF. Please keep this for your records.</p>
     <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border-radius:12px;margin-bottom:24px;">
       <tr><td style="padding:20px 24px;">
+        <p style="margin:0 0 4px;font-size:11px;color:#9ca3af;text-transform:uppercase;letter-spacing:1px;font-weight:600;">Renter</p>
+        <p style="margin:0 0 16px;font-size:18px;color:#111827;font-weight:800;">${name}</p>
         <p style="margin:0 0 8px;font-size:13px;color:#6b7280;text-transform:uppercase;font-weight:600;">Vehicle</p>
         <p style="margin:0 0 16px;font-size:16px;color:#1f2937;font-weight:600;">${vehicle}</p>
         <p style="margin:0 0 4px;font-size:13px;color:#6b7280;">Pickup: <strong style="color:#1f2937;">${fmtDate(data.pickupDate)}${fmtTimeAt(data.pickupTime)}</strong></p>
