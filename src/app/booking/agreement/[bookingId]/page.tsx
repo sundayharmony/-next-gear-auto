@@ -18,6 +18,7 @@ import {
   AgreementSigningWizard,
   type AgreementSigningVehicle,
 } from "@/components/agreement-signing-wizard";
+import { vehicleForSigningFromDisplayName } from "@/lib/agreement/vehicle-for-signing";
 import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
 interface BookingInfo {
@@ -60,15 +61,16 @@ export default function AgreementSigningPage() {
         if (!isMounted) return;
         if (data.success && data.data) {
           setBooking(data.data);
+          let resolvedVehicle: AgreementSigningVehicle | null = null;
           if (data.data.vehicle_id) {
             try {
               const vRes = await fetch("/api/vehicles");
               if (!vRes.ok) throw new Error(`HTTP ${vRes.status}`);
               const vData = await vRes.json();
-              if (isMounted && vData.success && Array.isArray(vData.data)) {
+              if (vData.success && Array.isArray(vData.data)) {
                 const v = vData.data.find((veh: { id: string }) => veh.id === data.data.vehicle_id);
                 if (v) {
-                  setVehicle({
+                  resolvedVehicle = {
                     make: v.make,
                     model: v.model,
                     year: v.year,
@@ -76,13 +78,17 @@ export default function AgreementSigningPage() {
                     vin: v.vin,
                     color: v.color,
                     mileage: v.mileage,
-                  });
+                  };
                 }
               }
             } catch {
-              // Vehicle fetch failed, continue without it
+              // Fall back to booking vehicle name below
             }
           }
+          if (!resolvedVehicle && data.data.vehicle_name) {
+            resolvedVehicle = vehicleForSigningFromDisplayName(data.data.vehicle_name);
+          }
+          if (isMounted) setVehicle(resolvedVehicle);
           if (data.data.agreement_signed_at) {
             setSubmitted(true);
             setSignedUrl(data.data.rental_agreement_url);
@@ -119,14 +125,16 @@ export default function AgreementSigningPage() {
         customerEmail: booking.customer_email,
       }),
     });
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
+    if (!res.ok || !data.success) {
+      throw new Error(data.error || "Failed to submit signed agreement.");
+    }
 
-    if (data.success && data.data?.url) {
+    if (data.data?.url) {
       setSubmitted(true);
       setSignedUrl(data.data.url);
     } else {
-      throw new Error(data.error || "Failed to submit signed agreement.");
+      throw new Error("Failed to submit signed agreement.");
     }
   };
 

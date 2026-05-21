@@ -16,7 +16,8 @@ export type PanelIconKey =
   | "instagram"
   | "clipboard"
   | "messageSquare"
-  | "megaphone";
+  | "megaphone"
+  | "fileText";
 
 export interface PanelNavItem {
   key: string;
@@ -44,6 +45,7 @@ const iconMap: Record<string, PanelIconKey> = {
   instagram: "instagram",
   analytics: "clipboard",
   marketing: "megaphone",
+  invoices: "fileText",
 };
 
 export function getAdminNavItems(): PanelNavItem[] {

@@ -73,6 +73,11 @@ import {
 
 import { isAllowedExternalHref } from "@/lib/utils/safe-url";
 import { SendInvoiceModal } from "./SendInvoiceModal";
+import {
+  INVOICE_STATUS_COLORS,
+  INVOICE_STATUS_LABELS,
+  type InvoicePaymentStatus,
+} from "@/lib/invoices/invoice-status";
 
 interface BookingDetailPanelProps {
   booking: BookingRow;
@@ -145,6 +150,12 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   // Email sending
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showSendInvoiceModal, setShowSendInvoiceModal] = useState(false);
+  const [invoiceSummary, setInvoiceSummary] = useState<{
+    id: string;
+    sent_at: string | null;
+    paymentStatus: InvoicePaymentStatus;
+  } | null>(null);
+  const invoicesPagePath = pathname.startsWith("/manager") ? "/manager/invoices" : "/admin/invoices";
   const [resendingAgreement, setResendingAgreement] = useState(false);
   const [overridingAgreement, setOverridingAgreement] = useState(false);
 
@@ -189,6 +200,39 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       }
     };
   }, [onClose]);
+
+  useEffect(() => {
+    if (!canSendInvoice) {
+      setInvoiceSummary(null);
+      return;
+    }
+    let cancelled = false;
+    adminFetch(`/api/admin/invoices?bookingId=${encodeURIComponent(booking.id)}&limit=1`)
+      .then(async (res) => {
+        const data = await res.json();
+        if (cancelled) return;
+        if (res.ok && data.success && Array.isArray(data.data) && data.data[0]) {
+          const inv = data.data[0] as {
+            id: string;
+            sent_at: string | null;
+            paymentStatus: InvoicePaymentStatus;
+          };
+          setInvoiceSummary({
+            id: inv.id,
+            sent_at: inv.sent_at,
+            paymentStatus: inv.paymentStatus,
+          });
+        } else {
+          setInvoiceSummary(null);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setInvoiceSummary(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [booking.id, canSendInvoice, showSendInvoiceModal]);
 
   // Fetch tickets, activity, and payments on mount (in parallel)
   useEffect(() => {
@@ -1589,7 +1633,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 )}
 
                 {canSendInvoice && canManageRow && (
-                  <div className="pt-2 border-t border-gray-300">
+                  <div className="pt-2 border-t border-gray-300 space-y-2">
                     <Button
                       size="sm"
                       variant="outline"
@@ -1607,6 +1651,29 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       <Mail className="w-3 h-3 mr-1" />
                       Send Invoice
                     </Button>
+                    {invoiceSummary && (
+                      <p className="text-xs text-gray-600">
+                        Last sent{" "}
+                        {invoiceSummary.sent_at
+                          ? new Date(invoiceSummary.sent_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })
+                          : "—"}
+                        {" — "}
+                        <Badge className={`text-[10px] px-1 py-0 ${INVOICE_STATUS_COLORS[invoiceSummary.paymentStatus]}`}>
+                          {INVOICE_STATUS_LABELS[invoiceSummary.paymentStatus]}
+                        </Badge>
+                        {" · "}
+                        <Link
+                          href={`${invoicesPagePath}?invoice=${invoiceSummary.id}`}
+                          className="text-purple-600 hover:underline"
+                        >
+                          View invoice
+                        </Link>
+                      </p>
+                    )}
                   </div>
                 )}
 

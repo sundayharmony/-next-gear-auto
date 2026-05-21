@@ -116,7 +116,15 @@ export async function POST(request: NextRequest) {
       .eq("id", booking_id)
       .maybeSingle();
 
-    if (bookingError || !bookingExists) {
+    if (bookingError) {
+      logger.error("Booking payment lookup error:", bookingError);
+      return NextResponse.json(
+        { success: false, message: "Unable to verify booking" },
+        { status: 500 }
+      );
+    }
+
+    if (!bookingExists) {
       return NextResponse.json(
         { success: false, message: "Booking not found" },
         { status: 404 }

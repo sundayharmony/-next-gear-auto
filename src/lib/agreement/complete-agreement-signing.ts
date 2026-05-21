@@ -111,7 +111,12 @@ export async function completeAgreementSigning(
     .eq("id", bookingId)
     .maybeSingle();
 
-  if (bookingErr || !booking) {
+  if (bookingErr) {
+    logger.error("Agreement signing booking lookup error:", bookingErr);
+    throw new AgreementSigningError("Unable to load booking", 500);
+  }
+
+  if (!booking) {
     throw new AgreementSigningError("Booking not found", 404);
   }
 

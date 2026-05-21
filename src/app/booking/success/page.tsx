@@ -99,14 +99,12 @@ function SuccessContent() {
           body: JSON.stringify({ bookingId, signatures: validSigs, customerEmail: booking.customer_email }),
         });
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        if (data.success) {
+        if (res.ok && data.success) {
           setAgreementStatus("signed");
-          // Clean up localStorage
           localStorage.removeItem(storageKey);
         } else {
-          logger.error("Agreement sign failed:", data.error);
+          logger.error("Agreement sign failed:", data.error || res.status);
           setAgreementStatus("error");
         }
       } catch (err) {

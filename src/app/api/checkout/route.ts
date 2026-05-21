@@ -214,21 +214,35 @@ export async function POST(request: NextRequest) {
     // dates, selected extras, and validated promo code.
     const { data: vehicle, error: vehicleError } = await supabase
       .from("vehicles")
-      .select("daily_rate, status")
+      .select("daily_rate, is_available, is_published, maintenance_status")
       .eq("id", vehicleId)
       .maybeSingle();
 
-    if (vehicleError || !vehicle) {
+    if (vehicleError) {
+      logger.error("Checkout vehicle lookup error:", vehicleError);
+      return NextResponse.json(
+        { success: false, message: "Unable to verify vehicle" },
+        { status: 500 }
+      );
+    }
+
+    if (!vehicle) {
       return NextResponse.json(
         { success: false, message: "Vehicle not found" },
         { status: 404 }
       );
     }
 
-    // Verify vehicle is available (not inactive or in maintenance)
-    if (vehicle.status && (vehicle.status === "inactive" || vehicle.status === "maintenance")) {
+    if (vehicle.is_available === false || vehicle.is_published === false) {
       return NextResponse.json(
         { success: false, message: "This vehicle is currently unavailable" },
+        { status: 400 }
+      );
+    }
+
+    if (vehicle.maintenance_status === "in-maintenance") {
+      return NextResponse.json(
+        { success: false, message: "This vehicle is currently in maintenance" },
         { status: 400 }
       );
     }

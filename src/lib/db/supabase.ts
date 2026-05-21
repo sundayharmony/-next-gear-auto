@@ -41,6 +41,7 @@ type Database = {
       instagram_posts: GenericTable;
       locations: GenericTable;
       booking_activity: GenericTable;
+      invoices: GenericTable;
       message_threads: GenericTable;
       message_thread_members: GenericTable;
       messages: GenericTable;

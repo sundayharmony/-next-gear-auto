@@ -48,7 +48,15 @@ export async function POST(req: NextRequest) {
       .eq("id", bookingId)
       .maybeSingle();
 
-    if (bookingErr || !booking) {
+    if (bookingErr) {
+      logger.error("Rental agreement sign booking lookup error:", bookingErr);
+      return NextResponse.json(
+        { success: false, error: "Unable to load booking" },
+        { status: 500 },
+      );
+    }
+
+    if (!booking) {
       return NextResponse.json(
         { success: false, error: "Booking not found" },
         { status: 404 },

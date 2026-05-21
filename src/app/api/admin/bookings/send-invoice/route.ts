@@ -1,192 +1,228 @@
 import { NextRequest, NextResponse } from "next/server";
+
 import { getServiceSupabase } from "@/lib/db/supabase";
+
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
-import {
-  fetchCustomerManagerAccessRow,
-  isManagerPanelAccessEnabled,
-} from "@/lib/auth/manager-access";
-import { isAdminRole, isManagerRole } from "@/lib/auth/roles";
-import { sendBookingInvoice } from "@/lib/email/mailer";
-import { buildBookingInvoiceData } from "@/lib/invoices/invoice-data";
-import { validateInvoiceDueDate } from "@/lib/invoices/invoice-due-date";
+
+import { authorizeBookingInvoiceAccess } from "@/lib/invoices/invoice-auth";
+
 import { validateAdditionalInvoiceLineItems } from "@/lib/invoices/invoice-line-items";
-import { generateInvoicePdf } from "@/lib/invoices/invoice-pdf";
-import { getVehicleDisplayName } from "@/lib/types";
+
+import {
+
+  loadBookingWithVehicle,
+
+  sendInvoiceEmail,
+
+  upsertInvoiceFromBooking,
+
+} from "@/lib/invoices/invoice-service";
+
 import { logger } from "@/lib/utils/logger";
+
 import { isValidEmailFormat } from "@/lib/utils/validation";
 
+
+
 const BOOKING_ID_RE = /^bk[0-9a-f]{7}$/i;
+
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+
+
 export async function POST(req: NextRequest) {
+
   const auth = await verifyAdminOrManager(req);
+
   if (!auth.authorized) return auth.response;
 
+
+
   try {
+
     let body: { bookingId?: string; additionalLineItems?: unknown; dueDate?: string };
+
     try {
+
       body = await req.json();
+
     } catch {
+
       return NextResponse.json(
+
         { success: false, message: "Invalid JSON body" },
+
         { status: 400 },
+
       );
+
     }
+
+
 
     const bookingId = typeof body.bookingId === "string" ? body.bookingId.trim() : "";
+
     const additionalParsed = validateAdditionalInvoiceLineItems(body.additionalLineItems);
+
     if (!additionalParsed.ok) {
+
       return NextResponse.json(
+
         { success: false, message: additionalParsed.message },
+
         { status: 400 },
+
       );
+
     }
+
     if (!bookingId || (!BOOKING_ID_RE.test(bookingId) && !UUID_RE.test(bookingId))) {
+
       return NextResponse.json(
+
         { success: false, message: "Valid bookingId is required" },
+
         { status: 400 },
+
       );
+
     }
+
+
 
     const supabase = getServiceSupabase();
-    const { data: booking, error: bookingErr } = await supabase
-      .from("bookings")
-      .select("*")
-      .eq("id", bookingId)
-      .maybeSingle();
 
-    if (bookingErr || !booking) {
+    const ctx = await loadBookingWithVehicle(supabase, bookingId);
+
+    if ("error" in ctx) {
+
       return NextResponse.json(
-        { success: false, message: "Booking not found" },
-        { status: 404 },
+
+        {
+
+          success: false,
+
+          message: ctx.error === "not_found" ? "Booking not found" : "Unable to load booking",
+
+        },
+
+        { status: ctx.error === "not_found" ? 404 : 500 },
+
       );
+
     }
 
-    if (isManagerRole(auth.role)) {
-      const accessRow = await fetchCustomerManagerAccessRow(supabase, auth.userId);
-      if (!isManagerPanelAccessEnabled(accessRow)) {
-        return NextResponse.json(
-          { success: false, message: "Manager panel access is disabled" },
-          { status: 403 },
-        );
-      }
-      if (
-        booking.origin_channel !== "manager_panel" ||
-        booking.created_by_user_id !== auth.userId
-      ) {
-        return NextResponse.json(
-          { success: false, message: "Managers can only send invoices for their own bookings" },
-          { status: 403 },
-        );
-      }
-    } else if (!isAdminRole(auth.role)) {
-      return NextResponse.json(
-        { success: false, message: "Staff access required" },
-        { status: 403 },
-      );
-    }
 
-    const customerEmail = (booking.customer_email || "").trim();
+
+    const denied = await authorizeBookingInvoiceAccess(
+
+      auth,
+
+      ctx.booking as { origin_channel: string | null; created_by_user_id: string | null },
+
+      "send",
+
+    );
+
+    if (denied) return denied;
+
+
+
+    const customerEmail = ((ctx.booking.customer_email as string) || "").trim();
+
     if (!customerEmail || !isValidEmailFormat(customerEmail)) {
+
       return NextResponse.json(
+
         { success: false, message: "Booking has no valid customer email" },
+
         { status: 400 },
+
       );
+
     }
 
-    let vehicleName = "Vehicle";
-    let vehicleDailyRate: number | null = null;
-    if (booking.vehicle_id) {
-      const { data: vehicle } = await supabase
-        .from("vehicles")
-        .select("year, make, model, daily_rate")
-        .eq("id", booking.vehicle_id)
-        .maybeSingle();
 
-      if (vehicle) {
-        vehicleName = getVehicleDisplayName(vehicle);
-        vehicleDailyRate =
-          typeof vehicle.daily_rate === "number"
-            ? vehicle.daily_rate
-            : Number(vehicle.daily_rate) || null;
-      }
-    }
 
-    const draftInvoice = buildBookingInvoiceData(
-      { ...booking, vehicleName },
-      { vehicleDailyRate },
-    );
-    const dueParsed = validateInvoiceDueDate(body.dueDate, draftInvoice.invoiceDate);
-    if (!dueParsed.ok) {
-      return NextResponse.json(
-        { success: false, message: dueParsed.message },
-        { status: 400 },
-      );
-    }
+    const upsert = await upsertInvoiceFromBooking(supabase, bookingId, {
 
-    const invoiceData = buildBookingInvoiceData(
-      {
-        ...booking,
-        vehicleName,
-      },
-      {
-        vehicleDailyRate,
-        additionalLineItems: additionalParsed.items,
-        dueDate: dueParsed.dueDate,
-      },
-    );
+      additionalLineItems: additionalParsed.items,
 
-    let pdfBytes: Uint8Array | undefined;
-    try {
-      pdfBytes = await generateInvoicePdf(invoiceData);
-      if (pdfBytes.length > 10 * 1024 * 1024) {
-        pdfBytes = undefined;
-      }
-    } catch (pdfErr) {
-      logger.warn("Invoice PDF generation failed, sending HTML only:", pdfErr);
-    }
+      dueDate: body.dueDate,
 
-    await sendBookingInvoice({
-      ...invoiceData,
-      customerEmail,
-      pdfBytes,
     });
 
+    if (!upsert.ok) {
+
+      const status =
+
+        upsert.code === "not_found" ? 404 : upsert.code === "validation" ? 400 : 500;
+
+      return NextResponse.json({ success: false, message: upsert.message }, { status });
+
+    }
+
+
+
     const { data: staff } = await supabase
+
       .from("customers")
+
       .select("email")
+
       .eq("id", auth.userId)
+
       .maybeSingle();
+
+
 
     const performedBy = staff?.email || auth.userId;
 
-    await supabase.from("booking_activity").insert({
-      booking_id: bookingId,
-      action: "invoice_sent",
-      details: {
-        to: customerEmail,
-        balance_due: invoiceData.balanceDue,
-        charges_total: invoiceData.chargesTotal,
-        had_pdf: !!pdfBytes,
-        additional_line_items: additionalParsed.items.length > 0 ? additionalParsed.items : undefined,
-        due_date: invoiceData.dueDate,
-      },
-      performed_by: performedBy,
-    });
+    const send = await sendInvoiceEmail(supabase, upsert.invoice.id, performedBy);
+
+    if (!send.ok) {
+
+      const status =
+
+        send.code === "not_found" ? 404 : send.code === "validation" ? 400 : 500;
+
+      return NextResponse.json({ success: false, message: send.message }, { status });
+
+    }
+
+
 
     return NextResponse.json({
+
       success: true,
-      message: `Invoice sent to ${customerEmail}`,
+
+      message: send.message,
+
       data: {
-        balanceDue: invoiceData.balanceDue,
-        hadPdf: !!pdfBytes,
+
+        invoiceId: upsert.invoice.id,
+
+        balanceDue: send.balanceDue,
+
+        hadPdf: send.hadPdf,
+
       },
+
     });
+
   } catch (error) {
+
     logger.error("Send invoice error:", error);
+
     return NextResponse.json(
+
       { success: false, message: "Failed to send invoice" },
+
       { status: 500 },
+
     );
+
   }
+
 }
+

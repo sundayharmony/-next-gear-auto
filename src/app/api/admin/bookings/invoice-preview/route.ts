@@ -75,7 +75,17 @@ async function loadBookingInvoiceContext(bookingId: string) {
     .eq("id", bookingId)
     .maybeSingle();
 
-  if (bookingErr || !booking) {
+  if (bookingErr) {
+    logger.error("Invoice preview booking lookup error:", bookingErr);
+    return {
+      error: NextResponse.json(
+        { success: false, message: "Unable to load booking" },
+        { status: 500 },
+      ),
+    };
+  }
+
+  if (!booking) {
     return { error: NextResponse.json({ success: false, message: "Booking not found" }, { status: 404 }) };
   }
 

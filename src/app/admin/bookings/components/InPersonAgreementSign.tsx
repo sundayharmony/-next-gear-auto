@@ -7,6 +7,7 @@ import {
   AgreementSigningWizard,
   type AgreementSigningVehicle,
 } from "@/components/agreement-signing-wizard";
+import { vehicleForSigningFromDisplayName } from "@/lib/agreement/vehicle-for-signing";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import type { BookingRow, Vehicle } from "../types";
 
@@ -17,13 +18,15 @@ interface InPersonAgreementSignProps {
   onSigned: (updated: Pick<BookingRow, "agreement_signed_at" | "rental_agreement_url" | "signed_name">) => void;
 }
 
-function mapVehicle(v: Vehicle | undefined): AgreementSigningVehicle | null {
-  if (!v) return null;
-  return {
-    make: v.make,
-    model: v.model,
-    year: v.year,
-  };
+function mapVehicle(v: Vehicle | undefined, vehicleName: string): AgreementSigningVehicle {
+  if (v) {
+    return {
+      make: v.make,
+      model: v.model,
+      year: v.year,
+    };
+  }
+  return vehicleForSigningFromDisplayName(vehicleName);
 }
 
 export function InPersonAgreementSign({
@@ -39,8 +42,8 @@ export function InPersonAgreementSign({
   >(null);
 
   const vehicle = useMemo(
-    () => mapVehicle(vehicles.find((v) => v.id === booking.vehicle_id)),
-    [vehicles, booking.vehicle_id],
+    () => mapVehicle(vehicles.find((v) => v.id === booking.vehicle_id), booking.vehicleName),
+    [vehicles, booking.vehicle_id, booking.vehicleName],
   );
 
   const handleSubmit = async (signatures: Record<string, string>) => {
