@@ -23,5 +23,7 @@ jobs:
       - run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key-for-ci-build
-          SUPABASE_SERVICE_KEY: placeholder-service-key-for-ci-build
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSJ9.placeholder
+          SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSJ9.placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder_for_ci_build_only
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder_for_ci_build_only

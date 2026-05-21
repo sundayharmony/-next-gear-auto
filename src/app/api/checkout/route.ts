@@ -15,12 +15,13 @@ import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
-// Fix 1: Validate Stripe key at module load
-if (!process.env.STRIPE_SECRET_KEY) {
-  throw new Error("STRIPE_SECRET_KEY is not configured");
+function getStripe(): Stripe {
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeKey) {
+    throw new Error("STRIPE_SECRET_KEY is not configured");
+  }
+  return new Stripe(stripeKey);
 }
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(request: NextRequest) {
   // ─── Rate limiting (Bug 16) ─────────────────────────────────────────
@@ -528,7 +529,7 @@ export async function POST(request: NextRequest) {
     // 4. Create Stripe Checkout Session for paid bookings
     let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.create({
+      session = await getStripe().checkout.sessions.create({
         payment_method_types: ["card", "cashapp", "link"],
         mode: "payment",
         customer_email: customerDetails.email,

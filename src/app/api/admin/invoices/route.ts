@@ -34,7 +34,6 @@ export async function GET(req: NextRequest) {
     let query = supabase
       .from("invoices")
       .select("*", { count: "exact" })
-      .order("sent_at", { ascending: false, nullsFirst: false })
       .order("updated_at", { ascending: false });
 
     if (bookingIdFilter) {
@@ -69,6 +68,15 @@ export async function GET(req: NextRequest) {
     if (error) {
       logger.error("Invoices list error:", error);
       const missing = invoiceTableMissingMessage(error);
+      if (missing && bookingIdFilter) {
+        return NextResponse.json({
+          success: true,
+          data: [],
+          total: 0,
+          limit,
+          offset,
+        });
+      }
       return NextResponse.json(
         { success: false, message: missing ?? "Failed to load invoices" },
         { status: missing ? 503 : 500 },

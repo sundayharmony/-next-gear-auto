@@ -6,11 +6,13 @@ import { logger } from "@/lib/utils/logger";
 import { sumBookingPaymentAmounts } from "@/lib/bookings/payments";
 import { getVehicleDisplayName } from "@/lib/types";
 
-const stripeKey = process.env.STRIPE_SECRET_KEY;
-if (!stripeKey) {
-  throw new Error("Missing STRIPE_SECRET_KEY environment variable");
+function getStripe(): Stripe {
+  const stripeKey = process.env.STRIPE_SECRET_KEY;
+  if (!stripeKey) {
+    throw new Error("STRIPE_SECRET_KEY is not configured");
+  }
+  return new Stripe(stripeKey);
 }
-const stripe = new Stripe(stripeKey);
 
 export async function POST(request: Request) {
   const supabase = getServiceSupabase();
@@ -31,7 +33,7 @@ export async function POST(request: Request) {
       logger.error("SECURITY: Missing webhook signature - rejecting request");
       return NextResponse.json({ error: "Webhook signature missing" }, { status: 400 });
     }
-    event = stripe.webhooks.constructEvent(body, sig, webhookSecret!);
+    event = getStripe().webhooks.constructEvent(body, sig, webhookSecret!);
   } catch (err) {
     logger.error("Webhook signature verification failed:", err);
     return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
