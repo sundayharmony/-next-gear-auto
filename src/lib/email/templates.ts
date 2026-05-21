@@ -1,4 +1,5 @@
 import { escapeHtml } from "@/lib/utils/validation";
+import { getInvoicePaymentNoticeParagraphs } from "@/lib/invoices/invoice-payment-notice";
 
 const COMPANY_ADDRESS = "92 Forrest Street, Jersey City, NJ 07304";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://rentnextgearauto.com";
@@ -683,6 +684,16 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
     .map((item) => invoiceLineRow(item.label, item.amount, item.isCredit))
     .join("");
   const balanceColor = data.balanceDue > 0 ? "#dc2626" : "#059669";
+  const paymentNoticeParagraphs = getInvoicePaymentNoticeParagraphs(data.balanceDue);
+  const paymentNoticeHtml = paymentNoticeParagraphs
+    .map(
+      (p) =>
+        `<p style="margin: 0 0 8px; color: #4b5563; font-size: 13px; line-height: 1.6;">${escapeHtml(p)}</p>`,
+    )
+    .join("");
+  const paymentNoticeBorder =
+    data.balanceDue > 0 ? "#fecaca" : "#bbf7d0";
+  const paymentNoticeBg = data.balanceDue > 0 ? "#fef2f2" : "#f0fdf4";
 
   return wrapEmail(`
     <tr>
@@ -719,6 +730,14 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
           <tr>
             <td style="padding: 14px 0 0; color: #111827; font-size: 15px; font-weight: 700;">Balance due</td>
             <td style="padding: 14px 0 0; color: ${balanceColor}; font-size: 18px; font-weight: 800; text-align: right;">$${data.balanceDue.toFixed(2)}</td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0 20px;">
+          <tr>
+            <td style="background: ${paymentNoticeBg}; border-radius: 10px; padding: 16px 18px; border: 1px solid ${paymentNoticeBorder};">
+              ${data.balanceDue > 0 ? `<p style="margin: 0 0 10px; color: #991b1b; font-size: 13px; font-weight: 700;">Payment required</p>` : ""}
+              ${paymentNoticeHtml}
+            </td>
           </tr>
         </table>
         <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">A PDF copy is attached for your records. Questions? Reply to this email or call (551) 429-3472.</p>

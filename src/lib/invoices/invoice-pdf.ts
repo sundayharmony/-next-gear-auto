@@ -1,8 +1,28 @@
-import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
+import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import type { BookingInvoiceData } from "./invoice-data";
 import { fmtMoney } from "./invoice-data";
+import { getInvoicePaymentNoticeParagraphs } from "./invoice-payment-notice";
 import { CONTACT_INFO, SITE_NAME } from "@/lib/constants";
 import { fmtDate, fmtTime } from "@/lib/email/templates";
+
+const PDF_TEXT_WIDTH = 512;
+
+function wrapPdfText(text: string, maxWidth: number, fontSize: number, pdfFont: PDFFont): string[] {
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = "";
+  for (const word of words) {
+    const test = current ? `${current} ${word}` : word;
+    if (pdfFont.widthOfTextAtSize(test, fontSize) > maxWidth && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = test;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
 
 function formatInvoiceDate(isoDate: string): string {
   return fmtDate(isoDate);
@@ -77,7 +97,21 @@ export async function generateInvoicePdf(data: BookingInvoiceData): Promise<Uint
     y -= 16;
   }
 
-  y -= 20;
+  y -= 12;
+  if (data.balanceDue > 0) {
+    draw("Payment required", 10, true, rgb(0.55, 0.1, 0.1));
+    y -= 2;
+  }
+  for (const paragraph of getInvoicePaymentNoticeParagraphs(data.balanceDue)) {
+    for (const line of wrapPdfText(paragraph, PDF_TEXT_WIDTH, 9, font)) {
+      if (y < 80) break;
+      page.drawText(line, { x: 50, y, size: 9, font, color: rgb(0.25, 0.25, 0.25) });
+      y -= 12;
+    }
+    y -= 4;
+  }
+
+  y -= 12;
   draw(
     `${CONTACT_INFO.address}, ${CONTACT_INFO.city}, ${CONTACT_INFO.state} ${CONTACT_INFO.zip}`,
     9,
