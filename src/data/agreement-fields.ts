@@ -1,9 +1,10 @@
-// Signature fields the renter must complete on the rental agreement PDF
+// Signature fields the renter must complete on the rental agreement PDF.
+// Legal text should be reviewed by licensed counsel before production use.
 export const AGREEMENT_SIGNATURE_FIELDS = [
   {
     id: "t35",
     label: "Renter Initials — Page 1 (Terms & Conditions)",
-    description: "By initialing, you acknowledge the vehicle condition and rental terms on page 1.",
+    description: "By initialing, you acknowledge vehicle condition, rental rates, and payment obligations on page 1.",
     isInitials: true,
   },
   {
@@ -15,7 +16,7 @@ export const AGREEMENT_SIGNATURE_FIELDS = [
   {
     id: "t43",
     label: "Renter Initials — Page 2 (Insurance & Liability)",
-    description: "By initialing, you acknowledge the insurance and liability terms on page 2.",
+    description: "By initialing, you acknowledge insurance, liability, and unpaid balance terms on page 2.",
     isInitials: true,
   },
   {
@@ -27,7 +28,7 @@ export const AGREEMENT_SIGNATURE_FIELDS = [
   {
     id: "t57",
     label: "Renter Initials — Page 3 (Final Acknowledgement)",
-    description: "By initialing, you confirm you have read and agree to all terms in this agreement.",
+    description: "By initialing, you confirm you have read and agree to all terms, including unpaid balance remedies.",
     isInitials: true,
   },
 ];

@@ -423,60 +423,57 @@ function BookingPageInner() {
 
   const availableVehicles = vehicles.filter((v) => v.isAvailable && !isVehicleBooked(v.id));
 
+  /** Pure validation for step 1 — safe to call during render (e.g. disabled button). */
+  const getStep1ValidationError = (): string | null => {
+    if (!searchDates.pickup || !searchDates.return || !searchDates.pickupTime || !searchDates.returnTime) {
+      return null;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const pickupDate = localMidnightFromYyyyMmDd(searchDates.pickup);
+    if (isNaN(pickupDate.getTime()) || pickupDate < today) {
+      return "Pick-up date cannot be in the past";
+    }
+
+    const returnDate = localMidnightFromYyyyMmDd(searchDates.return);
+    if (isNaN(returnDate.getTime())) {
+      return "Please select valid pick-up and return dates";
+    }
+
+    if (returnDate < pickupDate) {
+      return "Return date must be on or after pick-up date";
+    }
+
+    try {
+      const rentalHours = calculateRentalHours(
+        searchDates.pickup,
+        searchDates.return,
+        searchDates.pickupTime,
+        searchDates.returnTime,
+      );
+      if (rentalHours > 90 * 24) {
+        return "Maximum rental duration is 90 days";
+      }
+    } catch {
+      return "Return time must be after pickup time";
+    }
+
+    if (locations.length > 0 && !selectedPickupLocation) {
+      return "Please select a pickup location";
+    }
+
+    return null;
+  };
+
   const canProceed = (): boolean => {
     switch (booking.currentStep) {
-      case 1: {
-        if (!searchDates.pickup || !searchDates.return || !searchDates.pickupTime || !searchDates.returnTime) {
-          setDateValidationError("");
-          return false;
-        }
-
-        // Fix 1: Check if pickup date is in the past
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const pickupDate = localMidnightFromYyyyMmDd(searchDates.pickup);
-        if (isNaN(pickupDate.getTime()) || pickupDate < today) {
-          setDateValidationError("Pick-up date cannot be in the past");
-          return false;
-        }
-
-        const returnDate = localMidnightFromYyyyMmDd(searchDates.return);
-        if (isNaN(returnDate.getTime())) {
-          setDateValidationError("Please select valid pick-up and return dates");
-          return false;
-        }
-
-        if (returnDate < pickupDate) {
-          setDateValidationError("Return date must be on or after pick-up date");
-          return false;
-        }
-
-        // Validate datetime order and duration using selected pickup/return times.
-        let rentalHours = 0;
-        try {
-          rentalHours = calculateRentalHours(
-            searchDates.pickup,
-            searchDates.return,
-            searchDates.pickupTime,
-            searchDates.returnTime,
-          );
-        } catch {
-          setDateValidationError("Return time must be after pickup time");
-          return false;
-        }
-        if (rentalHours > 90 * 24) {
-          setDateValidationError("Maximum rental duration is 90 days");
-          return false;
-        }
-
-        setDateValidationError("");
-        // Require location selection if locations are available
-        if (locations.length > 0 && !selectedPickupLocation) {
-          setDateValidationError("Please select a pickup location");
-          return false;
-        }
-        return true;
-      }
+      case 1:
+        return getStep1ValidationError() === null &&
+          !!searchDates.pickup &&
+          !!searchDates.return &&
+          !!searchDates.pickupTime &&
+          !!searchDates.returnTime;
       case 2: return !!booking.selectedVehicle;
       case 3: {
         // Insurance (e1) is required: must either be selected (pay for it)
@@ -519,6 +516,9 @@ function BookingPageInner() {
   const handleNext = () => {
     // Validate we can proceed before updating state
     if (!canProceed()) {
+      if (booking.currentStep === 1) {
+        setDateValidationError(getStep1ValidationError() ?? "");
+      }
       return;
     }
 

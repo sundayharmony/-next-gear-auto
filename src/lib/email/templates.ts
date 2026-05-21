@@ -647,3 +647,82 @@ export function bookingExtendedTemplate(data: ExtensionEmailData): string {
     </tr>
   `);
 }
+
+export interface InvoiceEmailLineItem {
+  label: string;
+  amount: number;
+  isCredit?: boolean;
+}
+
+export interface BookingInvoiceEmailData {
+  bookingId: string;
+  customerName: string;
+  vehicleName: string;
+  pickupDate: string;
+  returnDate: string;
+  pickupTime?: string;
+  returnTime?: string;
+  invoiceDate: string;
+  lineItems: InvoiceEmailLineItem[];
+  chargesTotal: number;
+  amountPaid: number;
+  balanceDue: number;
+}
+
+function invoiceLineRow(label: string, amount: number, isCredit?: boolean): string {
+  const color = isCredit ? "#059669" : "#111827";
+  const amountText = `${isCredit ? "-" : ""}$${amount.toFixed(2)}`;
+  return `<tr>
+    <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; color: #4b5563; font-size: 14px;">${escapeHtml(label)}</td>
+    <td style="padding: 10px 0; border-bottom: 1px solid #f3f4f6; color: ${color}; font-size: 14px; font-weight: 600; text-align: right;">${amountText}</td>
+  </tr>`;
+}
+
+export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
+  const lineRows = data.lineItems
+    .map((item) => invoiceLineRow(item.label, item.amount, item.isCredit))
+    .join("");
+  const balanceColor = data.balanceDue > 0 ? "#dc2626" : "#059669";
+
+  return wrapEmail(`
+    <tr>
+      <td style="padding: 40px 32px 16px; text-align: center;">
+        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
+        <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Invoice</h1>
+        <p style="margin: 0; color: #6b7280; font-size: 13px;">${escapeHtml(fmtDate(data.invoiceDate))} &bull; Booking ${escapeHtml(data.bookingId)}</p>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 0 32px 24px;">
+        ${renterGreetingCentered(data.customerName, "please find your invoice below for your recent rental.")}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #f9fafb; border-radius: 12px; margin: 0 0 20px;">
+          <tr>
+            <td style="padding: 20px 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                ${renterDetailRow(data.customerName)}
+                ${detailRow("Vehicle", escapeHtml(data.vehicleName), true)}
+                ${detailRow("Pick-up", `${fmtDate(data.pickupDate)}${data.pickupTime ? " at " + fmtTime(data.pickupTime) : ""}`)}
+                ${detailRow("Return", `${fmtDate(data.returnDate)}${data.returnTime ? " at " + fmtTime(data.returnTime) : ""}`)}
+              </table>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 8px;">
+          <tr>
+            <td style="padding: 8px 0; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700;">Line items</td>
+            <td style="padding: 8px 0; color: #6b7280; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; text-align: right;">Amount</td>
+          </tr>
+          ${lineRows}
+          <tr><td colspan="2" style="height: 8px;"></td></tr>
+          ${detailRow("Charges total", "$" + data.chargesTotal.toFixed(2), true)}
+          ${detailRow("Payments received", "-$" + data.amountPaid.toFixed(2))}
+          <tr>
+            <td style="padding: 14px 0 0; color: #111827; font-size: 15px; font-weight: 700;">Balance due</td>
+            <td style="padding: 14px 0 0; color: ${balanceColor}; font-size: 18px; font-weight: 800; text-align: right;">$${data.balanceDue.toFixed(2)}</td>
+          </tr>
+        </table>
+        <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">A PDF copy is attached for your records. Questions? Reply to this email or call (551) 429-3472.</p>
+      </td>
+    </tr>
+  `);
+}

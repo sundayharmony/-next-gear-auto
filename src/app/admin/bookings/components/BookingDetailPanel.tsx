@@ -83,6 +83,7 @@ interface BookingDetailPanelProps {
   onSuccess: (msg: string) => void;
   capabilities?: {
     canSendBookingEmail: boolean;
+    canSendInvoice: boolean;
     canViewAdminNotes: boolean;
     canViewActivityTimeline: boolean;
     canManagePayments: boolean;
@@ -108,6 +109,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     onStartInPersonSign,
   } = props;
   const canSendBookingEmail = capabilities?.canSendBookingEmail ?? true;
+  const canSendInvoice = capabilities?.canSendInvoice ?? true;
   const canViewAdminNotes = capabilities?.canViewAdminNotes ?? true;
   const canViewActivityTimeline = capabilities?.canViewActivityTimeline ?? true;
   const canManagePayments = capabilities?.canManagePayments ?? true;
@@ -141,6 +143,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Email sending
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [sendingInvoice, setSendingInvoice] = useState(false);
   const [resendingAgreement, setResendingAgreement] = useState(false);
   const [overridingAgreement, setOverridingAgreement] = useState(false);
 
@@ -789,6 +792,35 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   const displayTotalPrice = getBookingDisplayTotal(booking);
   const balanceDue = getBookingBalanceDue(booking);
+  const hasCustomerEmail = Boolean((booking.customer_email || "").trim());
+  const canShowSendInvoice =
+    canSendInvoice && canViewPricing && canManageRow && hasCustomerEmail;
+
+  const handleSendInvoice = async () => {
+    if (!canShowSendInvoice) return;
+    const confirmMsg = `Send invoice to ${booking.customer_email}?\n\nBalance due: $${balanceDue.toFixed(2)}`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setSendingInvoice(true);
+    try {
+      const res = await adminFetch("/api/admin/bookings/send-invoice", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        onSuccess(data.message || `Invoice sent to ${booking.customer_email}`);
+      } else {
+        onError(data.message || "Failed to send invoice");
+      }
+    } catch (err) {
+      logger.error("Failed to send invoice:", err);
+      onError("Network error — could not send invoice");
+    } finally {
+      setSendingInvoice(false);
+    }
+  };
 
   // Get vehicle name
   const vehicleObj = vehicles.find((v) => v.id === booking.vehicle_id);
@@ -1578,6 +1610,28 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 {booking.payment_method && (
                   <div className="text-xs text-gray-600 pt-2">
                     Method: <span className="font-medium">{methodLabel}</span>
+                  </div>
+                )}
+
+                {canSendInvoice && canManageRow && (
+                  <div className="pt-2 border-t border-gray-300">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleSendInvoice}
+                      disabled={sendingInvoice || !hasCustomerEmail || !canViewPricing}
+                      title={
+                        !hasCustomerEmail
+                          ? "Customer email required"
+                          : !canViewPricing
+                            ? "Pricing hidden for this booking"
+                            : "Email invoice to customer"
+                      }
+                      className="w-full text-xs border-purple-300 text-purple-700 hover:bg-purple-50"
+                    >
+                      <Mail className="w-3 h-3 mr-1" />
+                      {sendingInvoice ? "Sending Invoice..." : "Send Invoice"}
+                    </Button>
                   </div>
                 )}
 

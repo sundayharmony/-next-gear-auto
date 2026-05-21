@@ -11,9 +11,11 @@ import {
   passwordResetTemplate,
   bookingSignAgreementTemplate,
   bookingExtendedTemplate,
+  bookingInvoiceTemplate,
   fmtDate,
   fmtTime,
 } from "./templates";
+import type { BookingInvoiceEmailData } from "./templates";
 
 const SMTP_USER = process.env.SMTP_USER || "contact@rentnextgearauto.com";
 const FROM_CUSTOMER = `"NextGearAuto" <${SMTP_USER}>`;
@@ -471,6 +473,43 @@ function internalMessageTemplate(data: InternalMessageEmailData): string {
   </table>
 </body>
 </html>`;
+}
+
+export async function sendBookingInvoice(
+  data: BookingInvoiceEmailData & { customerEmail: string; pdfBytes?: Uint8Array },
+) {
+  try {
+    if (!data.customerEmail) {
+      throw new Error("Cannot send invoice: no customer email");
+    }
+    const transporter = getTransporter();
+    const html = bookingInvoiceTemplate(data);
+    const attachments =
+      data.pdfBytes && data.pdfBytes.length > 0
+        ? [
+            {
+              filename: `Invoice-${data.bookingId}.pdf`,
+              content: Buffer.from(data.pdfBytes),
+              contentType: "application/pdf",
+            },
+          ]
+        : undefined;
+
+    await sendMailWithRetry(transporter, {
+      from: FROM_CUSTOMER,
+      to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
+      subject: `Invoice - ${data.bookingId} - ${data.vehicleName}`,
+      html,
+      text: stripHtmlTags(html),
+      attachments,
+    });
+    logger.info("Invoice email sent for booking:", data.bookingId);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send invoice email:", errorMsg);
+    throw error;
+  }
 }
 
 export async function sendInternalMessageNotification(data: InternalMessageEmailData) {

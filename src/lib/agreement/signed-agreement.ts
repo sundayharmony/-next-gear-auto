@@ -1,6 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 import fs from "fs/promises";
 import path from "path";
+import { appendAgreementSupplementPages } from "@/lib/agreement/append-agreement-supplement-pdf";
 import { fmtTime } from "@/lib/email/templates";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
@@ -192,6 +193,8 @@ export async function buildSignedAgreementPdfBytes(
 
   fillAgreementForm(form, booking, vehicle, signedAtIso);
   form.flatten();
+
+  await appendAgreementSupplementPages(pdfDoc);
 
   const pages = pdfDoc.getPages();
   for (const [fieldId, base64Data] of Object.entries(signatures)) {

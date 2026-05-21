@@ -7,6 +7,7 @@
   --color-accent: #A78BFA;
 
   /* Brand palette — shared nav & heroes */
+  --color-header-brand: var(--color-primary-dark);
   --color-nga-purple-950: #1e0a3c;
   --color-nga-purple-900: #3b0764;
   --color-nga-purple-800: #5b21b6;
@@ -71,9 +72,9 @@ body {
 }
 
 .site-header-ribbon {
-  background: var(--color-nga-purple-900);
+  background: var(--color-header-brand);
   color: #f5f3ff;
-  border-bottom: 1px solid rgba(167, 139, 250, 0.15);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.22);
 }
 
 .site-header-ribbon a {
@@ -182,8 +183,8 @@ body {
   --hero-text-muted: rgba(237, 233, 254, 0.88);
   position: relative;
   color: var(--hero-text);
-  background: var(--color-nga-purple-900);
-  border-bottom: 1px solid rgba(91, 33, 182, 0.35);
+  background: var(--color-header-brand);
+  border-bottom: 1px solid rgba(124, 58, 237, 0.28);
   animation: pageHeroEnter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
@@ -227,7 +228,7 @@ body {
 }
 
 .page-hero--home {
-  background: var(--color-nga-purple-900);
+  background: var(--color-header-brand);
 }
 
 .page-hero--success {
@@ -261,7 +262,7 @@ body {
 .page-hero-card {
   color: #faf5ff;
   border-radius: 0.75rem;
-  background: var(--color-nga-purple-900);
+  background: var(--color-header-brand);
   box-shadow: 0 4px 16px -6px rgba(91, 33, 182, 0.35);
 }
 

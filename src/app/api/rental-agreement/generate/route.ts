@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
+import { appendAgreementSupplementPages } from "@/lib/agreement/append-agreement-supplement-pdf";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { fmtTime } from "@/lib/email/templates";
 import path from "path";
@@ -291,8 +292,7 @@ export async function GET(req: NextRequest) {
     setText("t57", ""); // Renter Initials — SIGNATURE FIELD
     setText("t58", ""); // Date
 
-    // Flatten non-signature fields so they display nicely but keep signature fields editable
-    // Actually, we want to keep all fields for now since signatures will be embedded as images
+    await appendAgreementSupplementPages(pdfDoc);
 
     const pdfBytes = await pdfDoc.save();
 

@@ -1,6 +1,13 @@
 "use client";
 
+// Legal text should be reviewed by licensed counsel before production use.
+
 import React from "react";
+import {
+  RENTAL_AGREEMENT_SECTION_4A_AUTHORIZED,
+  RENTAL_AGREEMENT_SECTION_4_PAYMENT_ADDENDUM,
+  RENTAL_AGREEMENT_SECTION_5_UNPAID,
+} from "@/lib/agreement/rental-agreement-terms";
 
 interface RentalAgreementInlineProps {
   vehicle?: {
@@ -161,7 +168,11 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
           <div className="flex flex-wrap gap-y-1"><span className="font-semibold">Primary Renter (age 18+):</span>{" "}<Field value={customerName} width="200px" /><span className="ml-4 font-semibold">Driver&apos;s Lic:</span>{" "}<Field width="120px" /></div>
           <div className="flex flex-wrap gap-y-1"><span className="font-semibold">Additional Driver (age 18+):</span>{" "}<Field width="200px" /><span className="ml-4 font-semibold">Driver&apos;s Lic:</span>{" "}<Field width="120px" /></div>
         </div>
-        <p className="text-gray-700">Only these two drivers are authorized to operate this vehicle. Unauthorized drivers will result in: $750 penalty, full liability for all damage, and immediate agreement termination.</p>
+        <p className="text-gray-700 max-w-prose">
+          Only these two drivers are authorized to operate this vehicle. Any operation by an unauthorized
+          driver voids insurance protections, triggers a $750 penalty, makes Renter fully liable for all
+          damage and third-party claims, and authorizes immediate termination and lawful vehicle recovery.
+        </p>
       </div>
 
       {/* Section 4 */}
@@ -201,6 +212,13 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
         </div>
         <p className="text-gray-700"><strong>Included:</strong> 200 miles per day</p>
         <p className="text-gray-700"><strong>Extra Miles:</strong> $0.39 per mile over 200/day</p>
+        {RENTAL_AGREEMENT_SECTION_4_PAYMENT_ADDENDUM.paragraphs.map((p) => (
+          <p key={p.slice(0, 40)} className="text-gray-700 mt-2 max-w-prose">{p}</p>
+        ))}
+        <p className="font-semibold text-gray-900 mt-3 mb-1">{RENTAL_AGREEMENT_SECTION_4A_AUTHORIZED.title}</p>
+        {RENTAL_AGREEMENT_SECTION_4A_AUTHORIZED.paragraphs.map((p) => (
+          <p key={p.slice(0, 40)} className="text-gray-700 max-w-prose">{p}</p>
+        ))}
       </div>
 
       <div className="border-t border-dashed border-gray-300 my-4" />
@@ -213,10 +231,23 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
 function Page2() {
   return (
     <div className="p-6 pt-4 pb-4">
-      {/* Section 5 */}
+      {/* Section 5 — unpaid balances */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">5. INSURANCE REQUIREMENTS</h3>
-        <p className="mb-2 text-gray-700">Renter MUST provide proof of active auto insurance meeting New Jersey minimum requirements.</p>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">
+          {RENTAL_AGREEMENT_SECTION_5_UNPAID.title}
+        </h3>
+        {RENTAL_AGREEMENT_SECTION_5_UNPAID.paragraphs.map((p) => (
+          <p key={p.slice(0, 40)} className="text-gray-700 mb-2 max-w-prose">{p}</p>
+        ))}
+      </div>
+
+      {/* Section 6 */}
+      <div className="mb-5">
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">6. INSURANCE REQUIREMENTS</h3>
+        <p className="mb-2 text-gray-700 max-w-prose">
+          Renter MUST provide proof of active auto insurance meeting New Jersey minimum requirements before
+          or at pickup. False, expired, or incomplete insurance proof voids coverage under this Agreement.
+        </p>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-2 mb-2">
           <div><span className="font-semibold">Insurance Provider:</span> <Field width="120px" /></div>
           <div><span className="font-semibold">Policy #:</span> <Field width="120px" /></div>
@@ -226,21 +257,22 @@ function Page2() {
         <p className="text-gray-700"><strong>Optional Supplemental Liability Protection (SLP):</strong> $11.25/day (up to $1M)</p>
       </div>
 
-      {/* Section 6 */}
+      {/* Section 7 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">6. LIABILITY & DAMAGE RESPONSIBILITY</h3>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">7. LIABILITY & DAMAGE RESPONSIBILITY</h3>
         <p className="text-gray-700 max-w-prose">
-          Renter is fully and completely responsible for ALL vehicle damage regardless of cause or fault.
-          This includes but is not limited to: collision damage, theft, vandalism, weather damage,
-          tire/rim/undercarriage damage, windshield damage, lost or damaged keys ($350 replacement cost),
-          towing and impound fees, storage charges, diminished vehicle value (up to $5,000), and loss of
-          use charges (daily rental rate x number of days vehicle is unavailable).
+          Renter is fully and completely responsible for ALL vehicle damage regardless of cause, fault, or
+          insurance coverage. This includes but is not limited to: collision damage, theft, vandalism,
+          weather damage, tire/rim/undercarriage damage, windshield damage, interior damage, lost or damaged
+          keys ($350 replacement cost), towing and impound fees, storage charges, diminished vehicle value
+          (up to $5,000), and loss-of-use charges (daily rental rate × days the vehicle is unavailable).
+          Renter remains liable even if a third party or unauthorized driver caused the damage.
         </p>
       </div>
 
-      {/* Section 7 */}
+      {/* Section 8 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">7. INDEMNIFICATION & HOLD HARMLESS</h3>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">8. INDEMNIFICATION & HOLD HARMLESS</h3>
         <p className="text-gray-700 max-w-prose">
           Renter agrees to indemnify, defend, and hold harmless Next Gear Auto LLC, its owners, employees,
           and agents from and against any and all claims, demands, losses, liabilities, damages, costs, and
@@ -251,28 +283,31 @@ function Page2() {
         </p>
       </div>
 
-      {/* Section 8 */}
+      {/* Section 9 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">8. PROHIBITED USES</h3>
-        <p className="mb-2 text-gray-700 max-w-prose">The following are strictly prohibited ($1,500 penalty + full liability):</p>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">9. PROHIBITED USES</h3>
+        <p className="mb-2 text-gray-700 max-w-prose">
+          The following are strictly prohibited ($1,500 penalty + full liability + immediate termination):
+        </p>
         <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2 max-w-prose">
-          <li>Operating by unauthorized drivers</li>
-          <li>Commercial use (Uber, Lyft, DoorDash, etc.)</li>
-          <li>Off-road driving, racing, drifting, or aggressive driving</li>
-          <li>Exceeding passenger capacity</li>
+          <li>Operation by unauthorized drivers or while impaired</li>
+          <li>Commercial use (Uber, Lyft, DoorDash, delivery, etc.)</li>
+          <li>Off-road driving, racing, drifting, or reckless/aggressive driving</li>
+          <li>Exceeding passenger or cargo capacity</li>
           <li>Leaving vehicle running and unattended</li>
           <li>Crossing U.S. borders (Canada/Mexico prohibited)</li>
+          <li>Subleasing, transferring possession, or using the vehicle for illegal activity</li>
         </ul>
       </div>
 
-      {/* Section 9 */}
+      {/* Section 10 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">9. GPS / VEHICLE TRACKING DISCLOSURE</h3>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">10. GPS / VEHICLE TRACKING DISCLOSURE</h3>
         <p className="text-gray-700 mb-2 max-w-prose">
-          Renter acknowledges and agrees that the vehicle may be equipped with a GPS tracking device or
-          similar telematics system. This technology may record and transmit vehicle location, speed,
-          mileage, and other operational data for vehicle recovery, mileage verification, safety
-          monitoring, and fleet management.
+          Renter acknowledges that the vehicle may be equipped with GPS or telematics that record location,
+          speed, mileage, and operational data for recovery, mileage verification, safety, and fleet
+          management. Tampering with, disabling, or removing such equipment is prohibited and may result in
+          penalties and full recovery costs.
         </p>
         <p className="font-semibold text-gray-900 max-w-prose">I acknowledge and consent to GPS/vehicle tracking during the rental period.</p>
       </div>
@@ -287,27 +322,27 @@ function Page2() {
 function Page3({ customerName }: { customerName?: string }) {
   return (
     <div className="p-6 pt-4">
-      {/* Section 10 */}
+      {/* Section 11 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">10. PETS & CLEANLINESS</h3>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">11. PETS & CLEANLINESS</h3>
         <p className="text-gray-700 max-w-prose">
           Pets are allowed ONLY if the vehicle is returned in completely clean condition with no pet hair,
           odors, or damage. Pet-related cleaning charges: $150-$350 depending on condition.
         </p>
       </div>
 
-      {/* Section 11 */}
+      {/* Section 12 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">11. VEHICLE RETURN CONDITIONS</h3>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">12. VEHICLE RETURN CONDITIONS</h3>
         <p className="text-gray-700 max-w-prose">
           Vehicle must be returned: (1) Clean inside and out (2) Full fuel tank (3) Without any new damage
           (4) With all original accessories and documentation (5) At or before scheduled return time
         </p>
       </div>
 
-      {/* Section 12 */}
+      {/* Section 13 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">12. ACCIDENT & THEFT PROCEDURES</h3>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">13. ACCIDENT & THEFT PROCEDURES</h3>
         <p className="text-gray-700 max-w-prose">
           In the event of any accident or theft, Renter MUST immediately: (1) Call 911 (2) Contact Next
           Gear Auto at (551) 429-3472 (3) File a police report the same day. Failure to follow these steps
@@ -316,32 +351,35 @@ function Page3({ customerName }: { customerName?: string }) {
         </p>
       </div>
 
-      {/* Section 13 */}
+      {/* Section 14 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">13. FRAUD & MISREPRESENTATION</h3>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">14. FRAUD, CHARGEBACKS & MISREPRESENTATION</h3>
         <p className="text-gray-700 max-w-prose">
-          Providing false identification, fraudulent insurance information, or invalid payment methods will
-          result in immediate contract termination, full liability for vehicle value, and potential criminal
-          prosecution.
+          Providing false identification, fraudulent insurance, invalid payment methods, or initiating a
+          chargeback or payment reversal without a bona fide billing error will result in immediate
+          termination, full liability for all amounts owed (including vehicle value where applicable), and
+          potential civil or criminal prosecution. Disputed charges remain due until resolved in Lessor&apos;s favor.
         </p>
       </div>
 
-      {/* Section 14 */}
+      {/* Section 15 */}
       <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">14. GOVERNING LAW</h3>
+        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">15. GOVERNING LAW & DISPUTE RESOLUTION</h3>
         <p className="text-gray-700 max-w-prose">
-          This Agreement is governed by the laws of the State of New Jersey, Hudson County. Venue is Hudson
-          County Superior Court. Both parties waive jury trial and class action rights. The prevailing party
-          is entitled to reasonable attorney fees.
+          This Agreement is governed by the laws of the State of New Jersey. Venue for disputes, including
+          collection of unpaid balances, is Hudson County Superior Court or small claims court in Hudson
+          County, unless otherwise required by law. Both parties waive jury trial and class action rights to
+          the extent permitted by law. The prevailing party in any action to enforce this Agreement is
+          entitled to reasonable attorneys&apos; fees and costs.
         </p>
       </div>
 
       {/* Signatures Section */}
       <div className="mb-4">
         <h3 className="font-bold text-sm text-gray-900 border-b-2 border-gray-900 pb-1 mb-2">SIGNATURES & ACKNOWLEDGMENT</h3>
-        <p className="italic text-gray-700 mb-4">
+        <p className="italic text-gray-700 mb-4 max-w-prose">
           By signing below, Renter acknowledges reading, understanding, and agreeing to all terms including
-          GPS tracking and indemnification.
+          payment obligations, unpaid balance remedies, GPS tracking, and indemnification.
         </p>
         <div className="space-y-3">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 sm:gap-x-6">

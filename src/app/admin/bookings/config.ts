@@ -19,6 +19,7 @@ export interface BookingsPageConfig {
     canBulkEmail: boolean;
     canCreateBookings: boolean;
     canSendBookingEmail: boolean;
+    canSendInvoice: boolean;
     canViewAdminNotes: boolean;
     canViewActivityTimeline: boolean;
     canManagePayments: boolean;
@@ -44,6 +45,7 @@ export const adminBookingsConfig: BookingsPageConfig = {
     canBulkEmail: true,
     canCreateBookings: true,
     canSendBookingEmail: true,
+    canSendInvoice: true,
     canViewAdminNotes: true,
     canViewActivityTimeline: true,
     canManagePayments: true,
@@ -69,6 +71,7 @@ export const managerBookingsConfig: BookingsPageConfig = {
     canBulkEmail: false,
     canCreateBookings: true,
     canSendBookingEmail: false,
+    canSendInvoice: true,
     canViewAdminNotes: false,
     canViewActivityTimeline: false,
     canManagePayments: false,

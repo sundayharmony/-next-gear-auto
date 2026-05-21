@@ -398,6 +398,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
             onSuccess={setSuccess}
             capabilities={{
               canSendBookingEmail: config.capabilities.canSendBookingEmail,
+              canSendInvoice: config.capabilities.canSendInvoice,
               canViewAdminNotes: config.capabilities.canViewAdminNotes,
               canViewActivityTimeline: config.capabilities.canViewActivityTimeline,
               canManagePayments: config.capabilities.canManagePayments,
