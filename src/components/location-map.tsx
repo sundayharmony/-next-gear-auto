@@ -2,6 +2,8 @@
 
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { escapeHtml } from "@/lib/utils/validation";
+import { isGoogleMapsBillingError, loadGoogleMaps } from "@/lib/google-maps/load-maps";
+import { onAdvancedMarkerClick } from "@/lib/google-maps/marker-events";
 
 interface LocationMapProps {
   locations: Array<{
@@ -20,67 +22,49 @@ interface LocationMapProps {
   className?: string;
 }
 
-// Load the Google Maps script once
-let mapsLoaded = false;
-let mapsLoadPromise: Promise<void> | null = null;
-
-function loadGoogleMaps(): Promise<void> {
-  if (mapsLoaded) return Promise.resolve();
-  if (mapsLoadPromise) return mapsLoadPromise;
-
-  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  if (!key) return Promise.reject(new Error("Google Maps API key not set"));
-
-  mapsLoadPromise = new Promise((resolve, reject) => {
-    // Check if already loaded by AddressAutocomplete or other component
-    if (typeof google !== "undefined" && google.maps) {
-      mapsLoaded = true;
-      resolve();
-      return;
-    }
-    const existing = document.querySelector('script[src*="maps.googleapis.com"]');
-    if (existing) {
-      existing.addEventListener("load", () => { mapsLoaded = true; resolve(); }, { once: true });
-      if (typeof google !== "undefined" && google.maps) { mapsLoaded = true; resolve(); }
-      return;
-    }
-    const script = document.createElement("script");
-    script.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=marker&v=weekly`;
-    script.async = true;
-    script.defer = true;
-    script.onload = () => { mapsLoaded = true; resolve(); };
-    script.onerror = () => {
-      mapsLoadPromise = null;
-      reject(new Error("Failed to load Google Maps"));
-    };
-    document.head.appendChild(script);
-  });
-
-  return mapsLoadPromise;
-}
-
 export function LocationMap({ locations, selectedId, onSelect, className }: LocationMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
   const mapInstanceRef = useRef<google.maps.Map | null>(null);
   const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
+  const markerListenersRef = useRef<google.maps.MapsEventListener[]>([]);
   const infoWindowRef = useRef<google.maps.InfoWindow | null>(null);
   const [mapReady, setMapReady] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<"missing-key" | "billing" | "load" | null>(null);
 
-  // Filter to locations with coordinates and valid ranges
-  const mappableLocations = locations.filter(l => l.lat != null && l.lng != null && !isNaN(l.lat) && !isNaN(l.lng) && l.lat >= -90 && l.lat <= 90 && l.lng >= -180 && l.lng <= 180);
+  const mappableLocations = locations.filter(
+    (l) =>
+      l.lat != null &&
+      l.lng != null &&
+      !isNaN(l.lat) &&
+      !isNaN(l.lng) &&
+      l.lat >= -90 &&
+      l.lat <= 90 &&
+      l.lng >= -180 &&
+      l.lng <= 180,
+  );
 
-  // Initialize map
+  useEffect(() => {
+    const onWindowError = (event: ErrorEvent) => {
+      const msg = event.message || String(event.error ?? "");
+      if (isGoogleMapsBillingError(msg)) setError("billing");
+    };
+    window.addEventListener("error", onWindowError);
+    return () => window.removeEventListener("error", onWindowError);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
+
+    if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY) {
+      setError("missing-key");
+      return;
+    }
 
     loadGoogleMaps()
       .then(() => {
         if (cancelled || !mapRef.current) return;
 
-        // Default center: Jersey City
         const center = { lat: 40.7178, lng: -74.0431 };
-
         const map = new google.maps.Map(mapRef.current, {
           center,
           zoom: 11,
@@ -94,23 +78,25 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
         infoWindowRef.current = new google.maps.InfoWindow();
         setMapReady(true);
       })
-      .catch((err) => {
-        if (!cancelled) setError(err.message);
+      .catch(() => {
+        if (!cancelled) setError("load");
       });
 
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  // Update markers when locations or selection changes
   const updateMarkers = useCallback(() => {
     const map = mapInstanceRef.current;
     if (!map || !mapReady) return;
 
-    // Clear existing markers and close any open InfoWindow
-    if (infoWindowRef.current) {
-      infoWindowRef.current.close();
-    }
-    markersRef.current.forEach(m => {
+    if (infoWindowRef.current) infoWindowRef.current.close();
+
+    markerListenersRef.current.forEach((l) => l.remove());
+    markerListenersRef.current = [];
+
+    markersRef.current.forEach((m) => {
       if (m) m.map = null;
     });
     markersRef.current = [];
@@ -135,7 +121,7 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
         zIndex: isSelected ? 10 : 1,
       });
 
-      marker.addListener("click", () => {
+      const listener = onAdvancedMarkerClick(marker, () => {
         onSelect(loc.id);
         const infoWindow = infoWindowRef.current;
         if (infoWindow) {
@@ -154,12 +140,12 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
           infoWindow.open({ anchor: marker, map });
         }
       });
+      markerListenersRef.current.push(listener);
 
       bounds.extend(position);
       markersRef.current.push(marker);
     });
 
-    // Fit map to show all markers with padding
     if (mappableLocations.length > 1) {
       map.fitBounds(bounds, { top: 40, bottom: 40, left: 40, right: 40 });
     } else if (mappableLocations.length === 1) {
@@ -172,7 +158,29 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
     updateMarkers();
   }, [updateMarkers]);
 
-  if (error) {
+  if (error === "billing") {
+    return (
+      <div
+        className={`rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900 ${className || "h-[250px] flex items-center"}`}
+      >
+        <p className="font-medium">Map preview unavailable</p>
+        <p className="mt-1 text-amber-800">
+          Google Maps billing is not enabled for this site&apos;s API key. Enable billing in{" "}
+          <a
+            href="https://console.cloud.google.com/google/maps-apis"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline"
+          >
+            Google Cloud Console
+          </a>
+          . You can still choose a pickup location from the list below.
+        </p>
+      </div>
+    );
+  }
+
+  if (error === "load" || error === "missing-key") {
     return (
       <div className={`rounded-lg bg-gray-100 flex items-center justify-center text-sm text-gray-500 ${className || "h-[250px]"}`}>
         Map unavailable
@@ -180,17 +188,14 @@ export function LocationMap({ locations, selectedId, onSelect, className }: Loca
     );
   }
 
-  if (mappableLocations.length === 0 && !error) {
+  if (mappableLocations.length === 0) {
     return (
-      <div className={`rounded-lg bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center text-sm text-gray-400 ${className || "h-[250px]"}`}>
+      <div
+        className={`rounded-lg bg-gray-50 border border-dashed border-gray-200 flex items-center justify-center text-sm text-gray-400 ${className || "h-[250px]"}`}
+      >
         No locations with coordinates to display
       </div>
     );
-  }
-
-  // Don't render map if no API key
-  if (!process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY) {
-    return null;
   }
 
   return (

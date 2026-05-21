@@ -1,20 +1,26 @@
 ﻿"use client";
 
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FileText,
   CheckCircle2,
   ArrowRight,
-  ArrowLeft,
   Loader2,
   PenLine,
   X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { SignaturePad } from "@/components/signature-pad";
-import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
-import { AGREEMENT_SIGNATURE_FIELDS as SIGNATURE_FIELDS } from "@/data/agreement-fields";
+import { RentalAgreementInline } from "@/components/rental-agreement-inline";
+import { AgreementSignatureSlot } from "@/components/agreement-signature-slot";
+import {
+  AGREEMENT_PAGE_COUNT,
+  AGREEMENT_SIGNATURE_FIELDS,
+  getFieldsForPage,
+  isPageComplete,
+} from "@/data/agreement-fields";
 
 export interface AgreementSigningVehicle {
   make: string;
@@ -41,12 +47,20 @@ export interface AgreementSigningBooking {
 export interface AgreementSigningWizardProps {
   booking: AgreementSigningBooking;
   vehicle: AgreementSigningVehicle | null;
-  onSubmit: (signatures: Record<string, string>) => Promise<void>;
+  /** Standalone: submit all signatures to API */
+  onSubmit?: (signatures: Record<string, string>) => Promise<void>;
   onCancel?: () => void;
   headerNote?: string;
   submitLabel?: string;
   agreementFooterNote?: string;
   compact?: boolean;
+  /** Embedded in booking step: parent owns signature state */
+  embedded?: boolean;
+  signatures?: Record<string, string | null | undefined>;
+  onSignaturesChange?: (signatures: Record<string, string | null>) => void;
+  legalName?: string;
+  onLegalNameChange?: (name: string) => void;
+  showLegalName?: boolean;
 }
 
 function calculateTotalDays(pickupDate: string, returnDate: string): number {
@@ -61,6 +75,8 @@ function calculateTotalDays(pickupDate: string, returnDate: string): number {
   }
 }
 
+type WizardPhase = "draw-signature" | "sign-pages";
+
 export function AgreementSigningWizard({
   booking,
   vehicle,
@@ -68,36 +84,113 @@ export function AgreementSigningWizard({
   onCancel,
   headerNote,
   submitLabel = "Submit Signed Agreement",
-  agreementFooterNote = "Vehicle and booking information has been pre-filled. Review the agreement above, then sign below.",
+  agreementFooterNote,
   compact = false,
+  embedded = false,
+  signatures: controlledSignatures,
+  onSignaturesChange,
+  legalName = "",
+  onLegalNameChange,
+  showLegalName = true,
 }: AgreementSigningWizardProps) {
-  const [signatures, setSignatures] = useState<Record<string, string | null>>({});
-  const [currentStep, setCurrentStep] = useState(0);
+  const [internalSignatures, setInternalSignatures] = useState<Record<string, string | null>>({});
+  const [phase, setPhase] = useState<WizardPhase>("draw-signature");
+  const [masterSignature, setMasterSignature] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [pageTransition, setPageTransition] = useState(false);
 
-  const handleSignatureChange = useCallback((fieldId: string, dataUrl: string | null) => {
-    setSignatures((prev) => ({ ...prev, [fieldId]: dataUrl }));
-  }, []);
+  const signatures = embedded && controlledSignatures !== undefined
+    ? controlledSignatures
+    : internalSignatures;
 
-  const completedCount = SIGNATURE_FIELDS.filter((f) => signatures[f.id]).length;
-  const allSigned = completedCount === SIGNATURE_FIELDS.length;
-  const currentField = SIGNATURE_FIELDS[currentStep];
+  useEffect(() => {
+    const saved = AGREEMENT_SIGNATURE_FIELDS.map((f) => signatures[f.id]).find(Boolean);
+    if (saved && !masterSignature) {
+      setMasterSignature(saved);
+      setPhase("sign-pages");
+    }
+  }, [signatures, masterSignature]);
+
+  const setSignatures = useCallback(
+    (updater: (prev: Record<string, string | null>) => Record<string, string | null>) => {
+      const base = embedded && controlledSignatures !== undefined ? controlledSignatures : internalSignatures;
+      const next = updater(base);
+      if (embedded && onSignaturesChange) {
+        onSignaturesChange(next);
+      } else {
+        setInternalSignatures(next);
+      }
+    },
+    [embedded, controlledSignatures, internalSignatures, onSignaturesChange],
+  );
+
   const totalDays = calculateTotalDays(booking.pickup_date, booking.return_date);
+  const pageFields = useMemo(() => getFieldsForPage(currentPage), [currentPage]);
+  const completedCount = AGREEMENT_SIGNATURE_FIELDS.filter((f) => signatures[f.id]).length;
+  const allSigned = completedCount === AGREEMENT_SIGNATURE_FIELDS.length;
+  const pageComplete = isPageComplete(currentPage, signatures);
 
-  const handleSubmit = async () => {
-    if (!allSigned) return;
+  const firstUnsignedOnPage = pageFields.find((f) => !signatures[f.id]);
 
-    const hasNullSignatures = SIGNATURE_FIELDS.some((f) => !signatures[f.id]);
-    if (hasNullSignatures) {
-      setError("All signature fields are required. Please sign all sections.");
+  useEffect(() => {
+    if (phase !== "sign-pages") return;
+    for (let p = 1; p <= AGREEMENT_PAGE_COUNT; p++) {
+      if (!isPageComplete(p, signatures)) {
+        setCurrentPage(p);
+        return;
+      }
+    }
+    setCurrentPage(AGREEMENT_PAGE_COUNT);
+    // Only when entering sign-pages (e.g. back navigation with saved signatures)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
+
+  useEffect(() => {
+    if (phase !== "sign-pages" || !pageComplete) return;
+    if (currentPage >= AGREEMENT_PAGE_COUNT) return;
+
+    setPageTransition(true);
+    const timer = window.setTimeout(() => {
+      setCurrentPage((p) => Math.min(AGREEMENT_PAGE_COUNT, p + 1));
+      setPageTransition(false);
+    }, 700);
+
+    return () => window.clearTimeout(timer);
+  }, [phase, pageComplete, currentPage]);
+
+  const applyToField = (fieldId: string) => {
+    if (!masterSignature) {
+      setError("Draw your signature first, then tap each field to apply it.");
+      setPhase("draw-signature");
       return;
     }
+    setError(null);
+    setSignatures((prev) => ({ ...prev, [fieldId]: masterSignature }));
+  };
+
+  const handleBeginSigning = () => {
+    if (!masterSignature) {
+      setError("Please draw your signature before continuing.");
+      return;
+    }
+    setError(null);
+    setPhase("sign-pages");
+    setCurrentPage(1);
+  };
+
+  const handleSubmit = async () => {
+    if (!allSigned || !onSubmit) return;
 
     const payload: Record<string, string> = {};
-    for (const field of SIGNATURE_FIELDS) {
+    for (const field of AGREEMENT_SIGNATURE_FIELDS) {
       const val = signatures[field.id];
-      if (val) payload[field.id] = val;
+      if (!val) {
+        setError("All signature fields are required. Please sign every field on each page.");
+        return;
+      }
+      payload[field.id] = val;
     }
 
     setSubmitting(true);
@@ -114,7 +207,6 @@ export function AgreementSigningWizard({
   const padWidth = compact
     ? Math.min(340, typeof window !== "undefined" ? window.innerWidth - 48 : 340)
     : 400;
-  const initialsWidth = compact ? 160 : 200;
 
   return (
     <div className={`space-y-4 ${compact ? "px-1 pb-[env(safe-area-inset-bottom)]" : ""}`}>
@@ -125,12 +217,12 @@ export function AgreementSigningWizard({
       )}
 
       {error && (
-        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+        <div className="rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between gap-2">
           <span>{error}</span>
           <button
             type="button"
             onClick={() => setError(null)}
-            className="ml-3 text-red-400 hover:text-red-600 shrink-0"
+            className="text-red-400 hover:text-red-600 shrink-0"
             aria-label="Dismiss error"
           >
             <X className="h-4 w-4" />
@@ -138,123 +230,171 @@ export function AgreementSigningWizard({
         </div>
       )}
 
-      {vehicle && (
-        <Card className={compact ? "border-0 shadow-none" : "mb-2"}>
-          <CardContent className={compact ? "p-2" : "p-4"}>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                <FileText className="h-4 w-4 text-purple-500" />
-                Rental Agreement
-              </h3>
-              {onCancel && (
-                <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="h-8 px-2">
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
+      {phase === "draw-signature" && (
+        <Card className="border-purple-200">
+          <CardContent className={compact ? "p-4" : "p-6"}>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+              <PenLine className="h-5 w-5 text-purple-600" />
+              Create your signature
+            </h3>
+            <p className="text-sm text-gray-500 mb-4">
+              Draw your signature once below. On the next screens you will tap each highlighted box on
+              the contract to apply it — no need to sign again.
+            </p>
+            <div className="flex justify-center">
+              <SignaturePad
+                onSignatureChange={setMasterSignature}
+                label="Draw your signature"
+                width={padWidth}
+                height={150}
+              />
             </div>
-            <RentalAgreementInline
-              vehicle={vehicle}
-              customerName={booking.customer_name}
-              customerEmail={booking.customer_email}
-              customerPhone={booking.customer_phone}
-              pickupDate={booking.pickup_date}
-              returnDate={booking.return_date}
-              pickupTime={booking.pickup_time}
-              returnTime={booking.return_time}
-              totalPrice={booking.total_price}
-              totalDays={totalDays}
-              currentPage={getPageForStep(currentStep)}
-            />
-            <p className="text-xs text-gray-400 mt-2">{agreementFooterNote}</p>
+            <div className="mt-6 flex justify-end">
+              <Button
+                type="button"
+                onClick={handleBeginSigning}
+                disabled={!masterSignature}
+                className="min-h-11"
+              >
+                Continue to agreement <ArrowRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
           </CardContent>
         </Card>
       )}
 
-      <div aria-live="polite" aria-label="Signature progress">
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-sm font-medium text-gray-700">
-            Signatures: {completedCount} of {SIGNATURE_FIELDS.length}
-          </span>
-          <span className="text-xs text-gray-400">
-            Step {currentStep + 1} of {SIGNATURE_FIELDS.length}
-          </span>
-        </div>
-        <div className="flex gap-1">
-          {SIGNATURE_FIELDS.map((field, i) => (
-            <button
-              key={field.id}
-              type="button"
-              onClick={() => setCurrentStep(i)}
-              className={`h-10 min-w-[2rem] flex-1 rounded-full transition-colors flex items-center justify-center ${
-                signatures[field.id]
-                  ? "bg-green-500"
-                  : i === currentStep
-                    ? "bg-purple-500"
-                    : "bg-gray-200"
-              }`}
-              title={`${field.label}: ${signatures[field.id] ? "Signed" : "Pending"}`}
-              aria-label={`${field.label}: ${signatures[field.id] ? "Signed" : "Pending"}`}
-            >
-              {signatures[field.id] ? (
-                <CheckCircle2 className="h-5 w-5 text-white" />
-              ) : i === currentStep ? (
-                <PenLine className="h-5 w-5 text-white" />
-              ) : null}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <Card className="border-purple-200">
-        <CardContent className={compact ? "p-4" : "p-6"}>
-          <div className="mb-4">
-            <div className="flex items-center gap-2 mb-1">
-              {signatures[currentField.id] ? (
-                <CheckCircle2 className="h-5 w-5 text-green-500" />
-              ) : (
-                <PenLine className="h-5 w-5 text-purple-500" />
-              )}
-              <h3 className="text-lg font-semibold text-gray-900">{currentField.label}</h3>
-            </div>
-            <p className="text-sm text-gray-500 ml-7">{currentField.description}</p>
+      {phase === "sign-pages" && vehicle && (
+        <>
+          <div className="flex items-center justify-between gap-2">
+            <span className="text-sm font-medium text-gray-700">
+              Agreement page {currentPage} of {AGREEMENT_PAGE_COUNT}
+            </span>
+            <span className="text-xs text-gray-500">
+              {completedCount} of {AGREEMENT_SIGNATURE_FIELDS.length} signed
+            </span>
           </div>
 
-          <div className="flex justify-center">
-            <SignaturePad
-              key={currentField.id}
-              onSignatureChange={(data) => handleSignatureChange(currentField.id, data)}
-              isInitials={currentField.isInitials}
-              label={currentField.isInitials ? "Initial here" : "Sign here"}
-              width={currentField.isInitials ? initialsWidth : padWidth}
-              height={currentField.isInitials ? 80 : 150}
-            />
-          </div>
+          <Card className={compact ? "border-0 shadow-none overflow-hidden" : "overflow-hidden"}>
+            <CardContent className={compact ? "p-0" : "p-0"}>
+              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-gray-50">
+                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <FileText className="h-4 w-4 text-purple-500" />
+                  Rental Agreement
+                </h3>
+                {onCancel && (
+                  <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="h-8 px-2">
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
 
-          <div className="flex items-center justify-between mt-6 pt-4 border-t border-gray-100 gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setCurrentStep((s) => Math.max(0, s - 1))}
-              disabled={currentStep === 0}
-              className="min-h-11"
-            >
-              <ArrowLeft className="h-4 w-4 mr-1" /> Previous
-            </Button>
-
-            {currentStep < SIGNATURE_FIELDS.length - 1 ? (
-              <Button
-                type="button"
-                onClick={() => setCurrentStep((s) => s + 1)}
-                disabled={!signatures[currentField.id]}
-                className="min-h-11"
+              <div
+                className={`transition-opacity duration-300 ${pageTransition ? "opacity-40" : "opacity-100"}`}
               >
-                Next <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            ) : (
+                <div className="max-h-[min(52vh,520px)] overflow-y-auto overscroll-contain border-b border-gray-100">
+                  <RentalAgreementInline
+                    vehicle={vehicle}
+                    customerName={booking.customer_name}
+                    customerEmail={booking.customer_email}
+                    customerPhone={booking.customer_phone}
+                    pickupDate={booking.pickup_date}
+                    returnDate={booking.return_date}
+                    pickupTime={booking.pickup_time}
+                    returnTime={booking.return_time}
+                    totalPrice={booking.total_price}
+                    totalDays={totalDays}
+                    deposit={booking.deposit}
+                    currentPage={currentPage}
+                  />
+                </div>
+              </div>
+
+              {agreementFooterNote && (
+                <p className="text-xs text-gray-400 px-4 py-2 border-b border-gray-50">{agreementFooterNote}</p>
+              )}
+
+              <div className="p-4 bg-purple-50/50 border-t border-purple-100">
+                <p className="text-sm font-medium text-purple-900 mb-1">
+                  {pageComplete && currentPage < AGREEMENT_PAGE_COUNT
+                    ? "Page complete — moving to next page…"
+                    : "Tap each box to apply your signature"}
+                </p>
+                <p className="text-xs text-purple-700/80 mb-3">
+                  {firstUnsignedOnPage
+                    ? `Next: ${firstUnsignedOnPage.label}`
+                    : currentPage < AGREEMENT_PAGE_COUNT
+                      ? "All fields on this page are signed."
+                      : "All pages signed."}
+                </p>
+
+                <div className="flex flex-col gap-3">
+                  {pageFields.map((field) => (
+                    <div
+                      key={field.id}
+                      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-semibold text-gray-800">{field.label}</p>
+                        <p className="text-[11px] text-gray-500 line-clamp-2">{field.description}</p>
+                      </div>
+                      <AgreementSignatureSlot
+                        fieldId={field.id}
+                        label={field.label}
+                        isInitials={field.isInitials}
+                        signature={signatures[field.id]}
+                        onClick={applyToField}
+                        disabled={!masterSignature}
+                        highlighted={field.id === firstUnsignedOnPage?.id}
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {currentPage > 1 && (
+                  <div className="mt-4 pt-3 border-t border-purple-100">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                    >
+                      Previous page
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+
+          {showLegalName && onLegalNameChange && (
+            <div className="rounded-lg border border-gray-200 bg-white p-4">
+              <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                Type your full legal name
+              </label>
+              <Input
+                placeholder="Your full legal name"
+                value={legalName}
+                onChange={(e) => onLegalNameChange(e.target.value)}
+                className="font-serif italic text-lg"
+              />
+            </div>
+          )}
+
+          {embedded && allSigned && legalName.trim() && (
+            <div className="rounded-lg bg-green-50 border border-green-200 p-3 flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
+              <span className="text-sm text-green-700">
+                Agreement fully signed — you may proceed to payment.
+              </span>
+            </div>
+          )}
+
+          {!embedded && allSigned && (
+            <div className="flex justify-end">
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={!allSigned || submitting}
+                disabled={submitting}
                 className="bg-green-600 hover:bg-green-700 min-h-11"
               >
                 {submitting ? (
@@ -267,41 +407,9 @@ export function AgreementSigningWizard({
                   </>
                 )}
               </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {!compact && (
-        <Card>
-          <CardContent className="p-4">
-            <h4 className="text-sm font-semibold text-gray-700 mb-3">All Signatures</h4>
-            <div className="space-y-2">
-              {SIGNATURE_FIELDS.map((field, i) => (
-                <button
-                  key={field.id}
-                  type="button"
-                  onClick={() => setCurrentStep(i)}
-                  className={`w-full flex items-center gap-3 rounded-lg px-3 py-2 text-left transition-colors min-h-11 ${
-                    i === currentStep
-                      ? "bg-purple-50 border border-purple-200"
-                      : "hover:bg-gray-50"
-                  }`}
-                >
-                  {signatures[field.id] ? (
-                    <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                  ) : (
-                    <div className="h-4 w-4 rounded-full border-2 border-gray-300 shrink-0" />
-                  )}
-                  <span className="text-sm text-gray-700 truncate">{field.label}</span>
-                  {signatures[field.id] && (
-                    <span className="ml-auto text-xs text-green-600 shrink-0">Signed</span>
-                  )}
-                </button>
-              ))}
             </div>
-          </CardContent>
-        </Card>
+          )}
+        </>
       )}
     </div>
   );

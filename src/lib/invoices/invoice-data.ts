@@ -6,6 +6,11 @@ import {
   calculateRentalHours,
 } from "@/lib/utils/price-calculator";
 import {
+  normalizeAdditionalLineItems,
+  sumInvoiceLineItems,
+  type AdditionalInvoiceLineItemInput,
+} from "@/lib/invoices/invoice-line-items";
+import {
   getBookingBalanceDue,
   getBookingDisplayTotal,
   getRecurringBillingSummary,
@@ -78,7 +83,10 @@ export function buildBookingInvoiceData(
     | "pickup_location_name"
     | "return_location_name"
   >,
-  options?: { vehicleDailyRate?: number | null },
+  options?: {
+    vehicleDailyRate?: number | null;
+    additionalLineItems?: AdditionalInvoiceLineItemInput[];
+  },
 ): BookingInvoiceData {
   const displayTotal = getBookingDisplayTotal(booking);
   const balanceDue = getBookingBalanceDue(booking);
@@ -196,11 +204,26 @@ export function buildBookingInvoiceData(
     }
   }
 
-  const chargesTotal = recurring
-    ? recurring.contractTotalToDate
-    : lineItems.reduce((sum, item) => {
-        return item.isCredit ? sum - item.amount : sum + item.amount;
-      }, 0);
+  const additional = normalizeAdditionalLineItems(options?.additionalLineItems ?? []);
+  if (additional.length > 0) {
+    lineItems.push(...additional);
+  }
+
+  const additionalCharges = additional.length > 0 ? sumInvoiceLineItems(additional) : 0;
+  let chargesTotal: number;
+  if (recurring) {
+    chargesTotal = Math.max(
+      0,
+      Math.round((recurring.contractTotalToDate + additionalCharges) * 100) / 100,
+    );
+  } else {
+    chargesTotal = sumInvoiceLineItems(lineItems);
+  }
+
+  const invoiceBalanceDue =
+    additional.length > 0
+      ? Math.max(0, Math.round((chargesTotal - amountPaid) * 100) / 100)
+      : balanceDue;
 
   const today = new Date();
   const invoiceDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
@@ -219,7 +242,7 @@ export function buildBookingInvoiceData(
     lineItems,
     chargesTotal: Math.max(0, Math.round(chargesTotal * 100) / 100),
     amountPaid,
-    balanceDue,
+    balanceDue: invoiceBalanceDue,
     invoiceDate,
     promoCode: booking.promo_code || undefined,
   };

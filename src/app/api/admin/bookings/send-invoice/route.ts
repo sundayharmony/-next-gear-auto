@@ -8,6 +8,7 @@ import {
 import { isAdminRole, isManagerRole } from "@/lib/auth/roles";
 import { sendBookingInvoice } from "@/lib/email/mailer";
 import { buildBookingInvoiceData } from "@/lib/invoices/invoice-data";
+import { validateAdditionalInvoiceLineItems } from "@/lib/invoices/invoice-line-items";
 import { generateInvoicePdf } from "@/lib/invoices/invoice-pdf";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
@@ -21,7 +22,7 @@ export async function POST(req: NextRequest) {
   if (!auth.authorized) return auth.response;
 
   try {
-    let body: { bookingId?: string };
+    let body: { bookingId?: string; additionalLineItems?: unknown };
     try {
       body = await req.json();
     } catch {
@@ -32,6 +33,13 @@ export async function POST(req: NextRequest) {
     }
 
     const bookingId = typeof body.bookingId === "string" ? body.bookingId.trim() : "";
+    const additionalParsed = validateAdditionalInvoiceLineItems(body.additionalLineItems);
+    if (!additionalParsed.ok) {
+      return NextResponse.json(
+        { success: false, message: additionalParsed.message },
+        { status: 400 },
+      );
+    }
     if (!bookingId || (!BOOKING_ID_RE.test(bookingId) && !UUID_RE.test(bookingId))) {
       return NextResponse.json(
         { success: false, message: "Valid bookingId is required" },
@@ -108,7 +116,10 @@ export async function POST(req: NextRequest) {
         ...booking,
         vehicleName,
       },
-      { vehicleDailyRate },
+      {
+        vehicleDailyRate,
+        additionalLineItems: additionalParsed.items,
+      },
     );
 
     let pdfBytes: Uint8Array | undefined;
@@ -143,6 +154,7 @@ export async function POST(req: NextRequest) {
         balance_due: invoiceData.balanceDue,
         charges_total: invoiceData.chargesTotal,
         had_pdf: !!pdfBytes,
+        additional_line_items: additionalParsed.items.length > 0 ? additionalParsed.items : undefined,
       },
       performed_by: performedBy,
     });

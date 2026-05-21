@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, useCallback } from "react";
 import { MapPin, Search, X, Check } from "lucide-react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
+import { isGoogleMapsBillingError, loadGoogleMaps } from "@/lib/google-maps/load-maps";
 
 /* ── Types ────────────────────────────────────────── */
 
@@ -23,41 +24,6 @@ interface Props {
   onSelect?: (result: AddressResult) => void;
   placeholder?: string;
   className?: string;
-}
-
-/* ── Google Maps loader (shared singleton) ────────── */
-
-let loadPromise: Promise<void> | null = null;
-
-function ensureGoogleMaps(): Promise<void> {
-  if (typeof google !== "undefined" && google.maps) return Promise.resolve();
-  if (loadPromise) return loadPromise;
-
-  const key = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
-  if (!key) return Promise.reject(new Error("Missing NEXT_PUBLIC_GOOGLE_MAPS_KEY"));
-
-  loadPromise = new Promise((resolve, reject) => {
-    const existing = document.querySelector('script[src*="maps.googleapis.com"]');
-    if (existing) {
-      if (typeof google !== "undefined" && google.maps) return resolve();
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener("error", () => {
-        loadPromise = null;
-        reject(new Error("Script failed"));
-      }, { once: true });
-      return;
-    }
-    const s = document.createElement("script");
-    s.src = `https://maps.googleapis.com/maps/api/js?key=${key}&libraries=marker&v=weekly`;
-    s.async = true;
-    s.onload = () => resolve();
-    s.onerror = () => {
-      loadPromise = null;
-      reject(new Error("Script failed"));
-    };
-    document.head.appendChild(s);
-  });
-  return loadPromise;
 }
 
 /* ── Server-side geocoding ────────────────────────── */
@@ -106,12 +72,24 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder = "
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
+  useEffect(() => {
+    if (!open) return;
+    const onWindowError = (event: ErrorEvent) => {
+      const msg = event.message || String(event.error ?? "");
+      if (isGoogleMapsBillingError(msg)) {
+        setErr("Google Maps billing is not enabled for this API key. Enable billing in Google Cloud Console.");
+      }
+    };
+    window.addEventListener("error", onWindowError);
+    return () => window.removeEventListener("error", onWindowError);
+  }, [open]);
+
   /* ── Init map when modal opens ── */
   useEffect(() => {
     if (!open || !apiKey) return;
     let dead = false;
 
-    ensureGoogleMaps()
+    loadGoogleMaps()
       .then(() => new Promise<void>((r) => requestAnimationFrame(() => r())))
       .then(() => {
         if (dead) return;

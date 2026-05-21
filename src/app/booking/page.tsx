@@ -6,7 +6,7 @@ import { useSearchParams } from "next/navigation";
 import {
   Search, Car, Package, UserCheck, ShieldCheck, FileText, CreditCard,
   Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight, Tag, X, Upload,
-  Shield, CheckCircle, PenLine, CheckCircle2, Maximize2, MapPin,
+  Shield, CheckCircle, PenLine, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -15,8 +15,7 @@ import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { useBooking } from "@/lib/context/booking-context";
 import { useVehicles } from "@/lib/hooks/useVehicles";
-import { SignaturePad } from "@/components/signature-pad";
-import { RentalAgreementInline, getPageForStep } from "@/components/rental-agreement-inline";
+import { AgreementSigningWizard } from "@/components/agreement-signing-wizard";
 import { LocationMap } from "@/components/location-map";
 import { cn } from "@/lib/utils/cn";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
@@ -207,6 +206,13 @@ function BookingPageInner() {
     }
   }, [booking.pickupLocationId, booking.returnLocationId]);
 
+  // Restore ID document URL from booking context if user navigates back
+  useEffect(() => {
+    if (booking.idDocumentUrl) {
+      setIdDocumentUrl(booking.idDocumentUrl);
+    }
+  }, [booking.idDocumentUrl]);
+
   // Check if a vehicle has a date conflict with selected dates (includes 60-minute buffer matching server gap)
   const isVehicleBooked = (vehicleId: string): boolean => {
     const ranges = vehicleBookedDates[vehicleId];
@@ -265,18 +271,8 @@ function BookingPageInner() {
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   // PDF agreement signature state
   const [agreementSignatures, setAgreementSignatures] = useState<Record<string, string | null>>({});
-  const [agreementStep, setAgreementStep] = useState(0);
 
-  const handleAgreementSignatureChange = useCallback(
-    (fieldId: string, dataUrl: string | null) => {
-      setAgreementSignatures((prev) => ({ ...prev, [fieldId]: dataUrl }));
-    },
-    []
-  );
-
-  const agreementCompletedCount = AGREEMENT_SIGNATURE_FIELDS.filter((f) => agreementSignatures[f.id]).length;
-  const allAgreementsSigned = agreementCompletedCount === AGREEMENT_SIGNATURE_FIELDS.length;
-  const currentAgreementField = AGREEMENT_SIGNATURE_FIELDS[agreementStep];
+  const allAgreementsSigned = AGREEMENT_SIGNATURE_FIELDS.every((f) => agreementSignatures[f.id]);
   const [searchDates, setSearchDates] = useState(() => {
     // Restore from booking context if available
     if (booking.pickupDate && booking.returnDate) {
@@ -296,14 +292,13 @@ function BookingPageInner() {
   const [calendarViewDate, setCalendarViewDate] = useState(new Date());
   const [showDobCalendar, setShowDobCalendar] = useState(false);
   const [dobViewDate, setDobViewDate] = useState(new Date(new Date().getFullYear() - 25, new Date().getMonth(), 1));
-  const [showFullAgreement, setShowFullAgreement] = useState(false);
-  const [fullAgreementPage, setFullAgreementPage] = useState(1);
   const [promoInput, setPromoInput] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState("");
-  const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(null);
+  const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(booking.idDocumentUrl);
+  const [idRequiredError, setIdRequiredError] = useState("");
   const [uploadingId, setUploadingId] = useState(false);
   const [dateValidationError, setDateValidationError] = useState<string>("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -372,8 +367,12 @@ function BookingPageInner() {
     setPromoLoading(false);
   };
 
+  const hasValidIdUpload = (): boolean =>
+    !!idDocumentUrl && !uploadingId;
+
   const handleFileUpload = async (file: File) => {
     setUploadError("");
+    setIdRequiredError("");
     if (!file || !file.name) {
       setUploadError("No file selected.");
       return;
@@ -403,6 +402,7 @@ function BookingPageInner() {
       const data = await res.json();
       if (data.success) {
         setIdDocumentUrl(data.url);
+        setIdRequiredError("");
       } else {
         setUploadError("Upload failed: " + (data.error || "Unknown error"));
         setUploadedFile(null);
@@ -506,7 +506,7 @@ function BookingPageInner() {
         }
         return true;
       }
-      case 5: return true; // ID upload optional in prototype
+      case 5: return hasValidIdUpload();
       case 6: return allAgreementsSigned && !!signedName;
       case 7: return true;
       default: return false;
@@ -518,6 +518,9 @@ function BookingPageInner() {
     if (!canProceed()) {
       if (booking.currentStep === 1) {
         setDateValidationError(getStep1ValidationError() ?? "");
+      }
+      if (booking.currentStep === 5) {
+        setIdRequiredError("Please upload a photo of your ID to continue");
       }
       return;
     }
@@ -1474,18 +1477,20 @@ function BookingPageInner() {
                   }}
                 />
 
-                {uploadedFile ? (
+                {hasValidIdUpload() || (uploadedFile && uploadingId) ? (
                   <div className="rounded-xl border-2 border-green-300 bg-green-50 p-6 text-center">
                     <Check className="mx-auto h-10 w-10 text-green-500 mb-3" />
                     <p className="text-sm font-medium text-green-700">
                       {uploadingId ? "Uploading..." : "File uploaded successfully"}
                     </p>
-                    <p className="mt-1 text-xs text-gray-500">{uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(0)} KB)</p>
+                    {uploadedFile && (
+                      <p className="mt-1 text-xs text-gray-500">{uploadedFile.name} ({(uploadedFile.size / 1024).toFixed(0)} KB)</p>
+                    )}
                     <div className="mt-4 flex justify-center gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => { setUploadedFile(null); setIdDocumentUrl(null); if (fileInputRef.current) fileInputRef.current.value = ""; }}
+                        onClick={() => { setUploadedFile(null); setIdDocumentUrl(null); setIdRequiredError(""); if (fileInputRef.current) fileInputRef.current.value = ""; }}
                       >
                         <X className="h-3.5 w-3.5 mr-1" /> Remove
                       </Button>
@@ -1524,7 +1529,13 @@ function BookingPageInner() {
                   <p className="mt-3 text-sm text-red-600">{uploadError}</p>
                 )}
 
-                <p className="mt-4 text-xs text-gray-400">Your ID will be verified within 24 hours. You can proceed with your booking now.</p>
+                {!hasValidIdUpload() && !uploadingId && (
+                  <p className="mt-3 text-sm text-red-600">
+                    {idRequiredError || "Please upload a photo of your ID to continue"}
+                  </p>
+                )}
+
+                <p className="mt-4 text-xs text-gray-400">Your ID will be verified before or at pickup.</p>
               </CardContent>
             </Card>
           )}
@@ -1712,229 +1723,40 @@ function BookingPageInner() {
                     Rental Agreement
                   </h3>
                   <p className="text-sm text-gray-500 mb-4">
-                    Review the rental agreement, then provide your initials and signature to proceed.
+                    Draw your signature once, then read each page and tap each box to sign. Pages advance
+                    automatically when complete.
                   </p>
 
-                  {/* Read Agreement Button + Compact Preview */}
-                  {booking.selectedVehicle && (
-                    <div className="mb-4">
-                      <button
-                        onClick={() => { setFullAgreementPage(getPageForStep(agreementStep)); setShowFullAgreement(true); }}
-                        className="w-full rounded-xl border-2 border-dashed border-purple-200 bg-purple-50/50 p-4 flex items-center justify-between hover:border-purple-400 hover:bg-purple-50 transition-all group"
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className="h-10 w-10 rounded-lg bg-purple-100 flex items-center justify-center group-hover:bg-purple-200 transition-colors">
-                            <FileText className="h-5 w-5 text-purple-600" />
-                          </div>
-                          <div className="text-left">
-                            <p className="text-sm font-semibold text-gray-900">Vehicle Rental Agreement</p>
-                            <p className="text-xs text-gray-500">Tap to read full agreement — Page {getPageForStep(agreementStep)} of 3</p>
-                          </div>
-                        </div>
-                        <Maximize2 className="h-5 w-5 text-purple-400 group-hover:text-purple-600 transition-colors" />
-                      </button>
-                    </div>
-                  )}
-
-                  {/* Full-Screen Agreement Reader Overlay */}
-                  {showFullAgreement && booking.selectedVehicle && (
-                    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center" onClick={() => setShowFullAgreement(false)}>
-                      <div className="absolute inset-0 bg-black/40 backdrop-blur-xl" />
-                      <div
-                        className="relative bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl w-full sm:max-w-lg mx-0 sm:mx-4 shadow-2xl max-h-[92vh] sm:max-h-[85vh] flex flex-col animate-in slide-in-from-bottom duration-300"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {/* Header */}
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                          <h3 className="font-bold text-gray-900">Rental Agreement</h3>
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs text-gray-400">Page {fullAgreementPage} of 3</span>
-                            <button onClick={() => setShowFullAgreement(false)} aria-label="Close agreement" className="h-8 w-8 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200 transition-colors">
-                              <X className="h-4 w-4 text-gray-600" />
-                            </button>
-                          </div>
-                        </div>
-
-                        {/* Scrollable Agreement Content */}
-                        <div className="flex-1 overflow-y-auto overscroll-contain">
-                          <div className="text-[15px] leading-relaxed">
-                            <RentalAgreementInline
-                              vehicle={booking.selectedVehicle}
-                              customerName={details.name}
-                              customerEmail={details.email}
-                              customerPhone={details.phone}
-                              pickupDate={booking.pickupDate}
-                              returnDate={booking.returnDate}
-                              pickupTime={booking.pickupTime}
-                              returnTime={booking.returnTime}
-                              totalPrice={booking.pricing?.total || 0}
-                              totalDays={
-                                booking.pricing
-                                  ? wholeCalendarDaysBetween(booking.pickupDate, booking.returnDate)
-                                  : 1
-                              }
-                              currentPage={fullAgreementPage}
-                            />
-                          </div>
-                        </div>
-
-                        {/* Page Navigation Footer */}
-                        <div className="shrink-0 px-6 py-4 border-t border-gray-100 flex items-center justify-between bg-white/80">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => setFullAgreementPage((p) => Math.max(1, p - 1))}
-                            disabled={fullAgreementPage === 1}
-                          >
-                            <ArrowLeft className="h-3.5 w-3.5 mr-1" /> Previous
-                          </Button>
-                          <div className="flex gap-1.5">
-                            {[1, 2, 3].map((p) => (
-                              <button
-                                key={p}
-                                onClick={() => setFullAgreementPage(p)}
-                                className={`h-2.5 w-8 rounded-full transition-colors ${p === fullAgreementPage ? "bg-purple-600" : "bg-gray-200 hover:bg-gray-300"}`}
-                              />
-                            ))}
-                          </div>
-                          {fullAgreementPage < 3 ? (
-                            <Button
-                              size="sm"
-                              onClick={() => setFullAgreementPage((p) => p + 1)}
-                            >
-                              Next <ArrowRight className="h-3.5 w-3.5 ml-1" />
-                            </Button>
-                          ) : (
-                            <Button
-                              size="sm"
-                              onClick={() => setShowFullAgreement(false)}
-                            >
-                              Done <Check className="h-3.5 w-3.5 ml-1" />
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Signature Progress */}
-                  <div className="mb-4">
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-700">
-                        Signatures: {agreementCompletedCount} of {AGREEMENT_SIGNATURE_FIELDS.length}
-                      </span>
-                      <span className="text-xs text-gray-400">
-                        Step {agreementStep + 1} of {AGREEMENT_SIGNATURE_FIELDS.length}
-                      </span>
-                    </div>
-                    <div className="flex gap-1">
-                      {AGREEMENT_SIGNATURE_FIELDS.map((field, i) => (
-                        <button
-                          key={field.id}
-                          onClick={() => setAgreementStep(i)}
-                          className={`h-2 flex-1 rounded-full transition-colors ${
-                            agreementSignatures[field.id]
-                              ? "bg-green-500"
-                              : i === agreementStep
-                                ? "bg-purple-500"
-                                : "bg-gray-200"
-                          }`}
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Current Signature Field */}
-                  {currentAgreementField && (
-                    <div className="rounded-lg border border-purple-200 bg-purple-50/30 p-4 mb-4">
-                      <div className="mb-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          {agreementSignatures[currentAgreementField.id] ? (
-                            <CheckCircle2 className="h-5 w-5 text-green-500" />
-                          ) : (
-                            <PenLine className="h-5 w-5 text-purple-500" />
-                          )}
-                          <h4 className="text-sm font-semibold text-gray-900">
-                            {currentAgreementField.label}
-                          </h4>
-                        </div>
-                        <p className="text-xs text-gray-500 ml-7">
-                          {currentAgreementField.description}
-                        </p>
-                      </div>
-
-                      <div className="flex justify-center">
-                        <SignaturePad
-                          key={currentAgreementField.id}
-                          onSignatureChange={(data) =>
-                            handleAgreementSignatureChange(currentAgreementField.id, data)
-                          }
-                          isInitials={currentAgreementField.isInitials}
-                          label={currentAgreementField.isInitials ? "Initial here" : "Sign here"}
-                          width={currentAgreementField.isInitials ? 200 : 400}
-                          height={currentAgreementField.isInitials ? 80 : 150}
-                        />
-                      </div>
-
-                      {/* Signature Navigation */}
-                      <div className="flex items-center justify-between mt-4 pt-3 border-t border-purple-100">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setAgreementStep((s) => Math.max(0, s - 1))}
-                          disabled={agreementStep === 0}
-                        >
-                          <ArrowLeft className="h-3 w-3 mr-1" /> Previous
-                        </Button>
-                        {agreementStep < AGREEMENT_SIGNATURE_FIELDS.length - 1 && (
-                          <Button
-                            size="sm"
-                            onClick={() => setAgreementStep((s) => s + 1)}
-                            disabled={!agreementSignatures[currentAgreementField.id]}
-                          >
-                            Next <ArrowRight className="h-3 w-3 ml-1" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* All Signatures Summary */}
-                  <div className="space-y-1.5 mb-4">
-                    {AGREEMENT_SIGNATURE_FIELDS.map((field, i) => (
-                      <button
-                        key={field.id}
-                        onClick={() => setAgreementStep(i)}
-                        className={`w-full flex items-center gap-2 rounded-lg px-3 py-2 text-left transition-colors text-sm ${
-                          i === agreementStep
-                            ? "bg-purple-50 border border-purple-200"
-                            : "hover:bg-gray-50"
-                        }`}
-                      >
-                        {agreementSignatures[field.id] ? (
-                          <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0" />
-                        ) : (
-                          <div className="h-3.5 w-3.5 rounded-full border-2 border-gray-300 shrink-0" />
-                        )}
-                        <span className="text-gray-700 truncate text-xs">{field.label}</span>
-                        {agreementSignatures[field.id] && (
-                          <span className="ml-auto text-xs text-green-600 shrink-0">Signed</span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
-
-                  {/* Typed Legal Name */}
-                  <div className="border-t pt-4">
-                    <label className="mb-1.5 block text-sm font-medium text-gray-700">Type Your Full Legal Name</label>
-                    <Input placeholder="Your full legal name" value={signedName} onChange={(e) => setSignedName(e.target.value)} className="font-serif italic text-lg" />
-                  </div>
-
-                  {allAgreementsSigned && signedName && (
-                    <div className="mt-3 rounded-lg bg-green-50 border border-green-200 p-3 flex items-center gap-2">
-                      <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
-                      <span className="text-sm text-green-700">Agreement fully signed — you may proceed to payment.</span>
-                    </div>
+                  {booking.selectedVehicle ? (
+                    <AgreementSigningWizard
+                      embedded
+                      booking={{
+                        customer_name: details.name,
+                        customer_email: details.email,
+                        customer_phone: details.phone,
+                        pickup_date: booking.pickupDate,
+                        return_date: booking.returnDate,
+                        pickup_time: booking.pickupTime,
+                        return_time: booking.returnTime,
+                        total_price: booking.pricing?.total || 0,
+                      }}
+                      vehicle={{
+                        make: booking.selectedVehicle.make,
+                        model: booking.selectedVehicle.model,
+                        year: booking.selectedVehicle.year,
+                        licensePlate: booking.selectedVehicle.licensePlate,
+                        vin: booking.selectedVehicle.vin,
+                        color: booking.selectedVehicle.color,
+                        mileage: booking.selectedVehicle.mileage,
+                      }}
+                      signatures={agreementSignatures}
+                      onSignaturesChange={setAgreementSignatures}
+                      legalName={signedName}
+                      onLegalNameChange={setSignedName}
+                      agreementFooterNote="Review the text above, then tap each signature box below."
+                    />
+                  ) : (
+                    <p className="text-sm text-amber-700">Select a vehicle to view and sign the agreement.</p>
                   )}
                 </CardContent>
               </Card>

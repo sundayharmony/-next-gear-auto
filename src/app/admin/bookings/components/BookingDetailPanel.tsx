@@ -72,6 +72,7 @@ import {
 } from "@/lib/utils/recurring-booking";
 
 import { isAllowedExternalHref } from "@/lib/utils/safe-url";
+import { SendInvoiceModal } from "./SendInvoiceModal";
 
 interface BookingDetailPanelProps {
   booking: BookingRow;
@@ -143,7 +144,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
 
   // Email sending
   const [sendingEmail, setSendingEmail] = useState(false);
-  const [sendingInvoice, setSendingInvoice] = useState(false);
+  const [showSendInvoiceModal, setShowSendInvoiceModal] = useState(false);
   const [resendingAgreement, setResendingAgreement] = useState(false);
   const [overridingAgreement, setOverridingAgreement] = useState(false);
 
@@ -795,32 +796,6 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const hasCustomerEmail = Boolean((booking.customer_email || "").trim());
   const canShowSendInvoice =
     canSendInvoice && canViewPricing && canManageRow && hasCustomerEmail;
-
-  const handleSendInvoice = async () => {
-    if (!canShowSendInvoice) return;
-    const confirmMsg = `Send invoice to ${booking.customer_email}?\n\nBalance due: $${balanceDue.toFixed(2)}`;
-    if (!window.confirm(confirmMsg)) return;
-
-    setSendingInvoice(true);
-    try {
-      const res = await adminFetch("/api/admin/bookings/send-invoice", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: booking.id }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        onSuccess(data.message || `Invoice sent to ${booking.customer_email}`);
-      } else {
-        onError(data.message || "Failed to send invoice");
-      }
-    } catch (err) {
-      logger.error("Failed to send invoice:", err);
-      onError("Network error — could not send invoice");
-    } finally {
-      setSendingInvoice(false);
-    }
-  };
 
   // Get vehicle name
   const vehicleObj = vehicles.find((v) => v.id === booking.vehicle_id);
@@ -1618,8 +1593,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     <Button
                       size="sm"
                       variant="outline"
-                      onClick={handleSendInvoice}
-                      disabled={sendingInvoice || !hasCustomerEmail || !canViewPricing}
+                      onClick={() => setShowSendInvoiceModal(true)}
+                      disabled={!hasCustomerEmail || !canViewPricing}
                       title={
                         !hasCustomerEmail
                           ? "Customer email required"
@@ -1630,7 +1605,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       className="w-full text-xs border-purple-300 text-purple-700 hover:bg-purple-50"
                     >
                       <Mail className="w-3 h-3 mr-1" />
-                      {sendingInvoice ? "Sending Invoice..." : "Send Invoice"}
+                      Send Invoice
                     </Button>
                   </div>
                 )}
@@ -2304,6 +2279,15 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           )}
         </div>
       </div>
+
+      {showSendInvoiceModal && canShowSendInvoice && (
+        <SendInvoiceModal
+          bookingId={booking.id}
+          onClose={() => setShowSendInvoiceModal(false)}
+          onSuccess={onSuccess}
+          onError={onError}
+        />
+      )}
     </div>
   );
 }
