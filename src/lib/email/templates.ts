@@ -664,6 +664,7 @@ export interface BookingInvoiceEmailData {
   pickupTime?: string;
   returnTime?: string;
   invoiceDate: string;
+  dueDate: string;
   lineItems: InvoiceEmailLineItem[];
   chargesTotal: number;
   amountPaid: number;
@@ -684,7 +685,7 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
     .map((item) => invoiceLineRow(item.label, item.amount, item.isCredit))
     .join("");
   const balanceColor = data.balanceDue > 0 ? "#dc2626" : "#059669";
-  const paymentNoticeParagraphs = getInvoicePaymentNoticeParagraphs(data.balanceDue);
+  const paymentNoticeParagraphs = getInvoicePaymentNoticeParagraphs(data.balanceDue, data.dueDate);
   const paymentNoticeHtml = paymentNoticeParagraphs
     .map(
       (p) =>
@@ -700,7 +701,7 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
       <td style="padding: 40px 32px 16px; text-align: center;">
         <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
         <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Invoice</h1>
-        <p style="margin: 0; color: #6b7280; font-size: 13px;">${escapeHtml(fmtDate(data.invoiceDate))} &bull; Booking ${escapeHtml(data.bookingId)}</p>
+        <p style="margin: 0; color: #6b7280; font-size: 13px;">Invoice ${escapeHtml(fmtDate(data.invoiceDate))} &bull; Due ${escapeHtml(fmtDate(data.dueDate))} &bull; Booking ${escapeHtml(data.bookingId)}</p>
       </td>
     </tr>
     <tr>
@@ -731,6 +732,7 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
             <td style="padding: 14px 0 0; color: #111827; font-size: 15px; font-weight: 700;">Balance due</td>
             <td style="padding: 14px 0 0; color: ${balanceColor}; font-size: 18px; font-weight: 800; text-align: right;">$${data.balanceDue.toFixed(2)}</td>
           </tr>
+          ${data.balanceDue > 0 ? detailRow("Payment due by", fmtDate(data.dueDate), true) : ""}
         </table>
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0 20px;">
           <tr>

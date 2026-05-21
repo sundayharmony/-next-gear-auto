@@ -47,6 +47,7 @@ export async function generateInvoicePdf(data: BookingInvoiceData): Promise<Uint
   draw("INVOICE", 14, true, purple);
   y -= 4;
   draw(`Invoice date: ${formatInvoiceDate(data.invoiceDate)}`, 10);
+  draw(`Payment due by: ${formatInvoiceDate(data.dueDate)}`, 10);
   draw(`Booking ID: ${data.bookingId}`, 10);
   y -= 8;
 
@@ -102,7 +103,7 @@ export async function generateInvoicePdf(data: BookingInvoiceData): Promise<Uint
     draw("Payment required", 10, true, rgb(0.55, 0.1, 0.1));
     y -= 2;
   }
-  for (const paragraph of getInvoicePaymentNoticeParagraphs(data.balanceDue)) {
+  for (const paragraph of getInvoicePaymentNoticeParagraphs(data.balanceDue, data.dueDate)) {
     for (const line of wrapPdfText(paragraph, PDF_TEXT_WIDTH, 9, font)) {
       if (y < 80) break;
       page.drawText(line, { x: 50, y, size: 9, font, color: rgb(0.25, 0.25, 0.25) });

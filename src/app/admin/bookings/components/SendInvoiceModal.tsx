@@ -3,7 +3,9 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Mail, Plus, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
+import { defaultInvoiceDueDate } from "@/lib/invoices/invoice-due-date";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import type { InvoiceLineItem } from "@/lib/invoices/invoice-data";
 import {
@@ -28,6 +30,8 @@ type PreviewData = {
   balanceDue: number;
   customerEmail: string;
   customerName: string;
+  invoiceDate: string;
+  defaultDueDate: string;
 };
 
 function emptyDraft(): DraftLine {
@@ -70,6 +74,7 @@ export function SendInvoiceModal({
   const [htmlPreview, setHtmlPreview] = useState("");
   const [loadingHtml, setLoadingHtml] = useState(false);
   const [htmlError, setHtmlError] = useState("");
+  const [dueDate, setDueDate] = useState(defaultInvoiceDueDate());
 
   useEffect(() => {
     let cancelled = false;
@@ -84,7 +89,9 @@ export function SendInvoiceModal({
           setPreviewError(data.message || "Could not load invoice preview");
           return;
         }
-        setPreview(data.data as PreviewData);
+        const loaded = data.data as PreviewData;
+        setPreview(loaded);
+        if (loaded.defaultDueDate) setDueDate(loaded.defaultDueDate);
       })
       .catch(() => {
         if (!cancelled) setPreviewError("Network error — could not load invoice preview");
@@ -126,6 +133,7 @@ export function SendInvoiceModal({
         body: JSON.stringify({
           bookingId,
           additionalLineItems: additionalItems,
+          dueDate,
         }),
       })
         .then(async (res) => {
@@ -153,7 +161,7 @@ export function SendInvoiceModal({
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [tab, preview, loadingPreview, previewError, bookingId, additionalItems]);
+  }, [tab, preview, loadingPreview, previewError, bookingId, additionalItems, dueDate]);
 
   const addLine = () => {
     if (drafts.length >= MAX_ADDITIONAL_INVOICE_LINES) return;
@@ -180,6 +188,10 @@ export function SendInvoiceModal({
       onError("Each additional line needs both a description and an amount, or leave the row empty.");
       return;
     }
+    if (!dueDate) {
+      onError("Please select a payment due date.");
+      return;
+    }
 
     setSending(true);
     try {
@@ -189,6 +201,7 @@ export function SendInvoiceModal({
         body: JSON.stringify({
           bookingId,
           additionalLineItems: additionalItems,
+          dueDate,
         }),
       });
       const data = await res.json();
@@ -203,7 +216,7 @@ export function SendInvoiceModal({
     } finally {
       setSending(false);
     }
-  }, [preview, sending, drafts, additionalItems, bookingId, onClose, onSuccess, onError]);
+  }, [preview, sending, drafts, additionalItems, dueDate, bookingId, onClose, onSuccess, onError]);
 
   const tabBtn = (id: TabId, label: string) => (
     <button
@@ -271,6 +284,21 @@ export function SendInvoiceModal({
                   To: <span className="font-medium text-gray-900">{preview.customerEmail}</span>
                 </p>
                 <p className="text-xs text-gray-500 mt-0.5">{preview.customerName}</p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1.5">
+                  Payment due date
+                </label>
+                <DatePicker
+                  value={dueDate}
+                  onChange={setDueDate}
+                  min={preview.invoiceDate}
+                  placeholder="Select due date"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Shown on the invoice and in the payment notice sent to the customer.
+                </p>
               </div>
 
               <div>
@@ -350,6 +378,18 @@ export function SendInvoiceModal({
 
               {totals && (
                 <div className="rounded-lg bg-purple-50 border border-purple-100 px-3 py-2.5 text-sm space-y-1">
+                  {totals.balanceDue > 0 && (
+                    <div className="flex justify-between text-purple-900 font-medium pb-1 border-b border-purple-200">
+                      <span>Payment due by</span>
+                      <span>
+                        {new Date(`${dueDate}T00:00:00`).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex justify-between text-gray-700">
                     <span>Charges total</span>
                     <span className="font-medium">{fmt(totals.chargesTotal)}</span>
@@ -400,7 +440,7 @@ export function SendInvoiceModal({
             type="button"
             className="flex-1 bg-purple-600 hover:bg-purple-700"
             onClick={handleSend}
-            disabled={sending || loadingPreview || !preview || !!previewError}
+            disabled={sending || loadingPreview || !preview || !!previewError || !dueDate}
           >
             {sending ? "Sending…" : "Send invoice"}
           </Button>

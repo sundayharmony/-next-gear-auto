@@ -8,6 +8,7 @@ import {
 import { isAdminRole, isManagerRole } from "@/lib/auth/roles";
 import { sendBookingInvoice } from "@/lib/email/mailer";
 import { buildBookingInvoiceData } from "@/lib/invoices/invoice-data";
+import { validateInvoiceDueDate } from "@/lib/invoices/invoice-due-date";
 import { validateAdditionalInvoiceLineItems } from "@/lib/invoices/invoice-line-items";
 import { generateInvoicePdf } from "@/lib/invoices/invoice-pdf";
 import { getVehicleDisplayName } from "@/lib/types";
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest) {
   if (!auth.authorized) return auth.response;
 
   try {
-    let body: { bookingId?: string; additionalLineItems?: unknown };
+    let body: { bookingId?: string; additionalLineItems?: unknown; dueDate?: string };
     try {
       body = await req.json();
     } catch {
@@ -111,6 +112,18 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const draftInvoice = buildBookingInvoiceData(
+      { ...booking, vehicleName },
+      { vehicleDailyRate },
+    );
+    const dueParsed = validateInvoiceDueDate(body.dueDate, draftInvoice.invoiceDate);
+    if (!dueParsed.ok) {
+      return NextResponse.json(
+        { success: false, message: dueParsed.message },
+        { status: 400 },
+      );
+    }
+
     const invoiceData = buildBookingInvoiceData(
       {
         ...booking,
@@ -119,6 +132,7 @@ export async function POST(req: NextRequest) {
       {
         vehicleDailyRate,
         additionalLineItems: additionalParsed.items,
+        dueDate: dueParsed.dueDate,
       },
     );
 
@@ -155,6 +169,7 @@ export async function POST(req: NextRequest) {
         charges_total: invoiceData.chargesTotal,
         had_pdf: !!pdfBytes,
         additional_line_items: additionalParsed.items.length > 0 ? additionalParsed.items : undefined,
+        due_date: invoiceData.dueDate,
       },
       performed_by: performedBy,
     });

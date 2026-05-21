@@ -5,6 +5,7 @@ import {
   calculatePricing,
   calculateRentalHours,
 } from "@/lib/utils/price-calculator";
+import { defaultInvoiceDueDate } from "@/lib/invoices/invoice-due-date";
 import {
   normalizeAdditionalLineItems,
   sumInvoiceLineItems,
@@ -41,6 +42,8 @@ export interface BookingInvoiceData {
   amountPaid: number;
   balanceDue: number;
   invoiceDate: string;
+  /** Payment due date (YYYY-MM-DD), set when sending the invoice */
+  dueDate: string;
   promoCode?: string;
 }
 
@@ -86,6 +89,7 @@ export function buildBookingInvoiceData(
   options?: {
     vehicleDailyRate?: number | null;
     additionalLineItems?: AdditionalInvoiceLineItemInput[];
+    dueDate?: string;
   },
 ): BookingInvoiceData {
   const displayTotal = getBookingDisplayTotal(booking);
@@ -227,6 +231,7 @@ export function buildBookingInvoiceData(
 
   const today = new Date();
   const invoiceDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const dueDate = options?.dueDate?.trim() || defaultInvoiceDueDate(today);
 
   return {
     bookingId: booking.id,
@@ -244,6 +249,7 @@ export function buildBookingInvoiceData(
     amountPaid,
     balanceDue: invoiceBalanceDue,
     invoiceDate,
+    dueDate,
     promoCode: booking.promo_code || undefined,
   };
 }

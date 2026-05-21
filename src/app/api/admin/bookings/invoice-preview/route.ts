@@ -8,6 +8,7 @@ import {
 import { isAdminRole, isManagerRole } from "@/lib/auth/roles";
 import { bookingInvoiceTemplate } from "@/lib/email/templates";
 import { buildBookingInvoiceData } from "@/lib/invoices/invoice-data";
+import { defaultInvoiceDueDate, validateInvoiceDueDate } from "@/lib/invoices/invoice-due-date";
 import { validateAdditionalInvoiceLineItems } from "@/lib/invoices/invoice-line-items";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
@@ -136,6 +137,8 @@ export async function GET(req: NextRequest) {
         balanceDue: invoiceData.balanceDue,
         customerEmail: invoiceData.customerEmail,
         customerName: invoiceData.customerName,
+        invoiceDate: invoiceData.invoiceDate,
+        defaultDueDate: defaultInvoiceDueDate(),
       },
     });
   } catch (error) {
@@ -152,7 +155,7 @@ export async function POST(req: NextRequest) {
   if (!auth.authorized) return auth.response;
 
   try {
-    let body: { bookingId?: string; additionalLineItems?: unknown };
+    let body: { bookingId?: string; additionalLineItems?: unknown; dueDate?: string };
     try {
       body = await req.json();
     } catch {
@@ -184,11 +187,24 @@ export async function POST(req: NextRequest) {
     const denied = await authorizeBookingInvoiceAccess(auth, ctx.booking, "preview");
     if (denied) return denied;
 
+    const draftInvoice = buildBookingInvoiceData(
+      { ...ctx.booking, vehicleName: ctx.vehicleName },
+      { vehicleDailyRate: ctx.vehicleDailyRate },
+    );
+    const dueParsed = validateInvoiceDueDate(body.dueDate, draftInvoice.invoiceDate);
+    if (!dueParsed.ok) {
+      return NextResponse.json(
+        { success: false, message: dueParsed.message },
+        { status: 400 },
+      );
+    }
+
     const invoiceData = buildBookingInvoiceData(
       { ...ctx.booking, vehicleName: ctx.vehicleName },
       {
         vehicleDailyRate: ctx.vehicleDailyRate,
         additionalLineItems: additionalParsed.items,
+        dueDate: dueParsed.dueDate,
       },
     );
 
