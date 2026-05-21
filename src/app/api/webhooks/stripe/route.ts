@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendBookingConfirmationWithAgreement, sendAdminNewBooking } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
+import { sumBookingPaymentAmounts } from "@/lib/bookings/payments";
 import { getVehicleDisplayName } from "@/lib/types";
 
 const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -58,16 +59,42 @@ export async function POST(request: Request) {
             return NextResponse.json({ received: true });
           }
 
-          // Atomically confirm booking — only update if not already confirmed.
-          // The .neq("status", "confirmed") guard makes this idempotent even under
-          // concurrent webhook deliveries without a separate read-then-write.
           const amountPaid = Math.round((session.amount_total ?? 0)) / 100;
+          const stripeNote = `stripe_session:${session.id}`;
+
+          // Mirror Stripe payment in booking_payments so admin Record Payment sums stay correct.
+          const { data: existingBp } = await supabase
+            .from("booking_payments")
+            .select("id")
+            .eq("booking_id", bookingId)
+            .eq("note", stripeNote)
+            .maybeSingle();
+
+          if (!existingBp && amountPaid > 0) {
+            const { error: bpError } = await supabase.from("booking_payments").insert({
+              booking_id: bookingId,
+              amount: amountPaid,
+              method: "stripe",
+              note: stripeNote,
+            });
+            if (bpError) {
+              logger.error("Error creating booking_payments row for Stripe:", bpError);
+            }
+          }
+
+          const { data: allPayments } = await supabase
+            .from("booking_payments")
+            .select("amount")
+            .eq("booking_id", bookingId);
+          const depositTotal = sumBookingPaymentAmounts(allPayments || []);
+
+          // Atomically confirm booking — only update if not already confirmed.
           const { error: updateError } = await supabase
             .from("bookings")
             .update({
               status: "confirmed",
               stripe_payment_intent: session.payment_intent as string,
-              deposit: amountPaid,
+              deposit: depositTotal,
             })
             .eq("id", bookingId)
             .neq("status", "confirmed");
@@ -76,15 +103,13 @@ export async function POST(request: Request) {
             logger.error("Error updating booking status:", updateError);
           }
 
-          // Create payment record (use crypto.randomUUID to avoid ID collisions in serverless).
-          // Upsert on stripe_session_id prevents duplicate records from concurrent webhook deliveries.
           const { error: paymentError } = await supabase.from("payment_records").upsert(
             {
               id: "pay_" + crypto.randomUUID(),
               booking_id: bookingId,
               stripe_session_id: session.id,
               stripe_payment_intent: session.payment_intent as string,
-              amount: (session.amount_total ?? 0) / 100,
+              amount: amountPaid,
               status: "succeeded",
             },
             { onConflict: "stripe_session_id", ignoreDuplicates: true }

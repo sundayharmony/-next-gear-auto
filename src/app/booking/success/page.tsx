@@ -35,13 +35,11 @@ function SuccessContent() {
   const [fetchError, setFetchError] = useState(false);
   const [agreementStatus, setAgreementStatus] = useState<"idle" | "signing" | "signed" | "error">("idle");
 
-  // If booking_id is missing, show error immediately
+  // If booking_id is missing, show error immediately (fetchBooking handles loading otherwise)
   useEffect(() => {
     if (!bookingId) {
       setLoading(false);
       setFetchError(true);
-    } else {
-      setLoading(false);
     }
   }, [bookingId]);
 
@@ -104,7 +102,7 @@ function SuccessContent() {
           setAgreementStatus("signed");
           localStorage.removeItem(storageKey);
         } else {
-          logger.error("Agreement sign failed:", data.error || res.status);
+          logger.error("Agreement sign failed:", data.error || data.message || res.status);
           setAgreementStatus("error");
         }
       } catch (err) {

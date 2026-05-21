@@ -106,6 +106,13 @@ function BookingPageInner() {
 
   // Pre-select vehicle from URL query param (e.g. /booking?vehicleId=v1)
   const [preSelected, setPreSelected] = useState(false);
+  const urlVehicleId = searchParams.get("vehicleId");
+  const urlVehicleUnavailable =
+    Boolean(urlVehicleId) &&
+    !vehiclesLoading &&
+    vehicles.length > 0 &&
+    !vehicles.find((v) => v.id === urlVehicleId);
+
   useEffect(() => {
     if (preSelected || vehiclesLoading) return;
     const vehicleId = searchParams.get("vehicleId");
@@ -1201,6 +1208,11 @@ function BookingPageInner() {
                   Checking vehicle availability...
                 </div>
               )}
+              {urlVehicleUnavailable && (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                  The vehicle in this link is no longer available for booking. Please choose another vehicle below.
+                </div>
+              )}
               <div className="grid grid-cols-1 gap-4">
                 {vehicles.filter((v) => v.isAvailable).map((vehicle) => {
                   const booked = isVehicleBooked(vehicle.id);
@@ -1796,11 +1808,14 @@ function BookingPageInner() {
                     </div>
                   )}
 
+                  {!booking.selectedVehicle && (
+                    <p className="text-sm text-amber-700 mb-2">Select a vehicle before proceeding to payment.</p>
+                  )}
                   <Button
                     className="w-full"
                     size="lg"
                     onClick={() => { if (!booking.isSubmitting) booking.submitBooking(); }}
-                    disabled={booking.isSubmitting}
+                    disabled={booking.isSubmitting || !booking.selectedVehicle}
                   >
                     {booking.isSubmitting ? (
                       <>

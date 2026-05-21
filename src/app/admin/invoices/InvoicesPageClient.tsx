@@ -117,6 +117,12 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
   const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
+  const [detailTab, setDetailTab] = useState<"edit" | "preview">("edit");
+  const [htmlPreview, setHtmlPreview] = useState("");
+  const [loadingHtml, setLoadingHtml] = useState(false);
+  const [htmlError, setHtmlError] = useState("");
+
+  const additionalItems = useMemo(() => parseDraftLines(drafts), [drafts]);
 
   const loadList = useCallback(async () => {
     setLoading(true);
@@ -169,9 +175,57 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
   }, [setError]);
 
   useEffect(() => {
-    if (selectedId) loadDetail(selectedId);
-    else setDetail(null);
+    if (selectedId) {
+      setDetailTab("edit");
+      loadDetail(selectedId);
+    } else {
+      setDetail(null);
+    }
   }, [selectedId, loadDetail]);
+
+  useEffect(() => {
+    if (detailTab !== "preview" || !detail) return;
+
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setLoadingHtml(true);
+      setHtmlError("");
+
+      adminFetch("/api/admin/bookings/invoice-preview", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: detail.booking_id,
+          additionalLineItems: additionalItems,
+          dueDate,
+        }),
+      })
+        .then(async (res) => {
+          const data = await res.json();
+          if (cancelled) return;
+          if (res.ok && data.success) {
+            setHtmlPreview(typeof data.data?.html === "string" ? data.data.html : "");
+          } else {
+            setHtmlPreview("");
+            setHtmlError(data.message || "Could not render preview");
+          }
+        })
+        .catch(() => {
+          if (!cancelled) {
+            setHtmlPreview("");
+            setHtmlError("Network error — could not render preview");
+          }
+        })
+        .finally(() => {
+          if (!cancelled) setLoadingHtml(false);
+        });
+    }, 300);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [detailTab, detail, additionalItems, dueDate]);
 
   const handleBackfill = async () => {
     setBackfilling(true);
@@ -411,6 +465,48 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
                       </Badge>
                     </div>
 
+                    <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
+                      <button
+                        type="button"
+                        onClick={() => setDetailTab("edit")}
+                        className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md ${
+                          detailTab === "edit"
+                            ? "bg-purple-600 text-white"
+                            : "text-gray-600 hover:bg-purple-50"
+                        }`}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setDetailTab("preview")}
+                        className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md ${
+                          detailTab === "preview"
+                            ? "bg-purple-600 text-white"
+                            : "text-gray-600 hover:bg-purple-50"
+                        }`}
+                      >
+                        Preview
+                      </button>
+                    </div>
+
+                    {detailTab === "preview" ? (
+                      <div className="border rounded-lg overflow-hidden max-h-80 overflow-y-auto bg-white">
+                        {loadingHtml && (
+                          <p className="p-4 text-sm text-gray-500 text-center">Rendering preview…</p>
+                        )}
+                        {htmlError && (
+                          <p className="p-4 text-sm text-red-600">{htmlError}</p>
+                        )}
+                        {!loadingHtml && !htmlError && htmlPreview && (
+                          <div
+                            className="p-2 text-sm"
+                            dangerouslySetInnerHTML={{ __html: htmlPreview }}
+                          />
+                        )}
+                      </div>
+                    ) : (
+                      <>
                     <div>
                       <label className="text-xs font-medium text-gray-700">Due date</label>
                       <DatePicker value={dueDate} onChange={setDueDate} className="mt-1" />
@@ -467,6 +563,8 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
                       )}
                       Save &amp; re-send
                     </Button>
+                      </>
+                    )}
 
                     <Link
                       href={`${bookingsHref}?highlight=${detail.booking_id}`}

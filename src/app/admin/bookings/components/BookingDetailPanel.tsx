@@ -78,6 +78,7 @@ import {
   INVOICE_STATUS_LABELS,
   type InvoicePaymentStatus,
 } from "@/lib/invoices/invoice-status";
+import { isAgreementComplete } from "@/lib/agreement/agreement-complete";
 
 interface BookingDetailPanelProps {
   booking: BookingRow;
@@ -128,7 +129,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const showInPersonSign =
     canSignAgreementInPerson &&
     canManageRow &&
-    !booking.agreement_signed_at &&
+    !isAgreementComplete(booking) &&
     booking.status !== "cancelled" &&
     booking.status !== "completed" &&
     Boolean(onStartInPersonSign);
@@ -875,7 +876,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     : null;
   const canOverrideAgreement =
     canViewAdminNotes &&
-    !booking.agreement_signed_at &&
+    !isAgreementComplete(booking) &&
     !!pickupStart &&
     !Number.isNaN(pickupStart.getTime()) &&
     now >= pickupStart;
@@ -1045,7 +1046,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   const isCompleted = idx < currentStatusIndex;
                   const isCurrent = idx === currentStatusIndex;
                   const isFuture = idx > currentStatusIndex;
-                  const isLocked = step === "confirmed" && isFuture && !booking.agreement_signed_at;
+                  const isLocked = step === "confirmed" && isFuture && !isAgreementComplete(booking);
                   const isClickable = isFuture && !isLocked;
 
                   return (
@@ -2075,7 +2076,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 <p className="text-gray-700">
                   Signed by: <span className="italic">{booking.signed_name}</span>
                 </p>
-                {booking.agreement_signed_at && (
+                {isAgreementComplete(booking) && booking.agreement_signed_at && (
                   <p className="text-gray-600 text-xs">
                     {formatDate(booking.agreement_signed_at)}
                   </p>
@@ -2282,7 +2283,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   )}
                   {/* Next status button */}
                   {booking.status === "pending" && (
-                    booking.agreement_signed_at ? (
+                    isAgreementComplete(booking) ? (
                       <Button
                         onClick={() => updateStatus("confirmed")}
                         className="w-full bg-green-600 hover:bg-green-700 text-white text-xs"

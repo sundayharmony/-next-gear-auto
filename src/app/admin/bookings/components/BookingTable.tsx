@@ -18,6 +18,7 @@ import {
   getDisplayReturnDate,
   parseRecurringBookingMeta,
 } from "@/lib/utils/recurring-booking";
+import { isAgreementComplete } from "@/lib/agreement/agreement-complete";
 
 interface BookingTableProps {
   bookings: BookingRow[];
@@ -274,7 +275,7 @@ export default function BookingTable({
                   <div className="flex items-center gap-1">
                     {booking.id_document_url && <FileText size={13} className="text-gray-400" />}
                     {booking.insurance_proof_url && <Shield size={13} className="text-gray-400" />}
-                    {booking.agreement_signed_at && <Check size={13} className="text-green-500" />}
+                    {isAgreementComplete(booking) && <Check size={13} className="text-green-500" />}
                     {booking.is_overdue && <AlertTriangle size={13} className="text-red-500" />}
                     {booking.admin_notes && <StickyNote size={13} className="text-yellow-500" />}
                   </div>
@@ -471,7 +472,7 @@ export default function BookingTable({
                       {booking.insurance_proof_url && (
                         <span title="Insurance Proof"><Shield size={14} className="text-gray-500" /></span>
                       )}
-                      {booking.agreement_signed_at && (
+                      {isAgreementComplete(booking) && (
                         <span title="Agreement Signed"><Check size={14} className="text-green-600" /></span>
                       )}
                       {booking.is_overdue && <span title="Overdue"><AlertTriangle size={14} className="text-red-600" /></span>}

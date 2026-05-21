@@ -277,7 +277,7 @@ export async function regenerateSignedAgreementForBooking(
   supabase: any,
   booking: AgreementBooking,
 ): Promise<boolean> {
-  if (!booking.agreement_signed_at) return false;
+  if (!booking.rental_agreement_url) return false;
 
   const signatures = await getLatestAgreementSignatures(supabase, booking.id);
   if (!signatures) {
