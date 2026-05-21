@@ -222,7 +222,7 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
       </div>
 
       <div className="border-t border-dashed border-gray-300 my-4" />
-      <p className="text-center text-[11px] text-gray-400 italic">Page 1 of 3 — Renter Initials Required</p>
+      <p className="text-center text-[11px] text-gray-400 italic">Page 1 of 3 — Renter Signature Required</p>
     </div>
   );
 }
@@ -313,7 +313,7 @@ function Page2() {
       </div>
 
       <div className="border-t border-dashed border-gray-300 my-4" />
-      <p className="text-center text-[11px] text-gray-400 italic">Page 2 of 3 — GPS Acknowledgement & Renter Initials Required</p>
+      <p className="text-center text-[11px] text-gray-400 italic">Page 2 of 3 — GPS Acknowledgement & Renter Signatures Required</p>
     </div>
   );
 }
@@ -398,7 +398,7 @@ function Page3({ customerName }: { customerName?: string }) {
       </div>
 
       <div className="border-t border-dashed border-gray-300 my-4" />
-      <p className="text-center text-[11px] text-gray-400 italic">Page 3 of 3 — Full Signature & Final Initials Required</p>
+      <p className="text-center text-[11px] text-gray-400 italic">Page 3 of 3 — Renter Signatures Required</p>
     </div>
   );
 }

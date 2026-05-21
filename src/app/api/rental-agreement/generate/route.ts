@@ -261,7 +261,7 @@ export async function GET(req: NextRequest) {
     setCheck("c33", false); // Other
     setText("t34", ""); // Other text
 
-    // t35: Renter Initials — SIGNATURE FIELD (leave for digital signing)
+    // t35: Renter Signature — SIGNATURE FIELD (leave for digital signing)
     setText("t35", "");
     // t36: Date (will be filled at signing time)
     setText("t36", "");
@@ -272,8 +272,8 @@ export async function GET(req: NextRequest) {
     setText("t39", ""); // Insurance Phone
     setCheck("c40", false); // Accept SLP
     setCheck("c41", false); // GPS consent
-    setText("t42", ""); // GPS Initials — SIGNATURE FIELD
-    setText("t43", ""); // Renter Initials — SIGNATURE FIELD
+    setText("t42", ""); // GPS Acknowledgement Signature — SIGNATURE FIELD
+    setText("t43", ""); // Renter Signature — SIGNATURE FIELD
     setText("t44", ""); // Date
 
     // === PAGE 3: Signatures ===
@@ -289,7 +289,7 @@ export async function GET(req: NextRequest) {
     setText("t54", ""); // Date
     setText("t55", ""); // Rep Signature — SIGNATURE FIELD
     setText("t56", ""); // Time
-    setText("t57", ""); // Renter Initials — SIGNATURE FIELD
+    setText("t57", ""); // Renter Signature — SIGNATURE FIELD
     setText("t58", ""); // Date
 
     await appendAgreementSupplementPages(pdfDoc);
