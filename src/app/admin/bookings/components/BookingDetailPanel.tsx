@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -201,16 +201,14 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     };
   }, [onClose]);
 
-  useEffect(() => {
+  const refreshInvoiceSummary = useCallback(() => {
     if (!canSendInvoice) {
       setInvoiceSummary(null);
       return;
     }
-    let cancelled = false;
     adminFetch(`/api/admin/invoices?bookingId=${encodeURIComponent(booking.id)}&limit=1`)
       .then(async (res) => {
         const data = await res.json();
-        if (cancelled) return;
         if (res.ok && data.success && Array.isArray(data.data) && data.data[0]) {
           const inv = data.data[0] as {
             id: string;
@@ -226,13 +224,12 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           setInvoiceSummary(null);
         }
       })
-      .catch(() => {
-        if (!cancelled) setInvoiceSummary(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [booking.id, canSendInvoice, showSendInvoiceModal]);
+      .catch(() => setInvoiceSummary(null));
+  }, [booking.id, canSendInvoice]);
+
+  useEffect(() => {
+    refreshInvoiceSummary();
+  }, [refreshInvoiceSummary, showSendInvoiceModal]);
 
   // Fetch tickets, activity, and payments on mount (in parallel)
   useEffect(() => {
@@ -257,7 +254,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
         if (results[0]?.status === "fulfilled") {
           try {
             const ticketsData = await results[0].value.json();
-            if (!cancelled) setBookingTickets(Array.isArray(ticketsData) ? ticketsData : []);
+            const tickets = ticketsData?.data ?? ticketsData;
+            if (!cancelled) setBookingTickets(Array.isArray(tickets) ? tickets : []);
           } catch {
             // Ignore JSON parse errors
           }
@@ -2353,6 +2351,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
           onClose={() => setShowSendInvoiceModal(false)}
           onSuccess={onSuccess}
           onError={onError}
+          onSent={refreshInvoiceSummary}
         />
       )}
     </div>

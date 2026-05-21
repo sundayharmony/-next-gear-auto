@@ -12,6 +12,7 @@ import { getBookingBalanceDue } from "@/lib/utils/recurring-booking";
 import { logger } from "@/lib/utils/logger";
 import { generateInvoicePdf } from "@/lib/invoices/invoice-pdf";
 import { isValidEmailFormat } from "@/lib/utils/validation";
+import { invoiceTableMissingMessage } from "@/lib/invoices/invoice-db-errors";
 
 export interface DbInvoiceRow {
   id: string;
@@ -185,10 +186,15 @@ export async function upsertInvoiceFromBooking(
       .select("*")
       .single();
 
-    if (error) {
-      logger.error("Invoice update error:", error);
-      return { ok: false, message: "Failed to save invoice", code: "db_error" };
-    }
+  if (error) {
+    logger.error("Invoice update error:", error);
+    const missing = invoiceTableMissingMessage(error);
+    return {
+      ok: false,
+      message: missing ?? "Failed to save invoice",
+      code: "db_error",
+    };
+  }
     return { ok: true, invoice: data as DbInvoiceRow };
   }
 
@@ -208,7 +214,12 @@ export async function upsertInvoiceFromBooking(
 
   if (error) {
     logger.error("Invoice insert error:", error);
-    return { ok: false, message: "Failed to save invoice", code: "db_error" };
+    const missing = invoiceTableMissingMessage(error);
+    return {
+      ok: false,
+      message: missing ?? "Failed to save invoice",
+      code: "db_error",
+    };
   }
 
   return { ok: true, invoice: data as DbInvoiceRow };
@@ -261,6 +272,16 @@ export async function sendInvoiceEmail(
 
   const { invoiceData } = built;
 
+  const upsert = await upsertInvoiceFromBooking(supabase, invoice.booking_id, {
+    additionalLineItems: additional,
+    dueDate: invoice.due_date,
+    performedBy,
+    incrementSend: true,
+  });
+  if (!upsert.ok) {
+    return { ok: false, message: upsert.message, code: upsert.code };
+  }
+
   let pdfBytes: Uint8Array | undefined;
   try {
     pdfBytes = await generateInvoicePdf(invoiceData);
@@ -271,20 +292,19 @@ export async function sendInvoiceEmail(
     logger.warn("Invoice PDF generation failed, sending HTML only:", pdfErr);
   }
 
-  await sendBookingInvoice({
-    ...invoiceData,
-    customerEmail,
-    pdfBytes,
-  });
-
-  const upsert = await upsertInvoiceFromBooking(supabase, invoice.booking_id, {
-    additionalLineItems: additional,
-    dueDate: invoice.due_date,
-    performedBy,
-    incrementSend: true,
-  });
-  if (!upsert.ok) {
-    return { ok: false, message: upsert.message, code: upsert.code };
+  try {
+    await sendBookingInvoice({
+      ...invoiceData,
+      customerEmail,
+      pdfBytes,
+    });
+  } catch (mailErr) {
+    logger.error("Invoice email send failed after save:", mailErr);
+    return {
+      ok: false,
+      message: "Invoice saved but email failed to send. Try Save & re-send from Invoices.",
+      code: "db_error",
+    };
   }
 
   await supabase.from("booking_activity").insert({

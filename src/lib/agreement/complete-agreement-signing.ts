@@ -73,9 +73,10 @@ export function validateAgreementSignatures(
 
 function assertBookingSignable(booking: {
   agreement_signed_at?: string | null;
+  rental_agreement_url?: string | null;
   status?: string | null;
 }) {
-  if (booking.agreement_signed_at) {
+  if (booking.rental_agreement_url) {
     throw new AgreementSigningError("This agreement has already been signed", 409);
   }
   if (!booking.status || !VALID_SIGNING_STATUSES.includes(booking.status as (typeof VALID_SIGNING_STATUSES)[number])) {
@@ -158,7 +159,7 @@ export async function completeAgreementSigning(
       signed_name: booking.customer_name,
     })
     .eq("id", bookingId)
-    .is("agreement_signed_at", null)
+    .is("rental_agreement_url", null)
     .select("id")
     .maybeSingle();
 

@@ -89,7 +89,7 @@ export default function AgreementSigningPage() {
             resolvedVehicle = vehicleForSigningFromDisplayName(data.data.vehicle_name);
           }
           if (isMounted) setVehicle(resolvedVehicle);
-          if (data.data.agreement_signed_at) {
+          if (data.data.rental_agreement_url) {
             setSubmitted(true);
             setSignedUrl(data.data.rental_agreement_url);
           }

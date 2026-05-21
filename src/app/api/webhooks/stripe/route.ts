@@ -61,11 +61,13 @@ export async function POST(request: Request) {
           // Atomically confirm booking — only update if not already confirmed.
           // The .neq("status", "confirmed") guard makes this idempotent even under
           // concurrent webhook deliveries without a separate read-then-write.
+          const amountPaid = Math.round((session.amount_total ?? 0)) / 100;
           const { error: updateError } = await supabase
             .from("bookings")
             .update({
               status: "confirmed",
               stripe_payment_intent: session.payment_intent as string,
+              deposit: amountPaid,
             })
             .eq("id", bookingId)
             .neq("status", "confirmed");

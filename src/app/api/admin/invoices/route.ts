@@ -8,6 +8,7 @@ import {
   enrichInvoiceWithBooking,
   type DbInvoiceRow,
 } from "@/lib/invoices/invoice-service";
+import { invoiceTableMissingMessage } from "@/lib/invoices/invoice-db-errors";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 
@@ -60,13 +61,17 @@ export async function GET(req: NextRequest) {
       query = query.in("booking_id", ids);
     }
 
-    const { data: invoices, error, count } = await query.range(offset, offset + limit - 1);
+    const needsClientFilter = !bookingIdFilter && (statusFilter !== "all" || !!search);
+    const { data: invoices, error, count } = needsClientFilter
+      ? await query.limit(1000)
+      : await query.range(offset, offset + limit - 1);
 
     if (error) {
       logger.error("Invoices list error:", error);
+      const missing = invoiceTableMissingMessage(error);
       return NextResponse.json(
-        { success: false, message: "Failed to load invoices" },
-        { status: 500 },
+        { success: false, message: missing ?? "Failed to load invoices" },
+        { status: missing ? 503 : 500 },
       );
     }
 
@@ -118,10 +123,13 @@ export async function GET(req: NextRequest) {
       rows = rows.filter((r) => r.paymentStatus === statusFilter);
     }
 
+    const total = needsClientFilter ? rows.length : (count ?? rows.length);
+    const pagedRows = needsClientFilter ? rows.slice(offset, offset + limit) : rows;
+
     return NextResponse.json({
       success: true,
-      data: rows,
-      total: count ?? rows.length,
+      data: pagedRows,
+      total,
       limit,
       offset,
     });

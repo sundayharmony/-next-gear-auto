@@ -240,7 +240,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (vehicle.maintenance_status === "in-maintenance") {
+    if (
+      vehicle.maintenance_status === "in-maintenance" ||
+      vehicle.maintenance_status === "needs-service"
+    ) {
       return NextResponse.json(
         { success: false, message: "This vehicle is currently in maintenance" },
         { status: 400 }
@@ -449,10 +452,9 @@ export async function POST(request: NextRequest) {
       return_time: returnTime || null,
       extras: extras || [],
       total_price: serverTotal,
-      deposit: chargeAmount,
+      deposit: 0,
       status: "pending",
-      signed_name: signedName,
-      agreement_signed_at: signedName ? new Date().toISOString() : null,
+      signed_name: signedName || null,
       insurance_proof_url: insuranceProofUrl || null,
       insurance_opted_out: insuranceOptedOut || false,
       id_document_url: idDocumentUrl || null,
@@ -478,7 +480,7 @@ export async function POST(request: NextRequest) {
     if (chargeAmount <= 0) {
       await supabase
         .from("bookings")
-        .update({ status: "confirmed" })
+        .update({ status: "confirmed", deposit: 0 })
         .eq("id", bookingId);
 
       // Check if customer has a password set

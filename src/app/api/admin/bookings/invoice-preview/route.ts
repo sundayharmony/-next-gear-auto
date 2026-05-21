@@ -1,16 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
-import {
-  fetchCustomerManagerAccessRow,
-  isManagerPanelAccessEnabled,
-} from "@/lib/auth/manager-access";
-import { isAdminRole, isManagerRole } from "@/lib/auth/roles";
 import { bookingInvoiceTemplate } from "@/lib/email/templates";
+import { authorizeBookingInvoiceAccess } from "@/lib/invoices/invoice-auth";
 import { buildBookingInvoiceData } from "@/lib/invoices/invoice-data";
 import { defaultInvoiceDueDate, validateInvoiceDueDate } from "@/lib/invoices/invoice-due-date";
 import { validateAdditionalInvoiceLineItems } from "@/lib/invoices/invoice-line-items";
-import { getVehicleDisplayName } from "@/lib/types";
+import { getServiceSupabase } from "@/lib/db/supabase";
+import { loadBookingWithVehicle } from "@/lib/invoices/invoice-service";
 import { logger } from "@/lib/utils/logger";
 
 const BOOKING_ID_RE = /^bk[0-9a-f]{7}$/i;
@@ -24,94 +20,17 @@ function parseBookingId(raw: string | null | undefined): string | null {
   return bookingId;
 }
 
-async function authorizeBookingInvoiceAccess(
-  auth: Awaited<ReturnType<typeof verifyAdminOrManager>>,
-  booking: {
-    origin_channel: string | null;
-    created_by_user_id: string | null;
-  },
-  action: "preview" | "send",
-): Promise<NextResponse | null> {
-  if (!auth.authorized) return auth.response;
-
-  const verb = action === "send" ? "send" : "preview";
-
-  if (isManagerRole(auth.role)) {
-    const supabase = getServiceSupabase();
-    const accessRow = await fetchCustomerManagerAccessRow(supabase, auth.userId);
-    if (!isManagerPanelAccessEnabled(accessRow)) {
-      return NextResponse.json(
-        { success: false, message: "Manager panel access is disabled" },
-        { status: 403 },
-      );
-    }
-    if (
-      booking.origin_channel !== "manager_panel" ||
-      booking.created_by_user_id !== auth.userId
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message: `Managers can only ${verb} invoices for their own bookings`,
-        },
-        { status: 403 },
-      );
-    }
-  } else if (!isAdminRole(auth.role)) {
+function bookingLookupResponse(ctx: Awaited<ReturnType<typeof loadBookingWithVehicle>>) {
+  if ("error" in ctx) {
     return NextResponse.json(
-      { success: false, message: "Staff access required" },
-      { status: 403 },
+      {
+        success: false,
+        message: ctx.error === "not_found" ? "Booking not found" : "Unable to load booking",
+      },
+      { status: ctx.error === "not_found" ? 404 : 500 },
     );
   }
-
   return null;
-}
-
-async function loadBookingInvoiceContext(bookingId: string) {
-  const supabase = getServiceSupabase();
-  const { data: booking, error: bookingErr } = await supabase
-    .from("bookings")
-    .select("*")
-    .eq("id", bookingId)
-    .maybeSingle();
-
-  if (bookingErr) {
-    logger.error("Invoice preview booking lookup error:", bookingErr);
-    return {
-      error: NextResponse.json(
-        { success: false, message: "Unable to load booking" },
-        { status: 500 },
-      ),
-    };
-  }
-
-  if (!booking) {
-    return { error: NextResponse.json({ success: false, message: "Booking not found" }, { status: 404 }) };
-  }
-
-  let vehicleName = "Vehicle";
-  let vehicleDailyRate: number | null = null;
-  if (booking.vehicle_id) {
-    const { data: vehicle } = await supabase
-      .from("vehicles")
-      .select("year, make, model, daily_rate")
-      .eq("id", booking.vehicle_id)
-      .maybeSingle();
-
-    if (vehicle) {
-      vehicleName = getVehicleDisplayName(vehicle);
-      vehicleDailyRate =
-        typeof vehicle.daily_rate === "number"
-          ? vehicle.daily_rate
-          : Number(vehicle.daily_rate) || null;
-    }
-  }
-
-  return {
-    booking,
-    vehicleName,
-    vehicleDailyRate,
-  };
 }
 
 export async function GET(req: NextRequest) {
@@ -127,14 +46,22 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const ctx = await loadBookingInvoiceContext(bookingId);
-    if ("error" in ctx) return ctx.error;
+    const supabase = getServiceSupabase();
+    const ctx = await loadBookingWithVehicle(supabase, bookingId);
+    const lookupErr = bookingLookupResponse(ctx);
+    if (lookupErr) return lookupErr;
 
-    const denied = await authorizeBookingInvoiceAccess(auth, ctx.booking, "preview");
+    const denied = await authorizeBookingInvoiceAccess(
+      auth,
+      ctx.booking as { origin_channel: string | null; created_by_user_id: string | null },
+      "preview",
+    );
     if (denied) return denied;
 
     const invoiceData = buildBookingInvoiceData(
-      { ...ctx.booking, vehicleName: ctx.vehicleName },
+      { ...ctx.booking, vehicleName: ctx.vehicleName } as Parameters<
+        typeof buildBookingInvoiceData
+      >[0],
       { vehicleDailyRate: ctx.vehicleDailyRate },
     );
 
@@ -191,14 +118,22 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const ctx = await loadBookingInvoiceContext(bookingId);
-    if ("error" in ctx) return ctx.error;
+    const supabase = getServiceSupabase();
+    const ctx = await loadBookingWithVehicle(supabase, bookingId);
+    const lookupErr = bookingLookupResponse(ctx);
+    if (lookupErr) return lookupErr;
 
-    const denied = await authorizeBookingInvoiceAccess(auth, ctx.booking, "preview");
+    const denied = await authorizeBookingInvoiceAccess(
+      auth,
+      ctx.booking as { origin_channel: string | null; created_by_user_id: string | null },
+      "preview",
+    );
     if (denied) return denied;
 
     const draftInvoice = buildBookingInvoiceData(
-      { ...ctx.booking, vehicleName: ctx.vehicleName },
+      { ...ctx.booking, vehicleName: ctx.vehicleName } as Parameters<
+        typeof buildBookingInvoiceData
+      >[0],
       { vehicleDailyRate: ctx.vehicleDailyRate },
     );
     const dueParsed = validateInvoiceDueDate(body.dueDate, draftInvoice.invoiceDate);
@@ -210,7 +145,9 @@ export async function POST(req: NextRequest) {
     }
 
     const invoiceData = buildBookingInvoiceData(
-      { ...ctx.booking, vehicleName: ctx.vehicleName },
+      { ...ctx.booking, vehicleName: ctx.vehicleName } as Parameters<
+        typeof buildBookingInvoiceData
+      >[0],
       {
         vehicleDailyRate: ctx.vehicleDailyRate,
         additionalLineItems: additionalParsed.items,

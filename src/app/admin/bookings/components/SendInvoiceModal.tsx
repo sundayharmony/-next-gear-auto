@@ -57,6 +57,8 @@ interface SendInvoiceModalProps {
   onClose: () => void;
   onSuccess: (message: string) => void;
   onError: (message: string) => void;
+  /** Called after a successful send so parent can refresh invoice summary */
+  onSent?: () => void;
 }
 
 export function SendInvoiceModal({
@@ -64,6 +66,7 @@ export function SendInvoiceModal({
   onClose,
   onSuccess,
   onError,
+  onSent,
 }: SendInvoiceModalProps) {
   const [tab, setTab] = useState<TabId>("edit");
   const [preview, setPreview] = useState<PreviewData | null>(null);
@@ -206,6 +209,7 @@ export function SendInvoiceModal({
       });
       const data = await res.json();
       if (res.ok && data.success) {
+        onSent?.();
         onSuccess(data.message || `Invoice sent to ${preview.customerEmail}`);
         onClose();
       } else {
