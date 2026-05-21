@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   Search, Car, Package, UserCheck, ShieldCheck, FileText, CreditCard,
-  Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight, Tag, X, Upload,
+  Calendar, ArrowLeft, ArrowRight, Check, Users, Briefcase, Fuel, ChevronRight, ChevronDown, Tag, X, Upload,
   Shield, CheckCircle, PenLine, MapPin,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -1444,7 +1444,7 @@ function BookingPageInner() {
                             : "Select your birthday"}
                         </span>
                       </div>
-                      <Maximize2 className="h-3.5 w-3.5 text-gray-400" />
+                      <ChevronDown className="h-3.5 w-3.5 text-gray-400" />
                     </button>
                     <p className="mt-1 text-xs text-gray-400">You must be at least 18 years old to rent.</p>
                     <BirthdayCalendarOverlay
