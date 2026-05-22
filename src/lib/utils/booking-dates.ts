@@ -17,6 +17,13 @@ export function formatYyyyMmDdLocal(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
+/** Business calendar day for billing, cron, and recurring due dates (America/New_York). */
+export function getBusinessTodayYyyyMmDd(
+  timeZone = "America/New_York"
+): string {
+  return new Date().toLocaleDateString("en-CA", { timeZone });
+}
+
 /** Validate calendar date string (YYYY-MM-DD) used across bookings APIs. */
 export function isYyyyMmDd(value: unknown): value is string {
   if (typeof value !== "string") return false;

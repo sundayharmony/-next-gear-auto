@@ -1,5 +1,6 @@
 import {
   formatYyyyMmDdLocal,
+  getBusinessTodayYyyyMmDd,
   localMidnightFromYyyyMmDd,
 } from "@/lib/utils/booking-dates";
 
@@ -116,7 +117,7 @@ export function nextWeeklyDueOnOrAfter(
 export function getEffectiveReturnDate(
   storedReturnDate: string,
   adminNotes?: string | null,
-  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+  todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): string {
   const meta = parseRecurringBookingMeta(adminNotes);
   if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) {
@@ -146,7 +147,7 @@ export function isRecurringPaymentOverdue(
     admin_notes?: string | null;
     status?: string;
   },
-  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+  todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): boolean {
   const occupyStatuses = ["active", "confirmed"];
   if (booking.status && !occupyStatuses.includes(booking.status)) {
@@ -161,7 +162,7 @@ export function isActiveBookingOverdue(
   storedReturnDate: string,
   adminNotes: string | null | undefined,
   status: string,
-  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+  todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): boolean {
   if (status !== "active") return false;
   const meta = parseRecurringBookingMeta(adminNotes);
@@ -218,7 +219,7 @@ export function getBookingBalanceDue(
 export function getStagedRecurringReturnDate(
   storedReturnDate: string,
   adminNotes?: string | null,
-  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+  todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): string | null {
   const meta = parseRecurringBookingMeta(adminNotes);
   if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) return null;
@@ -242,7 +243,7 @@ export function getBookingOccupancyEndDate(
     admin_notes?: string | null;
     status?: string;
   },
-  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+  todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): string {
   const pickupKey = (booking.pickup_date || "").split("T")[0];
   const storedReturnKey = (booking.return_date || "").split("T")[0];
@@ -263,6 +264,38 @@ export function getBookingOccupancyEndDate(
   }
 
   return endKey;
+}
+
+/** True when rental span overlaps [rangeStart, rangeEnd] (inclusive, YYYY-MM-DD). */
+export function bookingIntersectsRange(
+  booking: {
+    pickup_date: string;
+    return_date: string;
+    admin_notes?: string | null;
+    status?: string;
+  },
+  rangeStart: string,
+  rangeEnd: string,
+  todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
+): boolean {
+  const pickupKey = (booking.pickup_date || "").split("T")[0];
+  const endKey = getBookingOccupancyEndDate(booking, todayYyyyMmDd);
+  const startKey = rangeStart.split("T")[0];
+  const endRangeKey = rangeEnd.split("T")[0];
+  return pickupKey <= endRangeKey && endKey >= startKey;
+}
+
+/** Active/upcoming for manager lists: occupancy extends through today or later. */
+export function bookingIsCurrentlyOccupying(
+  booking: {
+    pickup_date: string;
+    return_date: string;
+    admin_notes?: string | null;
+    status?: string;
+  },
+  todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
+): boolean {
+  return bookingIntersectsRange(booking, todayYyyyMmDd, "9999-12-31", todayYyyyMmDd);
 }
 
 /** Return date to show in admin lists (rolled forward for recurring LT). */
@@ -297,6 +330,58 @@ export function parseRecurringWeekPaymentNote(
   return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : null;
 }
 
+const LEGACY_RECURRING_WEEK_NOTE_RE = /^recurring weekly payment \(week (\d+)\)$/i;
+
+export function isLegacyRecurringWeekPaymentNote(note: string | null | undefined): boolean {
+  if (!note) return false;
+  return LEGACY_RECURRING_WEEK_NOTE_RE.test(note.trim());
+}
+
+export function parseLegacyRecurringWeekNumber(
+  note: string | null | undefined
+): number | null {
+  if (!note) return null;
+  const match = note.trim().match(LEGACY_RECURRING_WEEK_NOTE_RE);
+  if (!match) return null;
+  const week = Number(match[1]);
+  return Number.isFinite(week) && week > 0 ? week : null;
+}
+
+/** Map each due period end to at most one payment (new note key, then legacy week notes in order). */
+export function getRecognizedRecurringPeriodEnds(
+  payments: Array<{ note?: string | null; amount?: number | null }>,
+  dueDates: string[],
+  weeklyRate: number
+): Set<string> {
+  const paid = new Set<string>();
+  const legacyPool: Array<{ note?: string | null; amount?: number | null }> = [];
+
+  for (const p of payments) {
+    const key = parseRecurringWeekPaymentNote(p.note);
+    if (key) {
+      paid.add(key);
+      continue;
+    }
+    if (isLegacyRecurringWeekPaymentNote(p.note)) {
+      legacyPool.push(p);
+    }
+  }
+
+  for (const legacy of legacyPool) {
+    const weekNum = parseLegacyRecurringWeekNumber(legacy.note);
+    if (!weekNum) continue;
+    const due = dueDates[weekNum - 1];
+    if (!due || paid.has(due)) continue;
+    const amount = Number(legacy.amount);
+    if (!Number.isFinite(amount) || Math.abs(amount - weeklyRate) >= 0.02) {
+      continue;
+    }
+    paid.add(due);
+  }
+
+  return paid;
+}
+
 /** Weekly due dates from pickup through throughDate (inclusive). */
 export function listRecurringWeeklyDueDates(
   pickupDate: string,
@@ -317,7 +402,7 @@ export function listRecurringWeeklyDueDates(
 export function countRecurringWeeklyPaymentsDue(
   pickupDate: string,
   weeklyDueDay: WeeklyDueDay,
-  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+  todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): number {
   let count = 0;
   let due = nextWeeklyDueOnOrAfter(pickupDate, weeklyDueDay);
@@ -327,7 +412,7 @@ export function countRecurringWeeklyPaymentsDue(
     due = nextWeeklyDueOnOrAfter(addCalendarDaysYyyyMmDd(due, 1), weeklyDueDay);
     guard++;
   }
-  return Math.max(1, count);
+  return count;
 }
 
 export function getRecurringBillingSummary(
@@ -337,7 +422,7 @@ export function getRecurringBillingSummary(
     deposit?: number | null;
     admin_notes?: string | null;
   },
-  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+  todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): RecurringBillingSummary | null {
   const meta = parseRecurringBookingMeta(booking.admin_notes);
   if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) return null;

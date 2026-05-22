@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
+  bookingIntersectsRange,
   getBookingOccupancyEndDate,
   upsertRecurringBookingMeta,
 } from "@/lib/utils/recurring-booking";
@@ -58,6 +59,40 @@ test("confirmed recurring uses rolled due date not today", () => {
       "2026-05-20"
     ),
     "2026-05-21"
+  );
+});
+
+test("bookingIntersectsRange includes recurring active despite stale return_date", () => {
+  assert.equal(
+    bookingIntersectsRange(
+      {
+        pickup_date: "2026-05-07",
+        return_date: "2026-05-14",
+        admin_notes: RECURRING_NOTES,
+        status: "active",
+      },
+      "2026-05-15",
+      "2026-05-20",
+      "2026-05-20"
+    ),
+    true
+  );
+});
+
+test("bookingIntersectsRange excludes recurring before pickup", () => {
+  assert.equal(
+    bookingIntersectsRange(
+      {
+        pickup_date: "2026-05-20",
+        return_date: "2026-05-27",
+        admin_notes: RECURRING_NOTES,
+        status: "confirmed",
+      },
+      "2026-05-01",
+      "2026-05-15",
+      "2026-05-15"
+    ),
+    false
   );
 });
 

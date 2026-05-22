@@ -10,7 +10,10 @@ import {
   sortOccupancyEntries,
 } from "@/lib/admin/vehicle-occupancy";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
-import { enrichBookingOverdueFields } from "@/lib/utils/recurring-booking";
+import {
+  bookingIsCurrentlyOccupying,
+  enrichBookingOverdueFields,
+} from "@/lib/utils/recurring-booking";
 import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
 
 const sortColumnMap: Record<string, string> = {
@@ -48,7 +51,7 @@ export async function GET(req: NextRequest) {
     if (includeTuro) {
       let bq = supabase.from("bookings").select("*, vehicles(year, make, model)");
       if (auth.role === "manager") {
-        bq = bq.not("status", "in", "(cancelled,completed)").gte("return_date", today);
+        bq = bq.not("status", "in", "(cancelled,completed)");
       } else if (managerId) {
         bq = bq.eq("created_by_user_id", managerId);
       }
@@ -110,10 +113,7 @@ export async function GET(req: NextRequest) {
     let query = supabase.from("bookings").select("*, vehicles(year, make, model)");
 
     if (auth.role === "manager") {
-      // Managers can see all active and upcoming trips across channels.
-      query = query
-        .not("status", "in", "(cancelled,completed)")
-        .gte("return_date", today);
+      query = query.not("status", "in", "(cancelled,completed)");
     } else if (managerId) {
       query = query.eq("created_by_user_id", managerId);
     }
@@ -141,7 +141,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Failed to fetch manager bookings" }, { status: 500 });
     }
 
-    const enriched = (data || []).map((b) => {
+    let enriched = (data || []).map((b) => {
       const v = b.vehicles as unknown as { year: number; make: string; model: string } | null;
       const { vehicles: _vehicle, ...rest } = b;
       const canViewPricing = auth.role === "admin" || b.created_by_user_id === auth.userId;
@@ -150,6 +150,17 @@ export async function GET(req: NextRequest) {
       const total_price = canViewPricing ? b.total_price : null;
       const deposit = canViewPricing ? b.deposit : null;
       const location_surcharge = canViewPricing ? b.location_surcharge : null;
+      const overdueFields = enrichBookingOverdueFields(
+        {
+          pickup_date: b.pickup_date,
+          return_date: b.return_date,
+          status: b.status,
+          total_price: b.total_price,
+          deposit: b.deposit,
+          admin_notes: b.admin_notes,
+        },
+        today
+      );
       return {
         ...rest,
         total_price,
@@ -158,8 +169,23 @@ export async function GET(req: NextRequest) {
         canViewPricing,
         canManage,
         vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
+        ...overdueFields,
       };
     });
+
+    if (auth.role === "manager") {
+      enriched = enriched.filter((b) =>
+        bookingIsCurrentlyOccupying(
+          {
+            pickup_date: b.pickup_date,
+            return_date: b.return_date,
+            admin_notes: b.admin_notes,
+            status: b.status,
+          },
+          today
+        )
+      );
+    }
 
     return NextResponse.json({ success: true, data: enriched });
   } catch (error) {

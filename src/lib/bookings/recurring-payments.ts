@@ -2,10 +2,10 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { sumBookingPaymentAmounts } from "@/lib/bookings/payments";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import {
+  getRecognizedRecurringPeriodEnds,
   getRecurringBillingSummary,
   listRecurringWeeklyDueDates,
   parseRecurringBookingMeta,
-  parseRecurringWeekPaymentNote,
   recurringWeekPaymentNote,
 } from "@/lib/utils/recurring-booking";
 
@@ -58,18 +58,19 @@ export async function syncRecurringPaymentsToDate(
 
   const { data: existing, error: listError } = await supabase
     .from("booking_payments")
-    .select("id, note")
-    .eq("booking_id", bookingId);
+    .select("id, note, amount")
+    .eq("booking_id", bookingId)
+    .order("received_at", { ascending: true });
 
   if (listError) {
     throw new Error(listError.message);
   }
 
-  const paidPeriodEnds = new Set<string>();
-  for (const row of existing || []) {
-    const periodEnd = parseRecurringWeekPaymentNote(row.note);
-    if (periodEnd) paidPeriodEnds.add(periodEnd);
-  }
+  const paidPeriodEnds = getRecognizedRecurringPeriodEnds(
+    existing || [],
+    dueDates,
+    summary.weeklyRate
+  );
 
   let paymentsAdded = 0;
   const method =

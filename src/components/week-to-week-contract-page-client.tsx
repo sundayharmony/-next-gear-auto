@@ -175,7 +175,11 @@ export function WeekToWeekContractPageClient() {
           <Card>
             <CardContent className="p-4 sm:p-6">
               <p className="mb-4 text-sm text-gray-600">
-                This contract is prefilled from the selected booking and stays aligned with the booking schedule.
+                This contract is prefilled from the selected booking and stays aligned with the
+                booking schedule. When the rental agreement is signed or regenerated (including
+                after extending a recurring period), the stored PDF at{" "}
+                <span className="font-medium">rental_agreement_url</span> is updated separately
+                and includes weekly supplement pages for recurring long-term bookings.
               </p>
               <WeekToWeekContractViewer
                 vehicle={vehicle}

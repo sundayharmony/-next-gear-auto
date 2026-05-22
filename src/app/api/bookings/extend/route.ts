@@ -183,6 +183,24 @@ export async function POST(request: NextRequest) {
         }
       }
 
+      const { data: recurringBlockedDates } = await supabase
+        .from("blocked_dates")
+        .select("id")
+        .eq("vehicle_id", booking.vehicle_id)
+        .eq("start_date", booking.pickup_date)
+        .eq("end_date", originalReturnDate);
+
+      if (recurringBlockedDates && recurringBlockedDates.length > 0) {
+        await supabase
+          .from("blocked_dates")
+          .update({
+            end_date: newReturnDate,
+            is_extension: true,
+            original_end_date: originalReturnDate,
+          })
+          .eq("id", recurringBlockedDates[0].id);
+      }
+
       return NextResponse.json({
         success: true,
         message: "Recurring billing period updated",

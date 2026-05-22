@@ -69,7 +69,10 @@ function drawSection(
 }
 
 /** Appends supplemental legal sections so signed PDFs match inline agreement updates. */
-export async function appendAgreementSupplementPages(pdfDoc: PDFDocument): Promise<void> {
+export async function appendAgreementSupplementPages(
+  pdfDoc: PDFDocument,
+  sections: AgreementTermsSection[] = RENTAL_AGREEMENT_SUPPLEMENT_SECTIONS
+): Promise<void> {
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const pageSize: [number, number] = [612, 792];
@@ -98,7 +101,7 @@ export async function appendAgreementSupplementPages(pdfDoc: PDFDocument): Promi
   );
   y -= LINE_HEIGHT + 10;
 
-  for (const section of RENTAL_AGREEMENT_SUPPLEMENT_SECTIONS) {
+  for (const section of sections) {
     const estimatedHeight =
       LINE_HEIGHT * 3 +
       section.paragraphs.reduce(

@@ -15,6 +15,7 @@ import { formatYyyyMmDdLocal, isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/
 import { isManagerFeatureEnabled } from "@/lib/config/feature-flags";
 import { regenerateSignedAgreementForBooking } from "@/lib/agreement/signed-agreement";
 import {
+  bookingIntersectsRange,
   enrichBookingOverdueFields,
   getStagedRecurringReturnDate,
   parseRecurringBookingMeta,
@@ -170,11 +171,7 @@ export async function GET(request: NextRequest) {
         }
       } else if (isManager) {
         bq = bq.eq("origin_channel", "manager_panel").eq("created_by_user_id", auth.sub);
-        const todayStr = formatYyyyMmDdLocal(new Date());
-        bq = bq.not("status", "in", "(cancelled,completed)").gte("return_date", todayStr);
-      }
-      if (fromDate) {
-        bq = bq.gte("return_date", fromDate);
+        bq = bq.not("status", "in", "(cancelled,completed)");
       }
       if (toDate) {
         bq = bq.lte("pickup_date", toDate);
@@ -312,12 +309,13 @@ export async function GET(request: NextRequest) {
     if (status) {
       query = query.eq("status", status);
     }
-    // Date range filter: return bookings overlapping [from, to]
-    if (fromDate) {
-      query = query.gte("return_date", fromDate);
-    }
+    // Date range: widen SQL fetch; intersect using rolled occupancy end after enrich
+    const hasDateRange = !!(fromDate || toDate);
     if (toDate) {
       query = query.lte("pickup_date", toDate);
+    }
+    if (hasDateRange && !limitParam && offset === null) {
+      query = query.limit(2000);
     }
     // Server-side search: filter by customer_name, customer_email, or id (case-insensitive)
     if (search) {
@@ -363,7 +361,7 @@ export async function GET(request: NextRequest) {
 
     const today = formatYyyyMmDdLocal(new Date());
 
-    const enriched = (bookings || []).map((b) => {
+    let enriched = (bookings || []).map((b) => {
       const v = b.vehicles as unknown as { year: number; make: string; model: string } | null;
       const { vehicles: _v, ...rest } = b;
       const overdueFields = enrichBookingOverdueFields(
@@ -385,13 +383,35 @@ export async function GET(request: NextRequest) {
       };
     });
 
+    if (hasDateRange) {
+      const rangeStart = fromDate || "1970-01-01";
+      const rangeEnd = toDate || "9999-12-31";
+      enriched = enriched.filter((b) =>
+        bookingIntersectsRange(
+          {
+            pickup_date: b.pickup_date,
+            return_date: b.return_date,
+            admin_notes: b.admin_notes,
+            status: b.status,
+          },
+          rangeStart,
+          rangeEnd,
+          today
+        )
+      );
+    }
+
     // Handle pagination response
     if (page !== null && offset !== null) {
-      const totalPages = Math.max(1, Math.ceil((count || 0) / perPage));
+      const total = hasDateRange ? enriched.length : count || 0;
+      const pageSlice = hasDateRange
+        ? enriched.slice(offset, offset + perPage)
+        : enriched;
+      const totalPages = Math.max(1, Math.ceil(total / perPage));
       return NextResponse.json({
-        data: enriched,
+        data: pageSlice,
         success: true,
-        total: count || 0,
+        total,
         page,
         totalPages,
       }, {

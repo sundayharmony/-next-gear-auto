@@ -1,5 +1,10 @@
 // Legal text should be reviewed by licensed counsel before production use.
 
+import {
+  parseRecurringBookingMeta,
+  type WeeklyDueDay,
+} from "@/lib/utils/recurring-booking";
+
 export type AgreementTermsSection = {
   title: string;
   paragraphs: string[];
@@ -50,6 +55,37 @@ export const RENTAL_AGREEMENT_SECTION_5_UNPAID: AgreementTermsSection = {
     "Following default, Lessor may pursue any remedy available under New Jersey law, including civil collection; suit in small claims or Superior Court in Hudson County; offset against the security deposit; lawful vehicle recovery; suspension of future rentals; and reporting to consumer reporting agencies where permitted by law.",
   ],
 };
+
+export const RECURRING_WEEKLY_SUPPLEMENT_SECTIONS: AgreementTermsSection[] = [
+  {
+    title: "WEEK-TO-WEEK LONG-TERM RENTAL TERMS",
+    paragraphs: [
+      "This rental is structured as a recurring week-to-week long-term agreement. Each renewal period is seven (7) calendar days unless otherwise agreed in writing.",
+      "The weekly recurring rate shown on the agreement form is due at the start of each new seven-day term. Failure to pay the weekly amount when due may result in default under Section 5 and suspension or termination of the rental.",
+      "The return date on the form reflects the end of the current billing period and will roll forward while the rental remains active.",
+    ],
+  },
+];
+
+export function getAgreementSupplementSections(
+  adminNotes?: string | null,
+  weeklyDueDay?: WeeklyDueDay
+): AgreementTermsSection[] {
+  const meta = parseRecurringBookingMeta(adminNotes);
+  const dueDay = weeklyDueDay ?? meta.weeklyDueDay;
+  if (!meta.isRecurringLongTerm || !dueDay) {
+    return RENTAL_AGREEMENT_SUPPLEMENT_SECTIONS;
+  }
+  const dueLine = `Weekly payment is due every ${dueDay} at the start of each new seven-day term.`;
+  return [
+    ...RENTAL_AGREEMENT_SUPPLEMENT_SECTIONS,
+    ...RECURRING_WEEKLY_SUPPLEMENT_SECTIONS,
+    {
+      title: "WEEKLY DUE DAY",
+      paragraphs: [dueLine],
+    },
+  ];
+}
 
 export const RENTAL_AGREEMENT_SECTION_4A_AUTHORIZED: AgreementTermsSection = {
   title: "4A. AUTHORIZED CHARGES",

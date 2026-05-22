@@ -1,6 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { PDFDocument } from "pdf-lib";
 import { appendAgreementSupplementPages } from "@/lib/agreement/append-agreement-supplement-pdf";
+import { getAgreementSupplementSections } from "@/lib/agreement/rental-agreement-terms";
+import {
+  getDisplayReturnDate,
+  parseRecurringBookingMeta,
+} from "@/lib/utils/recurring-booking";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { fmtTime } from "@/lib/email/templates";
 import path from "path";
@@ -44,6 +49,7 @@ export async function GET(req: NextRequest) {
       total_price: number;
       deposit: number;
       vehicle_id?: string;
+      admin_notes?: string | null;
     } | null = null;
     let vehicle: {
       make?: string;
@@ -229,9 +235,17 @@ export async function GET(req: NextRequest) {
       return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
     };
 
+    const recurringMeta = parseRecurringBookingMeta(booking.admin_notes);
+    const isRecurringLt =
+      recurringMeta.isRecurringLongTerm && !!recurringMeta.weeklyDueDay;
+    const displayReturnDate =
+      isRecurringLt && booking.return_date
+        ? getDisplayReturnDate(booking.return_date, booking.admin_notes)
+        : booking.return_date;
+
     setText("t18", pdfDate(booking.pickup_date)); // Pickup Date
     setText("t19", fmtTime(booking.pickup_time)); // Pickup Time
-    setText("t20", pdfDate(booking.return_date)); // Return Date
+    setText("t20", pdfDate(displayReturnDate)); // Return Date
     setText("t21", fmtTime(booking.return_time)); // Return Time
 
     // === Driver Info ===
@@ -246,9 +260,11 @@ export async function GET(req: NextRequest) {
     const pickupDate = booking.pickup_date ? new Date(booking.pickup_date + "T00:00:00") : new Date();
     const returnDate = booking.return_date ? new Date(booking.return_date + "T00:00:00") : new Date();
     const daysDiff = (returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24);
-    const totalDays = Math.max(1, Math.ceil(Number.isFinite(daysDiff) ? daysDiff : 1));
+    const totalDays = isRecurringLt
+      ? 7
+      : Math.max(1, Math.ceil(Number.isFinite(daysDiff) ? daysDiff : 1));
 
-    setText("t26", `$${totalPrice.toFixed(2)}`); // Total Price
+    setText("t26", `$${totalPrice.toFixed(2)}${isRecurringLt ? " (weekly)" : ""}`);
     setText("t27", String(totalDays)); // Total Days
     setText("t28", `$${(totalPrice - deposit).toFixed(2)}`); // Balance Due
 
@@ -292,7 +308,10 @@ export async function GET(req: NextRequest) {
     setText("t57", ""); // Renter Signature — SIGNATURE FIELD
     setText("t58", ""); // Date
 
-    await appendAgreementSupplementPages(pdfDoc);
+    await appendAgreementSupplementPages(
+      pdfDoc,
+      getAgreementSupplementSections(booking.admin_notes)
+    );
 
     const pdfBytes = await pdfDoc.save();
 

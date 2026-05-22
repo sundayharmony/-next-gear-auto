@@ -2,6 +2,11 @@ import { getVehicleDisplayName } from "@/lib/types";
 import { resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import type { StaffRole } from "@/lib/admin/vehicle-details-queries";
+import {
+  bookingIntersectsRange,
+  bookingIsCurrentlyOccupying,
+} from "@/lib/utils/recurring-booking";
+import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 
 /** Service-role Supabase client — typed loosely so real Postgrest builders are accepted. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -231,14 +236,31 @@ async function fetchBookingsForVehicleMerge(
     .order("pickup_date", { ascending: false });
 
   if (role === "manager") {
-    dbQuery = dbQuery.not("status", "in", "(cancelled,completed)").gte("return_date", todayYmdUtc());
+    dbQuery = dbQuery.not("status", "in", "(cancelled,completed)");
   }
-  if (query.from) dbQuery = dbQuery.gte("pickup_date", query.from);
-  if (query.to) dbQuery = dbQuery.lte("return_date", query.to);
+  if (query.to) dbQuery = dbQuery.lte("pickup_date", query.to);
 
   const { data, error } = await dbQuery.limit(2000);
   if (error) return [];
-  return (data || []) as Record<string, unknown>[];
+  const today = formatYyyyMmDdLocal(new Date());
+  const rangeStart = query.from || "1970-01-01";
+  const rangeEnd = query.to || "9999-12-31";
+
+  return ((data || []) as Record<string, unknown>[]).filter((b) => {
+    const row = {
+      pickup_date: String(b.pickup_date),
+      return_date: String(b.return_date),
+      admin_notes: (b.admin_notes as string | null) ?? null,
+      status: String(b.status || ""),
+    };
+    if (role === "manager" && !bookingIsCurrentlyOccupying(row, today)) {
+      return false;
+    }
+    if (query.from || query.to) {
+      return bookingIntersectsRange(row, rangeStart, rangeEnd, today);
+    }
+    return true;
+  });
 }
 
 function statusMatchesFilter(entry: OccupancyEntry, status: string | null): boolean {
@@ -319,7 +341,23 @@ export async function fetchGlobalOccupancy(
   const status = opts.status && opts.status !== "all" ? opts.status : null;
   const merged: OccupancyEntry[] = [];
 
+  const today = formatYyyyMmDdLocal(new Date());
+  const rangeStart = opts.from || "1970-01-01";
+  const rangeEnd = opts.to || "9999-12-31";
+
   for (const b of opts.bookingRows) {
+    const row = {
+      pickup_date: String(b.pickup_date),
+      return_date: String(b.return_date),
+      admin_notes: (b.admin_notes as string | null) ?? null,
+      status: String(b.status || ""),
+    };
+    if (role === "manager" && !bookingIsCurrentlyOccupying(row, today)) {
+      continue;
+    }
+    if ((opts.from || opts.to) && !bookingIntersectsRange(row, rangeStart, rangeEnd, today)) {
+      continue;
+    }
     const entry = mapBookingRow(b, role, userId);
     if (!statusMatchesFilter(entry, status)) continue;
     merged.push(entry);

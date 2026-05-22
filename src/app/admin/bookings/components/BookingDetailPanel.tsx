@@ -2153,6 +2153,14 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                     View Agreement
                   </a>
                 )}
+                {recurringMeta.isRecurringLongTerm &&
+                  isAgreementComplete(booking) &&
+                  booking.rental_agreement_url && (
+                    <p className="text-xs text-gray-600">
+                      Signed PDF includes the weekly recurring supplement. For the full
+                      layout, use Week-to-Week Contract.
+                    </p>
+                  )}
                 {canSendBookingEmail && (
                   <button
                     onClick={handleResendAgreement}

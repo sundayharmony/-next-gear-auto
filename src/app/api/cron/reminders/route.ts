@@ -14,6 +14,7 @@ import {
   isWeeklyDueOnDate,
   parseRecurringBookingMeta,
 } from "@/lib/utils/recurring-booking";
+import { getBusinessTodayYyyyMmDd } from "@/lib/utils/booking-dates";
 
 // This endpoint runs daily via Vercel Cron
 // Sends pickup reminders (24h before), return reminders (day of return),
@@ -32,11 +33,10 @@ export async function GET(request: Request) {
 
   try {
     const tz = "America/New_York";
-    const now = new Date();
-    const todayStr = now.toLocaleDateString("en-CA", { timeZone: tz });
-    const tomorrow = new Date(now);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toLocaleDateString("en-CA", { timeZone: tz });
+    const todayStr = getBusinessTodayYyyyMmDd(tz);
+    const tomorrowStr = new Date(
+      Date.now() + 24 * 60 * 60 * 1000
+    ).toLocaleDateString("en-CA", { timeZone: tz });
 
     let pickupCount = 0;
     let returnCount = 0;
@@ -162,6 +162,18 @@ export async function GET(request: Request) {
       );
       if (!billing || billing.balanceDue <= 0 || !booking.customer_email) continue;
 
+      const { data: priorReminders } = await supabase
+        .from("booking_activity")
+        .select("details")
+        .eq("booking_id", booking.id)
+        .eq("action", "recurring_payment_reminder_sent");
+
+      const alreadySentToday = (priorReminders || []).some((row) => {
+        const details = row.details as { reminder_date?: string } | null;
+        return details?.reminder_date === todayStr;
+      });
+      if (alreadySentToday) continue;
+
       try {
         const { data: vehicle } = await supabase
           .from("vehicles")
@@ -179,6 +191,11 @@ export async function GET(request: Request) {
           totalPrice: booking.total_price ?? 0,
           deposit: booking.deposit ?? 0,
           balanceDue: billing.balanceDue,
+        });
+        await supabase.from("booking_activity").insert({
+          booking_id: booking.id,
+          action: "recurring_payment_reminder_sent",
+          details: { reminder_date: todayStr },
         });
         paymentReminderCount++;
       } catch (err) {

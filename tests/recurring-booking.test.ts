@@ -59,6 +59,13 @@ test("counts weekly payments due from pickup through today", () => {
   );
 });
 
+test("charges zero weeks before the first weekly due date", () => {
+  assert.equal(
+    countRecurringWeeklyPaymentsDue("2026-05-08", "Thursday", "2026-05-08"),
+    0
+  );
+});
+
 test("flags recurring payment overdue when balance due is positive", () => {
   assert.equal(
     isRecurringPaymentOverdue(
