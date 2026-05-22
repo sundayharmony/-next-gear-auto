@@ -72,6 +72,64 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder = "
 
   const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_KEY;
 
+  function placeMarker(map: google.maps.Map, lat: number, lng: number) {
+    if (markerObjRef.current) markerObjRef.current.map = null;
+    const pin = document.createElement("div");
+    pin.style.cssText = "width:24px;height:24px;border-radius:50%;background:#7c3aed;border:2px solid #4c1d95;";
+    markerObjRef.current = new google.maps.marker.AdvancedMarkerElement({
+      position: { lat, lng },
+      map,
+      content: pin,
+    });
+  }
+
+  const close = useCallback(() => {
+    setOpen(false);
+    setQuery("");
+    setResults([]);
+    setPicked(null);
+    setErr("");
+  }, []);
+
+  function flyTo(item: { formatted: string; result: AddressResult }) {
+    setPicked(item);
+    const map = mapObjRef.current;
+    if (!map || !item.result.lat || !item.result.lng) return;
+    map.panTo({ lat: item.result.lat, lng: item.result.lng });
+    map.setZoom(16);
+    placeMarker(map, item.result.lat, item.result.lng);
+  }
+
+  const doSearch = useCallback(async () => {
+    if (!query.trim()) return;
+    setBusy(true);
+    setErr("");
+    setPicked(null);
+
+    searchCounterRef.current++;
+    const currentSearchId = searchCounterRef.current;
+
+    const hits = await forwardGeocode(query);
+
+    if (currentSearchId !== searchCounterRef.current) return;
+
+    if (hits.length === 0) {
+      setErr("No addresses found. Try a more specific search.");
+      setResults([]);
+    } else {
+      setResults(hits);
+      flyTo(hits[0]);
+    }
+    setBusy(false);
+  }, [query]);
+
+  function confirm() {
+    if (!picked) return;
+    onChange(picked.result.address || picked.formatted);
+    onSelect?.(picked.result);
+    close();
+  }
+
   useEffect(() => {
     if (!open) return;
     const onWindowError = (event: ErrorEvent) => {
@@ -144,64 +202,7 @@ export function AddressAutocomplete({ value, onChange, onSelect, placeholder = "
 
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [open]);
-
-  /* ── Helpers ── */
-
-  function placeMarker(map: google.maps.Map, lat: number, lng: number) {
-    if (markerObjRef.current) markerObjRef.current.map = null;
-    const pin = document.createElement("div");
-    pin.style.cssText = "width:24px;height:24px;border-radius:50%;background:#7c3aed;border:2px solid #4c1d95;";
-    markerObjRef.current = new google.maps.marker.AdvancedMarkerElement({
-      position: { lat, lng },
-      map,
-      content: pin,
-    });
-  }
-
-  function flyTo(item: { formatted: string; result: AddressResult }) {
-    setPicked(item);
-    const map = mapObjRef.current;
-    if (!map || !item.result.lat || !item.result.lng) return;
-    map.panTo({ lat: item.result.lat, lng: item.result.lng });
-    map.setZoom(16);
-    placeMarker(map, item.result.lat, item.result.lng);
-  }
-
-  const doSearch = useCallback(async () => {
-    if (!query.trim()) return;
-    setBusy(true);
-    setErr("");
-    setPicked(null);
-
-    // Increment counter to track this search
-    searchCounterRef.current++;
-    const currentSearchId = searchCounterRef.current;
-
-    const hits = await forwardGeocode(query);
-
-    // Discard results if a newer search has been started
-    if (currentSearchId !== searchCounterRef.current) return;
-
-    if (hits.length === 0) { setErr("No addresses found. Try a more specific search."); setResults([]); }
-    else { setResults(hits); flyTo(hits[0]); }
-    setBusy(false);
-  }, [query]);
-
-  function confirm() {
-    if (!picked) return;
-    onChange(picked.result.address || picked.formatted);
-    onSelect?.(picked.result);
-    close();
-  }
-
-  function close() {
-    setOpen(false);
-    setQuery("");
-    setResults([]);
-    setPicked(null);
-    setErr("");
-  }
+  }, [open, close]);
 
   /* ── Fallback: no API key ── */
   if (!apiKey) {

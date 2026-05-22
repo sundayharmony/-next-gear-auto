@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { parseApiJsonResponse } from "@/lib/utils/parse-api-json";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
@@ -27,6 +28,10 @@ interface ManagerRow {
   manager_access_granted_at?: string | null;
   manager_access_revoked_at?: string | null;
   account_activated: boolean;
+}
+
+function apiMessage(data: Record<string, unknown>, fallback: string): string {
+  return typeof data.message === "string" ? data.message : fallback;
 }
 
 export default function AdminManagersPage() {
@@ -44,16 +49,24 @@ export default function AdminManagersPage() {
     setLoading(true);
     try {
       const res = await adminFetch("/api/admin/managers");
-      const json = await res.json();
+      const parsed = await parseApiJsonResponse(res);
+      if (!parsed.ok) {
+        setError(parsed.message);
+        return;
+      }
+      const json = parsed.data;
       if (res.ok && json.success) {
-        setManagers(json.data || []);
+        setManagers((json.data as ManagerRow[]) || []);
+      } else {
+        setError(apiMessage(json, "Failed to load managers."));
       }
     } catch (error) {
       logger.error("Failed to fetch managers:", error);
+      setError("Failed to load managers.");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [setError]);
 
   useEffect(() => {
     fetchManagers();
@@ -93,13 +106,18 @@ export default function AdminManagersPage() {
           phone: editForm.phone.trim(),
         }),
       });
-      const json = await res.json();
+      const parsed = await parseApiJsonResponse(res);
+      if (!parsed.ok) {
+        setError(parsed.message);
+        return;
+      }
+      const json = parsed.data;
       if (res.ok && json.success) {
         setSuccess("Manager updated.");
         setEditingId(null);
         await fetchManagers();
       } else {
-        setError(json.message || "Failed to update manager.");
+        setError(apiMessage(json, "Failed to update manager."));
       }
     } catch (error) {
       logger.error("Failed to update manager:", error);
@@ -123,13 +141,18 @@ export default function AdminManagersPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(form),
       });
-      const json = await res.json();
+      const parsed = await parseApiJsonResponse(res);
+      if (!parsed.ok) {
+        setError(parsed.message);
+        return;
+      }
+      const json = parsed.data;
       if (res.ok && json.success) {
-        setSuccess(json.message || "Manager access created.");
+        setSuccess(apiMessage(json, "Manager access created."));
         setForm({ name: "", email: "", phone: "" });
         await fetchManagers();
       } else {
-        setError(json.message || "Failed to create manager.");
+        setError(apiMessage(json, "Failed to create manager."));
       }
     } catch (error) {
       logger.error("Failed to create manager:", error);
@@ -153,13 +176,18 @@ export default function AdminManagersPage() {
       setSuccess(null);
       try {
         const res = await adminFetch(`/api/admin/managers/${managerId}`, { method: "DELETE" });
-        const json = await res.json();
+        const parsed = await parseApiJsonResponse(res);
+        if (!parsed.ok) {
+          setError(parsed.message);
+          return;
+        }
+        const json = parsed.data;
         if (res.ok && json.success) {
-          setSuccess(json.message || "Manager removed.");
+          setSuccess(apiMessage(json, "Manager removed."));
           if (editingId === managerId) setEditingId(null);
           await fetchManagers();
         } else {
-          setError(json.message || "Failed to remove manager.");
+          setError(apiMessage(json, "Failed to remove manager."));
         }
       } catch (error) {
         logger.error("Failed to remove manager:", error);

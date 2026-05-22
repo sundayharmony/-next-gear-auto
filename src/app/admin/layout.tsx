@@ -37,6 +37,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const [loggingOut, setLoggingOut] = useState(false);
   const [pendingCount, setPendingCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notificationPosition, setNotificationPosition] = useState({ top: 80, left: 16 });
   const [recentBookings, setRecentBookings] = useState<Array<{ id: string; customer_name: string; created_at: string; total_price: number }>>([]);
   const onMessagesRoute = pathname.startsWith("/admin/messages");
   const unreadMessages = useStaffMessageUnreadCount(
@@ -66,6 +67,26 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     if (!showNotifications) return;
     const t = window.setTimeout(() => notificationsCloseRef.current?.focus(), 0);
     return () => clearTimeout(t);
+  }, [showNotifications]);
+
+  useEffect(() => {
+    if (!showNotifications) return;
+
+    const updatePosition = () => {
+      const rect = bellButtonRef.current?.getBoundingClientRect();
+      const top = rect ? rect.bottom + 8 : 80;
+      const preferredLeft = rect ? rect.right - 320 : 16;
+      const left = Math.max(16, Math.min(preferredLeft, window.innerWidth - 336));
+      setNotificationPosition({ top, left });
+    };
+
+    updatePosition();
+    window.addEventListener("resize", updatePosition);
+    window.addEventListener("scroll", updatePosition, true);
+    return () => {
+      window.removeEventListener("resize", updatePosition);
+      window.removeEventListener("scroll", updatePosition, true);
+    };
   }, [showNotifications]);
 
   const fetchPendingBookings = useCallback(async () => {
@@ -224,13 +245,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             aria-modal="true"
             aria-labelledby="admin-notifications-title"
             className="fixed w-80 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 z-[60] overflow-hidden"
-            style={(() => {
-              const rect = bellButtonRef.current?.getBoundingClientRect();
-              const top = rect ? rect.bottom + 8 : 80;
-              const preferredLeft = rect ? rect.right - 320 : 16;
-              const left = Math.max(16, Math.min(preferredLeft, (typeof window !== "undefined" ? window.innerWidth : 400) - 336));
-              return { top, left };
-            })()}
+            style={notificationPosition}
           >
             <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between">
               <h3 id="admin-notifications-title" className="text-sm font-semibold text-gray-900">
