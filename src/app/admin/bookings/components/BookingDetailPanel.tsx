@@ -64,6 +64,7 @@ import {
   getBookingDisplayTotal,
   getDisplayReturnDate,
   getRecurringBillingSummary,
+  getStagedRecurringReturnDate,
   parseRecurringBookingMeta,
   stripRecurringBookingMeta,
   upsertRecurringBookingMeta,
@@ -339,6 +340,10 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     deposit: booking.deposit,
     admin_notes: booking.admin_notes,
   });
+  const stagedRecurringReturn = getStagedRecurringReturnDate(
+    booking.return_date,
+    booking.admin_notes
+  );
   const visibleAdminNotes = stripRecurringBookingMeta(
     typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes
   );
@@ -353,6 +358,34 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const canGenerateWeekToWeekContract =
     recurringMeta.isRecurringLongTerm &&
     (booking.status === "confirmed" || booking.status === "active");
+
+  const handleAdvanceRecurringPeriod = async () => {
+    if (!stagedRecurringReturn || saving) return;
+    setSaving(true);
+    try {
+      const response = await adminFetch(`/api/bookings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: booking.id,
+          advanceRecurringPeriod: true,
+        }),
+      });
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.message || "Failed to advance billing period");
+      }
+      const updated = { ...booking, return_date: stagedRecurringReturn };
+      onUpdateBooking(updated);
+      setEditData(updated);
+      onSuccess(`Billing period advanced to ${stagedRecurringReturn}`);
+    } catch (err) {
+      logger.error("Failed to advance recurring period", err);
+      onError(err instanceof Error ? err.message : "Failed to advance billing period");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   // Handle edit mode toggle
   const toggleEditMode = () => {
@@ -717,6 +750,17 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
         return;
       }
 
+      if (!markPaid && recurringBilling) {
+        for (const payment of payments) {
+          const delRes = await adminFetch(
+            `/api/admin/booking-payments?id=${payment.id}`,
+            { method: "DELETE" }
+          );
+          if (!delRes.ok) throw new Error("Failed to clear payment records");
+        }
+        setPayments([]);
+      }
+
       const newDeposit = markPaid ? (booking.total_price ?? 0) : 0;
       const response = await adminFetch(`/api/bookings`, {
         method: "PATCH",
@@ -729,7 +773,13 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
       const updated = { ...booking, deposit: newDeposit };
       onUpdateBooking(updated);
       setEditData(updated);
-      onSuccess(markPaid ? "Marked as fully paid" : "Marked as unpaid");
+      onSuccess(
+        markPaid
+          ? "Marked as fully paid"
+          : recurringBilling
+            ? "Cleared weekly payment records"
+            : "Marked as unpaid"
+      );
     } catch (err) {
       logger.error("Failed to toggle payment status", err);
       onError(err instanceof Error ? err.message : "Failed to update payment status");
@@ -1997,6 +2047,17 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                         {recurringMeta.weeklyDueDay || "Not set"}
                       </span>
                     </p>
+                    {stagedRecurringReturn ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-xs"
+                        disabled={saving}
+                        onClick={() => void handleAdvanceRecurringPeriod()}
+                      >
+                        Advance billing period to {stagedRecurringReturn}
+                      </Button>
+                    ) : null}
                     {canGenerateWeekToWeekContract ? (
                       <Button
                         size="sm"

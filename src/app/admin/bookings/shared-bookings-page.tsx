@@ -42,7 +42,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
     searchQuery, setSearchQuery,
     sortField, sortOrder, setSort,
     fetchBookings, mergeBookingInList, updateStatus, bulkUpdateStatus, updating,
-    todayPickups, todayReturns, overdueBookings,
+    todayPickups, todayReturns, overdueBookings, paymentDueBookings,
   } = useBookings(config);
 
   // UI state
@@ -312,6 +312,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
           todayPickups={todayPickups}
           todayReturns={todayReturns}
           overdueBookings={overdueBookings}
+          paymentDueBookings={paymentDueBookings}
           onSelectBooking={handleSelectBooking}
         />
 

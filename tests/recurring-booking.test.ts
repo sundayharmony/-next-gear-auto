@@ -5,6 +5,7 @@ import {
   getEffectiveReturnDate,
   getRecurringBillingSummary,
   isActiveBookingOverdue,
+  isRecurringPaymentOverdue,
   nextWeeklyDueOnOrAfter,
   upsertRecurringBookingMeta,
 } from "@/lib/utils/recurring-booking";
@@ -55,6 +56,35 @@ test("counts weekly payments due from pickup through today", () => {
   assert.equal(
     countRecurringWeeklyPaymentsDue("2026-05-07", "Thursday", "2026-05-21"),
     3
+  );
+});
+
+test("flags recurring payment overdue when balance due is positive", () => {
+  assert.equal(
+    isRecurringPaymentOverdue(
+      {
+        pickup_date: "2026-05-07",
+        total_price: 325,
+        deposit: 325,
+        admin_notes: RECURRING_NOTES,
+        status: "active",
+      },
+      "2026-05-16"
+    ),
+    true
+  );
+  assert.equal(
+    isRecurringPaymentOverdue(
+      {
+        pickup_date: "2026-05-07",
+        total_price: 325,
+        deposit: 650,
+        admin_notes: RECURRING_NOTES,
+        status: "active",
+      },
+      "2026-05-16"
+    ),
+    false
   );
 });
 

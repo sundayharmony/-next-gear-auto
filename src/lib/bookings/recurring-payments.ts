@@ -1,8 +1,12 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sumBookingPaymentAmounts } from "@/lib/bookings/payments";
 import {
+  formatYyyyMmDdLocal,
   getRecurringBillingSummary,
+  listRecurringWeeklyDueDates,
   parseRecurringBookingMeta,
+  parseRecurringWeekPaymentNote,
+  recurringWeekPaymentNote,
 } from "@/lib/utils/recurring-booking";
 
 export interface SyncRecurringPaymentsResult {
@@ -40,34 +44,53 @@ export async function syncRecurringPaymentsToDate(
     throw new Error("Booking is not a recurring long-term rental");
   }
 
+  const meta = parseRecurringBookingMeta(booking.admin_notes);
+  if (!meta.weeklyDueDay) {
+    throw new Error("Weekly due day is not set for this recurring rental");
+  }
+
+  const today = formatYyyyMmDdLocal(new Date());
+  const dueDates = listRecurringWeeklyDueDates(
+    booking.pickup_date,
+    meta.weeklyDueDay,
+    today
+  );
+
   const { data: existing, error: listError } = await supabase
     .from("booking_payments")
-    .select("id")
-    .eq("booking_id", bookingId)
-    .order("received_at", { ascending: true });
+    .select("id, note")
+    .eq("booking_id", bookingId);
 
   if (listError) {
     throw new Error(listError.message);
   }
 
-  const existingCount = existing?.length ?? 0;
+  const paidPeriodEnds = new Set<string>();
+  for (const row of existing || []) {
+    const periodEnd = parseRecurringWeekPaymentNote(row.note);
+    if (periodEnd) paidPeriodEnds.add(periodEnd);
+  }
+
   let paymentsAdded = 0;
   const method =
     typeof booking.payment_method === "string" && booking.payment_method
       ? booking.payment_method
       : "cash";
 
-  for (let week = existingCount + 1; week <= summary.weeksDue; week++) {
+  for (const periodEnd of dueDates) {
+    if (paidPeriodEnds.has(periodEnd)) continue;
+
     const { error: insertError } = await supabase.from("booking_payments").insert({
       booking_id: bookingId,
       amount: summary.weeklyRate,
       method,
-      note: `Recurring weekly payment (week ${week})`,
+      note: recurringWeekPaymentNote(periodEnd),
     });
     if (insertError) {
       throw new Error(insertError.message);
     }
     paymentsAdded++;
+    paidPeriodEnds.add(periodEnd);
   }
 
   const { data: allPayments, error: sumError } = await supabase

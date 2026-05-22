@@ -3,8 +3,10 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
+import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import {
   bookingConflictsWithAny,
+  filterOccupyingBookings,
   overlapConfigForMode,
   toBookingInterval,
   type BookingOverlapMode,
@@ -55,19 +57,27 @@ export async function GET(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    const { data: conflicting } = await supabase
+    const today = formatYyyyMmDdLocal(new Date());
+
+    const { data: conflictingRaw } = await supabase
       .from("bookings")
-      .select("id, pickup_date, return_date, pickup_time, return_time, customer_name, status")
+      .select("id, pickup_date, return_date, pickup_time, return_time, customer_name, status, admin_notes")
       .eq("vehicle_id", vehicleId)
       .in("status", [...statuses])
-      .lte("pickup_date", returnDate)
-      .gte("return_date", pickupDate);
+      .lte("pickup_date", returnDate);
+
+    const conflicting = filterOccupyingBookings(
+      conflictingRaw || [],
+      pickupDate,
+      returnDate,
+      today
+    );
 
     const proposed = toBookingInterval(pickupDate, returnDate, pickupTime, returnTime);
 
     let hasRealOverlap = false;
-    if (conflicting && conflicting.length > 0) {
-      hasRealOverlap = bookingConflictsWithAny(proposed, conflicting, minGapMinutes);
+    if (conflicting.length > 0) {
+      hasRealOverlap = bookingConflictsWithAny(proposed, conflicting, minGapMinutes, today);
     }
 
     let blockedConflict = false;

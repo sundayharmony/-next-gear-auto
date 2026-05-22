@@ -2,12 +2,13 @@
 
 import { BookingRow } from "../types";
 import { Card, CardContent } from "@/components/ui/card";
-import { CarFront, CalendarCheck, AlertTriangle } from "lucide-react";
+import { CarFront, CalendarCheck, AlertTriangle, CircleDollarSign } from "lucide-react";
 
 interface TodaySummaryProps {
   todayPickups: BookingRow[];
   todayReturns: BookingRow[];
   overdueBookings: BookingRow[];
+  paymentDueBookings: BookingRow[];
   onSelectBooking: (booking: BookingRow) => void;
 }
 
@@ -78,19 +79,30 @@ export function TodaySummary({
   todayPickups,
   todayReturns,
   overdueBookings,
+  paymentDueBookings,
   onSelectBooking,
 }: TodaySummaryProps) {
   // Don't render if all are empty
   if (
     todayPickups.length === 0 &&
     todayReturns.length === 0 &&
-    overdueBookings.length === 0
+    overdueBookings.length === 0 &&
+    paymentDueBookings.length === 0
   ) {
     return null;
   }
 
+  const columnCount =
+    2 +
+    (overdueBookings.length > 0 ? 1 : 0) +
+    (paymentDueBookings.length > 0 ? 1 : 0);
+
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+    <div
+      className={`grid grid-cols-1 gap-4 mb-6 ${
+        columnCount >= 4 ? "md:grid-cols-4" : columnCount === 3 ? "md:grid-cols-3" : "md:grid-cols-2"
+      }`}
+    >
       <SummaryCard
         icon={CarFront}
         title="Today's Pickups"
@@ -116,6 +128,17 @@ export function TodaySummary({
           count={overdueBookings.length}
           accentColor="#ef4444"
           items={overdueBookings}
+          showCard={true}
+          onSelectBooking={onSelectBooking}
+        />
+      )}
+      {paymentDueBookings.length > 0 && (
+        <SummaryCard
+          icon={CircleDollarSign}
+          title="Weekly Payment Due"
+          count={paymentDueBookings.length}
+          accentColor="#d97706"
+          items={paymentDueBookings}
           showCard={true}
           onSelectBooking={onSelectBooking}
         />

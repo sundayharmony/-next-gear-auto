@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
-import { bookingConflictsWithAny, overlapConfigForMode, toBookingInterval } from "@/lib/utils/booking-overlap";
+import {
+  bookingConflictsWithAny,
+  filterOccupyingBookings,
+  overlapConfigForMode,
+  toBookingInterval,
+} from "@/lib/utils/booking-overlap";
+import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 
 export async function GET(req: NextRequest) {
   const supabase = getServiceSupabase();
@@ -37,13 +43,21 @@ export async function GET(req: NextRequest) {
 
     const { statuses, minGapMinutes } = overlapConfigForMode("default");
 
-    const { data: conflicting, error } = await supabase
+    const today = formatYyyyMmDdLocal(new Date());
+
+    const { data: conflictingRaw, error } = await supabase
       .from("bookings")
-      .select("id, pickup_date, return_date, pickup_time, return_time, status")
+      .select("id, pickup_date, return_date, pickup_time, return_time, status, admin_notes")
       .eq("vehicle_id", vehicleId)
       .in("status", [...statuses])
-      .lte("pickup_date", endDate)
-      .gte("return_date", startDate);
+      .lte("pickup_date", endDate);
+
+    const conflicting = filterOccupyingBookings(
+      conflictingRaw || [],
+      startDate,
+      endDate,
+      today
+    );
 
     if (error) {
       logger.error("Availability check error:", error);
@@ -57,11 +71,16 @@ export async function GET(req: NextRequest) {
 
     // Allow same-day turnovers with at least 60-minute gap (shared logic with POST /api/bookings)
     let available = true;
-    if (conflicting && conflicting.length > 0) {
+    if (conflicting.length > 0) {
       const pickupTime = searchParams.get("pickupTime") || "00:00";
       const returnTime = searchParams.get("returnTime") || "23:59";
       const proposed = toBookingInterval(startDate, endDate, pickupTime, returnTime);
-      const hasRealConflict = bookingConflictsWithAny(proposed, conflicting, minGapMinutes);
+      const hasRealConflict = bookingConflictsWithAny(
+        proposed,
+        conflicting,
+        minGapMinutes,
+        today
+      );
       available = !hasRealConflict;
     }
 

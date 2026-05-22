@@ -16,6 +16,7 @@ import { isManagerFeatureEnabled } from "@/lib/config/feature-flags";
 import { regenerateSignedAgreementForBooking } from "@/lib/agreement/signed-agreement";
 import {
   enrichBookingOverdueFields,
+  getStagedRecurringReturnDate,
   parseRecurringBookingMeta,
   upsertRecurringBookingMeta,
 } from "@/lib/utils/recurring-booking";
@@ -797,6 +798,16 @@ export async function PATCH(request: NextRequest) {
     // Build update object — only include fields that were actually sent
     const updateFields: Record<string, any> = {};
 
+    if (body.advanceRecurringPeriod === true) {
+      const stagedReturn = getStagedRecurringReturnDate(
+        booking.return_date,
+        booking.admin_notes
+      );
+      if (stagedReturn) {
+        updateFields.return_date = stagedReturn;
+      }
+    }
+
     if (body.status !== undefined) updateFields.status = body.status;
     if (body.customer_id !== undefined) updateFields.customer_id = body.customer_id;
     if (body.customer_name !== undefined) updateFields.customer_name = body.customer_name;
@@ -820,7 +831,21 @@ export async function PATCH(request: NextRequest) {
     if (body.deposit !== undefined) updateFields.deposit = body.deposit;
     if (body.extras !== undefined) updateFields.extras = body.extras;
     if (body.insurance_opted_out !== undefined) updateFields.insurance_opted_out = body.insurance_opted_out;
-    if (body.admin_notes !== undefined && !isManagerEditor) updateFields.admin_notes = body.admin_notes;
+    if (body.admin_notes !== undefined && !isManagerEditor) {
+      const incomingMeta = parseRecurringBookingMeta(
+        typeof body.admin_notes === "string" ? body.admin_notes : ""
+      );
+      if (incomingMeta.isRecurringLongTerm && !incomingMeta.weeklyDueDay) {
+        return NextResponse.json(
+          { success: false, message: "Weekly due day is required for recurring long-term bookings" },
+          { status: 400 }
+        );
+      }
+      updateFields.admin_notes = upsertRecurringBookingMeta(body.admin_notes, {
+        isRecurringLongTerm: incomingMeta.isRecurringLongTerm,
+        weeklyDueDay: incomingMeta.weeklyDueDay,
+      });
+    }
     if (body.payment_method !== undefined) updateFields.payment_method = body.payment_method;
     if (body.pickup_location_id !== undefined) updateFields.pickup_location_id = body.pickup_location_id;
     if (body.pickup_location_name !== undefined) updateFields.pickup_location_name = body.pickup_location_name;

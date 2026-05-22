@@ -304,6 +304,32 @@ function agreementEmailTemplate(data: BookingEmailData): string {
 </body></html>`;
 }
 
+export async function sendRecurringPaymentReminder(data: BookingEmailData & { balanceDue: number }) {
+  try {
+    const transporter = getTransporter();
+    const html = `
+      <p>Hi ${escapeHtml(data.customerName)},</p>
+      <p>Your weekly rental payment for <strong>${escapeHtml(data.vehicleName)}</strong> is due today.</p>
+      <p>Amount due: <strong>$${data.balanceDue.toFixed(2)}</strong></p>
+      <p>Pickup: ${escapeHtml(data.pickupDate)}</p>
+      <p>Thank you,<br/>NextGearAuto</p>
+    `;
+    await sendMailWithRetry(transporter, {
+      from: FROM_CUSTOMER,
+      to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
+      subject: `Weekly Payment Due - ${data.vehicleName}`,
+      html,
+      text: stripHtmlTags(html),
+    });
+    logger.info("Recurring payment reminder email sent successfully");
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send recurring payment reminder:", errorMsg);
+    throw error;
+  }
+}
+
 export async function sendReturnReminder(data: BookingEmailData) {
   try {
     const transporter = getTransporter();

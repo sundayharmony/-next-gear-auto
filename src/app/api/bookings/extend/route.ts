@@ -5,6 +5,8 @@ import { logger } from "@/lib/utils/logger";
 import { sendBookingExtended } from "@/lib/email/mailer";
 import { getVehicleDisplayName } from "@/lib/types";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
+import { isRecurringLongTermBooking } from "@/lib/bookings/recurring-payments";
+import { getEffectiveReturnDate } from "@/lib/utils/recurring-booking";
 import { regenerateSignedAgreementForBooking } from "@/lib/agreement/signed-agreement";
 import Stripe from "stripe";
 
@@ -91,17 +93,25 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 5. Validate new return date is after current return date
-    const currentReturn = new Date(booking.return_date + "T00:00:00");
+    const isRecurring = isRecurringLongTermBooking(booking.admin_notes);
+    const currentReturnKey = isRecurring
+      ? getEffectiveReturnDate(booking.return_date, booking.admin_notes)
+      : booking.return_date.split("T")[0];
+
+    const currentReturn = new Date(currentReturnKey + "T00:00:00");
     const newReturn = new Date(newReturnDate + "T00:00:00");
     if (newReturn <= currentReturn) {
       return NextResponse.json(
-        { success: false, message: "New return date must be after the current return date" },
+        {
+          success: false,
+          message: isRecurring
+            ? "New billing period end must be after the current weekly due date"
+            : "New return date must be after the current return date",
+        },
         { status: 400 }
       );
     }
 
-    // Calculate extension days
     const extensionDays = Math.ceil(
       (newReturn.getTime() - currentReturn.getTime()) / (1000 * 60 * 60 * 24)
     );
@@ -118,6 +128,74 @@ export async function POST(request: NextRequest) {
       { mode: "default", excludeBookingId: bookingId },
     );
     if (overlap) return overlap;
+
+    if (isRecurring) {
+      const originalReturnDate = booking.return_date;
+      const originalTotalPrice = booking.total_price;
+      const updateData: Record<string, unknown> = {
+        return_date: newReturnDate,
+      };
+      if (newReturnTime) {
+        updateData.return_time = newReturnTime;
+      }
+      let newWeeklyRate = Number(booking.total_price) || 0;
+      if (extensionAmount > 0) {
+        newWeeklyRate = extensionAmount;
+        updateData.total_price = newWeeklyRate;
+      }
+
+      const { error: recurringUpdateError } = await supabase
+        .from("bookings")
+        .update(updateData)
+        .eq("id", bookingId);
+
+      if (recurringUpdateError) {
+        logger.error("Failed to update recurring booking period:", recurringUpdateError);
+        return NextResponse.json(
+          { success: false, message: "Failed to update booking" },
+          { status: 500 }
+        );
+      }
+
+      await supabase.from("booking_activity").insert({
+        booking_id: bookingId,
+        action: "recurring_period_updated",
+        details: {
+          original_return_date: originalReturnDate,
+          new_return_date: newReturnDate,
+          original_weekly_rate: originalTotalPrice,
+          new_weekly_rate: newWeeklyRate,
+          extension_amount: extensionAmount,
+        },
+        performed_by: auth.email || auth.sub,
+      });
+
+      if (booking.agreement_signed_at) {
+        try {
+          await regenerateSignedAgreementForBooking(supabase, {
+            ...booking,
+            return_date: newReturnDate,
+            return_time: newReturnTime || booking.return_time,
+            total_price: newWeeklyRate,
+          });
+        } catch (regenErr) {
+          logger.error("Signed agreement refresh failed after recurring update:", regenErr);
+        }
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: "Recurring billing period updated",
+        data: {
+          bookingId,
+          newReturnDate,
+          newReturnTime: newReturnTime || booking.return_time,
+          extensionDays,
+          newWeeklyRate,
+          recurring: true,
+        },
+      });
+    }
 
     // 6. Fetch vehicle for display name
     const { data: vehicle } = await supabase

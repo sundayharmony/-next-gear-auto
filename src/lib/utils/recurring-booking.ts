@@ -137,6 +137,26 @@ export function getEffectiveReturnDate(
   return effective;
 }
 
+/** True when recurring contract balance due through today is unpaid. */
+export function isRecurringPaymentOverdue(
+  booking: {
+    pickup_date: string;
+    total_price?: number | null;
+    deposit?: number | null;
+    admin_notes?: string | null;
+    status?: string;
+  },
+  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+): boolean {
+  const occupyStatuses = ["active", "confirmed"];
+  if (booking.status && !occupyStatuses.includes(booking.status)) {
+    return false;
+  }
+  const billing = getRecurringBillingSummary(booking, todayYyyyMmDd);
+  if (!billing) return false;
+  return billing.balanceDue > 0;
+}
+
 export function isActiveBookingOverdue(
   storedReturnDate: string,
   adminNotes: string | null | undefined,
@@ -189,6 +209,62 @@ export function getBookingBalanceDue(
   return Math.max(0, total - (Number(booking.deposit) || 0));
 }
 
+/**
+ * End date used for vehicle occupancy (overlap, booked-dates, availability).
+ * Recurring LT uses rolled weekly due; active rentals extend through today so the
+ * vehicle stays blocked while the contract is ongoing.
+ */
+/** Stored return_date to persist when the rolled billing period has moved forward. */
+export function getStagedRecurringReturnDate(
+  storedReturnDate: string,
+  adminNotes?: string | null,
+  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+): string | null {
+  const meta = parseRecurringBookingMeta(adminNotes);
+  if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) return null;
+
+  const storedKey = storedReturnDate.split("T")[0];
+  const effective = getEffectiveReturnDate(storedKey, adminNotes, todayYyyyMmDd);
+  return effective > storedKey ? effective : null;
+}
+
+export function isWeeklyDueOnDate(
+  weeklyDueDay: WeeklyDueDay,
+  dateIso: string
+): boolean {
+  return nextWeeklyDueOnOrAfter(dateIso, weeklyDueDay) === dateIso.split("T")[0];
+}
+
+export function getBookingOccupancyEndDate(
+  booking: {
+    pickup_date: string;
+    return_date: string;
+    admin_notes?: string | null;
+    status?: string;
+  },
+  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+): string {
+  const pickupKey = (booking.pickup_date || "").split("T")[0];
+  const storedReturnKey = (booking.return_date || "").split("T")[0];
+  const meta = parseRecurringBookingMeta(booking.admin_notes);
+
+  if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) {
+    return storedReturnKey;
+  }
+
+  let endKey = getEffectiveReturnDate(
+    storedReturnKey,
+    booking.admin_notes,
+    todayYyyyMmDd
+  ).split("T")[0];
+
+  if (booking.status === "active" && todayYyyyMmDd > pickupKey && todayYyyyMmDd > endKey) {
+    endKey = todayYyyyMmDd;
+  }
+
+  return endKey;
+}
+
 /** Return date to show in admin lists (rolled forward for recurring LT). */
 export function getDisplayReturnDate(
   storedReturnDate: string,
@@ -207,6 +283,37 @@ export interface RecurringBillingSummary {
 }
 
 /** Count weekly payment due dates from pickup through today (inclusive). */
+export const RECURRING_WEEK_NOTE_PREFIX = "recurring_week:";
+
+export function recurringWeekPaymentNote(periodEndIso: string): string {
+  return `${RECURRING_WEEK_NOTE_PREFIX}${periodEndIso}`;
+}
+
+export function parseRecurringWeekPaymentNote(
+  note: string | null | undefined
+): string | null {
+  if (!note?.startsWith(RECURRING_WEEK_NOTE_PREFIX)) return null;
+  const key = note.slice(RECURRING_WEEK_NOTE_PREFIX.length).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : null;
+}
+
+/** Weekly due dates from pickup through throughDate (inclusive). */
+export function listRecurringWeeklyDueDates(
+  pickupDate: string,
+  weeklyDueDay: WeeklyDueDay,
+  throughDate: string
+): string[] {
+  const dates: string[] = [];
+  let due = nextWeeklyDueOnOrAfter(pickupDate, weeklyDueDay);
+  let guard = 0;
+  while (due <= throughDate && guard < 520) {
+    dates.push(due);
+    due = nextWeeklyDueOnOrAfter(addCalendarDaysYyyyMmDd(due, 1), weeklyDueDay);
+    guard++;
+  }
+  return dates;
+}
+
 export function countRecurringWeeklyPaymentsDue(
   pickupDate: string,
   weeklyDueDay: WeeklyDueDay,
@@ -269,7 +376,9 @@ export function enrichBookingOverdueFields(
   effective_total_price?: number;
   recurring_weeks_due?: number;
   recurring_weekly_rate?: number;
+  recurring_balance_due?: number;
   is_overdue: boolean;
+  is_payment_overdue: boolean;
 } {
   const meta = parseRecurringBookingMeta(booking.admin_notes);
   const effectiveReturn = getEffectiveReturnDate(
@@ -298,6 +407,7 @@ export function enrichBookingOverdueFields(
           effective_total_price: billing.contractTotalToDate,
           recurring_weeks_due: billing.weeksDue,
           recurring_weekly_rate: billing.weeklyRate,
+          recurring_balance_due: billing.balanceDue,
         }
       : {}),
     is_overdue: isActiveBookingOverdue(
@@ -306,5 +416,17 @@ export function enrichBookingOverdueFields(
       booking.status,
       todayYyyyMmDd
     ),
+    is_payment_overdue: booking.pickup_date
+      ? isRecurringPaymentOverdue(
+          {
+            pickup_date: booking.pickup_date,
+            total_price: booking.total_price,
+            deposit: booking.deposit,
+            admin_notes: booking.admin_notes,
+            status: booking.status,
+          },
+          todayYyyyMmDd
+        )
+      : false,
   };
 }

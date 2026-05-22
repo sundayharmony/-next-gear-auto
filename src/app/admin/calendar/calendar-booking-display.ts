@@ -1,9 +1,6 @@
 import type { BookingDbRow } from "@/lib/types";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
-import {
-  getDisplayReturnDate,
-  parseRecurringBookingMeta,
-} from "@/lib/utils/recurring-booking";
+import { getBookingOccupancyEndDate } from "@/lib/utils/recurring-booking";
 
 type CalendarBooking = Pick<
   BookingDbRow,
@@ -19,26 +16,15 @@ export function getCalendarPickupDateKey(booking: CalendarBooking): string {
  * (and extend through today while active so the timeline reads as a continuous rental).
  */
 export function getCalendarReturnDateKey(booking: CalendarBooking): string {
-  const pickupKey = getCalendarPickupDateKey(booking);
-  let endKey = getDisplayReturnDate(
-    booking.return_date,
-    booking.admin_notes,
-    booking.effective_return_date
-  ).split("T")[0];
-
-  const meta = parseRecurringBookingMeta(booking.admin_notes);
-  if (
-    meta.isRecurringLongTerm &&
-    meta.weeklyDueDay &&
-    booking.status === "active"
-  ) {
-    const todayKey = formatYyyyMmDdLocal(new Date());
-    if (todayKey > pickupKey && todayKey > endKey) {
-      endKey = todayKey;
-    }
-  }
-
-  return endKey;
+  return getBookingOccupancyEndDate(
+    {
+      pickup_date: booking.pickup_date,
+      return_date: booking.return_date,
+      admin_notes: booking.admin_notes,
+      status: booking.status,
+    },
+    formatYyyyMmDdLocal(new Date())
+  );
 }
 
 export function bookingOverlapsDateRange(

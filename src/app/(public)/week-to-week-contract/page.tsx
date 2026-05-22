@@ -5,7 +5,7 @@ import { WeekToWeekContractPageClient } from "@/components/week-to-week-contract
 export const metadata = {
   title: "Week-to-Week Long-Term Rental Contract",
   description:
-    "Special recurring week-to-week rental contract for long-term renters who rebook every week.",
+    "Week-to-week long-term rental contract (admin/manager access). Open from a recurring booking in the bookings panel.",
 };
 
 export default function WeekToWeekContractPage() {

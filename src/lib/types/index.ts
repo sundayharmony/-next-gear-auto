@@ -307,12 +307,15 @@ export interface BookingDbRow {
   promo_code?: string;
   discount_amount?: number;
   is_overdue?: boolean;
+  /** Recurring LT: unpaid contract balance through today (API-enriched). */
+  is_payment_overdue?: boolean;
   /** Rolled weekly due date for recurring long-term rentals (API-enriched). */
   effective_return_date?: string;
   /** Cumulative contract total through today for recurring LT (weeks due × weekly rate). */
   effective_total_price?: number;
   recurring_weeks_due?: number;
   recurring_weekly_rate?: number;
+  recurring_balance_due?: number;
   pickup_location_id?: string;
   pickup_location_name?: string;
   return_location_id?: string;

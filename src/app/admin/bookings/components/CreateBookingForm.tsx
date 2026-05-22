@@ -22,6 +22,7 @@ import {
 } from "../types";
 import { Location } from "@/lib/types";
 import {
+  nextWeeklyDueOnOrAfter,
   upsertRecurringBookingMeta,
   WEEKLY_DUE_DAY_OPTIONS,
   type WeeklyDueDay,
@@ -113,6 +114,17 @@ export default function CreateBookingForm({
       }));
     }
   }, [prefillData]);
+
+  useEffect(() => {
+    if (!form.isRecurringLongTerm || !form.weeklyDueDay || !form.pickupDate) return;
+    const firstDue = nextWeeklyDueOnOrAfter(
+      form.pickupDate,
+      form.weeklyDueDay as WeeklyDueDay
+    );
+    setForm((prev) =>
+      prev.returnDate === firstDue ? prev : { ...prev, returnDate: firstDue }
+    );
+  }, [form.isRecurringLongTerm, form.weeklyDueDay, form.pickupDate]);
 
   // Click-outside detection for dropdown
   useEffect(() => {
@@ -401,7 +413,11 @@ export default function CreateBookingForm({
       }
     }
     if (form.totalPrice <= 0) {
-      onError("Total price must be greater than zero");
+      onError(
+        form.isRecurringLongTerm
+          ? "Weekly rate must be greater than zero"
+          : "Total price must be greater than zero"
+      );
       return false;
     }
     if (form.isRecurringLongTerm && !form.weeklyDueDay) {
@@ -878,7 +894,9 @@ export default function CreateBookingForm({
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Total Price ($)</label>
+              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
+                {form.isRecurringLongTerm ? "Weekly Rate ($)" : "Total Price ($)"}
+              </label>
               <div className="relative">
                 <Input
                   type="number"

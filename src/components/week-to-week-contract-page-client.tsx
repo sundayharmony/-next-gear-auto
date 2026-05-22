@@ -65,7 +65,9 @@ export function WeekToWeekContractPageClient() {
 
     const loadContractContext = async () => {
       if (!bookingId) {
-        setError("Missing bookingId. Open this contract from the booking list or booking detail panel.");
+        setError(
+          "Missing bookingId. Open this contract from the admin or manager booking list while signed in."
+        );
         setLoading(false);
         return;
       }
@@ -73,7 +75,11 @@ export function WeekToWeekContractPageClient() {
       try {
         const bookingRes = await adminFetch(`/api/bookings?id=${encodeURIComponent(bookingId)}`);
         if (!bookingRes.ok) {
-          setError("Booking not found or access denied.");
+          setError(
+            bookingRes.status === 401
+              ? "Sign in as admin or manager to view this week-to-week contract."
+              : "Booking not found or access denied."
+          );
           setLoading(false);
           return;
         }
@@ -159,6 +165,7 @@ export function WeekToWeekContractPageClient() {
           <h1 className="text-3xl font-bold sm:text-4xl">Week-to-Week Long-Term Contract</h1>
           <p className="mx-auto mt-3 max-w-3xl text-purple-100">
             Generated from booking <span className="font-semibold">{booking.id}</span> for recurring long-term rental terms.
+            Admin or manager login is required to open this page.
           </p>
         </div>
       </section>

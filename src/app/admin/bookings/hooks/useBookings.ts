@@ -35,6 +35,7 @@ interface UseBookingsReturn {
   todayPickups: BookingRow[];
   todayReturns: BookingRow[];
   overdueBookings: BookingRow[];
+  paymentDueBookings: BookingRow[];
 }
 
 export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
@@ -287,6 +288,11 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
     [bookings]
   );
 
+  const paymentDueBookings = useMemo(
+    () => bookings.filter((b) => isWebsiteBooking(b) && b.is_payment_overdue),
+    [bookings]
+  );
+
   return {
     bookings, vehicles, allCustomers, loading,
     error, success, setError, setSuccess,
@@ -295,6 +301,6 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
     searchQuery, setSearchQuery,
     sortField, sortOrder, setSort,
     fetchBookings, mergeBookingInList, updateStatus, bulkUpdateStatus, updating,
-    todayPickups, todayReturns, overdueBookings,
+    todayPickups, todayReturns, overdueBookings, paymentDueBookings,
   };
 }

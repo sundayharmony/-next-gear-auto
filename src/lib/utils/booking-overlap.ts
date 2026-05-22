@@ -1,4 +1,6 @@
 import { NextResponse } from "next/server";
+import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
+import { getBookingOccupancyEndDate } from "@/lib/utils/recurring-booking";
 
 export type BookingOverlapMode = "default" | "manager";
 
@@ -66,17 +68,56 @@ export function bookingIntervalsConflict(
   return false;
 }
 
+export type OverlapBookingRow = {
+  pickup_date: string;
+  return_date: string;
+  pickup_time: string | null;
+  return_time: string | null;
+  admin_notes?: string | null;
+  status?: string;
+};
+
+export function toOccupancyInterval(
+  row: OverlapBookingRow,
+  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+): BookingInterval {
+  const endDate = getBookingOccupancyEndDate(row, todayYyyyMmDd);
+  return toBookingInterval(
+    row.pickup_date,
+    endDate,
+    row.pickup_time,
+    row.return_time
+  );
+}
+
+/** Keep bookings whose occupancy window intersects [proposedPickup, proposedReturn]. */
+export function filterOccupyingBookings(
+  rows: OverlapBookingRow[],
+  proposedPickupDate: string,
+  proposedReturnDate: string,
+  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
+): OverlapBookingRow[] {
+  const pu = proposedPickupDate.split("T")[0];
+  const rd = proposedReturnDate.split("T")[0];
+  return rows.filter((row) => {
+    const pk = row.pickup_date.split("T")[0];
+    const end = getBookingOccupancyEndDate(row, todayYyyyMmDd);
+    return pk <= rd && end >= pu;
+  });
+}
+
 export function bookingConflictsWithAny(
   proposed: BookingInterval,
-  rows: Array<{ pickup_date: string; return_date: string; pickup_time: string | null; return_time: string | null }>,
+  rows: OverlapBookingRow[],
   minGapMinutes: number,
+  todayYyyyMmDd: string = formatYyyyMmDdLocal(new Date())
 ): boolean {
   return rows.some((row) =>
     bookingIntervalsConflict(
       proposed,
-      toBookingInterval(row.pickup_date, row.return_date, row.pickup_time, row.return_time),
-      minGapMinutes,
-    ),
+      toOccupancyInterval(row, todayYyyyMmDd),
+      minGapMinutes
+    )
   );
 }
 
@@ -128,20 +169,31 @@ export async function checkBookingOverlap(
   const mode: BookingOverlapMode = options.mode ?? "default";
   const { statuses, minGapMinutes } = overlapConfigForMode(mode);
 
+  const today = formatYyyyMmDdLocal(new Date());
+
   const { data: conflictingRaw } = await supabase
     .from("bookings")
-    .select("id, pickup_date, return_date, pickup_time, return_time")
+    .select("id, pickup_date, return_date, pickup_time, return_time, admin_notes, status")
     .eq("vehicle_id", vehicleId)
     .in("status", [...statuses])
-    .lte("pickup_date", returnDate)
-    .gte("return_date", pickupDate);
+    .lte("pickup_date", returnDate);
 
-  const conflicting = excludeBookingRow(conflictingRaw, options.excludeBookingId);
+  const conflicting = filterOccupyingBookings(
+    excludeBookingRow(conflictingRaw, options.excludeBookingId),
+    pickupDate,
+    returnDate,
+    today
+  );
 
   const proposed = toBookingInterval(pickupDate, returnDate, pickupTime, returnTime);
 
   if (conflicting.length) {
-    const hasBookingConflict = bookingConflictsWithAny(proposed, conflicting, minGapMinutes);
+    const hasBookingConflict = bookingConflictsWithAny(
+      proposed,
+      conflicting,
+      minGapMinutes,
+      today
+    );
     if (hasBookingConflict) {
       const message =
         mode === "manager"
