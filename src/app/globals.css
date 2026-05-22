@@ -6,8 +6,8 @@
   --color-primary-light: #EDE9FE;
   --color-accent: #A78BFA;
 
-  /* Brand palette — shared nav & heroes */
-  --color-header-brand: var(--color-primary-dark);
+  /* Brand palette — shared nav & heroes (header Lab ≈ L43 a75.2 b-86 → #8427f8) */
+  --color-header-brand: #8427f8;
   --color-nga-purple-950: #1e0a3c;
   --color-nga-purple-900: #3b0764;
   --color-nga-purple-800: #5b21b6;
@@ -74,7 +74,7 @@ body {
 .site-header-ribbon {
   background: var(--color-header-brand);
   color: #f5f3ff;
-  border-bottom: 1px solid rgba(124, 58, 237, 0.22);
+  border-bottom: 1px solid rgba(132, 39, 248, 0.28);
 }
 
 .site-header-ribbon a {
@@ -184,7 +184,7 @@ body {
   position: relative;
   color: var(--hero-text);
   background: var(--color-header-brand);
-  border-bottom: 1px solid rgba(124, 58, 237, 0.28);
+  border-bottom: 1px solid rgba(132, 39, 248, 0.32);
   animation: pageHeroEnter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
