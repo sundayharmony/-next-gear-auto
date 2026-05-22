@@ -9,7 +9,7 @@
     "start": "next start",
     "lint": "eslint . --ext .ts,.tsx",
     "test": "npm run check:panel-sync && npm run check:staff-quality && npm run test:messaging",
-    "test:messaging": "tsx --test tests/staff-messaging.test.ts tests/booking-overlap.test.ts tests/booking-dates.test.ts tests/turo-blocked-date.test.ts tests/turo-revenue.test.ts tests/vehicle-occupancy.test.ts tests/price-calculator.test.ts tests/booking-lifecycle.test.ts tests/booking-payments-domain.test.ts tests/booking-upload-limits.test.ts tests/vehicle-sale-guards.test.ts tests/bill-of-sale-template.test.ts tests/recurring-booking.test.ts tests/recurring-occupancy.test.ts tests/recurring-payments.test.ts tests/calendar-booking-display.test.ts tests/safe-url.test.ts tests/vehicle-images.test.ts",
+    "test:messaging": "tsx --test tests/staff-messaging.test.ts tests/booking-overlap.test.ts tests/booking-dates.test.ts tests/turo-blocked-date.test.ts tests/turo-revenue.test.ts tests/vehicle-occupancy.test.ts tests/price-calculator.test.ts tests/booking-lifecycle.test.ts tests/booking-payments-domain.test.ts tests/booking-upload-limits.test.ts tests/vehicle-sale-guards.test.ts tests/bill-of-sale-template.test.ts tests/recurring-booking.test.ts tests/recurring-occupancy.test.ts tests/recurring-payments.test.ts tests/calendar-booking-display.test.ts tests/safe-url.test.ts tests/vehicle-images.test.ts tests/sanitize-campaign-html.test.ts",
     "check:panel-sync": "node ./scripts/check-panel-sync.mjs",
     "check:staff-quality": "node ./scripts/staff-quality-gates.mjs"
   },
@@ -51,6 +51,7 @@
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "recharts": "^3.8.1",
+    "sanitize-html": "^2.17.4",
     "stripe": "^21.0.1",
     "tailwind-merge": "^3.5.0",
     "web-push": "^3.6.7"
@@ -63,6 +64,7 @@
     "@types/nodemailer": "^6.4.23",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@types/sanitize-html": "^2.16.1",
     "eslint": "^10.1.0",
     "eslint-config-next": "^16.2.6",
     "postcss": "^8.5.10",

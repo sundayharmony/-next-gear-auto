@@ -2,7 +2,14 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Shield, Plus, RefreshCw, Pencil, Trash2, CheckCircle2, Clock } from "lucide-react";
-import { AdminPageHeader, AdminPageBody, AdminCard } from "@/components/admin/admin-shell";
+import {
+  AdminPageHeader,
+  AdminPageBody,
+  AdminCard,
+  adminSectionTitleClass,
+  adminMutedClass,
+  adminListItemClass,
+} from "@/components/admin/admin-shell";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -186,7 +193,7 @@ export default function AdminManagersPage() {
         {success ? <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} /> : null}
 
         <AdminCard>
-            <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h2 className={`${adminSectionTitleClass} mb-4 flex items-center gap-2`}>
               <Plus className="h-4 w-4 text-purple-600" /> Add manager
             </h2>
             <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
@@ -213,7 +220,7 @@ export default function AdminManagersPage() {
           </AdminCard>
 
         <AdminCard>
-            <h2 className="text-base font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <h2 className={`${adminSectionTitleClass} mb-4 flex items-center gap-2`}>
               <Shield className="h-4 w-4 text-purple-600" /> Current managers
             </h2>
             {loading ? (
@@ -228,7 +235,7 @@ export default function AdminManagersPage() {
             ) : (
               <div className="space-y-3">
                 {managers.map((manager) => (
-                  <div key={manager.id} className="rounded-xl border border-gray-200/80 bg-gray-50/40 p-4 transition-colors hover:border-purple-200/80 hover:bg-purple-50/25">
+                  <div key={manager.id} className={adminListItemClass}>
                     {editingId === manager.id ? (
                       <div className="space-y-3">
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -262,7 +269,7 @@ export default function AdminManagersPage() {
                       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
-                            <p className="font-semibold text-gray-900">{manager.name}</p>
+                            <p className="font-semibold text-gray-900 capitalize">{manager.name}</p>
                             {manager.account_activated ? (
                               <Badge className="bg-green-100 text-green-800 border-green-200">
                                 <CheckCircle2 className="h-3 w-3 mr-1" aria-hidden />
@@ -275,7 +282,7 @@ export default function AdminManagersPage() {
                               </Badge>
                             )}
                           </div>
-                          <p className="text-sm text-gray-500 truncate">{manager.email}</p>
+                          <p className={`${adminMutedClass} truncate`}>{manager.email}</p>
                           {!manager.account_activated ? (
                             <p className="text-xs text-amber-700 mt-1">
                               Has not set a password yet — resend the setup email from Customers if needed.
@@ -284,18 +291,23 @@ export default function AdminManagersPage() {
                           {manager.phone ? (
                             <p className="text-sm text-gray-600 mt-0.5">{manager.phone}</p>
                           ) : (
-                            <p className="text-xs text-gray-400 mt-0.5">No phone on file</p>
+                            <p className="text-xs text-gray-500 mt-0.5">No phone on file</p>
                           )}
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2">
-                          <Button size="sm" variant="outline" onClick={() => startEdit(manager)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                            onClick={() => startEdit(manager)}
+                          >
                             <Pencil className="h-3.5 w-3.5 mr-1" aria-hidden />
                             Edit
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
-                            className="text-red-700 border-red-200 hover:bg-red-50"
+                            className="text-red-700 border-red-300 hover:bg-red-50"
                             onClick={() => removeManager(manager.id, manager.email)}
                             disabled={removingId === manager.id}
                           >

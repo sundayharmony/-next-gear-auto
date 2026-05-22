@@ -540,7 +540,7 @@ body:has(.admin-dark) {
 }
 .admin-dark input::placeholder,
 .admin-dark textarea::placeholder {
-  color: #4a4a4a !important;
+  color: #94a3b8 !important;
 }
 /* Labels */
 .admin-dark label,
@@ -646,8 +646,42 @@ body:has(.admin-dark) {
 .admin-dark .active\:bg-purple-100:active { background-color: rgba(124, 58, 237, 0.25) !important; }
 
 /* Disabled/muted states */
-.admin-dark .bg-gray-50\/50 { background-color: rgba(0, 0, 0, 0.5) !important; }
-.admin-dark .text-gray-300 { color: #444444 !important; }
+.admin-dark .bg-gray-50\/50 { background-color: rgba(17, 17, 17, 0.85) !important; }
+.admin-dark .bg-gray-50\/40 { background-color: #111111 !important; }
+.admin-dark .bg-gray-50\/30 { background-color: #0f0f0f !important; }
+.admin-dark .bg-gray-50\/60 { background-color: #141414 !important; }
+.admin-dark .hover\:bg-purple-50\/25:hover { background-color: rgba(124, 58, 237, 0.12) !important; }
+.admin-dark .hover\:bg-purple-50\/50:hover { background-color: rgba(124, 58, 237, 0.1) !important; }
+.admin-dark .text-gray-300 { color: #64748b !important; }
+
+/* Status badge text (light-mode greens/ambers on dark cards) */
+.admin-dark .text-green-800,
+.admin-dark .text-green-700 { color: #86efac !important; }
+.admin-dark .bg-green-100 { background-color: rgba(34, 197, 94, 0.18) !important; }
+.admin-dark .text-amber-900,
+.admin-dark .text-amber-800,
+.admin-dark .text-amber-700 { color: #fcd34d !important; }
+.admin-dark .bg-amber-100 { background-color: rgba(245, 158, 11, 0.18) !important; }
+.admin-dark .text-red-700,
+.admin-dark .text-red-800 { color: #fca5a5 !important; }
+.admin-dark .hover\:bg-red-50:hover { background-color: rgba(239, 68, 68, 0.12) !important; }
+.admin-dark .text-blue-700,
+.admin-dark .text-blue-800 { color: #93c5fd !important; }
+.admin-dark .bg-blue-100 { background-color: rgba(59, 130, 246, 0.18) !important; }
+
+/* Outline / ghost buttons */
+.admin-dark .border-purple-300 { border-color: rgba(124, 58, 237, 0.45) !important; }
+.admin-dark .hover\:bg-purple-50:hover { background-color: rgba(124, 58, 237, 0.12) !important; }
+
+/* Shared admin list rows */
+.admin-dark .admin-list-item {
+  background-color: #111111 !important;
+  border-color: #2a2a2a !important;
+}
+.admin-dark .admin-list-item:hover {
+  background-color: #161616 !important;
+  border-color: rgba(124, 58, 237, 0.35) !important;
+}
 
 /* Badge and status chip backgrounds */
 .admin-dark .bg-gray-100\/80 { background-color: rgba(17, 17, 17, 0.8) !important; }

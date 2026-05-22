@@ -21,6 +21,21 @@ export function dedupeEmails(emails: string[]): string[] {
   return result;
 }
 
+function isStaffRole(role: unknown): boolean {
+  return role === "admin" || role === "manager";
+}
+
+export function mapSupabaseRecipientError(error: {
+  code?: string;
+  message?: string;
+}): string {
+  const msg = error.message || "";
+  if (error.code === "42703" || msg.includes("role")) {
+    return "Customer database schema is outdated (missing role column). Run migrations and try again.";
+  }
+  return "Failed to load recipient emails";
+}
+
 export async function fetchAllClientEmails(supabase: SupabaseClient): Promise<string[]> {
   const emails: string[] = [];
   let offset = 0;
@@ -37,8 +52,7 @@ export async function fetchAllClientEmails(supabase: SupabaseClient): Promise<st
     if (!data?.length) break;
 
     for (const row of data) {
-      const role = (row.role as string | null) || "customer";
-      if (role === "admin" || role === "manager") continue;
+      if (isStaffRole(row.role)) continue;
       if (row.email) emails.push(row.email);
     }
 
@@ -68,8 +82,7 @@ export async function fetchEmailsByCustomerIds(
     if (error) throw error;
 
     for (const row of data || []) {
-      const role = (row.role as string | null) || "customer";
-      if (role === "admin" || role === "manager") continue;
+      if (isStaffRole(row.role)) continue;
       if (row.email) emails.push(row.email);
     }
   }

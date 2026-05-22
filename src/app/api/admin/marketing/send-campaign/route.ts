@@ -10,8 +10,10 @@ import {
   dedupeEmails,
   fetchAllClientEmails,
   fetchEmailsByCustomerIds,
+  mapSupabaseRecipientError,
 } from "@/lib/email/resolve-marketing-recipients";
 
+export const runtime = "nodejs";
 export const maxDuration = 300;
 
 const MAX_RECIPIENTS = 300;
@@ -68,9 +70,24 @@ async function fetchMarketingVehicles(
   return vehicleIds.map((id) => byId.get(id)).filter((v): v is MarketingVehicle => Boolean(v));
 }
 
+function smtpConfigured(): boolean {
+  if (process.env.NODE_ENV !== "production") return true;
+  return Boolean(process.env.SMTP_PASS?.trim());
+}
+
 export async function POST(req: NextRequest) {
   const auth = await verifyAdmin(req);
   if (!auth.authorized) return auth.response;
+
+  if (!smtpConfigured()) {
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Email sending is not configured (SMTP_PASS missing)",
+      },
+      { status: 503 },
+    );
+  }
 
   try {
     const body = (await req.json()) as SendCampaignBody;
@@ -106,24 +123,35 @@ export async function POST(req: NextRequest) {
     const supabase = getServiceSupabase();
     let recipients: string[] = [];
 
-    if (recipientMode === "all") {
-      recipients = await fetchAllClientEmails(supabase);
-    } else if (recipientMode === "selected") {
-      const customerIds = Array.isArray(body.customerIds)
-        ? body.customerIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
-        : [];
-      if (customerIds.length === 0) {
-        return NextResponse.json(
-          { success: false, message: "Select at least one customer" },
-          { status: 400 },
-        );
+    try {
+      if (recipientMode === "all") {
+        recipients = await fetchAllClientEmails(supabase);
+      } else if (recipientMode === "selected") {
+        const customerIds = Array.isArray(body.customerIds)
+          ? body.customerIds.filter((id): id is string => typeof id === "string" && id.trim().length > 0)
+          : [];
+        if (customerIds.length === 0) {
+          return NextResponse.json(
+            { success: false, message: "Select at least one customer" },
+            { status: 400 },
+          );
+        }
+        recipients = await fetchEmailsByCustomerIds(supabase, customerIds);
+      } else {
+        const importEmails = Array.isArray(body.importEmails)
+          ? body.importEmails.filter((e): e is string => typeof e === "string")
+          : [];
+        recipients = dedupeEmails(importEmails);
       }
-      recipients = await fetchEmailsByCustomerIds(supabase, customerIds);
-    } else {
-      const importEmails = Array.isArray(body.importEmails)
-        ? body.importEmails.filter((e): e is string => typeof e === "string")
-        : [];
-      recipients = dedupeEmails(importEmails);
+    } catch (recipientErr) {
+      logger.error("Marketing campaign recipient resolution failed:", recipientErr);
+      const mapped =
+        recipientErr &&
+        typeof recipientErr === "object" &&
+        "code" in recipientErr
+          ? mapSupabaseRecipientError(recipientErr as { code?: string; message?: string })
+          : "Failed to load recipient emails";
+      return NextResponse.json({ success: false, message: mapped }, { status: 500 });
     }
 
     if (recipients.length === 0) {
@@ -143,11 +171,50 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const vehicles = await fetchMarketingVehicles(supabase, vehicleIds);
-    const sanitizedBody = sanitizeCampaignHtml(rawBodyHtml);
+    let vehicles: MarketingVehicle[];
+    try {
+      vehicles = await fetchMarketingVehicles(supabase, vehicleIds);
+    } catch (vehicleErr) {
+      logger.error("Marketing campaign vehicle fetch failed:", vehicleErr);
+      return NextResponse.json(
+        { success: false, message: "Failed to load selected vehicles" },
+        { status: 500 },
+      );
+    }
+
+    let sanitizedBody: string;
+    try {
+      sanitizedBody = sanitizeCampaignHtml(rawBodyHtml);
+    } catch (sanitizeErr) {
+      logger.error("Marketing campaign HTML sanitize failed:", sanitizeErr);
+      return NextResponse.json(
+        { success: false, message: "Failed to prepare email content" },
+        { status: 500 },
+      );
+    }
+
     const html = buildMarketingCampaignHtml(sanitizedBody, vehicles);
 
-    const { sent, failed } = await sendMarketingCampaignBatch(recipients, subject, html);
+    let sent = 0;
+    let failed: { email: string; error: string }[] = [];
+    try {
+      const result = await sendMarketingCampaignBatch(recipients, subject, html);
+      sent = result.sent;
+      failed = result.failed;
+    } catch (sendErr) {
+      logger.error("Marketing campaign send failed:", sendErr);
+      const message =
+        sendErr instanceof Error ? sendErr.message : "Failed to send campaign emails";
+      return NextResponse.json(
+        {
+          success: false,
+          message: message.includes("SMTP")
+            ? "Email server error — check SMTP configuration"
+            : "Failed to send campaign emails",
+        },
+        { status: 500 },
+      );
+    }
 
     logger.info("Marketing campaign sent", {
       adminId: auth.adminId,

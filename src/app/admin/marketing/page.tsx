@@ -26,6 +26,7 @@ import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 import { MARKETING_VEHICLE_MARKER } from "@/lib/email/sanitize-campaign-html";
 import { stripRichHtmlToText } from "@/lib/utils/validation";
+import { parseApiJsonResponse } from "@/lib/utils/parse-api-json";
 
 type RecipientMode = "all" | "selected" | "import";
 
@@ -207,19 +208,42 @@ export default function AdminMarketingPage() {
           importEmails: recipientMode === "import" ? importEmails : undefined,
         }),
       });
-      const json = await res.json();
+      const parsed = await parseApiJsonResponse(res);
+      if (!parsed.ok) {
+        logger.error("Marketing send failed", { status: res.status, message: parsed.message });
+        setError(
+          parsed.message.includes("Server error")
+            ? `${parsed.message}. Check Vercel logs or SMTP configuration.`
+            : parsed.message
+        );
+        return;
+      }
+      const json = parsed.data;
       if (res.ok && json.success) {
-        const { sent, failed, attempted } = json.data || {};
-        if (failed?.length) {
+        const data = json.data as {
+          sent?: number;
+          failed?: unknown[];
+          attempted?: number;
+        } | undefined;
+        const sent = data?.sent ?? 0;
+        const failed = data?.failed;
+        const attempted = data?.attempted;
+        if (Array.isArray(failed) && failed.length > 0) {
           setError(
-            json.message ||
+            (typeof json.message === "string" ? json.message : null) ||
               `Sent ${sent} of ${attempted}. ${failed.length} failed.`,
           );
         } else {
-          setSuccess(json.message || `Campaign sent to ${sent} recipients.`);
+          setSuccess(
+            (typeof json.message === "string" ? json.message : null) ||
+              `Campaign sent to ${sent} recipients.`,
+          );
         }
       } else {
-        setError(json.message || "Failed to send campaign");
+        setError(
+          (typeof json.message === "string" ? json.message : null) ||
+            "Failed to send campaign",
+        );
       }
     } catch (err) {
       logger.error("Marketing send failed", err);

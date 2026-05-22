@@ -20,6 +20,10 @@ export const adminSectionTitleClass = "text-base font-semibold text-gray-900";
 
 export const adminMutedClass = "text-sm text-gray-500";
 
+/** List row inside admin cards — readable in light and dark admin themes */
+export const adminListItemClass =
+  "admin-list-item rounded-xl border border-gray-200/80 bg-gray-100 p-4 transition-colors hover:border-purple-200/80 hover:bg-purple-50/50";
+
 interface AdminPageHeaderProps {
   title: string;
   subtitle?: string;
