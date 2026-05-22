@@ -1,7 +1,7 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { sumBookingPaymentAmounts } from "@/lib/bookings/payments";
+import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import {
-  formatYyyyMmDdLocal,
   getRecurringBillingSummary,
   listRecurringWeeklyDueDates,
   parseRecurringBookingMeta,

@@ -7,10 +7,10 @@ import {
 } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
+import { isRecurringLongTermBooking } from "@/lib/bookings/recurring-payments";
 import {
   getRecurringBillingSummary,
   getStagedRecurringReturnDate,
-  isRecurringLongTermBooking,
   isWeeklyDueOnDate,
   parseRecurringBookingMeta,
 } from "@/lib/utils/recurring-booking";
