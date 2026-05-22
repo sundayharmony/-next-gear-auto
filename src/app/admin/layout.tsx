@@ -261,6 +261,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
                   <Link
                     key={b.id}
                     href={`/admin/bookings?booking=${b.id}`}
+                    prefetch={false}
                     onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
                     className="flex items-center justify-between px-4 py-3 hover:bg-purple-50 active:bg-purple-100 transition-colors group"
                   >
@@ -277,6 +278,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             )}
             <Link
               href="/admin/bookings?status=pending"
+              prefetch={false}
               onClick={() => { setShowNotifications(false); setSidebarOpen(false); }}
               className="block px-4 py-3 text-center text-xs font-semibold text-purple-600 hover:bg-purple-50 active:bg-purple-100 border-t transition-colors"
             >
@@ -331,6 +333,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               onClick={() => setSidebarOpen(false)}
               className={cn(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",

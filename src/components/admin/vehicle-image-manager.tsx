@@ -73,22 +73,18 @@ async function mapWithConcurrency<T, R>(
 function SortableImageTile({
   url,
   index,
-  total,
   disabled,
   busy,
   onRemove,
   onMakePrimary,
-  onMove,
   onPreview,
 }: {
   url: string;
   index: number;
-  total: number;
   disabled?: boolean;
   busy?: boolean;
   onRemove: () => void;
   onMakePrimary: () => void;
-  onMove: (direction: -1 | 1) => void;
   onPreview: () => void;
 }) {
   const {
@@ -153,39 +149,12 @@ function SortableImageTile({
             onMakePrimary();
           }}
           disabled={disabled || busy}
-          className="absolute left-1 bottom-8 z-10 rounded bg-white/90 px-1 py-0.5 text-[10px] font-medium text-gray-800 hover:bg-white disabled:opacity-40"
+          className="absolute left-1 bottom-1 z-10 rounded bg-white/90 px-1 py-0.5 text-[10px] font-medium text-gray-800 hover:bg-white disabled:opacity-40"
           title="Make primary"
         >
           <Star className="h-3 w-3 inline" />
         </button>
       )}
-
-      <div className="absolute left-1 bottom-1 z-10 flex gap-1">
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onMove(-1);
-          }}
-          disabled={index === 0 || disabled || busy}
-          className="bg-white/90 text-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-white disabled:opacity-40"
-          aria-label="Move image left"
-        >
-          <ChevronLeft className="h-3.5 w-3.5" />
-        </button>
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onMove(1);
-          }}
-          disabled={index === total - 1 || disabled || busy}
-          className="bg-white/90 text-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-white disabled:opacity-40"
-          aria-label="Move image right"
-        >
-          <ChevronRight className="h-3.5 w-3.5" />
-        </button>
-      </div>
 
       <button
         type="button"
@@ -412,12 +381,6 @@ export function VehicleImageManager({
     await applyImages(arrayMove(images, index, 0));
   };
 
-  const handleMove = async (index: number, direction: -1 | 1) => {
-    const nextIndex = index + direction;
-    if (nextIndex < 0 || nextIndex >= images.length) return;
-    await applyImages(arrayMove(images, index, nextIndex));
-  };
-
   return (
     <div className="space-y-3">
       <div className="flex items-center gap-2">
@@ -447,12 +410,10 @@ export function VehicleImageManager({
                   key={url}
                   url={url}
                   index={idx}
-                  total={images.length}
                   disabled={disabled}
                   busy={busy}
                   onRemove={() => setConfirmRemoveUrl(url)}
                   onMakePrimary={() => void handleMakePrimary(idx)}
-                  onMove={(dir) => void handleMove(idx, dir)}
                   onPreview={() => setPreviewIndex(idx)}
                 />
               ))}

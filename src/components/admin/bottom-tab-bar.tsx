@@ -103,6 +103,7 @@ export function BottomTabBar() {
                 <Link
                   key={item.href}
                   href={item.href}
+                  prefetch={false}
                   onClick={() => setShowMore(false)}
                   className={cn(
                     "flex min-h-[76px] flex-col items-center justify-center gap-1.5 py-3.5 px-2 rounded-xl transition-all active:scale-95",
@@ -132,6 +133,7 @@ export function BottomTabBar() {
                 <Link
                   key={tab.href}
                   href={tab.href}
+                  prefetch={false}
                   aria-current={active ? "page" : undefined}
                   className={cn(
                     "flex min-h-[68px] flex-col items-center justify-center gap-0.5 pt-2 pb-1.5 px-3 min-w-[64px] transition-all active:scale-90",
