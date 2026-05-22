@@ -2,6 +2,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import {
+  isAllowedVehicleImageUrl,
+  isValidVehicleId,
+  parseVehicleImageStoragePath,
+  VEHICLE_IMAGES_BUCKET,
+} from "@/lib/admin/vehicle-images";
 
 export async function POST(request: NextRequest) {
   const auth = await verifyAdmin(request);
@@ -9,7 +15,9 @@ export async function POST(request: NextRequest) {
   try {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
-    const vehicleId = formData.get("vehicleId") as string | null;
+    const vehicleIdRaw = formData.get("vehicleId") as string | null;
+    const vehicleId =
+      vehicleIdRaw && isValidVehicleId(vehicleIdRaw) ? vehicleIdRaw.trim() : null;
 
     if (!file) {
       return NextResponse.json(
@@ -18,7 +26,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
@@ -27,7 +34,6 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file size (5MB max)
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json(
         { success: false, error: "File too large. Maximum 5MB." },
@@ -37,7 +43,6 @@ export async function POST(request: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    // Generate unique filename with safe extension
     const SAFE_EXTENSIONS: Record<string, string> = {
       "image/jpeg": "jpg",
       "image/png": "png",
@@ -48,17 +53,26 @@ export async function POST(request: NextRequest) {
     const folder = vehicleId || "temp";
     const fileName = `${folder}/${crypto.randomUUID()}.${ext}`;
 
-    // Convert File to ArrayBuffer then to Buffer for upload
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // Validate file magic bytes match declared MIME type
     const magicBytes = new Uint8Array(arrayBuffer.slice(0, 12));
-    const isJpeg = magicBytes[0] === 0xFF && magicBytes[1] === 0xD8 && magicBytes[2] === 0xFF;
-    const isPng = magicBytes[0] === 0x89 && magicBytes[1] === 0x50 && magicBytes[2] === 0x4E && magicBytes[3] === 0x47;
-    const isWebp = magicBytes[0] === 0x52 && magicBytes[1] === 0x49 && magicBytes[2] === 0x46 && magicBytes[3] === 0x46 &&
-                   magicBytes[8] === 0x57 && magicBytes[9] === 0x45 && magicBytes[10] === 0x42 && magicBytes[11] === 0x50;
-    const isSvg = file.type === "image/svg+xml"; // SVG is text-based, no magic bytes
+    const isJpeg = magicBytes[0] === 0xff && magicBytes[1] === 0xd8 && magicBytes[2] === 0xff;
+    const isPng =
+      magicBytes[0] === 0x89 &&
+      magicBytes[1] === 0x50 &&
+      magicBytes[2] === 0x4e &&
+      magicBytes[3] === 0x47;
+    const isWebp =
+      magicBytes[0] === 0x52 &&
+      magicBytes[1] === 0x49 &&
+      magicBytes[2] === 0x46 &&
+      magicBytes[3] === 0x46 &&
+      magicBytes[8] === 0x57 &&
+      magicBytes[9] === 0x45 &&
+      magicBytes[10] === 0x42 &&
+      magicBytes[11] === 0x50;
+    const isSvg = file.type === "image/svg+xml";
 
     const magicValid =
       (file.type === "image/jpeg" && isJpeg) ||
@@ -73,9 +87,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Upload to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
-      .from("vehicle-images")
+      .from(VEHICLE_IMAGES_BUCKET)
       .upload(fileName, buffer, {
         contentType: file.type,
         upsert: false,
@@ -89,58 +102,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get the public URL
     const { data: urlData } = supabase.storage
-      .from("vehicle-images")
+      .from(VEHICLE_IMAGES_BUCKET)
       .getPublicUrl(uploadData.path);
 
-    const publicUrl = urlData.publicUrl;
-
-    // If vehicleId provided, update vehicle images array in DB
-    if (vehicleId) {
-      const { data: vehicle, error: fetchError } = await supabase
-        .from("vehicles")
-        .select("images")
-        .eq("id", vehicleId)
-        .maybeSingle();
-
-      if (fetchError || !vehicle) {
-        logger.error("Error fetching vehicle:", fetchError);
-        return NextResponse.json({
-          success: true,
-          url: publicUrl,
-          warning: "Image uploaded but could not update vehicle record",
-        });
-      }
-
-      const currentImages = (vehicle?.images as string[]) || [];
-      const updatedImages = [...currentImages, publicUrl];
-
-      const { error: updateError } = await supabase
-        .from("vehicles")
-        .update({ images: updatedImages })
-        .eq("id", vehicleId);
-
-      if (updateError) {
-        logger.error("Error updating vehicle images:", updateError);
-        return NextResponse.json({
-          success: true,
-          url: publicUrl,
-          warning: "Image uploaded but could not update vehicle record",
-        });
-      }
-
-      return NextResponse.json({
-        success: true,
-        url: publicUrl,
-        images: updatedImages,
-      });
-    }
-
-    // No vehicleId — just return the uploaded URL (for new vehicles)
     return NextResponse.json({
       success: true,
-      url: publicUrl,
+      url: urlData.publicUrl,
     });
   } catch (error) {
     logger.error("Unexpected error in POST /api/admin/vehicles/upload:", error);
@@ -151,34 +119,41 @@ export async function POST(request: NextRequest) {
   }
 }
 
-// DELETE: Remove a single image from Supabase storage
 export async function DELETE(request: NextRequest) {
   const auth = await verifyAdmin(request);
   if (!auth.authorized) return auth.response;
   try {
     const { url } = await request.json();
-    if (!url || typeof url !== "string") {
-      return NextResponse.json({ success: false, error: "Image URL required" }, { status: 400 });
+    if (!url || typeof url !== "string" || !isAllowedVehicleImageUrl(url)) {
+      return NextResponse.json(
+        { success: false, error: "Invalid or unsupported image URL" },
+        { status: 400 }
+      );
+    }
+
+    const filePath = parseVehicleImageStoragePath(url);
+    if (!filePath) {
+      return NextResponse.json({ success: true });
     }
 
     const supabase = getServiceSupabase();
-    const bucket = "vehicle-images";
-    const marker = `/storage/v1/object/public/${bucket}/`;
-    const idx = url.indexOf(marker);
-    if (idx === -1) {
-      return NextResponse.json({ success: false, error: "Invalid storage URL" }, { status: 400 });
-    }
-
-    const filePath = url.substring(idx + marker.length);
-    const { error } = await supabase.storage.from(bucket).remove([filePath]);
+    const { error } = await supabase.storage
+      .from(VEHICLE_IMAGES_BUCKET)
+      .remove([filePath]);
     if (error) {
       logger.error("Failed to remove image from storage:", error);
-      return NextResponse.json({ success: false, error: "Failed to remove image" }, { status: 500 });
+      return NextResponse.json(
+        { success: false, error: "Failed to remove image" },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true });
   } catch (error) {
     logger.error("Unexpected error in DELETE /api/admin/vehicles/upload:", error);
-    return NextResponse.json({ success: false, error: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
   }
 }

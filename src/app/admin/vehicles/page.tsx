@@ -5,7 +5,6 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { compressImage } from "@/lib/utils/compress-image";
 import {
   Car,
   Plus,
@@ -14,13 +13,9 @@ import {
   Check,
   X,
   RefreshCw,
-  Upload,
   Wrench,
   Search,
   Filter,
-  ChevronLeft,
-  ChevronRight,
-  GripVertical,
   ImageIcon,
   DollarSign,
   AlertTriangle,
@@ -38,6 +33,10 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AdminPageHeader, AdminPageBody } from "@/components/admin/admin-shell";
 import { AdminStatusBanner } from "@/components/admin/ui-feedback";
+import {
+  VehicleImageManager,
+  cleanupTempVehicleImages,
+} from "@/components/admin/vehicle-image-manager";
 import { Vehicle, VehicleCategory, getVehicleDisplayName } from "@/lib/types";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { logger } from "@/lib/utils/logger";
@@ -55,8 +54,6 @@ const CURRENT_YEAR = new Date().getFullYear();
 const MAX_VEHICLE_YEAR = CURRENT_YEAR + 1;
 const TRANSMISSION_OPTIONS = ["Automatic", "Manual"] as const;
 const FUEL_TYPE_OPTIONS = ["Gasoline", "Diesel", "Hybrid", "Electric"] as const;
-const IMAGE_REORDER_MIME = "application/x-vehicle-image-reorder";
-
 const COLOR_HEX_MAP: Record<string, string> = {
   White: "#FFFFFF",
   Black: "#000000",
@@ -120,9 +117,6 @@ export default function AdminVehiclesPage() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [newVehicle, setNewVehicle] = useState<FormState>(emptyVehicle);
   const [saving, setSaving] = useState(false);
-  const [uploadingImage, setUploadingImage] = useState<{
-    [key: string]: boolean;
-  }>({});
   const { error, setError, success, setSuccess } = useAutoToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [filterCategory, setFilterCategory] = useState<VehicleCategory | "">("");
@@ -171,6 +165,18 @@ export default function AdminVehiclesPage() {
     return () => controller.abort();
   }, []);
 
+  const cancelAddForm = () => {
+    void cleanupTempVehicleImages(newVehicle.images || []);
+    setShowAddForm(false);
+    setNewVehicle(emptyVehicle);
+  };
+
+  const syncVehicleImagesInList = (vehicleId: string, images: string[]) => {
+    setVehicles((prev) =>
+      prev.map((v) => (v.id === vehicleId ? { ...v, images } : v))
+    );
+  };
+
   // Close forms on Escape key (only when not focused on an input)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -184,13 +190,12 @@ export default function AdminVehiclesPage() {
       if (editingId) {
         setEditingId(null);
       } else if (showAddForm) {
-        setShowAddForm(false);
-        setNewVehicle(emptyVehicle);
+        cancelAddForm();
       }
     };
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [editingId, showAddForm, saving]);
+  }, [editingId, showAddForm, saving, newVehicle.images]);
 
   // Compute stats (memoized to avoid 3 array filters + reduce per render)
   const stats = useMemo(() => ({
@@ -223,140 +228,6 @@ export default function AdminVehiclesPage() {
 
     return matchesSearch && matchesCategory;
   }), [vehicles, searchQuery, filterCategory]);
-
-  // Core upload logic — accepts raw File[] so both input change and drag-and-drop can share it
-  const uploadImageFiles = async (rawFiles: File[], formKey: "new" | string) => {
-    if (!rawFiles.length) return;
-
-    setUploadingImage((prev) => ({ ...prev, [formKey]: true }));
-
-    const uploadedUrls: string[] = [];
-    let failedCount = 0;
-
-    try {
-      // Compress raster images client-side to stay under Vercel's 4.5MB body limit
-      // SVGs are vector and should not be passed through canvas compression
-      const files: File[] = [];
-      for (const raw of rawFiles) {
-        if (raw.type === "image/svg+xml") {
-          files.push(raw);
-        } else {
-          const compressed = await compressImage(raw, 4, 2048, 0.8);
-          files.push(compressed);
-        }
-      }
-
-      for (const file of files) {
-        try {
-          const formData = new FormData();
-          formData.append("file", file);
-          if (formKey !== "new") {
-            formData.append("vehicleId", formKey);
-          }
-
-          const res = await adminFetch("/api/admin/vehicles/upload", {
-            method: "POST",
-            body: formData,
-          });
-
-          if (!res.ok) {
-            if (res.status === 413) {
-              throw new Error("Upload is too large for the server.");
-            }
-            throw new Error(`Upload failed (HTTP ${res.status})`);
-          }
-          const contentType = res.headers.get("content-type") || "";
-          if (!contentType.includes("application/json")) {
-            throw new Error("Upload failed with a non-JSON server response.");
-          }
-          const data = await res.json();
-          if (!data.success || !data.url) {
-            throw new Error(data.error || "Failed to upload image");
-          }
-          uploadedUrls.push(data.url as string);
-        } catch (fileErr) {
-          failedCount++;
-          logger.error(`Image upload error (${file.name}):`, fileErr);
-        }
-      }
-    } catch (err) {
-      // Compression or other outer error
-      logger.error("Image processing error:", err);
-      setError(
-        err instanceof Error ? err.message : "Network error — could not process images"
-      );
-    } finally {
-      // Always apply whatever uploads succeeded, even if some failed
-      if (uploadedUrls.length > 0) {
-        if (formKey === "new") {
-          setNewVehicle((prev) => ({
-            ...prev,
-            images: [...(prev.images || []), ...uploadedUrls],
-          }));
-        } else {
-          setEditForm((prev) => ({
-            ...prev,
-            images: [...(prev.images || []), ...uploadedUrls],
-          }));
-        }
-      }
-      if (failedCount > 0) {
-        setError(
-          `${failedCount} of ${failedCount + uploadedUrls.length} image${failedCount + uploadedUrls.length > 1 ? "s" : ""} failed to upload.`
-        );
-      }
-      setUploadingImage((prev) => ({ ...prev, [formKey]: false }));
-    }
-  };
-
-  const handleImageUpload = async (
-    e: React.ChangeEvent<HTMLInputElement>,
-    formKey: "new" | string
-  ) => {
-    const rawFiles = Array.from(e.target.files || []);
-    await uploadImageFiles(rawFiles, formKey);
-    e.target.value = "";
-  };
-
-  // Drag-and-drop state (file upload zone)
-  const [dragOver, setDragOver] = useState<Record<string, boolean>>({});
-  const [imageDragState, setImageDragState] = useState<{
-    formKey: string;
-    fromIndex: number;
-    overIndex: number | null;
-  } | null>(null);
-
-  const handleDragOver = (e: React.DragEvent, formKey: string) => {
-    if (e.dataTransfer.types.includes(IMAGE_REORDER_MIME)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOver((prev) => ({ ...prev, [formKey]: true }));
-  };
-
-  const handleDragLeave = (e: React.DragEvent, formKey: string) => {
-    e.preventDefault();
-    e.stopPropagation();
-    // Only clear drag state when actually leaving the drop zone,
-    // not when entering a child element inside it
-    if (e.currentTarget.contains(e.relatedTarget as Node)) return;
-    setDragOver((prev) => ({ ...prev, [formKey]: false }));
-  };
-
-  const handleDrop = async (e: React.DragEvent, formKey: "new" | string) => {
-    if (e.dataTransfer.types.includes(IMAGE_REORDER_MIME)) return;
-    e.preventDefault();
-    e.stopPropagation();
-    setDragOver((prev) => ({ ...prev, [formKey]: false }));
-
-    const droppedFiles = Array.from(e.dataTransfer.files).filter((f) =>
-      f.type.startsWith("image/")
-    );
-    if (!droppedFiles.length) {
-      setError("Only image files are accepted.");
-      return;
-    }
-    await uploadImageFiles(droppedFiles, formKey);
-  };
 
   const toggleAvailability = async (vehicle: Vehicle) => {
     setTogglingId(vehicle.id);
@@ -394,8 +265,7 @@ export default function AdminVehiclesPage() {
 
   const startEdit = (vehicle: Vehicle) => {
     if (showAddForm) {
-      setShowAddForm(false);
-      setNewVehicle(emptyVehicle);
+      cancelAddForm();
     }
     setEditingId(vehicle.id);
     setEditForm({ ...vehicle });
@@ -576,64 +446,6 @@ export default function AdminVehiclesPage() {
     } finally {
       setDeletingId(null);
     }
-  };
-
-  const removeImage = (url: string, formKey: "new" | string) => {
-    if (formKey === "new") {
-      setNewVehicle((prev) => ({
-        ...prev,
-        images: (prev.images || []).filter((img) => img !== url),
-      }));
-    } else {
-      setEditForm((prev) => ({
-        ...prev,
-        images: (prev.images || []).filter((img) => img !== url),
-      }));
-    }
-    // Fire-and-forget: clean up the file from Supabase storage
-    adminFetch("/api/admin/vehicles/upload", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ url }),
-    }).catch((err) => logger.error("Failed to clean up removed image:", err));
-  };
-
-  const reorderFormImages = (
-    formKey: "new" | string,
-    fromIndex: number,
-    toIndex: number
-  ) => {
-    if (fromIndex === toIndex) return;
-    const applyReorder = (images: string[] = []) => {
-      if (
-        fromIndex < 0 ||
-        fromIndex >= images.length ||
-        toIndex < 0 ||
-        toIndex >= images.length
-      ) {
-        return images;
-      }
-      const updated = [...images];
-      const [moved] = updated.splice(fromIndex, 1);
-      updated.splice(toIndex, 0, moved);
-      return updated;
-    };
-
-    if (formKey === "new") {
-      setNewVehicle((prev) => ({
-        ...prev,
-        images: applyReorder(prev.images || []),
-      }));
-    } else {
-      setEditForm((prev) => ({
-        ...prev,
-        images: applyReorder(prev.images || []),
-      }));
-    }
-  };
-
-  const moveImage = (formKey: "new" | string, index: number, direction: -1 | 1) => {
-    reorderFormImages(formKey, index, index + direction);
   };
 
   const addFeature = (formKey: "new" | string, featureInput: string) => {
@@ -979,164 +791,18 @@ export default function AdminVehiclesPage() {
             />
           </div>
 
-          {/* Images Section */}
-          <div>
-            <div className="flex items-center gap-2 mb-1.5">
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block">
-                Images
-              </label>
-              {(form.images || []).length > 0 && (
-                <span className="text-xs text-gray-500">
-                  ({(form.images || []).length} uploaded — drag to reorder, first is primary)
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-2 mb-3">
-              {(form.images || []).map((img, idx) => {
-                const formKeyStr = String(formKey);
-                const isDragging =
-                  imageDragState?.formKey === formKeyStr &&
-                  imageDragState.fromIndex === idx;
-                const isDropTarget =
-                  imageDragState?.formKey === formKeyStr &&
-                  imageDragState.overIndex === idx &&
-                  !isDragging;
-
-                return (
-                <div
-                  key={img}
-                  draggable
-                  onDragStart={(e) => {
-                    e.dataTransfer.setData(IMAGE_REORDER_MIME, String(idx));
-                    e.dataTransfer.effectAllowed = "move";
-                    setImageDragState({
-                      formKey: formKeyStr,
-                      fromIndex: idx,
-                      overIndex: idx,
-                    });
-                  }}
-                  onDragOver={(e) => {
-                    if (!e.dataTransfer.types.includes(IMAGE_REORDER_MIME)) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.dataTransfer.dropEffect = "move";
-                    setImageDragState((prev) =>
-                      prev?.formKey === formKeyStr
-                        ? { ...prev, overIndex: idx }
-                        : prev
-                    );
-                  }}
-                  onDrop={(e) => {
-                    if (!e.dataTransfer.types.includes(IMAGE_REORDER_MIME)) return;
-                    e.preventDefault();
-                    e.stopPropagation();
-                    const fromIndex =
-                      imageDragState?.formKey === formKeyStr
-                        ? imageDragState.fromIndex
-                        : Number.parseInt(
-                            e.dataTransfer.getData(IMAGE_REORDER_MIME),
-                            10
-                          );
-                    if (Number.isFinite(fromIndex)) {
-                      reorderFormImages(formKey, fromIndex, idx);
-                    }
-                    setImageDragState(null);
-                  }}
-                  onDragEnd={() => setImageDragState(null)}
-                  className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-xl border overflow-hidden bg-gray-50 cursor-grab active:cursor-grabbing touch-none ${
-                    isDragging
-                      ? "opacity-50 border-purple-300"
-                      : isDropTarget
-                        ? "border-purple-500 ring-2 ring-purple-400"
-                        : "border-gray-200"
-                  }`}
-                  title="Drag to reorder"
-                >
-                  <img
-                    src={img}
-                    alt={`Vehicle ${idx + 1}`}
-                    loading="lazy"
-                    draggable={false}
-                    className="w-full h-full object-cover pointer-events-none"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50' y='50' font-size='12' fill='%23999' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
-                    }}
-                  />
-                  <div className="absolute left-1 top-1 flex items-center gap-0.5 rounded bg-black/70 px-1 py-0.5 text-[10px] font-semibold text-white">
-                    <GripVertical className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
-                    {idx === 0 ? "Primary" : `#${idx + 1}`}
-                  </div>
-                  <div className="absolute left-1 bottom-1 flex gap-1">
-                    <button
-                      type="button"
-                      onClick={() => moveImage(formKey, idx, -1)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      disabled={idx === 0}
-                      className="bg-white/90 text-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
-                      title="Move image left"
-                      aria-label="Move image left"
-                    >
-                      <ChevronLeft className="h-3.5 w-3.5" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => moveImage(formKey, idx, 1)}
-                      onMouseDown={(e) => e.stopPropagation()}
-                      disabled={idx === (form.images || []).length - 1}
-                      className="bg-white/90 text-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
-                      title="Move image right"
-                      aria-label="Move image right"
-                    >
-                      <ChevronRight className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => removeImage(img, formKey)}
-                    onMouseDown={(e) => e.stopPropagation()}
-                    aria-label="Remove image"
-                    className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-                );
-              })}
-            </div>
-            <label
-              onDragOver={(e) => handleDragOver(e, formKey)}
-              onDragLeave={(e) => handleDragLeave(e, formKey)}
-              onDrop={(e) => handleDrop(e, formKey)}
-              className={`cursor-pointer block rounded-xl border-2 border-dashed p-6 sm:p-8 text-center transition-colors ${
-                dragOver[formKey]
-                  ? "border-purple-500 bg-purple-50"
-                  : "border-gray-300 hover:border-purple-400 hover:bg-gray-50"
-              } ${uploadingImage[formKey] ? "opacity-60 pointer-events-none" : ""}`}
-            >
-              {uploadingImage[formKey] ? (
-                <Loader2 className="h-8 w-8 mx-auto mb-2 text-purple-500 animate-spin" />
-              ) : (
-                <Upload className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-              )}
-              <p className="text-sm text-gray-600">
-                {uploadingImage[formKey]
-                  ? "Uploading..."
-                  : dragOver[formKey]
-                    ? "Drop images here"
-                    : "Drag & drop images or click to browse"}
-              </p>
-              <p className="text-xs text-gray-400 mt-0.5">JPEG, PNG, WebP, SVG up to 5MB</p>
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={(e) => handleImageUpload(e, formKey)}
-                disabled={uploadingImage[formKey]}
-                className="hidden"
-              />
-            </label>
-          </div>
+          <VehicleImageManager
+            vehicleId={formKey}
+            images={form.images || []}
+            onImagesChange={(images) => setForm({ ...form, images })}
+            onSaved={
+              formKey !== "new"
+                ? (images) => syncVehicleImagesInList(formKey, images)
+                : undefined
+            }
+            onError={setError}
+            disabled={isSaving}
+          />
 
           {/* Features Section */}
           <div>
@@ -1464,10 +1130,7 @@ export default function AdminVehiclesPage() {
               setNewVehicle,
               "new",
               addVehicle,
-              () => {
-                setShowAddForm(false);
-                setNewVehicle(emptyVehicle);
-              },
+              cancelAddForm,
               saving
             )}
           </>

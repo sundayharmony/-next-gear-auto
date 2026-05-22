@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import {
+  migrateTempImagesForVehicle,
+  validateVehicleImagesInput,
+} from "@/lib/admin/vehicle-images";
 
 function isValidVehicleId(id: unknown): id is string {
   if (typeof id !== "string") return false;
@@ -101,6 +105,22 @@ export async function POST(request: NextRequest) {
 
     const id = crypto.randomUUID();
 
+    let images: string[] = [];
+    if (body.images !== undefined) {
+      const imageValidation = validateVehicleImagesInput(body.images);
+      if (!imageValidation.ok) {
+        return NextResponse.json(
+          { success: false, message: imageValidation.message },
+          { status: 400 }
+        );
+      }
+      images = await migrateTempImagesForVehicle(
+        supabase,
+        id,
+        imageValidation.images
+      );
+    }
+
     const { data, error } = await supabase
       .from("vehicles")
       .insert({
@@ -109,7 +129,7 @@ export async function POST(request: NextRequest) {
         make: body.make || "",
         model: body.model || "",
         category: body.category,
-        images: body.images || [],
+        images,
         specs: body.specs || { passengers: 5, luggage: 2, transmission: "Automatic", fuelType: "Gasoline", mpg: 30, doors: 4 },
         daily_rate: body.dailyRate,
         features: body.features || [],
@@ -195,7 +215,16 @@ export async function PUT(request: NextRequest) {
     if (updates.description !== undefined) dbUpdates.description = updates.description;
     if (updates.features !== undefined) dbUpdates.features = updates.features;
     if (updates.specs !== undefined) dbUpdates.specs = updates.specs;
-    if (updates.images !== undefined) dbUpdates.images = updates.images;
+    if (updates.images !== undefined) {
+      const imageValidation = validateVehicleImagesInput(updates.images);
+      if (!imageValidation.ok) {
+        return NextResponse.json(
+          { success: false, message: imageValidation.message },
+          { status: 400 }
+        );
+      }
+      dbUpdates.images = imageValidation.images;
+    }
     if (updates.color !== undefined) dbUpdates.color = updates.color;
     if (updates.mileage !== undefined) dbUpdates.mileage = updates.mileage;
     if (updates.licensePlate !== undefined) dbUpdates.license_plate = updates.licensePlate;
