@@ -20,6 +20,7 @@ import {
   Filter,
   ChevronLeft,
   ChevronRight,
+  GripVertical,
   ImageIcon,
   DollarSign,
   AlertTriangle,
@@ -54,6 +55,8 @@ const CURRENT_YEAR = new Date().getFullYear();
 const MAX_VEHICLE_YEAR = CURRENT_YEAR + 1;
 const TRANSMISSION_OPTIONS = ["Automatic", "Manual"] as const;
 const FUEL_TYPE_OPTIONS = ["Gasoline", "Diesel", "Hybrid", "Electric"] as const;
+const IMAGE_REORDER_MIME = "application/x-vehicle-image-reorder";
+
 const COLOR_HEX_MAP: Record<string, string> = {
   White: "#FFFFFF",
   Black: "#000000",
@@ -315,10 +318,16 @@ export default function AdminVehiclesPage() {
     e.target.value = "";
   };
 
-  // Drag-and-drop state
+  // Drag-and-drop state (file upload zone)
   const [dragOver, setDragOver] = useState<Record<string, boolean>>({});
+  const [imageDragState, setImageDragState] = useState<{
+    formKey: string;
+    fromIndex: number;
+    overIndex: number | null;
+  } | null>(null);
 
   const handleDragOver = (e: React.DragEvent, formKey: string) => {
+    if (e.dataTransfer.types.includes(IMAGE_REORDER_MIME)) return;
     e.preventDefault();
     e.stopPropagation();
     setDragOver((prev) => ({ ...prev, [formKey]: true }));
@@ -334,6 +343,7 @@ export default function AdminVehiclesPage() {
   };
 
   const handleDrop = async (e: React.DragEvent, formKey: "new" | string) => {
+    if (e.dataTransfer.types.includes(IMAGE_REORDER_MIME)) return;
     e.preventDefault();
     e.stopPropagation();
     setDragOver((prev) => ({ ...prev, [formKey]: false }));
@@ -588,21 +598,42 @@ export default function AdminVehiclesPage() {
     }).catch((err) => logger.error("Failed to clean up removed image:", err));
   };
 
-  const moveImage = (formKey: "new" | string, index: number, direction: -1 | 1) => {
-    const reorder = (images: string[] = []) => {
-      const nextIndex = index + direction;
-      if (nextIndex < 0 || nextIndex >= images.length) return images;
+  const reorderFormImages = (
+    formKey: "new" | string,
+    fromIndex: number,
+    toIndex: number
+  ) => {
+    if (fromIndex === toIndex) return;
+    const applyReorder = (images: string[] = []) => {
+      if (
+        fromIndex < 0 ||
+        fromIndex >= images.length ||
+        toIndex < 0 ||
+        toIndex >= images.length
+      ) {
+        return images;
+      }
       const updated = [...images];
-      const [moved] = updated.splice(index, 1);
-      updated.splice(nextIndex, 0, moved);
+      const [moved] = updated.splice(fromIndex, 1);
+      updated.splice(toIndex, 0, moved);
       return updated;
     };
 
     if (formKey === "new") {
-      setNewVehicle((prev) => ({ ...prev, images: reorder(prev.images || []) }));
+      setNewVehicle((prev) => ({
+        ...prev,
+        images: applyReorder(prev.images || []),
+      }));
     } else {
-      setEditForm((prev) => ({ ...prev, images: reorder(prev.images || []) }));
+      setEditForm((prev) => ({
+        ...prev,
+        images: applyReorder(prev.images || []),
+      }));
     }
+  };
+
+  const moveImage = (formKey: "new" | string, index: number, direction: -1 | 1) => {
+    reorderFormImages(formKey, index, index + direction);
   };
 
   const addFeature = (formKey: "new" | string, featureInput: string) => {
@@ -956,33 +987,91 @@ export default function AdminVehiclesPage() {
               </label>
               {(form.images || []).length > 0 && (
                 <span className="text-xs text-gray-500">
-                  ({(form.images || []).length} uploaded)
+                  ({(form.images || []).length} uploaded — drag to reorder, first is primary)
                 </span>
               )}
             </div>
             <div className="flex flex-wrap gap-2 mb-3">
-              {(form.images || []).map((img, idx) => (
+              {(form.images || []).map((img, idx) => {
+                const formKeyStr = String(formKey);
+                const isDragging =
+                  imageDragState?.formKey === formKeyStr &&
+                  imageDragState.fromIndex === idx;
+                const isDropTarget =
+                  imageDragState?.formKey === formKeyStr &&
+                  imageDragState.overIndex === idx &&
+                  !isDragging;
+
+                return (
                 <div
-                  key={`${img}-${idx}`}
-                  className="relative w-28 h-28 sm:w-32 sm:h-32 rounded-xl border border-gray-200 overflow-hidden bg-gray-50"
+                  key={img}
+                  draggable
+                  onDragStart={(e) => {
+                    e.dataTransfer.setData(IMAGE_REORDER_MIME, String(idx));
+                    e.dataTransfer.effectAllowed = "move";
+                    setImageDragState({
+                      formKey: formKeyStr,
+                      fromIndex: idx,
+                      overIndex: idx,
+                    });
+                  }}
+                  onDragOver={(e) => {
+                    if (!e.dataTransfer.types.includes(IMAGE_REORDER_MIME)) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    e.dataTransfer.dropEffect = "move";
+                    setImageDragState((prev) =>
+                      prev?.formKey === formKeyStr
+                        ? { ...prev, overIndex: idx }
+                        : prev
+                    );
+                  }}
+                  onDrop={(e) => {
+                    if (!e.dataTransfer.types.includes(IMAGE_REORDER_MIME)) return;
+                    e.preventDefault();
+                    e.stopPropagation();
+                    const fromIndex =
+                      imageDragState?.formKey === formKeyStr
+                        ? imageDragState.fromIndex
+                        : Number.parseInt(
+                            e.dataTransfer.getData(IMAGE_REORDER_MIME),
+                            10
+                          );
+                    if (Number.isFinite(fromIndex)) {
+                      reorderFormImages(formKey, fromIndex, idx);
+                    }
+                    setImageDragState(null);
+                  }}
+                  onDragEnd={() => setImageDragState(null)}
+                  className={`relative w-28 h-28 sm:w-32 sm:h-32 rounded-xl border overflow-hidden bg-gray-50 cursor-grab active:cursor-grabbing touch-none ${
+                    isDragging
+                      ? "opacity-50 border-purple-300"
+                      : isDropTarget
+                        ? "border-purple-500 ring-2 ring-purple-400"
+                        : "border-gray-200"
+                  }`}
+                  title="Drag to reorder"
                 >
                   <img
                     src={img}
                     alt={`Vehicle ${idx + 1}`}
                     loading="lazy"
-                    className="w-full h-full object-cover"
+                    draggable={false}
+                    className="w-full h-full object-cover pointer-events-none"
                     onError={(e) => {
                       const target = e.target as HTMLImageElement;
                       target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Crect fill='%23ddd' width='100' height='100'/%3E%3Ctext x='50' y='50' font-size='12' fill='%23999' text-anchor='middle' dominant-baseline='middle'%3ENo Image%3C/text%3E%3C/svg%3E";
                     }}
                   />
-                  <div className="absolute left-1 top-1 rounded bg-black/70 px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                  <div className="absolute left-1 top-1 flex items-center gap-0.5 rounded bg-black/70 px-1 py-0.5 text-[10px] font-semibold text-white">
+                    <GripVertical className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
                     {idx === 0 ? "Primary" : `#${idx + 1}`}
                   </div>
                   <div className="absolute left-1 bottom-1 flex gap-1">
                     <button
                       type="button"
                       onClick={() => moveImage(formKey, idx, -1)}
+                      onMouseDown={(e) => e.stopPropagation()}
                       disabled={idx === 0}
                       className="bg-white/90 text-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Move image left"
@@ -993,6 +1082,7 @@ export default function AdminVehiclesPage() {
                     <button
                       type="button"
                       onClick={() => moveImage(formKey, idx, 1)}
+                      onMouseDown={(e) => e.stopPropagation()}
                       disabled={idx === (form.images || []).length - 1}
                       className="bg-white/90 text-gray-700 rounded w-6 h-6 flex items-center justify-center hover:bg-white disabled:opacity-40 disabled:cursor-not-allowed"
                       title="Move image right"
@@ -1004,13 +1094,15 @@ export default function AdminVehiclesPage() {
                   <button
                     type="button"
                     onClick={() => removeImage(img, formKey)}
+                    onMouseDown={(e) => e.stopPropagation()}
                     aria-label="Remove image"
                     className="absolute top-1 right-1 bg-red-500 text-white rounded-full w-6 h-6 flex items-center justify-center hover:bg-red-600"
                   >
                     <X className="h-3 w-3" />
                   </button>
                 </div>
-              ))}
+                );
+              })}
             </div>
             <label
               onDragOver={(e) => handleDragOver(e, formKey)}
