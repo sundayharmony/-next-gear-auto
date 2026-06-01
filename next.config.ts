@@ -46,31 +46,7 @@ const nextConfig: NextConfig = {
             value: "max-age=63072000; includeSubDomains; preload",
           },
 
-          // ── Content Security Policy ──
-          {
-            key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              // unsafe-inline required for Stripe.js and Next.js inline scripts
-              "script-src 'self' 'unsafe-inline' https://js.stripe.com https://maps.googleapis.com https://www.googletagmanager.com https://www.instagram.com https://*.instagram.com",
-              "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-              "img-src 'self' data: blob: https://images.unsplash.com https://via.placeholder.com https://maps.googleapis.com https://maps.gstatic.com https://*.gstatic.com https://*.stripe.com https://*.supabase.co https://*.cdninstagram.com https://*.fbcdn.net https://*.instagram.com",
-              "font-src 'self' https://fonts.gstatic.com",
-              // Restricted connect-src to only known API domains
-              "connect-src 'self' blob: https://api.stripe.com https://checkout.stripe.com https://*.supabase.co https://maps.googleapis.com https://maps.gstatic.com https://places.googleapis.com https://*.instagram.com",
-              "frame-src 'self' https://js.stripe.com https://checkout.stripe.com https://www.google.com https://maps.google.com https://www.instagram.com https://*.instagram.com",
-              // Prevent object/embed/applet elements
-              "object-src 'none'",
-              // Prevent form submissions to external origins
-              "form-action 'self'",
-              // Prevent embedding this site in frames on other domains
-              "frame-ancestors 'none'",
-              // Only load from HTTPS
-              "upgrade-insecure-requests",
-              // Restrict base tag to same origin
-              "base-uri 'self'",
-            ].join("; "),
-          },
+          // CSP is set per-request with a nonce in src/proxy.ts (Next.js App Router).
 
           // ── Permissions Policy — restrict powerful browser APIs ──
           {

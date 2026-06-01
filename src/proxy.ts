@@ -1,15 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, SignJWT } from "jose";
+import {
+  buildContentSecurityPolicy,
+  shouldApplyDocumentCsp,
+} from "@/lib/security/build-csp";
 
 /**
  * Next.js Proxy — runs on every matching request before the route handler.
  * (Renamed from middleware.ts to proxy.ts for Next.js 16 compatibility.)
  *
  * Responsibilities:
- *   1. Validate JWT on /admin/* pages (redirect to login if missing/invalid)
- *   2. Auto-refresh expired access tokens using the refresh token
- *   3. Add CSRF token cookie for state-changing requests
- *   4. Rate-limit headers (informational — actual enforcement in route handlers)
+ *   1. Nonce-based Content-Security-Policy on HTML/document routes
+ *   2. Validate JWT on /admin/* pages (redirect to login if missing/invalid)
+ *   3. Auto-refresh expired access tokens using the refresh token
+ *   4. Add CSRF token cookie for state-changing requests
  */
 
 const COOKIE_NAME = "nga_token";
@@ -43,7 +47,6 @@ async function tryRefreshToken(refreshToken: string): Promise<string | null> {
     const { payload } = await jwtVerify(refreshToken, secret, { issuer: "nextgearauto" });
     if (!payload.sub || !payload.role || !payload.email) return null;
 
-    // Issue new access token
     const newAccessToken = await new SignJWT({
       sub: payload.sub,
       role: payload.role,
@@ -61,35 +64,64 @@ async function tryRefreshToken(refreshToken: string): Promise<string | null> {
   }
 }
 
-/** Generate a random CSRF token */
 function generateCsrfToken(): string {
   const array = new Uint8Array(32);
   crypto.getRandomValues(array);
   return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+function generateNonce(): string {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  let binary = "";
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte);
+  }
+  return btoa(binary);
+}
+
+function createNextResponse(req: NextRequest): NextResponse {
+  const { pathname } = req.nextUrl;
+  const applyCsp = shouldApplyDocumentCsp(pathname);
+
+  if (!applyCsp) {
+    return NextResponse.next();
+  }
+
+  const nonce = generateNonce();
+  const isDev = process.env.NODE_ENV === "development";
+  const requestHeaders = new Headers(req.headers);
+  requestHeaders.set("x-nonce", nonce);
+
+  const response = NextResponse.next({
+    request: { headers: requestHeaders },
+  });
+  response.headers.set(
+    "Content-Security-Policy",
+    buildContentSecurityPolicy(nonce, isDev)
+  );
+  return response;
+}
+
 export async function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
-  // ── CSRF Token Management ───────────────────────────────────────
-  // Ensure every response has a CSRF cookie (double-submit pattern)
-  const response = NextResponse.next();
+  const response = createNextResponse(req);
+
   if (!req.cookies.get(CSRF_COOKIE)) {
     response.cookies.set(CSRF_COOKIE, generateCsrfToken(), {
-      httpOnly: false, // Must be readable by JavaScript
+      httpOnly: false,
       secure: process.env.NODE_ENV === "production",
       sameSite: "strict",
       path: "/",
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24,
     });
   }
 
-  // ── CSRF Validation on mutating API requests ────────────────────
   const mutatingMethods = ["POST", "PUT", "PATCH", "DELETE"];
   if (
     pathname.startsWith("/api/") &&
     mutatingMethods.includes(req.method) &&
-    // Exempt webhook endpoints, cron, and auth POST only (login/signup needs to work without CSRF)
     !pathname.startsWith("/api/webhooks/") &&
     !(pathname.startsWith("/api/auth") && req.method === "POST") &&
     !pathname.startsWith("/api/cron/")
@@ -105,8 +137,6 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  // ── Staff & Owner Panel Protection ───────────────────────────────
-  // Protect /admin/*, /manager/*, and /owner/* pages.
   const isOwnerRoute = pathname.startsWith("/owner");
   if (
     (pathname.startsWith("/admin/") && !pathname.startsWith("/admin/login")) ||
@@ -116,30 +146,27 @@ export async function proxy(req: NextRequest) {
     const token = req.cookies.get(COOKIE_NAME)?.value;
     const secret = getSecret();
 
-    // Only enforce JWT if JWT_SECRET is configured
     if (secret.length > 0) {
       let authenticated = token ? await isValidJwt(token) : false;
 
-      // If access token is expired, try auto-refresh with refresh token
       if (!authenticated) {
         const refreshToken = req.cookies.get(REFRESH_COOKIE)?.value;
         if (refreshToken) {
           const newAccessToken = await tryRefreshToken(refreshToken);
           if (newAccessToken) {
-            // Set the new access token cookie and continue
             response.cookies.set(COOKIE_NAME, newAccessToken, {
               httpOnly: true,
               secure: process.env.NODE_ENV === "production",
               sameSite: "strict",
               path: "/",
-              maxAge: 60 * 60, // 1 hour
+              maxAge: 60 * 60,
             });
             authenticated = true;
           }
         }
       }
 
-        if (!authenticated) {
+      if (!authenticated) {
         const legacyId =
           process.env.ALLOW_LEGACY_ADMIN_HEADER === "true"
             ? req.headers.get("x-admin-id")
@@ -156,19 +183,15 @@ export async function proxy(req: NextRequest) {
   return response;
 }
 
-/**
- * Matcher: run proxy on admin pages/APIs, and all API routes for CSRF.
- * Skip static assets and Next.js internals.
- */
 export const config = {
   matcher: [
-    // Admin pages
-    "/admin/:path*",
-    // Manager pages
-    "/manager/:path*",
-    // Owner portal pages
-    "/owner/:path*",
-    // API routes (for CSRF)
-    "/api/:path*",
+    {
+      source:
+        "/((?!_next/static|_next/image|favicon.ico|icon.png|apple-icon.png|images|robots.txt|sitemap.xml|manifest.json).*)",
+      missing: [
+        { type: "header", key: "next-router-prefetch" },
+        { type: "header", key: "purpose", value: "prefetch" },
+      ],
+    },
   ],
 };
