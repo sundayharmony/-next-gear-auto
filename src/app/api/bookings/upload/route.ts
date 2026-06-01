@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
+import { tokenHasOwnerAccess } from "@/lib/auth/roles";
+import { getOwnerVehicleIds } from "@/lib/owner/owner-check";
 import { logger } from "@/lib/utils/logger";
 import {
   BOOKING_UPLOAD_ALLOWED_MIME_TYPES,
@@ -45,15 +47,27 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Verify the caller owns this booking unless staff-level authenticated.
+    // Verify the caller may upload for this booking (staff, renter, or vehicle owner).
     if (auth.role !== "admin" && auth.role !== "manager") {
-      const { data: bookingOwner } = await supabase
+      const { data: bookingRow } = await supabase
         .from("bookings")
-        .select("customer_email")
+        .select("customer_email, vehicle_id")
         .eq("id", bookingId)
         .maybeSingle();
 
-      if (!bookingOwner || bookingOwner.customer_email?.toLowerCase() !== auth.email?.toLowerCase()) {
+      if (!bookingRow) {
+        return NextResponse.json({ success: false, error: "Booking not found" }, { status: 404 });
+      }
+
+      const isRenter =
+        bookingRow.customer_email?.toLowerCase() === auth.email?.toLowerCase();
+      let isVehicleOwner = false;
+      if (tokenHasOwnerAccess(auth) && bookingRow.vehicle_id) {
+        const owned = await getOwnerVehicleIds(auth.sub);
+        isVehicleOwner = owned.includes(bookingRow.vehicle_id as string);
+      }
+
+      if (!isRenter && !isVehicleOwner) {
         return NextResponse.json(
           { success: false, error: "You can only upload documents for your own bookings" },
           { status: 403 }

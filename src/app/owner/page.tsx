@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   DollarSign,
   CalendarClock,
   Car,
+  Plus,
   CheckCircle2,
   Wallet,
   Clock,
@@ -34,6 +36,7 @@ import {
   Legend,
 } from "recharts";
 import { Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 
 export default function OwnerDashboardPage() {
   const { data: metrics, loading } = useOwnerApi<OwnerDashboardMetrics>("/api/owner/summary");
@@ -44,7 +47,18 @@ export default function OwnerDashboardPage() {
 
   return (
     <>
-      <AdminPageHeader title="Owner Dashboard" subtitle="Performance across your vehicles" />
+      <AdminPageHeader
+        title="Owner Dashboard"
+        subtitle="Performance across your vehicles"
+        actions={
+          <Link href="/owner/bookings/create">
+            <Button size="sm" className="gap-1 bg-white text-purple-700 hover:bg-purple-50">
+              <Plus className="h-4 w-4" />
+              New booking
+            </Button>
+          </Link>
+        }
+      />
       <AdminPageBody>
         {loading && !metrics ? (
           <div className="flex justify-center py-16">

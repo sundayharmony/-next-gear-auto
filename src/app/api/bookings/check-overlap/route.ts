@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
+import { getAuthFromRequest } from "@/lib/auth/jwt";
+import { tokenHasOwnerAccess } from "@/lib/auth/roles";
+import { getOwnerVehicleIds } from "@/lib/owner/owner-check";
 import { logger } from "@/lib/utils/logger";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
@@ -19,9 +22,19 @@ import {
  * Used by admin/manager CreateBookingForm to warn before double-booking.
  */
 export async function GET(req: NextRequest) {
-  const auth = await verifyAdminOrManager(req);
-  if (!auth.authorized) {
-    return auth.response;
+  const staffAuth = await verifyAdminOrManager(req);
+  let overlapMode: BookingOverlapMode = "default";
+  let ownerId: string | null = null;
+
+  if (staffAuth.authorized) {
+    overlapMode = staffAuth.role === "manager" ? "manager" : "default";
+  } else {
+    const token = await getAuthFromRequest(req);
+    if (!token || !tokenHasOwnerAccess(token)) {
+      return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 403 });
+    }
+    ownerId = token.sub;
+    overlapMode = "manager";
   }
 
   try {
@@ -52,8 +65,17 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const mode: BookingOverlapMode = auth.role === "manager" ? "manager" : "default";
-    const { statuses, minGapMinutes } = overlapConfigForMode(mode);
+    if (ownerId && vehicleId) {
+      const owned = await getOwnerVehicleIds(ownerId);
+      if (!owned.includes(vehicleId)) {
+        return NextResponse.json(
+          { success: false, hasOverlap: false, message: "Vehicle not in your fleet" },
+          { status: 403 }
+        );
+      }
+    }
+
+    const { statuses, minGapMinutes } = overlapConfigForMode(overlapMode);
 
     const supabase = getServiceSupabase();
 

@@ -50,6 +50,9 @@ interface CreateBookingFormProps {
   onCreated: () => void;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
+  /** Admin/staff vs owner portal — affects API endpoint and customer search UI. */
+  variant?: "admin" | "owner";
+  createEndpoint?: string;
   prefillData?: {
     customerName?: string;
     customerEmail?: string;
@@ -82,8 +85,11 @@ export default function CreateBookingForm({
   onCreated,
   onError,
   onSuccess,
+  variant = "admin",
+  createEndpoint = "/api/bookings",
   prefillData,
 }: CreateBookingFormProps) {
+  const isOwnerVariant = variant === "owner";
   const [form, setForm] = useState(emptyForm);
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerOption[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -465,7 +471,7 @@ export default function CreateBookingForm({
           : "",
       };
 
-      const res = await adminFetch("/api/bookings", {
+      const res = await adminFetch(createEndpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -553,9 +559,14 @@ export default function CreateBookingForm({
 
         {/* ═══ SECTION 1: Customer ═══ */}
         <section className="space-y-4">
-          <SectionHeader icon={User} title="Customer Information" subtitle="Search existing or add new customer" />
+          <SectionHeader
+            icon={User}
+            title="Customer Information"
+            subtitle={isOwnerVariant ? "Enter guest details for this reservation" : "Search existing or add new customer"}
+          />
 
-          {/* Search dropdown */}
+          {/* Search dropdown — staff only */}
+          {!isOwnerVariant && (
           <div ref={dropdownRef} className="relative">
             <div className="relative">
               <Input
@@ -595,12 +606,15 @@ export default function CreateBookingForm({
               </div>
             )}
           </div>
+          )}
 
+          {!isOwnerVariant && (
           <div className="relative flex items-center gap-3 py-1">
             <div className="flex-1 border-t border-gray-200" />
             <span className="text-xs text-gray-400 font-medium">or enter details manually</span>
             <div className="flex-1 border-t border-gray-200" />
           </div>
+          )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>

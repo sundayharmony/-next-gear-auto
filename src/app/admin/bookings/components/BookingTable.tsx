@@ -54,6 +54,7 @@ export default function BookingTable({
   const getOriginLabel = (origin?: string) => {
     if (origin === "turo") return "Turo";
     if (origin === "manager_panel") return "Manager";
+    if (origin === "owner_panel") return "Owner";
     if (origin === "admin_panel") return "Admin";
     if (origin === "public_checkout") return "Public";
     return "Unknown";

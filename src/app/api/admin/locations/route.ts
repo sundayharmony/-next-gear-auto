@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
-import { tokenHasStaffAccess } from "@/lib/auth/roles";
+import { tokenHasOwnerAccess, tokenHasStaffAccess } from "@/lib/auth/roles";
 
 // GET: List all locations (optionally filter by is_active)
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthFromRequest(request);
-    if (!auth || !tokenHasStaffAccess(auth)) {
+    if (!auth || (!tokenHasStaffAccess(auth) && !tokenHasOwnerAccess(auth))) {
       return NextResponse.json({ success: false, message: "Unauthorized" }, { status: 401 });
     }
     const supabase = getServiceSupabase();

@@ -1,7 +1,9 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import Link from "next/link";
+import { ChevronLeft, ChevronRight, Loader2, Plus } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   AdminPageHeader,
   AdminPageBody,
@@ -71,7 +73,18 @@ export default function OwnerCalendarPage() {
 
   return (
     <>
-      <AdminPageHeader title="Booking Calendar" subtitle="Website bookings and Turo trips for your vehicles" />
+      <AdminPageHeader
+        title="Booking Calendar"
+        subtitle="Website bookings and Turo trips for your vehicles"
+        actions={
+          <Link href="/owner/bookings/create">
+            <Button size="sm" className="gap-1 bg-white text-purple-700 hover:bg-purple-50">
+              <Plus className="h-4 w-4" />
+              New booking
+            </Button>
+          </Link>
+        }
+      />
       <AdminPageBody>
         <AdminCard padding="sm">
           <div className="mb-3 flex items-center justify-between">

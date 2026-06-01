@@ -207,7 +207,7 @@ export interface DbBooking {
   pickup_location_id: string | null;
   return_location_id: string | null;
   location_surcharge: number | null;
-  origin_channel: "public_checkout" | "admin_panel" | "manager_panel" | "unknown" | null;
+  origin_channel: "public_checkout" | "admin_panel" | "manager_panel" | "owner_panel" | "unknown" | null;
   created_by_role: "admin" | "manager" | "customer" | null;
   created_by_user_id: string | null;
   /** Per-booking permission: when true, managers may view this booking's financials. Admin-controlled. */

@@ -323,7 +323,7 @@ export interface BookingDbRow {
   return_location_id?: string;
   return_location_name?: string;
   location_surcharge?: number;
-  origin_channel?: "public_checkout" | "admin_panel" | "manager_panel" | "turo" | "unknown";
+  origin_channel?: "public_checkout" | "admin_panel" | "manager_panel" | "owner_panel" | "turo" | "unknown";
   created_by_role?: "admin" | "manager" | "customer" | null;
   created_by_user_id?: string | null;
   /** Per-booking permission: when true, managers may view this booking's financials. Admin-controlled. */
