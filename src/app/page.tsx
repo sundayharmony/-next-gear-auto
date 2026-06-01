@@ -9,6 +9,7 @@ import { HomeReviews } from "@/components/home/home-reviews";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { generateLocalBusinessSchema } from "@/lib/utils/schema-generators";
 import { logger } from "@/lib/utils/logger";
+import { SITE_URL } from "@/lib/constants";
 
 export const metadata: Metadata = {
   title: "NextGearAuto - Premium Car Rental in Jersey City",
@@ -16,7 +17,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "NextGearAuto - Premium Car Rental",
     description: "Book premium vehicles at competitive prices in Jersey City",
-    url: "https://rentnextgearauto.com",
+    url: SITE_URL,
     type: "website",
   },
 };

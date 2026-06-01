@@ -8,9 +8,10 @@ import { NotificationToasts } from "@/components/layout/notification-toasts";
 import { LayoutShell } from "@/components/layout/layout-shell";
 import { Analytics } from "@vercel/analytics/next";
 import { generateOrganizationSchema } from "@/lib/utils/schema-generators";
+import { SITE_URL } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://rentnextgearauto.com"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "NextGearAuto | Premium Car Rentals in Jersey City, NJ",
     template: "%s | NextGearAuto",
@@ -36,11 +37,11 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     locale: "en_US",
-    url: "https://rentnextgearauto.com",
+    url: SITE_URL,
     siteName: "NextGearAuto",
     images: [
       {
-        url: "https://rentnextgearauto.com/images/logo.png",
+        url: `${SITE_URL}/images/logo.png`,
         width: 1200,
         height: 630,
         alt: "NextGearAuto - Premium Car Rentals",

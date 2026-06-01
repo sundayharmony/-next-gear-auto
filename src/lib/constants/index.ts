@@ -2,7 +2,8 @@ import type { NavItem } from "@/lib/types";
 
 export const SITE_NAME = "NextGearAuto";
 export const SITE_DESCRIPTION = "Premium car rentals at competitive prices. Choose from our well-maintained fleet of compact cars, sedans, SUVs, and trucks.";
-export const SITE_URL = "https://rentnextgearauto.com";
+/** Canonical public origin (must match Vercel primary domain to avoid redirect loops). */
+export const SITE_URL = "https://www.rentnextgearauto.com";
 
 export const CONTACT_INFO = {
   phone: "(551) 429-3472",
