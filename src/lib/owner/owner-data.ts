@@ -13,6 +13,8 @@ import {
   rentalDays,
   DEFAULT_OWNER_PERCENTAGE,
 } from "@/lib/owner/finance";
+import { getTuroDriverFromReason, resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
+import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 
 interface VehicleRow {
   id: string;
@@ -111,6 +113,7 @@ export async function loadOwnerDataset(ownerId: string): Promise<OwnerDataset> {
 
     return {
       id: b.id,
+      kind: "booking",
       vehicleId: b.vehicle_id,
       vehicleName: vehicle ? getVehicleDisplayName(vehicle) : "Vehicle",
       customerName: b.customer_name || "Guest",
@@ -126,5 +129,87 @@ export async function loadOwnerDataset(ownerId: string): Promise<OwnerDataset> {
     };
   });
 
+  const turoBlocks = await fetchOwnerTuroBlocks(supabase, vehicleIds);
+  for (const row of turoBlocks) {
+    const vehicleId = String(row.vehicle_id);
+    const vehicle = vehicleMap.get(vehicleId);
+    const ownerPercentage = clampPercentage(
+      vehicle?.owner_percentage ?? DEFAULT_OWNER_PERCENTAGE
+    );
+    const pickupDate = String(row.start_date);
+    const returnDate = String(row.end_date);
+    const status = deriveOwnerStatus("confirmed", pickupDate, returnDate, today);
+    const gross = resolveTuroTripRevenue({
+      earnings: row.earnings as number | string | null,
+      reason: (row.reason as string | null) ?? null,
+    });
+    const breakdown = computePayoutBreakdown({
+      grossRevenue: gross,
+      ownerPercentage,
+      processingFees: 0,
+      otherExpenses: 0,
+      paymentMethod: "cash",
+    });
+    const driver =
+      getTuroDriverFromReason((row.reason as string | null) ?? null) || "Turo guest";
+
+    bookings.push({
+      id: `turo:${String(row.id)}`,
+      kind: "turo",
+      vehicleId,
+      vehicleName: vehicle ? getVehicleDisplayName(vehicle) : "Vehicle",
+      customerName: driver,
+      pickupDate,
+      returnDate,
+      rentalDays: rentalDays(pickupDate, returnDate),
+      status,
+      rawStatus: "turo",
+      payoutStatus: "pending",
+      payoutDate: null,
+      createdAt: String(row.created_at || ""),
+      ...breakdown,
+    });
+  }
+
+  bookings.sort((a, b) => {
+    if (a.pickupDate !== b.pickupDate) return a.pickupDate < b.pickupDate ? 1 : -1;
+    return (b.createdAt || "").localeCompare(a.createdAt || "");
+  });
+
   return { vehicles, vehicleMap, bookings };
+}
+
+async function fetchOwnerTuroBlocks(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  vehicleIds: string[]
+): Promise<Record<string, unknown>[]> {
+  const fullSelect =
+    "id, vehicle_id, start_date, end_date, earnings, reason, created_at";
+  const minimalSelect = "id, vehicle_id, start_date, end_date, source, reason, created_at";
+
+  let { data, error } = await supabase
+    .from("blocked_dates")
+    .select(fullSelect)
+    .in("vehicle_id", vehicleIds)
+    .eq("source", "turo-email")
+    .order("start_date", { ascending: false })
+    .limit(2000);
+
+  if (error && isMissingColumnError(error)) {
+    const fb = await supabase
+      .from("blocked_dates")
+      .select(minimalSelect)
+      .in("vehicle_id", vehicleIds)
+      .eq("source", "turo-email")
+      .order("start_date", { ascending: false })
+      .limit(2000);
+    data = (fb.data || []).map((r: Record<string, unknown>) => ({
+      ...r,
+      earnings: null,
+    }));
+    error = fb.error;
+  }
+
+  if (error) return [];
+  return (data || []) as Record<string, unknown>[];
 }

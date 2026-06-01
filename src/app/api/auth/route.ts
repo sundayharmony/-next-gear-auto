@@ -3,11 +3,17 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
 import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
 import { createAccessToken, createRefreshToken, setAuthCookies, clearAuthCookies, getAuthFromRequest } from "@/lib/auth/jwt";
-import { isManagerPanelAccessEnabled } from "@/lib/auth/manager-access";
 import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
-import { isAppRole, isStaffRole, type AppRole } from "@/lib/auth/roles";
+import { isAppRole, isManagerRole, type AppRole } from "@/lib/auth/roles";
+import {
+  CUSTOMER_CAPABILITIES_SELECT,
+  hasManagerPortalAccess,
+  hasOwnerPortalAccess,
+  resolveCustomerRoles,
+} from "@/lib/auth/customer-capabilities";
+import { issueCustomerTokens } from "@/lib/auth/issue-customer-tokens";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 
 function normalizeRole(role: unknown): AppRole {
@@ -52,18 +58,28 @@ export async function GET(request: NextRequest) {
 
     const { data: customer } = await supabase
       .from("customers")
-      .select("id, name, email, phone, dob, driver_license, created_at, role, manager_access_enabled")
+      .select(`id, name, email, phone, dob, driver_license, created_at, ${CUSTOMER_CAPABILITIES_SELECT}`)
       .eq("id", auth.sub)
       .maybeSingle();
     if (!customer) {
       return NextResponse.json({ success: false, message: "User not found" }, { status: 404 });
     }
 
-    const resolvedRole = normalizeRole(customer.role);
-    if (resolvedRole === "manager" && !isManagerPanelAccessEnabled(customer)) {
+    const roles = resolveCustomerRoles(customer);
+    if (
+      isManagerRole(normalizeRole(customer.role)) &&
+      !hasManagerPortalAccess(customer) &&
+      !hasOwnerPortalAccess(customer)
+    ) {
       const cleared = clearAuthCookies(NextResponse.json({ success: false, message: "Manager access has been revoked." }, { status: 401 }));
       return cleared;
     }
+
+    const resolvedRole = roles.includes("manager")
+      ? "manager"
+      : roles.includes("owner")
+        ? "owner"
+        : normalizeRole(customer.role);
 
     return NextResponse.json({
       success: true,
@@ -78,6 +94,7 @@ export async function GET(request: NextRequest) {
         bookings: [],
         createdAt: customer.created_at,
         role: resolvedRole,
+        roles,
       },
     });
   } catch {
@@ -166,7 +183,7 @@ export async function POST(request: Request) {
       // Then check customers table
       const { data: customer, error } = await adminDb
         .from("customers")
-        .select("id, name, email, phone, dob, driver_license, created_at, role, password_hash, manager_access_enabled")
+        .select(`id, name, email, phone, dob, driver_license, created_at, password_hash, ${CUSTOMER_CAPABILITIES_SELECT}`)
         .eq("email", normalizedEmail)
         .maybeSingle();
 
@@ -195,17 +212,26 @@ export async function POST(request: Request) {
         );
       }
 
-      const customerRole = normalizeRole(customer.role || "customer");
+      const roles = resolveCustomerRoles(customer);
+      const customerRole = roles.includes("manager")
+        ? "manager"
+        : roles.includes("owner")
+          ? "owner"
+          : normalizeRole(customer.role || "customer");
 
-      if (staffOnly && !isStaffRole(customerRole)) {
-        auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Staff-only login rejected", role: customerRole } });
+      if (staffOnly && !roles.includes("manager")) {
+        auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Staff-only login rejected", roles } });
         return NextResponse.json(
           { success: false, message: "This sign-in is for staff only. Use the main site to access your account." },
           { status: 403 }
         );
       }
 
-      if (customerRole === "manager" && !isManagerPanelAccessEnabled(customer)) {
+      if (
+        isManagerRole(normalizeRole(customer.role)) &&
+        !hasManagerPortalAccess(customer) &&
+        !hasOwnerPortalAccess(customer)
+      ) {
         auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Manager access disabled", role: "manager" } });
         return NextResponse.json(
           { success: false, message: "Manager access is not enabled for this account." },
@@ -213,9 +239,8 @@ export async function POST(request: Request) {
         );
       }
 
-      auditLog("LOGIN_SUCCESS", { ip, userId: customer.id, email: normalizedEmail, details: { role: customerRole } });
+      auditLog("LOGIN_SUCCESS", { ip, userId: customer.id, email: normalizedEmail, details: { roles } });
 
-      // Map DB fields to frontend expected format
       const mapped = {
         id: customer.id,
         name: customer.name,
@@ -227,11 +252,10 @@ export async function POST(request: Request) {
         bookings: [],
         createdAt: customer.created_at,
         role: customerRole,
+        roles,
       };
 
-      // Issue JWT tokens
-      const accessToken = await createAccessToken({ userId: customer.id, role: customerRole, email: customer.email });
-      const refreshToken = await createRefreshToken({ userId: customer.id, role: customerRole, email: customer.email });
+      const { accessToken, refreshToken } = await issueCustomerTokens(customer);
 
       const response = NextResponse.json({ success: true, data: mapped });
 

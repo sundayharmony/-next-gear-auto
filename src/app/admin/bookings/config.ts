@@ -25,6 +25,8 @@ export interface BookingsPageConfig {
     canManagePayments: boolean;
     canExtendBooking: boolean;
     canSignAgreementInPerson: boolean;
+    /** Admin-only: grant/revoke a manager's financial visibility per booking. */
+    canManageManagerFinancialAccess: boolean;
   };
 }
 
@@ -51,6 +53,7 @@ export const adminBookingsConfig: BookingsPageConfig = {
     canManagePayments: true,
     canExtendBooking: true,
     canSignAgreementInPerson: true,
+    canManageManagerFinancialAccess: true,
   },
 };
 
@@ -58,7 +61,7 @@ export const managerBookingsConfig: BookingsPageConfig = {
   mode: "manager",
   homeHref: "/manager",
   title: "Bookings",
-  subtitle: "View all active and upcoming trips. Pricing is shown only on trips you created.",
+  subtitle: "View all active and upcoming trips. Financial details appear only when an admin grants access for a booking.",
   bookingsEndpoint: "/api/manager/bookings",
   vehiclesEndpoint: "/api/admin/vehicles",
   customersEndpoint: "/api/admin/customers",
@@ -77,5 +80,6 @@ export const managerBookingsConfig: BookingsPageConfig = {
     canManagePayments: false,
     canExtendBooking: false,
     canSignAgreementInPerson: true,
+    canManageManagerFinancialAccess: false,
   },
 };

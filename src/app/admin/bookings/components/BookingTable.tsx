@@ -265,9 +265,7 @@ export default function BookingTable({
                         </span>
                       ) : null}
                     </>
-                  ) : (
-                    <span className="text-xs font-medium text-gray-500">Pricing hidden</span>
-                  )}
+                  ) : null}
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -446,7 +444,7 @@ export default function BookingTable({
                     {canViewPricing && (displayTotal > 0 || !turoRow) ? (
                       <div className="font-semibold text-gray-900">${displayTotal.toFixed(2)}</div>
                     ) : (
-                      <div className="text-xs text-gray-500">Hidden</div>
+                      <div className="text-xs text-gray-400">—</div>
                     )}
                   </td>
 
@@ -457,7 +455,7 @@ export default function BookingTable({
                     ) : canViewPricing ? (
                       <div className={`font-semibold ${balanceColor}`}>${(balance ?? 0).toFixed(2)}</div>
                     ) : (
-                      <div className="text-xs text-gray-500">Hidden</div>
+                      <div className="text-xs text-gray-400">—</div>
                     )}
                   </td>
 

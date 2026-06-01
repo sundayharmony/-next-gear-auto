@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from "react";
 import type { Customer } from "@/lib/types";
-import { isAppRole } from "@/lib/auth/roles";
+import { isAppRole, type AppRole } from "@/lib/auth/roles";
+import { getUserRoles } from "@/lib/auth/user-roles";
 
 interface AuthState {
   user: Customer | null;
@@ -212,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const checkRole = useCallback(
-    (role: string) => state.user?.role === role,
+    (role: string) => isAppRole(role) && getUserRoles(state.user).includes(role as AppRole),
     [state.user]
   );
 

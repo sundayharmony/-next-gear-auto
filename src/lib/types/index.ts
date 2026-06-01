@@ -97,6 +97,8 @@ export interface Customer {
   bookings: string[];
   createdAt: string;
   role: "customer" | "admin" | "manager" | "owner";
+  /** Effective portal roles when user has manager + owner (or other dual assignment). */
+  roles?: Array<"customer" | "admin" | "manager" | "owner">;
 }
 
 export interface DriverLicense {
@@ -324,6 +326,8 @@ export interface BookingDbRow {
   origin_channel?: "public_checkout" | "admin_panel" | "manager_panel" | "turo" | "unknown";
   created_by_role?: "admin" | "manager" | "customer" | null;
   created_by_user_id?: string | null;
+  /** Per-booking permission: when true, managers may view this booking's financials. Admin-controlled. */
+  manager_financial_access?: boolean | null;
 }
 
 /** Minimal vehicle info used in admin list views */
@@ -386,6 +390,8 @@ export interface PayoutBreakdown {
 /** A booking as the owner sees it (their vehicle only, no other customer PII beyond name). */
 export interface OwnerBooking extends PayoutBreakdown {
   id: string;
+  /** Website booking vs Turo trip synced from email webhook. */
+  kind?: "booking" | "turo";
   vehicleId: string;
   vehicleName: string;
   customerName: string;

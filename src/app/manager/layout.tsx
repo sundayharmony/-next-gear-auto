@@ -20,7 +20,7 @@ import { getManagerNavItems } from "@/lib/admin/panel-navigation";
 import { staffPanelIconMap } from "@/lib/admin/staff-panel-icons";
 import { cn } from "@/lib/utils/cn";
 import { useStaffMessageUnreadCount } from "@/lib/hooks/use-staff-message-unread-count";
-import { isStaffRole, type AppRole } from "@/lib/auth/roles";
+import { userHasRole } from "@/lib/auth/user-roles";
 
 const NAV_ITEMS = getManagerNavItems().map((item) => ({
   href: item.href,
@@ -32,11 +32,10 @@ function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
-  const userRole = (user?.role ?? "customer") as AppRole;
   const { isDark, toggleTheme } = useTheme();
   const onMessagesRoute = pathname.startsWith("/manager/messages");
   const unreadMessages = useStaffMessageUnreadCount(
-    isAuthenticated && isStaffRole(userRole) && !onMessagesRoute
+    isAuthenticated && userHasRole(user, "manager") && !onMessagesRoute
   );
   const [loggingOut, setLoggingOut] = React.useState(false);
 
@@ -49,7 +48,7 @@ function ManagerLayoutInner({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const hasManagerAccess = isAuthenticated && isStaffRole(userRole);
+  const hasManagerAccess = isAuthenticated && userHasRole(user, "manager");
   if (!hasManagerAccess) {
     return (
       <PageContainer className="py-16 text-center">

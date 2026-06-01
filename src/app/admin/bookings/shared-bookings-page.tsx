@@ -405,6 +405,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
               canManagePayments: config.capabilities.canManagePayments,
               canExtendBooking: config.capabilities.canExtendBooking,
               canSignAgreementInPerson: config.capabilities.canSignAgreementInPerson,
+              canManageManagerFinancialAccess: config.capabilities.canManageManagerFinancialAccess,
               customerDetailsBasePath: config.customerDetailsBasePath,
               ticketsPagePath: config.ticketsPagePath,
             }}

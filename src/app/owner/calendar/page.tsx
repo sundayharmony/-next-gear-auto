@@ -11,6 +11,7 @@ import { useOwnerApi } from "@/lib/owner/use-owner-api";
 import { OwnerStatusBadge, OwnerBookingDetailModal } from "@/components/owner/owner-shared";
 import { formatCurrency, formatDate } from "@/lib/utils/date-helpers";
 import type { OwnerBooking, OwnerBookingStatus } from "@/lib/types";
+import { isOwnerTuroBooking } from "@/lib/owner/finance";
 import { cn } from "@/lib/utils/cn";
 
 const DOT_COLOR: Record<OwnerBookingStatus, string> = {
@@ -19,6 +20,11 @@ const DOT_COLOR: Record<OwnerBookingStatus, string> = {
   completed: "bg-gray-400",
   cancelled: "bg-red-400",
 };
+
+function eventDotClass(b: OwnerBooking): string {
+  if (isOwnerTuroBooking(b)) return "bg-teal-500";
+  return DOT_COLOR[b.status];
+}
 
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -65,7 +71,7 @@ export default function OwnerCalendarPage() {
 
   return (
     <>
-      <AdminPageHeader title="Booking Calendar" subtitle="Past, current and upcoming bookings for your vehicles" />
+      <AdminPageHeader title="Booking Calendar" subtitle="Website bookings and Turo trips for your vehicles" />
       <AdminPageBody>
         <AdminCard padding="sm">
           <div className="mb-3 flex items-center justify-between">
@@ -92,6 +98,9 @@ export default function OwnerCalendarPage() {
                 <span className={cn("h-2.5 w-2.5 rounded-full", DOT_COLOR[s])} /> <span className="capitalize">{s}</span>
               </span>
             ))}
+            <span className="flex items-center gap-1.5">
+              <span className="h-2.5 w-2.5 rounded-full bg-teal-500" /> Turo
+            </span>
           </div>
 
           {loading ? (
@@ -124,8 +133,10 @@ export default function OwnerCalendarPage() {
                           onClick={() => setSelected(b)}
                           className="flex w-full items-center gap-1 truncate rounded bg-gray-50 px-1 py-0.5 text-left text-[10px] hover:bg-purple-50"
                         >
-                          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", DOT_COLOR[b.status])} />
-                          <span className="truncate text-gray-700">{b.vehicleName}</span>
+                          <span className={cn("h-1.5 w-1.5 shrink-0 rounded-full", eventDotClass(b))} />
+                          <span className="truncate text-gray-700">
+                            {isOwnerTuroBooking(b) ? `${b.vehicleName} (Turo)` : b.vehicleName}
+                          </span>
                         </button>
                       ))}
                       {dayBookings.length > 2 && (
@@ -140,9 +151,9 @@ export default function OwnerCalendarPage() {
         </AdminCard>
 
         <div className="space-y-2">
-          <h2 className="text-base font-semibold text-gray-900">All bookings</h2>
+          <h2 className="text-base font-semibold text-gray-900">All trips</h2>
           {(bookings || []).length === 0 ? (
-            <AdminCard><p className="py-6 text-center text-sm text-gray-500">No bookings yet.</p></AdminCard>
+            <AdminCard><p className="py-6 text-center text-sm text-gray-500">No bookings or Turo trips yet.</p></AdminCard>
           ) : (
             (bookings || []).map((b) => (
               <button
@@ -151,12 +162,27 @@ export default function OwnerCalendarPage() {
                 className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200/80 bg-white p-4 text-left shadow-sm transition-colors hover:border-purple-200 hover:bg-purple-50/40"
               >
                 <div className="min-w-0">
-                  <p className="truncate font-medium text-gray-900">{b.vehicleName}</p>
-                  <p className="text-xs text-gray-500">{formatDate(b.pickupDate)} → {formatDate(b.returnDate)}</p>
+                  <p className="truncate font-medium text-gray-900">
+                    {b.vehicleName}
+                    {isOwnerTuroBooking(b) && (
+                      <span className="ml-1.5 text-xs font-normal text-teal-700">Turo</span>
+                    )}
+                  </p>
+                  <p className="text-xs text-gray-500">
+                    {isOwnerTuroBooking(b) ? b.customerName : formatDate(b.pickupDate)} · {formatDate(b.pickupDate)} → {formatDate(b.returnDate)}
+                  </p>
                 </div>
                 <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="font-semibold tabular-nums text-gray-900">{formatCurrency(b.ownerPayout)}</span>
-                  <OwnerStatusBadge status={b.status} />
+                  {b.grossRevenue > 0 && (
+                    <span className="font-semibold tabular-nums text-gray-900">{formatCurrency(b.ownerPayout)}</span>
+                  )}
+                  {isOwnerTuroBooking(b) ? (
+                    <span className="inline-flex items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold text-teal-800">
+                      Turo · {b.status}
+                    </span>
+                  ) : (
+                    <OwnerStatusBadge status={b.status} />
+                  )}
                 </div>
               </button>
             ))

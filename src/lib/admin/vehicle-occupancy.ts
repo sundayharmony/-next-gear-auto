@@ -3,6 +3,10 @@ import { resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import type { StaffRole } from "@/lib/admin/vehicle-details-queries";
 import {
+  canManageBooking,
+  canViewBookingFinancials,
+} from "@/lib/bookings/financial-access";
+import {
   bookingIntersectsRange,
   bookingIsCurrentlyOccupying,
 } from "@/lib/utils/recurring-booking";
@@ -84,7 +88,7 @@ function mapBookingRow(
   userId: string
 ): OccupancyEntry {
   const v = b.vehicles as { year?: number; make?: string; model?: string } | null;
-  const canViewPricing = role === "admin" || b.created_by_user_id === userId;
+  const canViewPricing = canViewBookingFinancials(role, b);
   const total = canViewPricing ? (Number(b.total_price ?? 0) || 0) : null;
   const dep = canViewPricing ? (Number(b.deposit ?? 0) || 0) : null;
   return {
@@ -105,7 +109,7 @@ function mapBookingRow(
     origin_channel: (b.origin_channel as OccupancyEntry["origin_channel"]) ?? null,
     source: "booking",
     canViewPricing,
-    canManage: role === "admin" || b.created_by_user_id === userId,
+    canManage: canManageBooking(role, b, userId),
     created_at: String(b.created_at || ""),
   };
 }

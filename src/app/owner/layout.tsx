@@ -13,15 +13,14 @@ import { OwnerBottomTabBar } from "@/components/owner/bottom-tab-bar";
 import { OWNER_NAV_ITEMS } from "@/lib/owner/owner-navigation";
 import { useOwnerUnreadCount } from "@/lib/owner/use-owner-notifications";
 import { cn } from "@/lib/utils/cn";
-import { isOwnerRole, type AppRole } from "@/lib/auth/roles";
+import { userHasRole } from "@/lib/auth/user-roles";
 
 function OwnerLayoutInner({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
-  const userRole = (user?.role ?? "customer") as AppRole;
   const { isDark, toggleTheme } = useTheme();
-  const isOwner = isAuthenticated && isOwnerRole(userRole);
+  const isOwner = isAuthenticated && userHasRole(user, "owner");
   const unread = useOwnerUnreadCount(isOwner);
   const [loggingOut, setLoggingOut] = React.useState(false);
 

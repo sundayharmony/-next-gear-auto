@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { isOwnerRole } from "@/lib/auth/roles";
+import { tokenHasOwnerAccess } from "@/lib/auth/roles";
 
 export type OwnerAuthResult =
   | { authorized: true; ownerId: string; email: string }
@@ -14,7 +14,7 @@ export type OwnerAuthResult =
  */
 export async function verifyOwner(req: NextRequest): Promise<OwnerAuthResult> {
   const tokenPayload = await getAuthFromRequest(req);
-  if (!tokenPayload || !isOwnerRole(tokenPayload.role)) {
+  if (!tokenPayload || !tokenHasOwnerAccess(tokenPayload)) {
     return {
       authorized: false,
       response: NextResponse.json(

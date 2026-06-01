@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin } from "@/lib/auth/admin-check";
-import { loadOwnerDataset } from "@/lib/owner/owner-data";
-import { isRevenueBooking, clampPercentage } from "@/lib/owner/finance";
+import { enrichOwnerRow } from "@/lib/admin/owner-enrichment";
+import { clampPercentage, DEFAULT_OWNER_PERCENTAGE } from "@/lib/owner/finance";
+import { isCompanyOwnedOwnerId } from "@/lib/owner/ownership";
+import { hasOwnerPortalAccess } from "@/lib/auth/customer-capabilities";
 import { isValidEmailFormat } from "@/lib/utils/validation";
-import { validatePassword } from "@/lib/auth/password-policy";
+import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
 import { logger } from "@/lib/utils/logger";
 import bcrypt from "bcryptjs";
 
@@ -20,8 +22,8 @@ export async function GET(req: NextRequest) {
     const supabase = getServiceSupabase();
     const { data: owners, error } = await supabase
       .from("customers")
-      .select("id, name, email, phone, created_at")
-      .eq("role", "owner")
+      .select("id, name, email, phone, created_at, password_hash, role, owner_portal_enabled")
+      .or("role.eq.owner,owner_portal_enabled.eq.true")
       .order("name", { ascending: true });
 
     if (error) {
@@ -29,35 +31,28 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Failed to load owners" }, { status: 500 });
     }
 
-    const enriched = await Promise.all(
-      (owners || []).map(async (o) => {
-        const { vehicles, bookings } = await loadOwnerDataset(o.id);
-        let lifetimeRevenue = 0;
-        let lifetimePayouts = 0;
-        let pendingPayouts = 0;
-        for (const b of bookings) {
-          if (b.status === "cancelled" || !isRevenueBooking(b.rawStatus)) continue;
-          lifetimeRevenue += b.grossRevenue;
-          if (b.payoutStatus === "paid") lifetimePayouts += b.ownerPayout;
-          else if (b.status === "completed") pendingPayouts += b.ownerPayout;
-        }
-        return {
-          id: o.id,
-          name: o.name,
-          email: o.email,
-          phone: o.phone || "",
-          createdAt: o.created_at,
-          vehicleCount: vehicles.length,
-          vehicles,
-          lifetimeRevenue: Math.round(lifetimeRevenue * 100) / 100,
-          lifetimePayouts: Math.round(lifetimePayouts * 100) / 100,
-          pendingPayouts: Math.round(pendingPayouts * 100) / 100,
-        };
-      })
-    );
+    const [{ data: vehicleRows }, enriched] = await Promise.all([
+      supabase.from("vehicles").select("id, owner_id, owner_percentage, is_company_owned"),
+      Promise.all((owners || []).map((o) => enrichOwnerRow(o, { recentBookingsLimit: 0 }))),
+    ]);
+
+    const vehicleAssignments: Record<
+      string,
+      { ownerId: string | null; isCompanyOwned: boolean; ownerPercentage: number }
+    > = {};
+    for (const v of vehicleRows || []) {
+      const isCompanyOwned = v.is_company_owned === true;
+      vehicleAssignments[v.id as string] = {
+        ownerId: isCompanyOwned ? null : ((v.owner_id as string | null) ?? null),
+        isCompanyOwned,
+        ownerPercentage: clampPercentage(
+          Number(v.owner_percentage) || DEFAULT_OWNER_PERCENTAGE
+        ),
+      };
+    }
 
     return NextResponse.json(
-      { success: true, data: enriched },
+      { success: true, data: enriched, vehicleAssignments },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err) {
@@ -81,7 +76,7 @@ export async function POST(req: NextRequest) {
     const name = (body.name || "").trim().slice(0, 100);
     const email = (body.email || "").toLowerCase().trim();
     const phone = (body.phone || "").trim().slice(0, 20);
-    const password = body.password;
+    const password = typeof body.password === "string" ? body.password.trim() : "";
 
     if (!name || !email) {
       return NextResponse.json({ success: false, message: "Name and email are required" }, { status: 400 });
@@ -94,19 +89,28 @@ export async function POST(req: NextRequest) {
     if (password) {
       const pwCheck = validatePassword(password);
       if (!pwCheck.valid) {
-        return NextResponse.json({ success: false, message: pwCheck.message }, { status: 400 });
+        return NextResponse.json(
+          { success: false, message: pwCheck.message, requirements: PASSWORD_REQUIREMENTS },
+          { status: 400 }
+        );
       }
       passwordHash = await bcrypt.hash(password, 12);
     }
 
     const { data: existing } = await supabase
       .from("customers")
-      .select("id")
+      .select("id, role")
       .eq("email", email)
       .maybeSingle();
 
     if (existing) {
-      const updates: Record<string, string> = { role: "owner", name };
+      const updates: Record<string, string | boolean> = {
+        name,
+        owner_portal_enabled: true,
+      };
+      if (existing.role !== "manager") {
+        updates.role = "owner";
+      }
       if (phone) updates.phone = phone;
       if (passwordHash) updates.password_hash = passwordHash;
       const { error } = await supabase.from("customers").update(updates).eq("id", existing.id);
@@ -124,6 +128,7 @@ export async function POST(req: NextRequest) {
       email,
       phone,
       role: "owner",
+      owner_portal_enabled: true,
       ...(passwordHash ? { password_hash: passwordHash } : {}),
     });
     if (error) {
@@ -140,7 +145,7 @@ export async function POST(req: NextRequest) {
 /**
  * PATCH /api/admin/owners
  * Assign / unassign a vehicle to an owner and set the owner revenue %.
- * Body: { vehicleId, ownerId | null, ownerPercentage? }
+ * Body: { vehicleId, ownerId | null | "__company__", ownerPercentage? }
  */
 export async function PATCH(req: NextRequest) {
   const auth = await verifyAdmin(req);
@@ -155,26 +160,47 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, message: "vehicleId is required" }, { status: 400 });
     }
 
-    const updates: Record<string, string | number | null> = {};
+    const updates: Record<string, string | number | boolean | null> = {};
+    let assigningCompany = false;
 
     if ("ownerId" in body) {
       const ownerId = body.ownerId;
-      if (ownerId === null || ownerId === "") {
+      if (isCompanyOwnedOwnerId(ownerId) || body.isCompanyOwned === true) {
         updates.owner_id = null;
+        updates.is_company_owned = true;
+        updates.owner_percentage = 0;
+        assigningCompany = true;
+      } else if (ownerId === null || ownerId === "") {
+        updates.owner_id = null;
+        updates.is_company_owned = false;
       } else {
         const { data: owner } = await supabase
           .from("customers")
-          .select("id, role")
+          .select("id, role, owner_portal_enabled")
           .eq("id", ownerId)
           .maybeSingle();
-        if (!owner || owner.role !== "owner") {
+        if (!owner || !hasOwnerPortalAccess(owner)) {
           return NextResponse.json({ success: false, message: "Target is not an owner account" }, { status: 400 });
         }
         updates.owner_id = ownerId;
+        updates.is_company_owned = false;
       }
     }
 
-    if (body.ownerPercentage !== undefined) {
+    if (body.ownerPercentage !== undefined && !assigningCompany) {
+      if (!("ownerId" in body)) {
+        const { data: current } = await supabase
+          .from("vehicles")
+          .select("is_company_owned")
+          .eq("id", vehicleId)
+          .maybeSingle();
+        if (current?.is_company_owned) {
+          return NextResponse.json(
+            { success: false, message: "Company-owned vehicles have no external owner share" },
+            { status: 400 }
+          );
+        }
+      }
       const pct = Number(body.ownerPercentage);
       if (!Number.isFinite(pct) || pct < 0 || pct > 100) {
         return NextResponse.json({ success: false, message: "ownerPercentage must be between 0 and 100" }, { status: 400 });

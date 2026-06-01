@@ -97,6 +97,7 @@ interface BookingDetailPanelProps {
     canManagePayments: boolean;
     canExtendBooking: boolean;
     canSignAgreementInPerson: boolean;
+    canManageManagerFinancialAccess?: boolean;
     customerDetailsBasePath: string;
     ticketsPagePath: string;
   };
@@ -122,6 +123,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const canViewActivityTimeline = capabilities?.canViewActivityTimeline ?? true;
   const canManagePayments = capabilities?.canManagePayments ?? true;
   const canExtendBooking = capabilities?.canExtendBooking ?? true;
+  const canManageManagerFinancialAccess = capabilities?.canManageManagerFinancialAccess ?? false;
   const canSignAgreementInPerson = capabilities?.canSignAgreementInPerson ?? false;
   const customerDetailsBasePath = capabilities?.customerDetailsBasePath ?? "/admin/customers";
   const ticketsPagePath = capabilities?.ticketsPagePath ?? "/admin/tickets";
@@ -166,6 +168,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const [showActivity, setShowActivity] = useState(false);
   const [showRecordPayment, setShowRecordPayment] = useState(false);
   const [noteSaving, setNoteSaving] = useState(false);
+  const [financialAccessSaving, setFinancialAccessSaving] = useState(false);
 
   // Payment form state
   const [paymentForm, setPaymentForm] = useState({
@@ -655,6 +658,35 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   const handleNotesBlur = () => {
     if (notesTimeoutRef.current) clearTimeout(notesTimeoutRef.current);
     notesTimeoutRef.current = setTimeout(saveNotes, 500);
+  };
+
+  // Admin-only: grant/revoke this manager's financial visibility for this booking.
+  const handleToggleManagerFinancialAccess = async (next: boolean) => {
+    if (!canManageManagerFinancialAccess || financialAccessSaving) return;
+    setFinancialAccessSaving(true);
+    try {
+      const response = await adminFetch(`/api/bookings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id, manager_financial_access: next }),
+      });
+      if (!response.ok) throw new Error("Failed to update manager access");
+      const result = await response.json();
+      const updated = result.data
+        ? { ...booking, ...result.data }
+        : { ...booking, manager_financial_access: next };
+      onUpdateBooking(updated);
+      onSuccess(
+        next
+          ? "Manager financial access enabled for this booking"
+          : "Manager financial access disabled for this booking"
+      );
+    } catch (err) {
+      logger.error("Failed to toggle manager financial access", err);
+      onError("Failed to update manager access");
+    } finally {
+      setFinancialAccessSaving(false);
+    }
   };
 
   // Record a payment
@@ -1538,7 +1570,10 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
             )}
           </div>
 
-          {/* Payment Summary Card */}
+          {/* Payment Summary Card — hidden entirely (no placeholders) when the
+              viewer can't see financials, so managers without per-booking access
+              get a clean layout with no empty gaps. */}
+          {canViewPricing && (
           <div className="bg-gray-50 rounded-lg p-4 space-y-3 border border-gray-200">
             <div className="flex items-center justify-between">
               <h3 className="text-sm font-semibold flex items-center gap-2">
@@ -1624,13 +1659,9 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                   <span className="text-gray-600">
                     {recurringBilling ? "Weekly rate" : "Total Price"}
                   </span>
-                  {canViewPricing ? (
-                    <span className="font-semibold">
-                      ${(recurringBilling?.weeklyRate ?? booking.total_price ?? 0).toFixed(2)}
-                    </span>
-                  ) : (
-                    <span className="font-semibold text-gray-500">Hidden</span>
-                  )}
+                  <span className="font-semibold">
+                    ${(recurringBilling?.weeklyRate ?? booking.total_price ?? 0).toFixed(2)}
+                  </span>
                 </div>
                 {recurringBilling && (
                   <div className="flex justify-between text-sm">
@@ -1638,41 +1669,29 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       Contract to date ({recurringBilling.weeksDue} week
                       {recurringBilling.weeksDue === 1 ? "" : "s"})
                     </span>
-                    {canViewPricing ? (
-                      <span className="font-semibold">${displayTotalPrice.toFixed(2)}</span>
-                    ) : (
-                      <span className="font-semibold text-gray-500">Hidden</span>
-                    )}
+                    <span className="font-semibold">${displayTotalPrice.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Amount Received</span>
-                  {canViewPricing ? (
-                    <span className="font-semibold">
-                      ${(booking.deposit ?? 0).toFixed(2)}
-                    </span>
-                  ) : (
-                    <span className="font-semibold text-gray-500">Hidden</span>
-                  )}
+                  <span className="font-semibold">
+                    ${(booking.deposit ?? 0).toFixed(2)}
+                  </span>
                 </div>
 
                 {/* Progress bar */}
                 <div className="w-full bg-gray-300 rounded-full h-2 overflow-hidden">
                   <div
                     className="bg-green-500 h-full transition-all"
-                    style={{ width: `${canViewPricing ? paymentPercentage : 0}%` }}
+                    style={{ width: `${paymentPercentage}%` }}
                   />
                 </div>
 
                 <div className="flex justify-between text-sm">
                   <span className="text-gray-600">Balance Due</span>
-                  {canViewPricing ? (
-                    <span className={`font-semibold ${balanceDue > 0 ? "text-red-600" : "text-green-600"}`}>
-                      ${balanceDue.toFixed(2)}
-                    </span>
-                  ) : (
-                    <span className="font-semibold text-gray-500">Hidden</span>
-                  )}
+                  <span className={`font-semibold ${balanceDue > 0 ? "text-red-600" : "text-green-600"}`}>
+                    ${balanceDue.toFixed(2)}
+                  </span>
                 </div>
 
                 {booking.payment_method && (
@@ -1687,14 +1706,8 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                       size="sm"
                       variant="outline"
                       onClick={() => setShowSendInvoiceModal(true)}
-                      disabled={!hasCustomerEmail || !canViewPricing}
-                      title={
-                        !hasCustomerEmail
-                          ? "Customer email required"
-                          : !canViewPricing
-                            ? "Pricing hidden for this booking"
-                            : "Email invoice to customer"
-                      }
+                      disabled={!hasCustomerEmail}
+                      title={hasCustomerEmail ? "Email invoice to customer" : "Customer email required"}
                       className="w-full text-xs border-purple-300 text-purple-700 hover:bg-purple-50"
                     >
                       <Mail className="w-3 h-3 mr-1" />
@@ -1884,6 +1897,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
               </div>
             )}
           </div>
+          )}
 
           {/* Extend Booking */}
           {canExtendBooking && ["confirmed", "active"].includes(booking.status) && !editMode && (
@@ -2123,6 +2137,42 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
                 )}
               </div>
             )}
+            </div>
+          )}
+
+          {/* Manager Access Settings — admin-only, per-booking financial grant.
+              Managers never see this toggle (capability is false for them) and
+              cannot set it via the API (server rejects the field for managers). */}
+          {canManageManagerFinancialAccess && (
+            <div className="space-y-2 border-t border-gray-200 pt-4">
+              <h3 className="text-sm font-semibold flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Manager Access Settings
+              </h3>
+              <label className="flex items-start gap-3 rounded-lg border border-gray-200 bg-gray-50 p-3 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={booking.manager_financial_access === true}
+                  disabled={financialAccessSaving}
+                  onChange={(e) => handleToggleManagerFinancialAccess(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                />
+                <span className="text-sm">
+                  <span className="font-medium text-gray-900">
+                    Allow manager to view financial details for this booking
+                  </span>
+                  <span className="block text-xs text-gray-500 mt-0.5">
+                    Applies to this booking only. When off, managers can view the
+                    booking but never its pricing, payments, or payment status.
+                  </span>
+                </span>
+              </label>
+              {financialAccessSaving && (
+                <p className="text-xs text-gray-500 flex items-center gap-1 pl-2">
+                  <RefreshCw className="w-3 h-3 animate-spin" />
+                  Saving…
+                </p>
+              )}
             </div>
           )}
 

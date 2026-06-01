@@ -130,6 +130,12 @@ export const generalLimiter = createRateLimiter({
   max: 100,
 });
 
+/** Admin-triggered password emails: 10 per hour per IP */
+export const passwordEmailLimiter = createRateLimiter({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+});
+
 /**
  * Simple hash function for IP addresses.
  * Used as fallback when x-forwarded-for header is untrusted.

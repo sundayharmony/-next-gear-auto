@@ -202,7 +202,11 @@ export default function AccountPage() {
     router.push("/admin");
     return null;
   }
-  if (isAuthenticated && user?.role === "manager") {
+  if (
+    isAuthenticated &&
+    user?.role === "manager" &&
+    !(user.roles?.includes("owner") ?? false)
+  ) {
     router.push("/manager");
     return null;
   }

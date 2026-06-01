@@ -149,6 +149,7 @@ export interface DbVehicle {
   maintenance_status: string;
   owner_id: string | null;
   owner_percentage: number | null;
+  is_company_owned: boolean;
   created_at: string;
 }
 
@@ -209,6 +210,8 @@ export interface DbBooking {
   origin_channel: "public_checkout" | "admin_panel" | "manager_panel" | "unknown" | null;
   created_by_role: "admin" | "manager" | "customer" | null;
   created_by_user_id: string | null;
+  /** Per-booking permission: when true, managers may view this booking's financials. Admin-controlled. */
+  manager_financial_access: boolean | null;
 }
 
 export interface DbPaymentRecord {

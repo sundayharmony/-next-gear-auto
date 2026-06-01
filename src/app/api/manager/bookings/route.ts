@@ -15,6 +15,11 @@ import {
   enrichBookingOverdueFields,
 } from "@/lib/utils/recurring-booking";
 import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
+import {
+  canManageBooking,
+  canViewBookingFinancials,
+  redactBookingFinancials,
+} from "@/lib/bookings/financial-access";
 
 const sortColumnMap: Record<string, string> = {
   customer_name: "customer_name",
@@ -83,27 +88,26 @@ export async function GET(req: NextRequest) {
         const row = occupancyToBookingRowCompat(e) as Record<string, unknown>;
         if (e.kind === "booking") {
           const raw = (bookingRowsRaw || []).find((x: { id?: string }) => x.id === e.id) as Record<string, unknown> | undefined;
-          const canViewPricing = auth.role === "admin" || raw?.created_by_user_id === auth.userId;
-          const canManage = auth.role === "admin" || raw?.created_by_user_id === auth.userId;
-          row.canViewPricing = canViewPricing;
-          row.canManage = canManage;
-          row.total_price = canViewPricing ? raw?.total_price : null;
-          row.deposit = canViewPricing ? raw?.deposit : null;
-          row.location_surcharge = canViewPricing ? raw?.location_surcharge : null;
-          if (e.kind === "booking") {
-            const overdueFields = enrichBookingOverdueFields(
-              {
-                pickup_date: e.pickup_date,
-                return_date: e.return_date,
-                status: e.status,
-                total_price: canViewPricing ? (raw?.total_price as number | null) : null,
-                deposit: canViewPricing ? (raw?.deposit as number | null) : null,
-                admin_notes: (raw?.admin_notes as string | null) ?? null,
-              },
-              today
-            );
-            Object.assign(row, overdueFields);
-          }
+          const canView = canViewBookingFinancials(auth.role, raw);
+          row.canManage = canManageBooking(auth.role, raw, auth.userId);
+          row.total_price = raw?.total_price ?? null;
+          row.deposit = raw?.deposit ?? null;
+          row.location_surcharge = raw?.location_surcharge ?? null;
+          const overdueFields = enrichBookingOverdueFields(
+            {
+              pickup_date: e.pickup_date,
+              return_date: e.return_date,
+              status: e.status,
+              total_price: (raw?.total_price as number | null) ?? null,
+              deposit: (raw?.deposit as number | null) ?? null,
+              admin_notes: (raw?.admin_notes as string | null) ?? null,
+            },
+            today
+          );
+          Object.assign(row, overdueFields);
+          // Centralized authorization: strips ALL financial fields (incl.
+          // derived totals and payment-overdue status) when access is denied.
+          return redactBookingFinancials(row, canView);
         }
         return row;
       });
@@ -144,12 +148,6 @@ export async function GET(req: NextRequest) {
     let enriched = (data || []).map((b) => {
       const v = b.vehicles as unknown as { year: number; make: string; model: string } | null;
       const { vehicles: _vehicle, ...rest } = b;
-      const canViewPricing = auth.role === "admin" || b.created_by_user_id === auth.userId;
-      const canManage = auth.role === "admin" || b.created_by_user_id === auth.userId;
-
-      const total_price = canViewPricing ? b.total_price : null;
-      const deposit = canViewPricing ? b.deposit : null;
-      const location_surcharge = canViewPricing ? b.location_surcharge : null;
       const overdueFields = enrichBookingOverdueFields(
         {
           pickup_date: b.pickup_date,
@@ -161,16 +159,17 @@ export async function GET(req: NextRequest) {
         },
         today
       );
-      return {
-        ...rest,
-        total_price,
-        deposit,
-        location_surcharge,
-        canViewPricing,
-        canManage,
-        vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
-        ...overdueFields,
-      };
+      // Centralized authorization: strips ALL financial fields (incl. derived
+      // totals and payment-overdue status) when manager access is denied.
+      return redactBookingFinancials(
+        {
+          ...rest,
+          canManage: canManageBooking(auth.role, b, auth.userId),
+          vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
+          ...overdueFields,
+        },
+        canViewBookingFinancials(auth.role, b)
+      );
     });
 
     if (auth.role === "manager") {

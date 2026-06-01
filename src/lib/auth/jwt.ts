@@ -16,7 +16,8 @@ import { isAppRole, type AppRole } from "@/lib/auth/roles";
 
 export interface TokenPayload extends JWTPayload {
   sub: string;       // user ID
-  role: AppRole;
+  role: AppRole;     // primary role (backward compatible)
+  roles?: AppRole[]; // effective portal roles (union when dual-assigned)
   email: string;
   type?: string;
 }
@@ -60,11 +61,14 @@ function getSecret(): Uint8Array {
 export async function createAccessToken(payload: {
   userId: string;
   role: AppRole;
+  roles?: AppRole[];
   email: string;
 }): Promise<string> {
+  const roles = payload.roles?.length ? payload.roles : [payload.role];
   return new SignJWT({
     sub: payload.userId,
     role: payload.role,
+    roles,
     email: payload.email,
   } satisfies TokenPayload)
     .setProtectedHeader({ alg: "HS256" })
@@ -77,11 +81,14 @@ export async function createAccessToken(payload: {
 export async function createRefreshToken(payload: {
   userId: string;
   role: AppRole;
+  roles?: AppRole[];
   email: string;
 }): Promise<string> {
+  const roles = payload.roles?.length ? payload.roles : [payload.role];
   return new SignJWT({
     sub: payload.userId,
     role: payload.role,
+    roles,
     email: payload.email,
     type: "refresh",
   })
@@ -100,9 +107,13 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
       issuer: "nextgearauto",
     });
     const typed = payload as TokenPayload;
-    // Validate role is one of the expected values
     if (!isAppRole(typed.role)) {
       return null;
+    }
+    if (typed.roles !== undefined) {
+      if (!Array.isArray(typed.roles) || !typed.roles.every(isAppRole)) {
+        return null;
+      }
     }
     return typed;
   } catch {

@@ -3,6 +3,10 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
+import {
+  canViewBookingFinancials,
+  redactBookingFinancials,
+} from "@/lib/bookings/financial-access";
 
 // GET: List all bookings for admin (with vehicle names)
 export async function GET(req: NextRequest) {
@@ -46,11 +50,16 @@ export async function GET(req: NextRequest) {
     const enriched = (bookings || []).map((b) => {
       const v = b.vehicles as unknown as { year: number; make: string; model: string } | null;
       const { vehicles: _v, ...rest } = b;
-      return {
-        ...rest,
-        vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
-        customerName: b.customer_name || "Guest",
-      };
+      // Centralized authorization: managers only see financials on bookings an
+      // admin has explicitly granted. Admins always see full data.
+      return redactBookingFinancials(
+        {
+          ...rest,
+          vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
+          customerName: b.customer_name || "Guest",
+        },
+        canViewBookingFinancials(auth.role, b)
+      );
     });
 
     return NextResponse.json({ data: enriched, success: true }, {

@@ -23,8 +23,16 @@ function LoginFormInner() {
   const redirectAfter = searchParams.get("redirect");
   const nextPath = searchParams.get("next");
 
-  const resolvePostLoginPath = (role: string | undefined) => {
-    if (role === "admin") {
+  const resolvePostLoginPath = (user: { role?: string; roles?: string[] } | null) => {
+    const roles =
+      user?.roles?.length ? user.roles : user?.role ? [user.role] : [];
+    const role = roles.includes("manager")
+      ? "manager"
+      : roles.includes("owner")
+        ? "owner"
+        : roles[0];
+
+    if (role === "admin" || roles.includes("admin")) {
       if (nextPath?.startsWith("/admin")) return nextPath;
       return "/admin";
     }
@@ -59,7 +67,7 @@ function LoginFormInner() {
     try {
       const user = await login(email, password, { staffOnly });
       if (user) {
-        router.push(resolvePostLoginPath(user.role));
+        router.push(resolvePostLoginPath(user));
       }
     } catch {
       // Error is handled by the auth context

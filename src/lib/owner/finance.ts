@@ -104,5 +104,10 @@ export function deriveOwnerStatus(
 /** Bookings that actually generate revenue for the owner (exclude cancelled). */
 export function isRevenueBooking(rawStatus: string): boolean {
   const status = (rawStatus || "").toLowerCase();
+  if (status === "turo") return true;
   return status !== "cancelled" && status !== "no-show";
+}
+
+export function isOwnerTuroBooking(booking: { kind?: string; id?: string }): boolean {
+  return booking.kind === "turo" || (typeof booking.id === "string" && booking.id.startsWith("turo:"));
 }

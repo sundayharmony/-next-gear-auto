@@ -8,10 +8,10 @@ import { validatePasswordToken } from "@/lib/auth/password-token";
 import { setAuthCookies } from "@/lib/auth/jwt";
 import { CUSTOMER_CAPABILITIES_SELECT, resolveCustomerRoles } from "@/lib/auth/customer-capabilities";
 import { issueCustomerTokens } from "@/lib/auth/issue-customer-tokens";
+import { auditLog } from "@/lib/security/audit-log";
 
 export async function POST(request: Request) {
   try {
-    // Rate limit password set attempts (uses login limiter)
     const ip = getClientIp(request);
     const rateCheck = loginLimiter.check(ip);
     if (!rateCheck.allowed) {
@@ -33,15 +33,19 @@ export async function POST(request: Request) {
       );
     }
 
-    // Validate the cryptographic token if provided (new flow)
-    if (token) {
-      const tokenEmail = validatePasswordToken(token);
-      if (!tokenEmail || tokenEmail !== email.toLowerCase().trim()) {
-        return NextResponse.json(
-          { success: false, message: "Invalid or expired link. Please request a new one." },
-          { status: 400 }
-        );
-      }
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Invalid or missing reset token. Please use the link from your email." },
+        { status: 400 }
+      );
+    }
+
+    const tokenEmail = validatePasswordToken(token);
+    if (!tokenEmail || tokenEmail !== email.toLowerCase().trim()) {
+      return NextResponse.json(
+        { success: false, message: "Invalid or expired link. Please request a new one." },
+        { status: 400 }
+      );
     }
 
     const pwCheck = validatePassword(password);
@@ -55,34 +59,28 @@ export async function POST(request: Request) {
     const normalizedEmail = email.toLowerCase().trim();
     const supabase = getServiceSupabase();
 
-    // Find the customer
     const { data: customer, error: findError } = await supabase
       .from("customers")
       .select(`id, password_hash, name, email, phone, dob, created_at, ${CUSTOMER_CAPABILITIES_SELECT}`)
       .eq("email", normalizedEmail)
       .maybeSingle();
 
-    // Timing attack mitigation: always perform a bcrypt hash to ensure
-    // consistent response time whether the account exists or not.
-    // This prevents attackers from enumerating valid email addresses.
     if (findError || !customer) {
-      await bcrypt.hash(password, 12); // constant-time dummy operation
+      await bcrypt.hash(password, 12);
       return NextResponse.json(
-        { success: false, message: "Unable to set password. Please check the link in your email and try again." },
+        { success: false, message: "Unable to reset password. Please check the link in your email and try again." },
         { status: 400 }
       );
     }
 
-    // Only allow setting password if one doesn't exist yet
-    if (customer.password_hash) {
-      await bcrypt.hash(password, 12); // constant-time dummy operation
+    if (!customer.password_hash) {
+      await bcrypt.hash(password, 12);
       return NextResponse.json(
-        { success: false, message: "Unable to set password. Please check the link in your email and try again." },
+        { success: false, message: "No password is set for this account. Use the set-password link from your email instead." },
         { status: 400 }
       );
     }
 
-    // Hash and set the password
     const passwordHash = await bcrypt.hash(password, 12);
     const { error: updateError } = await supabase
       .from("customers")
@@ -90,14 +88,20 @@ export async function POST(request: Request) {
       .eq("id", customer.id);
 
     if (updateError) {
-      logger.error("Set password error:", updateError);
+      logger.error("Reset password error:", updateError);
       return NextResponse.json(
-        { success: false, message: "Failed to set password. Please try again." },
+        { success: false, message: "Failed to reset password. Please try again." },
         { status: 500 }
       );
     }
 
-    // Return user data so frontend can log them in
+    auditLog("PASSWORD_CHANGE", {
+      ip,
+      userId: customer.id,
+      email: normalizedEmail,
+      details: { method: "reset_link", role: customer.role },
+    });
+
     const roles = resolveCustomerRoles(customer);
     const userData = {
       id: customer.id,
@@ -117,12 +121,12 @@ export async function POST(request: Request) {
 
     const response = NextResponse.json({
       success: true,
-      message: "Password set successfully!",
+      message: "Password reset successfully!",
       data: userData,
     });
     return setAuthCookies(response, accessToken, refreshToken);
   } catch (err) {
-    logger.error("Set password API error:", err);
+    logger.error("Reset password API error:", err);
     return NextResponse.json(
       { success: false, message: "Something went wrong. Please try again." },
       { status: 500 }

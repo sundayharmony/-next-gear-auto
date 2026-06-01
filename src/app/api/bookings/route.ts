@@ -27,6 +27,10 @@ import {
   sortOccupancyEntries,
 } from "@/lib/admin/vehicle-occupancy";
 import { validateBookingStatusPatch } from "@/lib/bookings";
+import {
+  canViewBookingFinancials,
+  redactBookingFinancials,
+} from "@/lib/bookings/financial-access";
 import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import { notifyVehicleOwner } from "@/lib/owner/notifications";
@@ -135,12 +139,20 @@ export async function GET(request: NextRequest) {
         rental_agreement_url: rest.rental_agreement_url,
       };
 
+      let outData: Record<string, unknown> = {
+        ...safeData,
+        vehicle_name: v ? getVehicleDisplayName(v) : "Vehicle",
+      };
+      // Managers never see financial data unless an admin granted per-booking
+      // access. Applied to BOTH the owner (full) and non-owner (subset) shapes
+      // so a manager cannot read totals by guessing a booking id.
+      if (isManager) {
+        outData = redactBookingFinancials(outData, canViewBookingFinancials("manager", booking));
+      }
+
       return NextResponse.json({
         success: true,
-        data: {
-          ...safeData,
-          vehicle_name: v ? getVehicleDisplayName(v) : "Vehicle",
-        },
+        data: outData,
       }, {
         headers: {
           "Cache-Control": "no-store",
@@ -231,13 +243,18 @@ export async function GET(request: NextRequest) {
               },
               today
             );
-            return {
+            const mergedRow = {
               ...rest,
               ...base,
               vehicleName: v ? getVehicleDisplayName(v) : (base.vehicleName as string),
               customerName: (rest.customer_name as string) || "Guest",
               ...overdueFields,
             };
+            // Re-spreading `rest` reintroduces raw financial columns; redact
+            // them for managers so nothing leaks past the central rule.
+            return isManager
+              ? redactBookingFinancials(mergedRow, canViewBookingFinancials("manager", raw))
+              : mergedRow;
           }
         }
         if (e.kind === "booking") {
@@ -376,12 +393,17 @@ export async function GET(request: NextRequest) {
         },
         today
       );
-      return {
+      const row = {
         ...rest,
         vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
         customerName: b.customer_name || "Guest",
         ...overdueFields,
       };
+      // Only managers are gated here; admins and the booking's own customer
+      // keep full visibility of their data.
+      return isManager
+        ? redactBookingFinancials(row, canViewBookingFinancials("manager", b))
+        : row;
     });
 
     if (hasDateRange) {
@@ -882,6 +904,12 @@ export async function PATCH(request: NextRequest) {
     if (body.return_location_id !== undefined) updateFields.return_location_id = body.return_location_id;
     if (body.return_location_name !== undefined) updateFields.return_location_name = body.return_location_name;
     if (body.location_surcharge !== undefined) updateFields.location_surcharge = body.location_surcharge;
+    // Admin-only: grant/revoke a manager's financial visibility for THIS booking.
+    // Managers can never set this (the `!isManagerEditor` guard); it is also
+    // excluded from the manager allow-list below as defense in depth.
+    if (body.manager_financial_access !== undefined && !isManagerEditor) {
+      updateFields.manager_financial_access = body.manager_financial_access === true;
+    }
 
     if (Object.keys(updateFields).length === 0) {
       return NextResponse.json(
@@ -901,15 +929,19 @@ export async function PATCH(request: NextRequest) {
         "return_date",
         "pickup_time",
         "return_time",
-        "total_price",
-        "deposit",
         "extras",
         "pickup_location_id",
         "pickup_location_name",
         "return_location_id",
         "return_location_name",
-        "location_surcharge",
       ]);
+      // Financial fields are only editable by a manager when an admin has
+      // granted financial access for this specific booking.
+      if (canViewBookingFinancials("manager", booking)) {
+        allowedManagerFields.add("total_price");
+        allowedManagerFields.add("deposit");
+        allowedManagerFields.add("location_surcharge");
+      }
       for (const key of Object.keys(updateFields)) {
         if (!allowedManagerFields.has(key)) {
           return NextResponse.json(
@@ -1126,7 +1158,17 @@ export async function PATCH(request: NextRequest) {
       .eq("id", bookingId)
       .maybeSingle();
 
-    return NextResponse.json({ success: true, message: "Booking updated", data: updatedBooking });
+    // Strip financial fields from the response for managers without access so
+    // the PATCH return value can't be used to read hidden financials.
+    const responseData =
+      auth.role === "manager" && updatedBooking
+        ? redactBookingFinancials(
+            updatedBooking as Record<string, unknown>,
+            canViewBookingFinancials("manager", updatedBooking)
+          )
+        : updatedBooking;
+
+    return NextResponse.json({ success: true, message: "Booking updated", data: responseData });
   } catch {
     return NextResponse.json(
       { success: false, message: "Invalid request" },

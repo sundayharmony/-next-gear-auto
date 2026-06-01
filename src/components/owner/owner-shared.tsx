@@ -14,6 +14,7 @@ import type {
   OwnerBookingStatus,
   PayoutStatus,
 } from "@/lib/types";
+import { isOwnerTuroBooking } from "@/lib/owner/finance";
 
 const STATUS_STYLES: Record<OwnerBookingStatus, string> = {
   upcoming: "bg-blue-100 text-blue-700",
@@ -71,20 +72,30 @@ export function OwnerBookingDetailModal({
   onClose: () => void;
 }) {
   if (!booking) return null;
+  const isTuro = isOwnerTuroBooking(booking);
+
   return (
     <Modal open={!!booking} onOpenChange={(o) => { if (!o) onClose(); }}>
       <ModalContent className="sm:max-w-md">
         <ModalHeader>
-          <ModalTitle>Booking Details</ModalTitle>
+          <ModalTitle>{isTuro ? "Turo Trip" : "Booking Details"}</ModalTitle>
         </ModalHeader>
 
         <div className="space-y-4">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="truncate font-semibold text-gray-900">{booking.vehicleName}</p>
-              <p className="text-xs text-gray-500">Booking #{booking.id}</p>
+              <p className="text-xs text-gray-500">
+                {isTuro ? `Guest: ${booking.customerName}` : `Booking #${booking.id}`}
+              </p>
             </div>
-            <OwnerStatusBadge status={booking.status} />
+            {isTuro ? (
+              <span className="inline-flex shrink-0 items-center rounded-full bg-teal-100 px-2.5 py-0.5 text-xs font-semibold capitalize text-teal-800">
+                Turo · {booking.status}
+              </span>
+            ) : (
+              <OwnerStatusBadge status={booking.status} />
+            )}
           </div>
 
           <div className="rounded-lg bg-gray-50 p-3 text-sm">
@@ -98,27 +109,43 @@ export function OwnerBookingDetailModal({
             </div>
           </div>
 
-          <div className="rounded-lg border border-gray-200 px-3">
-            <p className="pt-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Payout Breakdown</p>
-            <Row label="Gross Revenue" value={formatCurrency(booking.grossRevenue)} />
-            <Row label="Processing Fees" value={`− ${formatCurrency(booking.processingFees)}`} negative />
-            <Row label="Other Expenses" value={`− ${formatCurrency(booking.otherExpenses)}`} negative />
-            <div className="border-t border-gray-100">
-              <Row label="Net Revenue" value={formatCurrency(booking.netRevenue)} strong />
+          {booking.grossRevenue > 0 && (
+            <div className="rounded-lg border border-gray-200 px-3">
+              <p className="pt-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
+                {isTuro ? "Estimated share (Turo trip)" : "Payout Breakdown"}
+              </p>
+              <Row label="Trip Revenue" value={formatCurrency(booking.grossRevenue)} />
+              {!isTuro && (
+                <>
+                  <Row label="Processing Fees" value={`− ${formatCurrency(booking.processingFees)}`} negative />
+                  <Row label="Other Expenses" value={`− ${formatCurrency(booking.otherExpenses)}`} negative />
+                </>
+              )}
+              <div className="border-t border-gray-100">
+                <Row label="Net Revenue" value={formatCurrency(booking.netRevenue)} strong />
+              </div>
+              <Row label={`Platform Fees (${100 - booking.ownerPercentage}%)`} value={`− ${formatCurrency(booking.platformFees)}`} negative />
+              <div className="border-t border-gray-100">
+                <Row label={`Owner Share (${booking.ownerPercentage}%)`} value={formatCurrency(booking.ownerPayout)} strong />
+              </div>
             </div>
-            <Row label={`Platform Fees (${100 - booking.ownerPercentage}%)`} value={`− ${formatCurrency(booking.platformFees)}`} negative />
-            <div className="border-t border-gray-100">
-              <Row label={`Owner Payout (${booking.ownerPercentage}%)`} value={formatCurrency(booking.ownerPayout)} strong />
-            </div>
-          </div>
+          )}
 
-          <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 text-sm">
-            <span className="text-gray-500">Payout Status</span>
-            <div className="flex items-center gap-2">
-              <PayoutStatusBadge status={booking.payoutStatus} />
-              {booking.payoutDate && <span className="text-xs text-gray-500">{formatDate(booking.payoutDate)}</span>}
+          {!isTuro && (
+            <div className="flex items-center justify-between rounded-lg bg-gray-50 p-3 text-sm">
+              <span className="text-gray-500">Payout Status</span>
+              <div className="flex items-center gap-2">
+                <PayoutStatusBadge status={booking.payoutStatus} />
+                {booking.payoutDate && <span className="text-xs text-gray-500">{formatDate(booking.payoutDate)}</span>}
+              </div>
             </div>
-          </div>
+          )}
+
+          {isTuro && (
+            <p className="text-xs text-gray-500">
+              Synced from Turo email. Payout for Turo trips is tracked separately from website bookings.
+            </p>
+          )}
         </div>
       </ModalContent>
     </Modal>

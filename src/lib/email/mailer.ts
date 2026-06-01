@@ -9,6 +9,7 @@ import {
   pickupReminderTemplate,
   returnReminderTemplate,
   passwordResetTemplate,
+  accountPasswordResetTemplate,
   bookingSignAgreementTemplate,
   bookingExtendedTemplate,
   bookingInvoiceTemplate,
@@ -388,9 +389,9 @@ export async function sendBookingConfirmationWithAgreement(data: BookingEmailDat
   }
 }
 
+/** Send set-password email for accounts without a password yet (links to /set-password). */
 export async function sendPasswordResetLink(data: { customerName: string; customerEmail: string }) {
   try {
-    // Generate a cryptographic token for the set-password link
     const { generatePasswordToken } = await import("@/lib/auth/password-token");
     const token = generatePasswordToken(data.customerEmail);
 
@@ -404,10 +405,34 @@ export async function sendPasswordResetLink(data: { customerName: string; custom
       html,
       text: stripHtmlTags(html),
     });
-    logger.info("Password reset link email sent successfully");
+    logger.info("Set-password link email sent successfully");
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
-    logger.error("Failed to send password reset link:", errorMsg);
+    logger.error("Failed to send set-password link:", errorMsg);
+    throw error;
+  }
+}
+
+/** Send reset-password email for accounts that already have a password (links to /reset-password). */
+export async function sendAccountPasswordResetEmail(data: { customerName: string; customerEmail: string }) {
+  try {
+    const { generatePasswordToken } = await import("@/lib/auth/password-token");
+    const token = generatePasswordToken(data.customerEmail);
+
+    const transporter = getTransporter();
+    const html = accountPasswordResetTemplate({ ...data, token });
+    await sendMailWithRetry(transporter, {
+      from: FROM_CUSTOMER,
+      to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
+      subject: "Reset Your Password - NextGearAuto",
+      html,
+      text: stripHtmlTags(html),
+    });
+    logger.info("Reset-password link email sent successfully");
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send reset-password link:", errorMsg);
     throw error;
   }
 }

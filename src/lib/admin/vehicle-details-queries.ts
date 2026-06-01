@@ -1,4 +1,9 @@
 import { getVehicleDisplayName } from "@/lib/types";
+import {
+  canManageBooking,
+  canViewBookingFinancials,
+  redactBookingFinancials,
+} from "@/lib/bookings/financial-access";
 
 type SupabaseLike = {
   from: (table: string) => {
@@ -137,18 +142,18 @@ export async function fetchBookingsByVehicle(
 
   const rows = (data || []).map((b: Record<string, unknown>) => {
     const v = b.vehicles as { year?: number; make?: string; model?: string } | null;
-    const canViewPricing = role === "admin" || b.created_by_user_id === userId;
-    const total_price = canViewPricing ? b.total_price : null;
-    const deposit = canViewPricing ? b.deposit : null;
-    return {
-      ...b,
-      total_price,
-      deposit,
-      canViewPricing,
-      canManage: role === "admin" || b.created_by_user_id === userId,
-      vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
-      customerName: b.customer_name || "Guest",
-    };
+    const { vehicles: _vehicle, ...rest } = b;
+    // Centralized authorization — strips ALL financial fields for managers
+    // without per-booking access (not just total_price/deposit).
+    return redactBookingFinancials(
+      {
+        ...rest,
+        canManage: canManageBooking(role, b, userId),
+        vehicleName: v ? getVehicleDisplayName(v) : "Unknown Vehicle",
+        customerName: b.customer_name || "Guest",
+      },
+      canViewBookingFinancials(role, b)
+    );
   });
 
   return { data: rows, total: count || 0, page, limit };

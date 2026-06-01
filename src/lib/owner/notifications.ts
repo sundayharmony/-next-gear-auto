@@ -50,9 +50,10 @@ export async function notifyVehicleOwner(
     const supabase = getServiceSupabase();
     const { data: vehicle } = await supabase
       .from("vehicles")
-      .select("owner_id")
+      .select("owner_id, is_company_owned")
       .eq("id", vehicleId)
       .maybeSingle();
+    if (vehicle?.is_company_owned) return;
     const ownerId = vehicle?.owner_id as string | null | undefined;
     if (!ownerId) return;
     await notifyOwner({ ownerId, type, title, message, bookingId, vehicleId });

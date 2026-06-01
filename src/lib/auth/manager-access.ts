@@ -26,7 +26,7 @@ export async function fetchCustomerManagerAccessRow(
 ): Promise<ManagerAccessRow | null> {
   const { data, error } = await supabase
     .from("customers")
-    .select("role, manager_access_enabled")
+    .select("role, manager_access_enabled, owner_portal_enabled")
     .eq("id", userId)
     .maybeSingle();
   if (error) return null;

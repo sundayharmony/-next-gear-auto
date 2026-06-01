@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { loginLimiter, getClientIp } from "@/lib/security/rate-limit";
-import { isAdminRole, isStaffJwtRole } from "@/lib/auth/roles";
+import { getTokenStaffRole, isAdminRole, tokenHasStaffAccess } from "@/lib/auth/roles";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 
 /**
@@ -112,7 +112,8 @@ export async function verifyAdminOrManager(
   req: NextRequest
 ): Promise<{ authorized: true; userId: string; role: "admin" | "manager" } | { authorized: false; response: NextResponse }> {
   const tokenPayload = await getAuthFromRequest(req);
-  if (!tokenPayload || !isStaffJwtRole(tokenPayload.role)) {
+  const staffRole = tokenPayload ? getTokenStaffRole(tokenPayload) : null;
+  if (!tokenPayload || !staffRole || !tokenHasStaffAccess(tokenPayload)) {
     return {
       authorized: false,
       response: NextResponse.json(
@@ -121,5 +122,5 @@ export async function verifyAdminOrManager(
       ),
     };
   }
-  return { authorized: true, userId: tokenPayload.sub, role: tokenPayload.role };
+  return { authorized: true, userId: tokenPayload.sub, role: staffRole };
 }

@@ -67,10 +67,16 @@ export async function POST(req: NextRequest) {
 
     const { data: vehicle } = await supabase
       .from("vehicles")
-      .select("id, year, make, model, owner_id, owner_percentage")
+      .select("id, year, make, model, owner_id, owner_percentage, is_company_owned")
       .eq("id", booking.vehicle_id)
       .maybeSingle();
-    if (!vehicle || !vehicle.owner_id) {
+    if (!vehicle || vehicle.is_company_owned) {
+      return NextResponse.json(
+        { success: false, message: "This booking's vehicle is company-owned (no owner payout)" },
+        { status: 400 }
+      );
+    }
+    if (!vehicle.owner_id) {
       return NextResponse.json({ success: false, message: "This booking's vehicle has no owner assigned" }, { status: 400 });
     }
 

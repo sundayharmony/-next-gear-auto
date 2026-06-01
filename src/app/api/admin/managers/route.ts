@@ -84,7 +84,7 @@ export async function POST(req: NextRequest) {
 
   const { data: existingCustomer, error: existingLookupError } = await supabase
     .from("customers")
-    .select("id, name, email, phone, role, password_hash, manager_access_enabled, manager_access_granted_at, manager_access_revoked_at, created_at")
+    .select("id, name, email, phone, role, password_hash, manager_access_enabled, manager_access_granted_at, manager_access_revoked_at, owner_portal_enabled, created_at")
     .eq("email", email)
     .maybeSingle();
 
@@ -98,6 +98,9 @@ export async function POST(req: NextRequest) {
   let inviteMessage = "";
 
   if (existingCustomer) {
+    const keepOwnerPortal =
+      existingCustomer.role === "owner" ||
+      (existingCustomer as { owner_portal_enabled?: boolean }).owner_portal_enabled === true;
     const { data: updated, error: updateError } = await supabase
       .from("customers")
       .update({
@@ -107,6 +110,7 @@ export async function POST(req: NextRequest) {
         manager_access_enabled: true,
         manager_access_granted_at: now,
         manager_access_revoked_at: null,
+        ...(keepOwnerPortal ? { owner_portal_enabled: true } : {}),
       })
       .eq("id", existingCustomer.id)
       .select(MANAGER_DB_SELECT)

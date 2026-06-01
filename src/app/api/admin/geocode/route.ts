@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
-import { isStaffJwtRole } from "@/lib/auth/roles";
+import { tokenHasStaffAccess } from "@/lib/auth/roles";
 
 /**
  * Server-side geocoding proxy.
@@ -14,7 +14,7 @@ import { isStaffJwtRole } from "@/lib/auth/roles";
 export async function GET(request: NextRequest) {
   try {
     const auth = await getAuthFromRequest(request);
-    if (!auth || !isStaffJwtRole(auth.role)) {
+    if (!auth || !tokenHasStaffAccess(auth)) {
       return NextResponse.json(
         { success: false, message: "Unauthorized" },
         { status: 401 }

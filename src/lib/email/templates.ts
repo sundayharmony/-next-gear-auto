@@ -598,6 +598,36 @@ export function passwordResetTemplate(data: { customerName: string; customerEmai
   `);
 }
 
+/** Email for existing accounts that already have a password — links to /reset-password */
+export function accountPasswordResetTemplate(data: { customerName: string; customerEmail: string; token?: string }): string {
+  if (!data || !data.customerName || !data.customerEmail) {
+    throw new Error("Invalid email data: missing required fields");
+  }
+  const encodedEmail = encodeURIComponent(data.customerEmail);
+  const tokenParam = data.token ? `&token=${encodeURIComponent(data.token)}` : "";
+  return wrapEmail(`
+    <tr>
+      <td style="padding: 40px 32px 24px; text-align: center;">
+        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
+        <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Reset Your Password</h1>
+      </td>
+    </tr>
+    <tr>
+      <td style="padding: 0 32px;">
+        <p style="margin: 0 0 20px; color: #4b5563; font-size: 15px; line-height: 1.6; text-align: center;">Hi ${highlightRenterName(data.customerName)}, use the button below to choose a new password for your NextGearAuto account.</p>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 0 0 20px;">
+          <tr>
+            <td align="center">
+              <a href="${SITE_URL}/reset-password?email=${encodedEmail}${tokenParam}" style="display: inline-block; background: #111827; color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-weight: 600; font-size: 15px;">Reset My Password</a>
+            </td>
+          </tr>
+        </table>
+        <p style="margin: 0 0 24px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">This link expires in 48 hours. If you didn't request this, you can safely ignore this email.</p>
+      </td>
+    </tr>
+  `);
+}
+
 export function bookingExtendedTemplate(data: ExtensionEmailData): string {
   if (!data || !data.customerName || !data.bookingId || !data.vehicleName) {
     throw new Error("Invalid email data: missing required fields");

@@ -23,7 +23,41 @@ export function isOwnerRole(role: AppRole): boolean {
   return role === "owner";
 }
 
-/** JWT / DB role string is staff (admin or manager). */
+type TokenRoleFields = { role?: unknown; roles?: unknown };
+
+/** Roles encoded on the JWT (falls back to single `role` for older tokens). */
+export function getTokenRoles(payload: TokenRoleFields | null | undefined): AppRole[] {
+  if (!payload) return [];
+  if (Array.isArray(payload.roles) && payload.roles.length > 0) {
+    return payload.roles.filter(isAppRole);
+  }
+  return isAppRole(payload.role) ? [payload.role] : [];
+}
+
+export function tokenHasRole(payload: TokenRoleFields | null | undefined, role: AppRole): boolean {
+  return getTokenRoles(payload).includes(role);
+}
+
+export function tokenHasStaffAccess(payload: TokenRoleFields | null | undefined): boolean {
+  const roles = getTokenRoles(payload);
+  return roles.includes("admin") || roles.includes("manager");
+}
+
+export function tokenHasOwnerAccess(payload: TokenRoleFields | null | undefined): boolean {
+  return tokenHasRole(payload, "owner");
+}
+
+/** Staff role for scoped API behavior (admin wins over manager). */
+export function getTokenStaffRole(
+  payload: TokenRoleFields | null | undefined,
+): Extract<AppRole, "admin" | "manager"> | null {
+  const roles = getTokenRoles(payload);
+  if (roles.includes("admin")) return "admin";
+  if (roles.includes("manager")) return "manager";
+  return null;
+}
+
+/** JWT / DB role string is staff (admin or manager). @deprecated Prefer tokenHasStaffAccess */
 export function isStaffJwtRole(role: unknown): role is Extract<AppRole, "admin" | "manager"> {
   return isAppRole(role) && isStaffRole(role);
 }
