@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import { Car, Shield, Clock, DollarSign, Star, ArrowRight, Users, Luggage, Fuel, Settings2, Lock, BadgeCheck, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -42,6 +43,8 @@ interface Vehicle {
 }
 
 export default async function HomePage() {
+  const nonce = (await headers()).get("x-nonce") ?? undefined;
+
   // Fetch featured vehicles from Supabase
   const supabase = getServiceSupabase();
   let featuredVehicles: Vehicle[] = [];
@@ -79,7 +82,7 @@ export default async function HomePage() {
 
   return (
     <>
-      <script type="application/ld+json" suppressHydrationWarning>
+      <script type="application/ld+json" nonce={nonce} suppressHydrationWarning>
         {JSON.stringify(generateLocalBusinessSchema())}
       </script>
 
