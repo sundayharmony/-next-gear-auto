@@ -21,7 +21,7 @@ export async function GET(req: NextRequest) {
   if (!auth.authorized) return auth.response;
 
   try {
-    const { vehicles, bookings } = await loadOwnerDataset(auth.ownerId);
+    const { vehicles, bookings } = await loadOwnerDataset(auth.ownerId, { ownerPortalOnly: true });
 
     let totalRevenue = 0;
     let upcomingBookings = 0;

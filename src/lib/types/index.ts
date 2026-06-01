@@ -403,6 +403,7 @@ export interface OwnerBooking extends PayoutBreakdown {
   payoutStatus: PayoutStatus;
   payoutDate: string | null;
   createdAt: string;
+  originChannel?: "public_checkout" | "admin_panel" | "manager_panel" | "owner_panel" | "unknown" | null;
 }
 
 /** Aggregated owner dashboard metrics. */

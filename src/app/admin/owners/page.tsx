@@ -20,6 +20,7 @@ import {
 import {
   Modal,
   ModalContent,
+  ModalDescription,
   ModalHeader,
   ModalTitle,
 } from "@/components/ui/modal";
@@ -64,6 +65,7 @@ export default function AdminOwnersPage() {
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
   const [payoutsOwner, setPayoutsOwner] = useState<AdminOwner | null>(null);
+  const [supportsCompanyOwned, setSupportsCompanyOwned] = useState(true);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,6 +79,7 @@ export default function AdminOwnersPage() {
       if (oJson.success) {
         setOwners(oJson.data || []);
         setVehicleAssignments(oJson.vehicleAssignments || {});
+        setSupportsCompanyOwned(oJson.meta?.supportsCompanyOwned !== false);
       }
       if (vJson.success) setVehicles(vJson.data || []);
     } catch {
@@ -181,11 +184,21 @@ export default function AdminOwnersPage() {
               )}
             </AdminSection>
 
+            {!supportsCompanyOwned && (
+              <AdminCard className="mb-4 border-amber-200 bg-amber-50">
+                <p className="text-sm text-amber-900">
+                  <strong>Database update needed:</strong> “Company owned” cannot be saved until you run{" "}
+                  <code className="rounded bg-amber-100 px-1">supabase-company-owned-vehicles.sql</code> in the
+                  Supabase SQL Editor. You can still assign vehicles to an owner or leave them unassigned.
+                </p>
+              </AdminCard>
+            )}
             <AdminSection title="Vehicle assignments" description="Assign vehicles to owners and set each owner's revenue share.">
               <VehicleAssignments
                 vehicles={vehicles}
                 owners={owners}
                 assignment={assignment}
+                supportsCompanyOwned={supportsCompanyOwned}
                 onSaved={load}
               />
             </AdminSection>
@@ -203,11 +216,13 @@ function VehicleAssignments({
   vehicles,
   owners,
   assignment,
+  supportsCompanyOwned,
   onSaved,
 }: {
   vehicles: AdminVehicle[];
   owners: AdminOwner[];
   assignment: Map<string, { ownerId: string; isCompanyOwned: boolean; pct: number }>;
+  supportsCompanyOwned: boolean;
   onSaved: () => void;
 }) {
   const { showToast } = useNotification();
@@ -238,6 +253,14 @@ function VehicleAssignments({
 
   const save = async (vId: string) => {
     const draft = getDraft(vId);
+    if (!supportsCompanyOwned && draft.ownerId === COMPANY_OWNED_OWNER_ID) {
+      showToast(
+        "error",
+        "Database update required",
+        "Run supabase-company-owned-vehicles.sql in Supabase before using Company owned."
+      );
+      return;
+    }
     setSavingId(vId);
     try {
       const res = await adminFetch("/api/admin/owners", {
@@ -289,7 +312,9 @@ function VehicleAssignments({
                 <td className="px-4 py-3">
                   <Select value={draft.ownerId} onChange={(e) => setDraft(v.id, { ownerId: e.target.value })} className="min-w-[180px]">
                     <option value="">Unassigned</option>
-                    <option value={COMPANY_OWNED_OWNER_ID}>Company owned</option>
+                    {supportsCompanyOwned && (
+                      <option value={COMPANY_OWNED_OWNER_ID}>Company owned</option>
+                    )}
                     {owners.map((o) => (
                       <option key={o.id} value={o.id}>{o.name}</option>
                     ))}
@@ -381,6 +406,9 @@ function AddOwnerModal({ open, onClose, onCreated }: { open: boolean; onClose: (
       <ModalContent>
         <ModalHeader>
           <ModalTitle>Add Owner</ModalTitle>
+          <ModalDescription className="sr-only">
+            Create a new owner account or promote an existing customer by email.
+          </ModalDescription>
         </ModalHeader>
         <div className="space-y-3">
           <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Jane Owner" />

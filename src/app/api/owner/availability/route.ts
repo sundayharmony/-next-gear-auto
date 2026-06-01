@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyOwner } from "@/lib/owner/owner-check";
+import { isOwnerVisibleBooking } from "@/lib/owner/finance";
 import { loadOwnerDataset } from "@/lib/owner/owner-data";
+import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { notifyOwner } from "@/lib/owner/notifications";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
@@ -34,11 +36,22 @@ export async function GET(req: NextRequest) {
         .order("start_date", { ascending: true }),
       supabase
         .from("bookings")
-        .select("id, vehicle_id, pickup_date, return_date, status")
+        .select("id, vehicle_id, pickup_date, return_date, status, created_at, origin_channel")
         .in("vehicle_id", vehicleIds)
         .not("status", "in", "(cancelled,no-show)")
         .order("pickup_date", { ascending: true }),
     ]);
+
+    const todayYmd = formatYyyyMmDdLocal(new Date());
+    const visibleBookings = (bookings || []).filter((b) =>
+      isOwnerVisibleBooking(
+        {
+          origin_channel: b.origin_channel as string | null,
+          created_at: b.created_at as string | null,
+        },
+        todayYmd
+      )
+    );
 
     return NextResponse.json(
       {
@@ -55,7 +68,7 @@ export async function GET(req: NextRequest) {
             // Only owner-created blocks (source 'owner' + owner_id match) are removable here.
             removable: b.source === "owner" && b.owner_id === auth.ownerId,
           })),
-          bookedRanges: (bookings || []).map((b) => ({
+          bookedRanges: visibleBookings.map((b) => ({
             id: b.id,
             vehicleId: b.vehicle_id,
             startDate: b.pickup_date,

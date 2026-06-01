@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
     const bookingId = searchParams.get("id");
-    const { bookings } = await loadOwnerDataset(auth.ownerId);
+    const { bookings } = await loadOwnerDataset(auth.ownerId, { ownerPortalOnly: true });
 
     if (bookingId) {
       const booking = bookings.find((b) => b.id === bookingId);

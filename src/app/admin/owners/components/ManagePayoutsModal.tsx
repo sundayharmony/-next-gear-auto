@@ -5,6 +5,7 @@ import { DollarSign, Loader2 } from "lucide-react";
 import {
   Modal,
   ModalContent,
+  ModalDescription,
   ModalHeader,
   ModalTitle,
 } from "@/components/ui/modal";
@@ -43,7 +44,12 @@ export function ManagePayoutsModal({
       try {
         const res = await adminFetch(`/api/admin/owner-payouts?ownerId=${encodeURIComponent(ownerId)}`);
         const json = await res.json();
-        if (json.success) setBookings(json.data || []);
+        if (json.success) {
+          const rows = (json.data || []) as OwnerBooking[];
+          setBookings(rows.filter((b) => b.kind !== "turo" && !String(b.id).startsWith("turo:")));
+        } else {
+          showToast("error", "Load failed", json.message || "Could not load payouts.");
+        }
       } catch {
         showToast("error", "Load failed", "Could not load payouts.");
       } finally {
@@ -59,6 +65,10 @@ export function ManagePayoutsModal({
   }, [owner, load]);
 
   const updateStatus = async (booking: OwnerBooking, status: PayoutStatus) => {
+    if (booking.kind === "turo" || String(booking.id).startsWith("turo:")) {
+      showToast("error", "Not supported", "Payouts apply to website bookings only, not Turo trips.");
+      return;
+    }
     setBusyId(booking.id);
     try {
       const res = await adminFetch("/api/admin/owner-payouts", {
@@ -86,6 +96,9 @@ export function ManagePayoutsModal({
       <ModalContent className="sm:max-w-2xl">
         <ModalHeader>
           <ModalTitle>{owner ? `Payouts — ${owner.name}` : "Payouts"}</ModalTitle>
+          <ModalDescription className="sr-only">
+            Review and update payout status for this owner&apos;s website bookings.
+          </ModalDescription>
         </ModalHeader>
         {loading ? (
           <div className="flex justify-center py-10">

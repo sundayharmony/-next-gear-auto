@@ -52,6 +52,15 @@ export async function POST(req: NextRequest) {
     if (!bookingId) {
       return NextResponse.json({ success: false, message: "bookingId is required" }, { status: 400 });
     }
+    if (String(bookingId).startsWith("turo:")) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Turo trips cannot have owner payout records. Use website bookings only.",
+        },
+        { status: 400 }
+      );
+    }
     if (status && !VALID_STATUS.includes(status)) {
       return NextResponse.json({ success: false, message: "Invalid status" }, { status: 400 });
     }
@@ -148,6 +157,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, data: breakdown });
   } catch (err) {
     logger.error("Admin owner-payouts POST error:", err);
-    return NextResponse.json({ success: false, message: "Invalid request" }, { status: 400 });
+    const msg = err instanceof Error ? err.message : "Invalid request";
+    return NextResponse.json({ success: false, message: msg }, { status: 500 });
   }
 }

@@ -5,6 +5,12 @@ import { enrichOwnerRow } from "@/lib/admin/owner-enrichment";
 import { clampPercentage, DEFAULT_OWNER_PERCENTAGE } from "@/lib/owner/finance";
 import { isCompanyOwnedOwnerId } from "@/lib/owner/ownership";
 import { hasOwnerPortalAccess } from "@/lib/auth/customer-capabilities";
+import {
+  fetchVehiclesForOwnerAssignments,
+  patchVehicleAssignment,
+  vehicleSupportsCompanyOwnedFlag,
+} from "@/lib/admin/vehicle-assignment-db";
+import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
 import { logger } from "@/lib/utils/logger";
@@ -20,27 +26,38 @@ export async function GET(req: NextRequest) {
 
   try {
     const supabase = getServiceSupabase();
-    const { data: owners, error } = await supabase
+
+    let ownersQuery = await supabase
       .from("customers")
       .select("id, name, email, phone, created_at, password_hash, role, owner_portal_enabled")
       .or("role.eq.owner,owner_portal_enabled.eq.true")
       .order("name", { ascending: true });
 
-    if (error) {
-      logger.error("Admin owners GET error:", error);
+    if (ownersQuery.error && isMissingColumnError(ownersQuery.error)) {
+      ownersQuery = await supabase
+        .from("customers")
+        .select("id, name, email, phone, created_at, password_hash, role")
+        .eq("role", "owner")
+        .order("name", { ascending: true });
+    }
+
+    const { data: owners, error: ownersError } = ownersQuery;
+    if (ownersError) {
+      logger.error("Admin owners GET error:", ownersError);
       return NextResponse.json({ success: false, message: "Failed to load owners" }, { status: 500 });
     }
 
-    const [{ data: vehicleRows }, enriched] = await Promise.all([
-      supabase.from("vehicles").select("id, owner_id, owner_percentage, is_company_owned"),
+    const [vehicleResult, enriched] = await Promise.all([
+      fetchVehiclesForOwnerAssignments(supabase),
       Promise.all((owners || []).map((o) => enrichOwnerRow(o, { recentBookingsLimit: 0 }))),
     ]);
+    const vehicleRows = vehicleResult.rows;
 
     const vehicleAssignments: Record<
       string,
       { ownerId: string | null; isCompanyOwned: boolean; ownerPercentage: number }
     > = {};
-    for (const v of vehicleRows || []) {
+    for (const v of vehicleRows) {
       const isCompanyOwned = v.is_company_owned === true;
       vehicleAssignments[v.id as string] = {
         ownerId: isCompanyOwned ? null : ((v.owner_id as string | null) ?? null),
@@ -52,7 +69,12 @@ export async function GET(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { success: true, data: enriched, vehicleAssignments },
+      {
+        success: true,
+        data: enriched,
+        vehicleAssignments,
+        meta: { supportsCompanyOwned: vehicleResult.supportsCompanyOwned },
+      },
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err) {
@@ -160,35 +182,55 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, message: "vehicleId is required" }, { status: 400 });
     }
 
+    const supportsCompanyOwned = await vehicleSupportsCompanyOwnedFlag(supabase);
     const updates: Record<string, string | number | boolean | null> = {};
     let assigningCompany = false;
 
     if ("ownerId" in body) {
       const ownerId = body.ownerId;
       if (isCompanyOwnedOwnerId(ownerId) || body.isCompanyOwned === true) {
+        if (!supportsCompanyOwned) {
+          return NextResponse.json(
+            {
+              success: false,
+              message:
+                "“Company owned” requires a database update. In Supabase SQL Editor, run supabase-company-owned-vehicles.sql, then try again.",
+            },
+            { status: 400 }
+          );
+        }
         updates.owner_id = null;
         updates.is_company_owned = true;
         updates.owner_percentage = 0;
         assigningCompany = true;
       } else if (ownerId === null || ownerId === "") {
         updates.owner_id = null;
-        updates.is_company_owned = false;
+        if (supportsCompanyOwned) updates.is_company_owned = false;
       } else {
-        const { data: owner } = await supabase
+        let ownerQuery = await supabase
           .from("customers")
           .select("id, role, owner_portal_enabled")
           .eq("id", ownerId)
           .maybeSingle();
+        if (ownerQuery.error && isMissingColumnError(ownerQuery.error)) {
+          ownerQuery = await supabase
+            .from("customers")
+            .select("id, role")
+            .eq("id", ownerId)
+            .eq("role", "owner")
+            .maybeSingle();
+        }
+        const owner = ownerQuery.data;
         if (!owner || !hasOwnerPortalAccess(owner)) {
           return NextResponse.json({ success: false, message: "Target is not an owner account" }, { status: 400 });
         }
         updates.owner_id = ownerId;
-        updates.is_company_owned = false;
+        if (supportsCompanyOwned) updates.is_company_owned = false;
       }
     }
 
     if (body.ownerPercentage !== undefined && !assigningCompany) {
-      if (!("ownerId" in body)) {
+      if (!("ownerId" in body) && supportsCompanyOwned) {
         const { data: current } = await supabase
           .from("vehicles")
           .select("is_company_owned")
@@ -212,13 +254,35 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, message: "No changes provided" }, { status: 400 });
     }
 
-    const { error } = await supabase.from("vehicles").update(updates).eq("id", vehicleId);
+    const { error, companyOwnedUnsupported } = await patchVehicleAssignment(
+      supabase,
+      vehicleId,
+      updates
+    );
     if (error) {
       logger.error("Assign owner error:", error);
-      return NextResponse.json({ success: false, message: "Failed to update vehicle assignment" }, { status: 500 });
+      const status = companyOwnedUnsupported ? 400 : 500;
+      const hint =
+        companyOwnedUnsupported || isMissingColumnError(error)
+          ? " Run supabase-company-owned-vehicles.sql in Supabase SQL Editor."
+          : "";
+      const detail = error.message ? ` (${error.message})` : "";
+      return NextResponse.json(
+        {
+          success: false,
+          message: (error.message || "Failed to update vehicle assignment") + detail + hint,
+        },
+        { status }
+      );
     }
 
-    return NextResponse.json({ success: true, message: "Vehicle assignment updated" });
+    return NextResponse.json({
+      success: true,
+      message: "Vehicle assignment updated",
+      ...(companyOwnedUnsupported
+        ? { warning: "Company owned flag is not in the database yet; saved owner assignment only." }
+        : {}),
+    });
   } catch (err) {
     logger.error("Admin owners PATCH error:", err);
     return NextResponse.json({ success: false, message: "Invalid request" }, { status: 400 });

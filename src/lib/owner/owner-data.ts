@@ -10,6 +10,7 @@ import {
   clampPercentage,
   computePayoutBreakdown,
   deriveOwnerStatus,
+  isOwnerVisibleBooking,
   rentalDays,
   DEFAULT_OWNER_PERCENTAGE,
 } from "@/lib/owner/finance";
@@ -34,12 +35,23 @@ export interface OwnerDataset {
   bookings: OwnerBooking[];
 }
 
+export interface LoadOwnerDatasetOptions {
+  /**
+   * When true (owner portal), hide staff/private bookings created before today.
+   * Admin views should pass false to retain full history.
+   */
+  ownerPortalOnly?: boolean;
+}
+
 /**
  * Load an owner's vehicles, bookings and payout records, and assemble the
  * enriched `OwnerBooking[]` (with payout breakdowns) used across the portal.
  * One round-trip set per request; safe for owners with many vehicles.
  */
-export async function loadOwnerDataset(ownerId: string): Promise<OwnerDataset> {
+export async function loadOwnerDataset(
+  ownerId: string,
+  options?: LoadOwnerDatasetOptions
+): Promise<OwnerDataset> {
   const supabase = getServiceSupabase();
 
   const { data: vehicleRows } = await supabase
@@ -70,7 +82,9 @@ export async function loadOwnerDataset(ownerId: string): Promise<OwnerDataset> {
   const [{ data: bookingRows }, { data: payoutRows }] = await Promise.all([
     supabase
       .from("bookings")
-      .select("id, vehicle_id, customer_name, pickup_date, return_date, total_price, deposit, status, payment_method, created_at")
+      .select(
+        "id, vehicle_id, customer_name, pickup_date, return_date, total_price, deposit, status, payment_method, created_at, origin_channel"
+      )
       .in("vehicle_id", vehicleIds)
       .order("pickup_date", { ascending: false })
       .limit(2000),
@@ -125,9 +139,24 @@ export async function loadOwnerDataset(ownerId: string): Promise<OwnerDataset> {
       payoutStatus: payout?.status ?? "pending",
       payoutDate: payout?.payout_date ?? null,
       createdAt: b.created_at,
+      originChannel: (b.origin_channel as OwnerBooking["originChannel"]) ?? undefined,
       ...breakdown,
     };
   });
+
+  let visibleBookings = bookings;
+  if (options?.ownerPortalOnly) {
+    visibleBookings = bookings.filter((b) =>
+      isOwnerVisibleBooking(
+        {
+          kind: b.kind,
+          origin_channel: b.originChannel,
+          createdAt: b.createdAt,
+        },
+        today
+      )
+    );
+  }
 
   const turoBlocks = await fetchOwnerTuroBlocks(supabase, vehicleIds);
   for (const row of turoBlocks) {
@@ -153,7 +182,7 @@ export async function loadOwnerDataset(ownerId: string): Promise<OwnerDataset> {
     const driver =
       getTuroDriverFromReason((row.reason as string | null) ?? null) || "Turo guest";
 
-    bookings.push({
+    visibleBookings.push({
       id: `turo:${String(row.id)}`,
       kind: "turo",
       vehicleId,
@@ -171,12 +200,12 @@ export async function loadOwnerDataset(ownerId: string): Promise<OwnerDataset> {
     });
   }
 
-  bookings.sort((a, b) => {
+  visibleBookings.sort((a, b) => {
     if (a.pickupDate !== b.pickupDate) return a.pickupDate < b.pickupDate ? 1 : -1;
     return (b.createdAt || "").localeCompare(a.createdAt || "");
   });
 
-  return { vehicles, vehicleMap, bookings };
+  return { vehicles, vehicleMap, bookings: visibleBookings };
 }
 
 async function fetchOwnerTuroBlocks(
