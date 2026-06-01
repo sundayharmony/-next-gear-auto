@@ -1,6 +1,8 @@
 "use client";
 
-import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo } from "react";
+import React, { createContext, useContext, useReducer, useCallback, useEffect, useMemo, useRef } from "react";
+import { getCheckoutTotal } from "@/lib/booking/checkout-total";
+import { logBookingEvent } from "@/lib/booking/booking-events";
 import type { Vehicle, BookingExtra, BookingStep, PricingBreakdown } from "@/lib/types";
 import { calculatePricing, calculateRentalHours, applyDiscount, type PromoDiscount } from "@/lib/utils/price-calculator";
 import { logger } from "@/lib/utils/logger";
@@ -193,8 +195,25 @@ interface BookingContextType extends BookingState {
 
 const BookingContext = createContext<BookingContextType | undefined>(undefined);
 
+function mapCheckoutError(status: number, message?: string): string {
+  if (status === 409) {
+    return (
+      message ||
+      "These dates were just booked by another customer. Please go back and select different dates."
+    );
+  }
+  if (status === 400 && message?.toLowerCase().includes("price")) {
+    return "Your quote has changed. Please review the updated total and try again.";
+  }
+  if (status >= 500) {
+    return "Our booking service is temporarily unavailable. Please try again in a moment.";
+  }
+  return message || "Checkout failed. Please try again.";
+}
+
 export function BookingProvider({ children }: { children: React.ReactNode }) {
   const [state, dispatch] = useReducer(bookingReducer, initialState);
+  const submitInFlightRef = useRef(false);
 
   const setDates = useCallback((pickupDate: string, returnDate: string, pickupTime?: string, returnTime?: string) => {
     dispatch({ type: "SET_DATES", payload: { pickupDate, returnDate, pickupTime, returnTime } });
@@ -273,6 +292,10 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const submitBooking = useCallback(async () => {
+    if (submitInFlightRef.current || state.isSubmitting) {
+      return;
+    }
+
     // Validate required data before submission
     if (!state.selectedVehicle?.id) {
       dispatch({ type: "SUBMIT_ERROR", payload: "Please select a vehicle." });
@@ -295,7 +318,15 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
+    submitInFlightRef.current = true;
     dispatch({ type: "SUBMIT_START" });
+    logBookingEvent("checkout_start", {
+      vehicleId: state.selectedVehicle.id,
+      step: state.currentStep,
+    });
+
+    const chargeTotal = getCheckoutTotal(state.pricing, state.locationSurcharge);
+
     try {
       // Call our checkout API which creates booking in Supabase + Stripe Checkout session
       const res = await csrfFetch("/api/checkout", {
@@ -310,7 +341,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           returnTime: state.returnTime,
           extras: state.extras.filter((e) => e.selected),
           customerDetails: state.customerDetails,
-          totalPrice: state.pricing.total,
+          totalPrice: chargeTotal,
           deposit: state.pricing.deposit,
           signedName: state.signedName,
           promoCode: state.promoCode || undefined,
@@ -328,10 +359,18 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
       if (!res.ok) {
         const errorData = await res.json().catch(() => null);
-        dispatch({
-          type: "SUBMIT_ERROR",
-          payload: errorData?.message || `Server error (${res.status}). Please try again.`,
-        });
+        const msg = mapCheckoutError(res.status, errorData?.message);
+        if (res.status === 409) {
+          logBookingEvent("checkout_overlap", { vehicleId: state.selectedVehicle.id });
+        } else if (res.status === 400 && errorData?.message?.toLowerCase().includes("price")) {
+          logBookingEvent("checkout_price_mismatch", { vehicleId: state.selectedVehicle.id });
+        } else {
+          logBookingEvent("checkout_failed", {
+            status: res.status,
+            vehicleId: state.selectedVehicle.id,
+          });
+        }
+        dispatch({ type: "SUBMIT_ERROR", payload: msg });
         return;
       }
       const data = await res.json();
@@ -379,19 +418,24 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           }
         }
         // Redirect to Stripe Checkout hosted page
+        logBookingEvent("checkout_success", { bookingId: data.data.bookingId });
         dispatch({ type: "SUBMIT_SUCCESS", payload: data.data.bookingId });
         window.location.href = sessionUrl;
       } else {
+        logBookingEvent("checkout_failed", { reason: "no_session_url" });
         dispatch({
           type: "SUBMIT_ERROR",
           payload: data.message || "Checkout failed. Please try again.",
         });
       }
     } catch {
+      logBookingEvent("checkout_failed", { reason: "network" });
       dispatch({
         type: "SUBMIT_ERROR",
-        payload: "An error occurred. Please try again.",
+        payload: "Connection lost. Please check your network and try again.",
       });
+    } finally {
+      submitInFlightRef.current = false;
     }
   }, [state]);
 

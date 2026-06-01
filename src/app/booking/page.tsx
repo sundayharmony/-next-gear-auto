@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useCallback, Suspense } from "react";
+import React, { useState, useEffect, useRef, useCallback, Suspense, useMemo } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -32,6 +32,11 @@ import {
 } from "@/lib/utils/booking-dates";
 import { calculateRentalHours } from "@/lib/utils/price-calculator";
 import { isValidEmailFormat } from "@/lib/utils/validation";
+import { VehicleThumbnail } from "@/components/vehicle-thumbnail";
+import { FleetLoadingGrid } from "@/components/public/fleet-loading-grid";
+import { useFleetBookedDates } from "@/lib/hooks/use-fleet-booked-dates";
+import { rangesConflictWithSelection } from "@/lib/booking/booked-ranges";
+import { getCheckoutTotal } from "@/lib/booking/checkout-total";
 
 const STEPS = [
   { num: 1, label: "Search", icon: Search },
@@ -137,20 +142,16 @@ function BookingPageInner() {
   const [insuranceUploadError, setInsuranceUploadError] = useState("");
   const [showInsuranceWarning, setShowInsuranceWarning] = useState(false);
 
-  // Booked dates for vehicle availability
-  interface BookedRange {
-    id: string;
-    pickupDate: string;
-    returnDate: string;
-    pickupTime: string;
-    returnTime: string;
-    status: string;
-  }
-  const [vehicleBookedDates, setVehicleBookedDates] = useState<Record<string, BookedRange[]>>({});
-  const [checkingAvailability, setCheckingAvailability] = useState(false);
-
   // Fetch vehicles from API
   const { vehicles: hookVehicles, loading: hookLoading, error: hookError, retry: retryVehicles } = useVehicles();
+  const vehicleIds = useMemo(() => hookVehicles.map((v) => v.id), [hookVehicles]);
+  const datesReady = Boolean(booking.pickupDate && booking.returnDate);
+  const {
+    bookedByVehicle: vehicleBookedDates,
+    loading: checkingAvailability,
+    error: availabilityError,
+    retry: retryAvailability,
+  } = useFleetBookedDates(vehicleIds, datesReady && hookVehicles.length > 0);
 
   // Sync hook state to component state
   useEffect(() => {
@@ -179,51 +180,6 @@ function BookingPageInner() {
       }
     }
   }, [searchParams, booking.selectedVehicle, preSelected, vehicles, vehiclesLoading]);
-
-  // Fetch booked dates for all vehicles when dates are set (Step 1 → Step 2 transition)
-  useEffect(() => {
-    if (!booking.pickupDate || !booking.returnDate) return;
-    if (vehicles.length === 0) return;
-
-    let cancelled = false;
-    const controller = new AbortController();
-
-    const fetchAllBookedDates = async () => {
-      if (!cancelled) setCheckingAvailability(true);
-      const dateMap: Record<string, BookedRange[]> = {};
-      try {
-        await Promise.all(
-          vehicles.map(async (v) => {
-            try {
-              const res = await fetch(`/api/vehicles/booked-dates?vehicleId=${v.id}`, { signal: controller.signal });
-              if (!res.ok) throw new Error(`HTTP ${res.status}`);
-              const data = await res.json();
-              if (data.success) {
-                dateMap[v.id] = data.data || [];
-              }
-            } catch (err) {
-              if ((err as Error).name !== "AbortError") {
-                dateMap[v.id] = [];
-              }
-            }
-          })
-        );
-      } catch {
-        // If fetching fails, don't block anything
-      }
-      if (!cancelled) {
-        setVehicleBookedDates(dateMap);
-        setCheckingAvailability(false);
-      }
-    };
-
-    fetchAllBookedDates();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [booking.pickupDate, booking.returnDate, vehicles]);
 
   // Fetch locations on mount
   useEffect(() => {
@@ -275,34 +231,25 @@ function BookingPageInner() {
     }
   }, [booking.idDocumentUrl]);
 
-  // Check if a vehicle has a date conflict with selected dates (includes 60-minute buffer matching server gap)
-  const isVehicleBooked = (vehicleId: string): boolean => {
-    const ranges = vehicleBookedDates[vehicleId];
-    if (!ranges || ranges.length === 0) return false;
-    if (!booking.pickupDate || !booking.returnDate) return false;
+  const isVehicleBooked = useCallback(
+    (vehicleId: string): boolean =>
+      rangesConflictWithSelection(
+        vehicleBookedDates[vehicleId],
+        booking.pickupDate,
+        booking.returnDate,
+        booking.pickupTime,
+        booking.returnTime
+      ),
+    [
+      vehicleBookedDates,
+      booking.pickupDate,
+      booking.returnDate,
+      booking.pickupTime,
+      booking.returnTime,
+    ]
+  );
 
-    const BUFFER_MS = 60 * 60 * 1000; // 60 minutes (matches server gap)
-
-    // Convert selected dates + times to timestamps
-    const selectedPickup = new Date(`${booking.pickupDate}T${booking.pickupTime || "10:00"}:00`).getTime();
-    const selectedReturn = new Date(`${booking.returnDate}T${booking.returnTime || "10:00"}:00`).getTime();
-
-    for (const range of ranges) {
-      // Convert existing booking dates + times to timestamps
-      const existingPickup = new Date(`${range.pickupDate}T${range.pickupTime || "10:00"}:00`).getTime();
-      const existingReturn = new Date(`${range.returnDate}T${range.returnTime || "10:00"}:00`).getTime();
-
-      // Add 60-minute buffer: existing booking blocks from (pickup - 60m) to (return + 60m)
-      const bufferedStart = existingPickup - BUFFER_MS;
-      const bufferedEnd = existingReturn + BUFFER_MS;
-
-      // Check overlap: selected range overlaps with buffered existing range
-      if (selectedPickup < bufferedEnd && selectedReturn > bufferedStart) {
-        return true;
-      }
-    }
-    return false;
-  };
+  const checkoutTotal = getCheckoutTotal(booking.pricing, booking.locationSurcharge);
 
   // Customer details local state - restore from booking context if available
   const [details, setDetails] = useState(() => {
@@ -373,13 +320,20 @@ function BookingPageInner() {
   const [selectedReturnLocation, setSelectedReturnLocation] = useState<string>("");
   const [differentDropoff, setDifferentDropoff] = useState(false);
 
-  // Recalculate pricing when vehicle or extras change
+  // Recalculate pricing when vehicle, dates, times, or extras change
   useEffect(() => {
     if (booking.selectedVehicle && booking.pickupDate && booking.returnDate) {
       booking.setExtras(localExtras);
       booking.recalculatePrice();
     }
-  }, [localExtras, booking.selectedVehicle, booking.pickupDate, booking.returnDate]);
+  }, [
+    localExtras,
+    booking.selectedVehicle,
+    booking.pickupDate,
+    booking.returnDate,
+    booking.pickupTime,
+    booking.returnTime,
+  ]);
 
   // Track currentStep in a ref so the beforeunload handler doesn't churn on every step change
   const currentStepRef = useRef(booking.currentStep);
@@ -560,7 +514,13 @@ function BookingPageInner() {
           !!searchDates.return &&
           !!searchDates.pickupTime &&
           !!searchDates.returnTime;
-      case 2: return !!booking.selectedVehicle;
+      case 2:
+        return (
+          !!booking.selectedVehicle &&
+          !checkingAvailability &&
+          !availabilityError &&
+          !isVehicleBooked(booking.selectedVehicle.id)
+        );
       case 3: {
         // Insurance (e1) is required: must either be selected (pay for it)
         // or the user must have uploaded proof of their own coverage
@@ -939,7 +899,7 @@ function BookingPageInner() {
               <div className="text-right">
                 {booking.pricing ? (
                   <span className="text-lg font-bold text-purple-700">
-                    ${booking.pricing.total.toFixed(2)}
+                    ${checkoutTotal.toFixed(2)}
                     <span className="text-xs font-normal text-gray-500 ml-1">total</span>
                   </span>
                 ) : (
@@ -1236,9 +1196,17 @@ function BookingPageInner() {
                 </div>
               )}
               {checkingAvailability && (
-                <div className="rounded-lg bg-purple-50 p-3 text-sm text-purple-600 flex items-center gap-2">
+                <div className="rounded-lg bg-purple-50 p-3 text-sm text-purple-600 flex items-center gap-2" role="status" aria-live="polite">
                   <span className="animate-spin inline-block h-4 w-4 border-2 border-purple-600 border-t-transparent rounded-full" />
                   Checking vehicle availability...
+                </div>
+              )}
+              {availabilityError && !checkingAvailability && (
+                <div className="rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-900 flex flex-wrap items-center justify-between gap-2">
+                  <span>{availabilityError}</span>
+                  <Button type="button" variant="outline" size="sm" onClick={retryAvailability}>
+                    Retry
+                  </Button>
                 </div>
               )}
               {urlVehicleUnavailable && (
@@ -1262,12 +1230,11 @@ function BookingPageInner() {
                       onClick={() => !booked && booking.selectVehicle(vehicle)}
                     >
                       <CardContent className="flex items-center gap-4 p-4">
-                        <div className="flex h-20 w-28 shrink-0 items-center justify-center rounded-lg bg-gray-100 overflow-hidden">
-                          {vehicle.images && vehicle.images.length > 0 ? (
-                            <img src={vehicle.images[0]} alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`} loading="lazy" className="h-full w-full object-cover" onError={(e) => { const img = e.target as HTMLImageElement; const parent = img.parentElement; if (parent) { img.style.display = 'none'; const fallback = document.createElement('div'); fallback.className = 'flex h-full w-full items-center justify-center'; fallback.innerHTML = '<svg class="h-10 w-10 text-gray-300" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4v.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'; parent.appendChild(fallback); } }} />
-                          ) : (
-                            <Car className="h-10 w-10 text-gray-300" />
-                          )}
+                        <div className="flex h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-gray-100">
+                          <VehicleThumbnail
+                            src={vehicle.images?.[0]}
+                            alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                          />
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
@@ -1697,11 +1664,11 @@ function BookingPageInner() {
                           )}
                           <div className="border-t pt-3 flex justify-between font-semibold text-lg">
                             <span>Total</span>
-                            <span className="text-purple-600">${booking.pricing.total.toFixed(2)}</span>
+                            <span className="text-purple-600">${checkoutTotal.toFixed(2)}</span>
                           </div>
                           <div className="flex justify-between text-sm text-gray-500">
                             <span>Total Due</span>
-                            <span className="text-purple-600">${booking.pricing.total.toFixed(2)}</span>
+                            <span className="text-purple-600">${checkoutTotal.toFixed(2)}</span>
                           </div>
                         </>
                       )}
@@ -1832,11 +1799,11 @@ function BookingPageInner() {
                     <div className="rounded-lg bg-gray-50 p-4 text-left text-sm space-y-2">
                       <div className="flex justify-between border-b pb-2">
                         <span className="text-gray-500">Rental Total</span>
-                        <span className="font-semibold">${booking.pricing.total.toFixed(2)}</span>
+                        <span className="font-semibold">${checkoutTotal.toFixed(2)}</span>
                       </div>
                       <div className="flex justify-between pt-1">
                         <span className="font-medium text-gray-700">Amount Due Now</span>
-                        <span className="font-bold text-purple-600">${booking.pricing.total.toFixed(2)}</span>
+                        <span className="font-bold text-purple-600">${checkoutTotal.toFixed(2)}</span>
                       </div>
                     </div>
                   )}
@@ -1853,7 +1820,7 @@ function BookingPageInner() {
                     {booking.isSubmitting ? (
                       <>
                         <span className="animate-spin mr-2 inline-block h-4 w-4 border-2 border-white border-t-transparent rounded-full" />
-                        Redirecting to Stripe...
+                        Confirming your reservation…
                       </>
                     ) : (
                       "Proceed to Secure Payment"
@@ -1922,7 +1889,7 @@ function BookingPageInner() {
                         Total
                       </span>
                       <span className="text-base font-bold text-purple-700">
-                        ${booking.pricing.total.toFixed(2)}
+                        ${checkoutTotal.toFixed(2)}
                       </span>
                     </div>
                   )}
@@ -1930,7 +1897,7 @@ function BookingPageInner() {
                   {booking.currentStep < 7 && (
                     <Button
                       onClick={handleNext}
-                      disabled={!canProceed()}
+                      disabled={!canProceed() || booking.isSubmitting}
                       className={cn("sm:ml-auto", !showBarTotal && "flex-1 sm:flex-none")}
                     >
                       {booking.currentStep === 6 ? "Proceed to Payment" : "Continue"}
@@ -1949,7 +1916,13 @@ function BookingPageInner() {
 
 export default function BookingPage() {
   return (
-    <Suspense fallback={<div className="py-20 text-center text-gray-400">Loading...</div>}>
+    <Suspense
+      fallback={
+        <PageContainer className="py-12">
+          <FleetLoadingGrid count={3} />
+        </PageContainer>
+      }
+    >
       <BookingPageInner />
     </Suspense>
   );

@@ -10,6 +10,7 @@ import {
   isValidEmailFormat,
   stripHtmlAngleBrackets,
 } from "@/lib/utils/validation";
+import { logBookingEvent } from "@/lib/booking/booking-events";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import extrasData from "@/data/extras.json";
@@ -208,7 +209,10 @@ export async function POST(request: NextRequest) {
 
     // Double-booking check — allow same-day turnovers with 60-minute gap
     const overlap = await checkBookingOverlap(supabase, vehicleId, pickupDate, returnDate, pickupTime ?? null, returnTime ?? null);
-    if (overlap) return overlap;
+    if (overlap) {
+      logBookingEvent("checkout_overlap", { vehicleId, phase: "initial" });
+      return overlap;
+    }
 
     // ── Server-side price recalculation ──────────────────────────────
     // Never trust client-supplied totalPrice. Recalculate from vehicle rate,
@@ -356,6 +360,11 @@ export async function POST(request: NextRequest) {
     // Fix 3: Reject large price mismatches (> $1.00) instead of just logging
     if (totalPrice != null && Math.abs(totalPrice - serverTotal) > 1.00) {
       logger.warn(`Price mismatch rejected: client=${totalPrice}, server=${serverTotal}, booking for vehicle ${vehicleId}`);
+      logBookingEvent("checkout_price_mismatch", {
+        vehicleId,
+        client: totalPrice,
+        server: serverTotal,
+      });
       return NextResponse.json(
         { success: false, message: "Price mismatch detected. Please try again." },
         { status: 400 }
@@ -435,7 +444,10 @@ export async function POST(request: NextRequest) {
 
     // Re-check vehicle availability immediately before insert to prevent race condition
     const finalOverlap = await checkBookingOverlap(supabase, vehicleId, pickupDate, returnDate, pickupTime ?? null, returnTime ?? null);
-    if (finalOverlap) return finalOverlap;
+    if (finalOverlap) {
+      logBookingEvent("checkout_overlap", { vehicleId, phase: "pre_insert" });
+      return finalOverlap;
+    }
 
     // 2. Create booking in Supabase (status: pending)
     // Use crypto for better collision prevention

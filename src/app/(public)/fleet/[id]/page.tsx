@@ -72,12 +72,22 @@ async function getVehicleReviews(vehicleId: string): Promise<Array<{ id: string;
   try {
     const { data, error } = await supabase
       .from("reviews")
-      .select("*")
-      .eq("vehicleId", vehicleId)
-      .order("createdAt", { ascending: false });
+      .select("id, customer_id, customer_name, vehicle_id, rating, text, created_at, is_verified, status")
+      .eq("vehicle_id", vehicleId)
+      .eq("status", "approved")
+      .order("created_at", { ascending: false });
 
     if (error || !data) return [];
-    return data;
+    return data.map((r) => ({
+      id: String(r.id),
+      customerId: String(r.customer_id ?? ""),
+      customerName: String(r.customer_name ?? "Guest"),
+      vehicleId: String(r.vehicle_id ?? vehicleId),
+      rating: Number(r.rating) || 0,
+      text: String(r.text ?? ""),
+      createdAt: String(r.created_at ?? ""),
+      isVerified: Boolean(r.is_verified),
+    }));
   } catch {
     return [];
   }

@@ -227,7 +227,7 @@ function VehicleAssignments({
 }) {
   const { showToast } = useNotification();
   const [drafts, setDrafts] = useState<Record<string, { ownerId: string; pct: string }>>({});
-  const [savingId, setSavingId] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
   const getDraft = (vId: string) => {
     if (drafts[vId]) return drafts[vId];
@@ -251,39 +251,79 @@ function VehicleAssignments({
     setDrafts((prev) => ({ ...prev, [vId]: next }));
   };
 
-  const save = async (vId: string) => {
+  const savedFor = (vId: string) => {
+    const a = assignment.get(vId);
+    return {
+      ownerId: a?.isCompanyOwned ? COMPANY_OWNED_OWNER_ID : (a?.ownerId ?? ""),
+      pct: a?.isCompanyOwned ? 0 : (a?.pct ?? 70),
+    };
+  };
+
+  const isDirty = (vId: string) => {
     const draft = getDraft(vId);
-    if (!supportsCompanyOwned && draft.ownerId === COMPANY_OWNED_OWNER_ID) {
-      showToast(
-        "error",
-        "Database update required",
-        "Run supabase-company-owned-vehicles.sql in Supabase before using Company owned."
-      );
+    const saved = savedFor(vId);
+    if (draft.ownerId !== saved.ownerId) return true;
+    if (
+      draft.ownerId &&
+      draft.ownerId !== COMPANY_OWNED_OWNER_ID &&
+      Number(draft.pct) !== saved.pct
+    ) {
+      return true;
+    }
+    return false;
+  };
+
+  const dirtyVehicleIds = useMemo(
+    () => vehicles.filter((v) => isDirty(v.id)).map((v) => v.id),
+    [vehicles, drafts, assignment]
+  );
+
+  const saveAll = async () => {
+    if (dirtyVehicleIds.length === 0) {
+      showToast("info", "No changes", "Update an assignment before saving.");
       return;
     }
-    setSavingId(vId);
-    try {
-      const res = await adminFetch("/api/admin/owners", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          vehicleId: vId,
-          ownerId: draft.ownerId === COMPANY_OWNED_OWNER_ID ? COMPANY_OWNED_OWNER_ID : draft.ownerId || null,
-          ownerPercentage:
-            draft.ownerId === COMPANY_OWNED_OWNER_ID ? 0 : Number(draft.pct),
-        }),
-      });
-      const json = await res.json();
-      if (json.success) {
-        showToast("success", "Saved", "Vehicle assignment updated.");
-        onSaved();
-      } else {
-        showToast("error", "Save failed", json.message || "Try again.");
+    for (const vId of dirtyVehicleIds) {
+      const draft = getDraft(vId);
+      if (!supportsCompanyOwned && draft.ownerId === COMPANY_OWNED_OWNER_ID) {
+        showToast(
+          "error",
+          "Database update required",
+          "Run supabase-company-owned-vehicles.sql in Supabase before using Company owned."
+        );
+        return;
       }
+    }
+    setSaving(true);
+    try {
+      for (const vId of dirtyVehicleIds) {
+        const draft = getDraft(vId);
+        const res = await adminFetch("/api/admin/owners", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            vehicleId: vId,
+            ownerId:
+              draft.ownerId === COMPANY_OWNED_OWNER_ID
+                ? COMPANY_OWNED_OWNER_ID
+                : draft.ownerId || null,
+            ownerPercentage:
+              draft.ownerId === COMPANY_OWNED_OWNER_ID ? 0 : Number(draft.pct),
+          }),
+        });
+        const json = await res.json();
+        if (!json.success) {
+          showToast("error", "Save failed", json.message || "Try again.");
+          return;
+        }
+      }
+      showToast("success", "Saved", "Vehicle assignments updated.");
+      setDrafts({});
+      onSaved();
     } catch {
       showToast("error", "Save failed", "Network error.");
     } finally {
-      setSavingId(null);
+      setSaving(false);
     }
   };
 
@@ -292,61 +332,70 @@ function VehicleAssignments({
   }
 
   return (
-    <AdminTableWrap>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
-            <th className="px-4 py-3 font-semibold">Vehicle</th>
-            <th className="px-4 py-3 font-semibold">Owner</th>
-            <th className="px-4 py-3 font-semibold">Owner %</th>
-            <th className="px-4 py-3" />
-          </tr>
-        </thead>
-        <tbody>
-          {vehicles.map((v) => {
-            const draft = getDraft(v.id);
-            const isCompanyOwned = draft.ownerId === COMPANY_OWNED_OWNER_ID;
-            return (
-              <tr key={v.id} className="border-b border-gray-100">
-                <td className="px-4 py-3 text-gray-900">{v.year} {v.make} {v.model}</td>
-                <td className="px-4 py-3">
-                  <Select value={draft.ownerId} onChange={(e) => setDraft(v.id, { ownerId: e.target.value })} className="min-w-[180px]">
-                    <option value="">Unassigned</option>
-                    {supportsCompanyOwned && (
-                      <option value={COMPANY_OWNED_OWNER_ID}>Company owned</option>
+    <div className="space-y-4">
+      <AdminTableWrap>
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
+              <th className="px-4 py-3 font-semibold">Vehicle</th>
+              <th className="px-4 py-3 font-semibold">Owner</th>
+              <th className="px-4 py-3 font-semibold">Owner %</th>
+            </tr>
+          </thead>
+          <tbody>
+            {vehicles.map((v) => {
+              const draft = getDraft(v.id);
+              const isCompanyOwned = draft.ownerId === COMPANY_OWNED_OWNER_ID;
+              return (
+                <tr key={v.id} className="border-b border-gray-100">
+                  <td className="px-4 py-3 text-gray-900">{v.year} {v.make} {v.model}</td>
+                  <td className="px-4 py-3">
+                    <Select
+                      value={draft.ownerId}
+                      onChange={(e) => setDraft(v.id, { ownerId: e.target.value })}
+                      className="min-w-[180px]"
+                      disabled={saving}
+                    >
+                      <option value="">Unassigned</option>
+                      {supportsCompanyOwned && (
+                        <option value={COMPANY_OWNED_OWNER_ID}>Company owned</option>
+                      )}
+                      {owners.map((o) => (
+                        <option key={o.id} value={o.id}>{o.name}</option>
+                      ))}
+                    </Select>
+                  </td>
+                  <td className="px-4 py-3">
+                    {isCompanyOwned ? (
+                      <span className="text-sm text-gray-500">—</span>
+                    ) : (
+                      <Input
+                        type="number"
+                        min={0}
+                        max={100}
+                        value={draft.pct}
+                        onChange={(e) => setDraft(v.id, { pct: e.target.value })}
+                        className="w-24"
+                        disabled={!draft.ownerId || saving}
+                      />
                     )}
-                    {owners.map((o) => (
-                      <option key={o.id} value={o.id}>{o.name}</option>
-                    ))}
-                  </Select>
-                </td>
-                <td className="px-4 py-3">
-                  {isCompanyOwned ? (
-                    <span className="text-sm text-gray-500">—</span>
-                  ) : (
-                    <Input
-                      type="number"
-                      min={0}
-                      max={100}
-                      value={draft.pct}
-                      onChange={(e) => setDraft(v.id, { pct: e.target.value })}
-                      className="w-24"
-                      disabled={!draft.ownerId}
-                    />
-                  )}
-                </td>
-                <td className="px-4 py-3 text-right">
-                  <Button size="sm" variant="secondary" onClick={() => save(v.id)} disabled={savingId === v.id}>
-                    {savingId === v.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                    Save
-                  </Button>
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </AdminTableWrap>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </AdminTableWrap>
+      <div className="flex justify-end">
+        <Button
+          onClick={saveAll}
+          disabled={saving || dirtyVehicleIds.length === 0}
+        >
+          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+          Save assignments
+        </Button>
+      </div>
+    </div>
   );
 }
 

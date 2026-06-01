@@ -21,7 +21,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "NGA Admin",
+    title: "NextGearAuto",
   },
   icons: {
     icon: [

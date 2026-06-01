@@ -11,8 +11,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
+import { FleetLoadingGrid } from "@/components/public/fleet-loading-grid";
 import { useVehicles } from "@/lib/hooks/useVehicles";
-import { logger } from "@/lib/utils/logger";
 import { parseDisplayPrice } from "@/lib/utils/validation";
 import type { Vehicle } from "@/lib/types";
 
@@ -28,11 +28,8 @@ function ComparisonContent() {
 
   if (loading) {
     return (
-      <PageContainer className="py-16">
-        <div className="flex flex-col items-center justify-center gap-3" role="status" aria-live="polite">
-          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" aria-hidden="true" />
-          <p className="text-sm text-gray-500">Loading comparison...</p>
-        </div>
+      <PageContainer className="py-16" role="status" aria-live="polite" aria-label="Loading comparison">
+        <FleetLoadingGrid count={3} />
       </PageContainer>
     );
   }

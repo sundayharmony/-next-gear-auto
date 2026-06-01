@@ -18,6 +18,7 @@ import { SwipeBack } from "@/components/admin/swipe-back";
 import { buildPageTitleMap, getAdminNavItems } from "@/lib/admin/panel-navigation";
 import { staffPanelIconMap } from "@/lib/admin/staff-panel-icons";
 import { useStaffMessageUnreadCount } from "@/lib/hooks/use-staff-message-unread-count";
+import { userHasRole } from "@/lib/auth/user-roles";
 
 const NAV_ITEMS = getAdminNavItems().map((item) => ({
   href: item.href,
@@ -40,8 +41,9 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   const [notificationPosition, setNotificationPosition] = useState({ top: 80, left: 16 });
   const [recentBookings, setRecentBookings] = useState<Array<{ id: string; customer_name: string; created_at: string; total_price: number }>>([]);
   const onMessagesRoute = pathname.startsWith("/admin/messages");
+  const isAdminUser = isAuthenticated && userHasRole(user, "admin");
   const unreadMessages = useStaffMessageUnreadCount(
-    isAuthenticated && user?.role === "admin" && !onMessagesRoute
+    isAdminUser && !authLoading && !onMessagesRoute
   );
 
   // Track abort controller for fetch cancellation
@@ -90,6 +92,8 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   }, [showNotifications]);
 
   const fetchPendingBookings = useCallback(async () => {
+    if (!isAdminUser || authLoading) return;
+
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -97,7 +101,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     abortControllerRef.current = new AbortController();
 
     try {
-      const res = await adminFetch("/api/bookings?status=pending", {
+      const res = await adminFetch("/api/admin/bookings?status=pending&limit=50", {
         signal: abortControllerRef.current.signal,
       });
       if (!res.ok) return;
@@ -120,9 +124,11 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
       if (err instanceof Error && err.name === "AbortError") return;
       logger.error("Failed to fetch pending bookings:", err);
     }
-  }, []);
+  }, [isAdminUser, authLoading]);
 
   useEffect(() => {
+    if (!isAdminUser || authLoading) return;
+
     fetchPendingBookings();
     const jitter = 45000 + Math.random() * 30000;
 
@@ -155,7 +161,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         abortControllerRef.current.abort();
       }
     };
-  }, [fetchPendingBookings]);
+  }, [fetchPendingBookings, isAdminUser, authLoading]);
 
   if (authLoading) {
     return (
@@ -166,7 +172,7 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
     );
   }
 
-  if (!isAuthenticated || user?.role !== "admin") {
+  if (!isAuthenticated || !userHasRole(user, "admin")) {
     return (
       <PageContainer className="py-16 text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>

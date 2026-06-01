@@ -164,7 +164,10 @@ export function Header() {
       )}
 
       {isMobileMenuOpen && (
-        <div className="relative z-40 site-header-mobile-menu md:hidden mobile-menu-enter">
+        <nav
+          className="relative z-40 site-header-mobile-menu md:hidden mobile-menu-enter"
+          aria-label="Mobile navigation"
+        >
           <div className="space-y-2 px-4 py-3">
             {NAV_ITEMS.map((item) => (
               <Link
@@ -215,7 +218,7 @@ export function Header() {
                 ))}
             </div>
           </div>
-        </div>
+        </nav>
       )}
     </header>
   );

@@ -5,41 +5,59 @@ import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { getBookingOccupancyEndDate } from "@/lib/utils/recurring-booking";
 
-export async function GET(req: NextRequest) {
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_BATCH_VEHICLES = 80;
+
+export type BookedRangeDto = {
+  pickupDate: string;
+  returnDate: string;
+  pickupTime: string;
+  returnTime: string;
+};
+
+function parseVehicleIds(searchParams: URLSearchParams): string[] {
+  const batch = searchParams.get("vehicleIds");
+  if (batch) {
+    const ids = batch
+      .split(",")
+      .map((id) => id.trim())
+      .filter((id) => UUID_RE.test(id) || id.startsWith("v"));
+    return [...new Set(ids)].slice(0, MAX_BATCH_VEHICLES);
+  }
+  const single = searchParams.get("vehicleId");
+  if (single?.trim()) return [single.trim()];
+  return [];
+}
+
+async function fetchRangesForVehicles(
+  vehicleIds: string[]
+): Promise<Record<string, BookedRangeDto[]>> {
   const supabase = getServiceSupabase();
-  try {
-    const { searchParams } = new URL(req.url);
-    const vehicleId = searchParams.get("vehicleId");
+  const today = formatYyyyMmDdLocal(new Date());
+  const result: Record<string, BookedRangeDto[]> = {};
+  for (const id of vehicleIds) result[id] = [];
 
-    if (!vehicleId) {
-      return NextResponse.json(
-        { success: false, error: "vehicleId param is required" },
-        { status: 400 }
-      );
-    }
+  if (vehicleIds.length === 0) return result;
 
-    // Bookings that occupy the vehicle on the calendar (includes pending website holds + confirmed/active)
-    const { data: bookings, error } = await supabase
-      .from("bookings")
-      .select("id, pickup_date, return_date, pickup_time, return_time, status, admin_notes")
-      .eq("vehicle_id", vehicleId)
-      .in("status", ["confirmed", "active", "pending"])
-      .order("pickup_date", { ascending: true })
-      .limit(500);
+  const { data: bookings, error } = await supabase
+    .from("bookings")
+    .select(
+      "vehicle_id, pickup_date, return_date, pickup_time, return_time, status, admin_notes"
+    )
+    .in("vehicle_id", vehicleIds)
+    .in("status", ["confirmed", "active", "pending"])
+    .order("pickup_date", { ascending: true })
+    .limit(5000);
 
-    if (error) {
-      logger.error("Booked dates fetch error:", error);
-      return NextResponse.json({
-        success: false,
-        error: "Failed to fetch booked dates",
-      }, { status: 500 });
-    }
+  if (error) {
+    throw error;
+  }
 
-    const today = formatYyyyMmDdLocal(new Date());
-
-    // Return booking date ranges with time info for 60-minute gap checks.
-    // Recurring long-term uses rolled/active occupancy end (not stale stored return_date).
-    const bookedRanges = (bookings || []).map((b) => ({
+  for (const b of bookings || []) {
+    const vid = String(b.vehicle_id);
+    if (!result[vid]) result[vid] = [];
+    result[vid].push({
       pickupDate: b.pickup_date,
       returnDate: getBookingOccupancyEndDate(
         {
@@ -52,53 +70,74 @@ export async function GET(req: NextRequest) {
       ),
       pickupTime: b.pickup_time || "00:00",
       returnTime: b.return_time || "23:59",
-    }));
+    });
+  }
 
-    // Also fetch blocked dates (manual blocks, Turo email sync, etc.)
-    let { data: blocks, error: blocksError } = await supabase
+  let { data: blocks, error: blocksError } = await supabase
+    .from("blocked_dates")
+    .select("vehicle_id, start_date, end_date, pickup_time, return_time")
+    .in("vehicle_id", vehicleIds)
+    .order("start_date", { ascending: true });
+
+  if (blocksError && isMissingColumnError(blocksError)) {
+    const fallback = await supabase
       .from("blocked_dates")
-      .select("start_date, end_date, pickup_time, return_time")
-      .eq("vehicle_id", vehicleId)
+      .select("vehicle_id, start_date, end_date")
+      .in("vehicle_id", vehicleIds)
       .order("start_date", { ascending: true });
+    blocks = fallback.data as Array<{
+      vehicle_id: string;
+      start_date: string;
+      end_date: string;
+      pickup_time?: string | null;
+      return_time?: string | null;
+    }> | null;
+    blocksError = fallback.error;
+  }
 
-    if (blocksError && isMissingColumnError(blocksError)) {
-      const fallback = await supabase
-        .from("blocked_dates")
-        .select("start_date, end_date")
-        .eq("vehicle_id", vehicleId)
-        .order("start_date", { ascending: true });
+  if (blocksError) {
+    throw blocksError;
+  }
 
-      blocks = fallback.data as Array<{ start_date: string; end_date: string; pickup_time?: string | null; return_time?: string | null }> | null;
-      blocksError = fallback.error;
-    }
+  for (const b of blocks || []) {
+    const vid = String(b.vehicle_id);
+    if (!result[vid]) result[vid] = [];
+    result[vid].push({
+      pickupDate: b.start_date,
+      returnDate: b.end_date,
+      pickupTime: b.pickup_time?.trim() || "00:00",
+      returnTime: b.return_time?.trim() || "23:59",
+    });
+  }
 
-    if (blocksError) {
-      logger.error("Blocked dates fetch error:", blocksError);
+  return result;
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const { searchParams } = new URL(req.url);
+    const vehicleIds = parseVehicleIds(searchParams);
+
+    if (vehicleIds.length === 0) {
       return NextResponse.json(
-        { success: false, error: "Failed to fetch blocked dates" },
-        { status: 500 }
+        { success: false, error: "vehicleId or vehicleIds param is required" },
+        { status: 400 }
       );
     }
 
-    const blockedRanges = (blocks || []).map(
-      (b: { start_date: string; end_date: string; pickup_time?: string | null; return_time?: string | null }) => ({
-        pickupDate: b.start_date,
-        returnDate: b.end_date,
-        pickupTime: b.pickup_time?.trim() || "00:00",
-        returnTime: b.return_time?.trim() || "23:59",
-      }),
-    );
+    const byVehicle = await fetchRangesForVehicles(vehicleIds);
+
+    // Backward compatible: single vehicleId returns array in `data`
+    if (vehicleIds.length === 1 && !searchParams.get("vehicleIds")) {
+      return NextResponse.json(
+        { success: true, data: byVehicle[vehicleIds[0]] || [] },
+        { headers: { "Cache-Control": "no-store" } }
+      );
+    }
 
     return NextResponse.json(
-      {
-        success: true,
-        data: [...bookedRanges, ...blockedRanges],
-      },
-      {
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      },
+      { success: true, data: byVehicle },
+      { headers: { "Cache-Control": "no-store" } }
     );
   } catch (err) {
     logger.error("Booked dates API error:", err);

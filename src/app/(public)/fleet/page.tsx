@@ -13,7 +13,8 @@ import { useComparison } from "@/lib/hooks/use-comparison";
 import { useVehicles } from "@/lib/hooks/useVehicles";
 import { VEHICLE_CATEGORIES } from "@/lib/constants";
 import { getVehicleDisplayName } from "@/lib/types";
-import { logger } from "@/lib/utils/logger";
+import { FleetLoadingGrid } from "@/components/public/fleet-loading-grid";
+import { VehicleThumbnail } from "@/components/vehicle-thumbnail";
 import type { Vehicle } from "@/lib/types";
 
 type SortOption = "price-low" | "price-high" | "name";
@@ -23,7 +24,7 @@ function FleetContent() {
   const router = useRouter();
   const categoryParam = searchParams.get("category");
 
-  const { vehicles, loading, error: vehicleError } = useVehicles();
+  const { vehicles, loading, error: vehicleError, retry } = useVehicles();
   const [activeCategory, setActiveCategory] = useState(
     categoryParam && VEHICLE_CATEGORIES.some((c) => c.value === categoryParam)
       ? categoryParam
@@ -129,18 +130,17 @@ function FleetContent() {
       <PageContainer className={`py-8 ${comparison.compareCount >= 2 ? "pb-24" : "pb-8"}`}>
         {/* Error state */}
         {vehicleError && (
-          <div className="mb-8 rounded-lg bg-red-50 border border-red-200 p-4">
+          <div className="mb-8 rounded-lg bg-red-50 border border-red-200 p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <p className="text-red-700 font-medium">{vehicleError}</p>
+            <Button type="button" variant="outline" size="sm" onClick={retry}>
+              Try again
+            </Button>
           </div>
         )}
 
-        {/* Loading state */}
         {loading && (
-          <div className="flex items-center justify-center py-16" role="status" aria-live="polite">
-            <div className="flex flex-col items-center gap-4" aria-label="Loading vehicles" role="status">
-              <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full" aria-hidden="true" />
-              <p className="text-gray-500">Loading vehicles...</p>
-            </div>
+          <div role="status" aria-live="polite" aria-label="Loading vehicles">
+            <FleetLoadingGrid />
           </div>
         )}
 
@@ -250,39 +250,15 @@ function FleetContent() {
                 <Link href={`/fleet/${vehicle.id}`}>
                   <Card className={`group h-full card-hover transition-shadow ${comparison.isComparing(vehicle.id) ? "ring-2 ring-purple-500" : ""}`}>
                     {/* Vehicle Image */}
-                    <div className="relative aspect-[16/10] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100 animate-pulse">
-                      {vehicle.images && vehicle.images.length > 0 ? (
-                        <img
-                          src={vehicle.images[0]}
-                          alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                          width={600}
-                          height={400}
-                          loading="eager"
-                          className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-                          onLoad={(e) => {
-                            const imgElement = e.target as HTMLImageElement;
-                            const parent = imgElement.parentElement;
-                            if (parent) parent.classList.remove("animate-pulse");
-                          }}
-                          onError={(e) => {
-                            const imgElement = e.target as HTMLImageElement;
-                            imgElement.style.display = "none";
-                            const parent = imgElement.parentElement;
-                            if (parent && parent.querySelector(".fallback-icon") === null) {
-                              const fallback = document.createElement("div");
-                              fallback.className = "fallback-icon absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-50 to-gray-100";
-                              const icon = document.createElement("div");
-                              icon.innerHTML = '<svg class="h-20 w-20 page-hero-subtitle" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16h8m-4-4h4m-4-4h4m-10 8a2 2 0 100-4 2 2 0 000 4zm0-6a3 3 0 00-3 3v4a3 3 0 003 3h8a3 3 0 003-3v-4a3 3 0 00-3-3h-8z"></path></svg>';
-                              fallback.appendChild(icon);
-                              parent.appendChild(fallback);
-                            }
-                          }}
-                        />
-                      ) : (
-                        <div className="flex h-full items-center justify-center">
-                          <Car className="h-20 w-20 text-purple-300/70 transition-all duration-300 group-hover:text-purple-400 group-hover:scale-110" />
-                        </div>
-                      )}
+                    <div className="relative aspect-[16/10] overflow-hidden rounded-t-xl">
+                      <VehicleThumbnail
+                        src={vehicle.images?.[0]}
+                        alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                        loading="lazy"
+                        showPulseUntilLoad
+                        fallbackIconClassName="h-20 w-20 text-purple-300/70"
+                        imgClassName="transition-transform duration-300 group-hover:scale-105"
+                      />
                       <Badge className="absolute top-3 left-3">{vehicle.category}</Badge>
                       {vehicle.isAvailable ? (
                         <Badge className="absolute bottom-3 right-3 bg-green-100 text-green-700 border-green-200">Available</Badge>
