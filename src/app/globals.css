@@ -34,6 +34,9 @@ body {
   -moz-osx-font-smoothing: grayscale;
   -webkit-tap-highlight-color: transparent;
   overscroll-behavior-y: none;
+  /* Safety net against stray horizontal scroll on mobile.
+     `clip` (not `hidden`) keeps position: sticky working. */
+  overflow-x: clip;
 }
 
 /* Focus styles */
@@ -296,6 +299,32 @@ body {
 @media screen and (max-width: 767px) {
   input, textarea, select {
     font-size: 16px !important;
+  }
+}
+
+/* ═══ Touch-target accessibility (WCAG 2.5.5 / Apple HIG ≥ 44px) ═══
+   Scoped to touch (coarse) pointers so desktop density is untouched.
+   Add `data-no-touch-target` to opt a control out (e.g. inline text links). */
+@media (pointer: coarse) {
+  button:not([data-no-touch-target]),
+  [role="button"]:not([data-no-touch-target]),
+  a[role="button"],
+  select,
+  summary,
+  input[type="checkbox"],
+  input[type="radio"] {
+    min-height: 44px;
+  }
+
+  /* Icon-only / square controls also need a 44px tap width */
+  button:not([data-no-touch-target]):empty,
+  [aria-label][role="button"]:not([data-no-touch-target]) {
+    min-width: 44px;
+  }
+
+  /* Comfortable hit area for icon buttons that only contain an svg */
+  button:not([data-no-touch-target]):has(> svg:only-child) {
+    min-width: 44px;
   }
 }
 

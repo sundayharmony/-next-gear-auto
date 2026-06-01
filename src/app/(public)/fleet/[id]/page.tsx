@@ -414,6 +414,32 @@ export default async function VehicleDetailPage({ params }: PageProps) {
           </PageContainer>
         </section>
       )}
+
+      {/* Spacer so the sticky book bar never covers page content on mobile/tablet */}
+      <div className="h-20 lg:hidden" aria-hidden="true" />
+
+      {/* Sticky book bar — keeps price + Reserve in thumb reach (sidebar stacks far below on mobile) */}
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] shadow-[0_-4px_20px_-8px_rgba(124,58,237,0.25)] backdrop-blur-md lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4">
+          <div className="leading-tight">
+            <div className="text-xl font-bold text-purple-600">
+              ${vehicle.daily_rate}
+              <span className="text-sm font-normal text-gray-500">/day</span>
+            </div>
+            {vehicle.is_available ? (
+              <span className="text-xs font-medium text-green-600">Available now</span>
+            ) : (
+              <span className="text-xs font-medium text-red-500">Currently unavailable</span>
+            )}
+          </div>
+          <Link href={`/booking?vehicleId=${vehicle.id}`} className="shrink-0">
+            <Button size="lg">
+              <Calendar className="h-4 w-4 mr-2" />
+              Reserve
+            </Button>
+          </Link>
+        </div>
+      </div>
     </>
   );
 }

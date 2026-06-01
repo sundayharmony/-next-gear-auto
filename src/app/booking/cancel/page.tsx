@@ -46,12 +46,12 @@ function CancelContent() {
               </div>
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link href={bookingId ? `/booking?retry=${bookingId}` : "/booking"}>
+                <Link href={bookingId ? `/booking?retry=${bookingId}` : "/booking"} className="w-full sm:w-auto">
                   <Button className="w-full sm:w-auto">
                     <RefreshCw className="h-4 w-4 mr-1" /> Retry Payment
                   </Button>
                 </Link>
-                <Link href="/fleet">
+                <Link href="/fleet" className="w-full sm:w-auto">
                   <Button variant="outline" className="w-full sm:w-auto">
                     <ArrowLeft className="h-4 w-4 mr-1" /> Back to Fleet
                   </Button>

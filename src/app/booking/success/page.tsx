@@ -297,12 +297,12 @@ function SuccessContent() {
               )}
 
               <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Link href="/account">
+                <Link href="/account" className="w-full sm:w-auto">
                   <Button className="w-full sm:w-auto">
                     View My Bookings <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
                 </Link>
-                <Link href="/fleet">
+                <Link href="/fleet" className="w-full sm:w-auto">
                   <Button variant="outline" className="w-full sm:w-auto">
                     Browse More Vehicles
                   </Button>

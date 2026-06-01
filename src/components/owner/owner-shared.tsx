@@ -73,7 +73,7 @@ export function OwnerBookingDetailModal({
   if (!booking) return null;
   return (
     <Modal open={!!booking} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <ModalContent className="max-w-md">
+      <ModalContent className="sm:max-w-md">
         <ModalHeader>
           <ModalTitle>Booking Details</ModalTitle>
         </ModalHeader>

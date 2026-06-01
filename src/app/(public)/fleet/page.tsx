@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Car, Users, Briefcase, Fuel, ArrowUpDown, Search, GitCompareArrows, X, Settings2 } from "lucide-react";
+import { Car, Users, Briefcase, Fuel, ArrowUpDown, Search, GitCompareArrows, X, Settings2, SlidersHorizontal, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,6 +31,7 @@ function FleetContent() {
   );
   const [sortBy, setSortBy] = useState<SortOption>("price-low");
   const [searchQuery, setSearchQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
   const comparison = useComparison();
 
   // Sync category when URL param changes
@@ -39,6 +40,41 @@ function FleetContent() {
       setActiveCategory(categoryParam);
     }
   }, [categoryParam]);
+
+  // Lock body scroll while the mobile filter drawer is open
+  useEffect(() => {
+    if (showFilters) {
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = "";
+      };
+    }
+  }, [showFilters]);
+
+  const SORT_OPTIONS: { value: SortOption; label: string }[] = [
+    { value: "price-low", label: "Price: Low to High" },
+    { value: "price-high", label: "Price: High to Low" },
+    { value: "name", label: "Name: A-Z" },
+  ];
+  const activeFilterCount =
+    (activeCategory !== "all" ? 1 : 0) + (sortBy !== "price-low" ? 1 : 0);
+
+  // Shared across the desktop inline filters and the mobile filter drawer
+  const categoryPills = VEHICLE_CATEGORIES.map((cat) => (
+    <button
+      key={cat.value}
+      onClick={() => setActiveCategory(cat.value)}
+      className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+        activeCategory === cat.value
+          ? "bg-purple-600 text-white"
+          : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+      }`}
+      aria-pressed={activeCategory === cat.value}
+      aria-label={`Filter by ${cat.label} category`}
+    >
+      {cat.label}
+    </button>
+  ));
 
   const filteredVehicles = useMemo(() => {
     // Filter first
@@ -112,65 +148,68 @@ function FleetContent() {
           <>
             {/* Filters */}
             <div className="mb-8 space-y-4">
-              {/* Search */}
-              <div className="relative max-w-md">
-                <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
-                <Input
-                  type="text"
-                  placeholder="Search vehicles..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  aria-label="Search vehicles"
-                  className="pl-10 pr-10"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery("")}
-                    aria-label="Clear search"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                )}
+              {/* Search + mobile filter trigger */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1 sm:max-w-md">
+                  <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" aria-hidden="true" />
+                  <Input
+                    type="text"
+                    placeholder="Search vehicles..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    aria-label="Search vehicles"
+                    className="pl-10 pr-10"
+                  />
+                  {searchQuery && (
+                    <button
+                      onClick={() => setSearchQuery("")}
+                      aria-label="Clear search"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  )}
+                </div>
+                {/* Mobile filter trigger (drawer) */}
+                <button
+                  type="button"
+                  onClick={() => setShowFilters(true)}
+                  className="relative flex shrink-0 items-center gap-2 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-colors hover:border-purple-300 sm:hidden"
+                  aria-label="Open filters and sorting"
+                  aria-haspopup="dialog"
+                >
+                  <SlidersHorizontal className="h-4 w-4 text-purple-600" />
+                  Filters
+                  {activeFilterCount > 0 && (
+                    <span className="absolute -right-1.5 -top-1.5 flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-purple-600 px-1 text-[11px] font-bold text-white">
+                      {activeFilterCount}
+                    </span>
+                  )}
+                </button>
               </div>
 
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            {/* Category filters */}
-            <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by vehicle category">
-              {VEHICLE_CATEGORIES.map((cat) => (
-                <button
-                  key={cat.value}
-                  onClick={() => setActiveCategory(cat.value)}
-                  className={`rounded-full px-4 py-2 text-sm font-medium transition-colors ${
-                    activeCategory === cat.value
-                      ? "bg-purple-600 text-white"
-                      : "bg-gray-100 text-gray-600 hover:bg-gray-200"
-                  }`}
-                  aria-pressed={activeCategory === cat.value}
-                  aria-label={`Filter by ${cat.label} category`}
-                >
-                  {cat.label}
-                </button>
-              ))}
-            </div>
+              {/* Desktop / tablet inline filters */}
+              <div className="hidden flex-wrap items-center justify-between gap-4 sm:flex">
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by vehicle category">
+                  {categoryPills}
+                </div>
 
-            {/* Sort */}
-            <div className="flex items-center gap-2">
-              <label htmlFor="sort-select" className="sr-only">Sort vehicles by</label>
-              <ArrowUpDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
-              <select
-                id="sort-select"
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as SortOption)}
-                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
-                aria-label="Sort vehicles by"
-              >
-                <option value="price-low">Price: Low to High</option>
-                <option value="price-high">Price: High to Low</option>
-                <option value="name">Name: A-Z</option>
-              </select>
-            </div>
-            </div>
+                <div className="flex items-center gap-2">
+                  <label htmlFor="sort-select" className="sr-only">Sort vehicles by</label>
+                  <ArrowUpDown className="h-4 w-4 text-gray-400" aria-hidden="true" />
+                  <select
+                    id="sort-select"
+                    value={sortBy}
+                    onChange={(e) => setSortBy(e.target.value as SortOption)}
+                    className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                    aria-label="Sort vehicles by"
+                  >
+                    {SORT_OPTIONS.map((opt) => (
+                      <option key={opt.value} value={opt.value}>{opt.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
 
             {/* Results count */}
@@ -292,6 +331,72 @@ function FleetContent() {
             </>
         )}
       </PageContainer>
+
+      {/* Mobile Filter Drawer (bottom sheet) */}
+      {showFilters && (
+        <div className="fixed inset-0 z-[60] sm:hidden" role="dialog" aria-modal="true" aria-label="Filters and sorting">
+          <div
+            className="absolute inset-0 bg-black/40 backdrop-blur-[2px]"
+            onClick={() => setShowFilters(false)}
+            aria-hidden="true"
+          />
+          <div className="absolute inset-x-0 bottom-0 flex max-h-[85vh] flex-col rounded-t-3xl bg-white shadow-2xl animate-in slide-in-from-bottom-2">
+            <div className="flex shrink-0 items-center justify-between border-b border-gray-100 px-5 py-4">
+              <h2 className="text-base font-semibold text-gray-900">Filters &amp; Sort</h2>
+              <button
+                onClick={() => setShowFilters(false)}
+                aria-label="Close filters"
+                className="rounded-full p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 space-y-6 overflow-y-auto px-5 py-5">
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">Category</h3>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by vehicle category">
+                  {categoryPills}
+                </div>
+              </div>
+
+              <div>
+                <h3 className="mb-3 text-sm font-semibold text-gray-700">Sort by</h3>
+                <div className="space-y-2">
+                  {SORT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      onClick={() => setSortBy(opt.value)}
+                      className={`flex w-full items-center justify-between rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
+                        sortBy === opt.value
+                          ? "border-purple-500 bg-purple-50 text-purple-700"
+                          : "border-gray-200 text-gray-700 hover:border-purple-300"
+                      }`}
+                      aria-pressed={sortBy === opt.value}
+                    >
+                      {opt.label}
+                      {sortBy === opt.value && <Check className="h-4 w-4 text-purple-600" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex shrink-0 gap-3 border-t border-gray-100 px-5 py-4 pb-[max(1rem,env(safe-area-inset-bottom))]">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => { setActiveCategory("all"); setSortBy("price-low"); }}
+              >
+                Clear
+              </Button>
+              <Button className="flex-1" onClick={() => setShowFilters(false)}>
+                Show {filteredVehicles.length} result{filteredVehicles.length !== 1 ? "s" : ""}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Floating Compare Bar */}
       {!loading && comparison.compareCount >= 2 && (

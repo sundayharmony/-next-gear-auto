@@ -378,7 +378,7 @@ function ManagePayoutsModal({ owner, onClose, onChanged }: { owner: AdminOwner |
 
   return (
     <Modal open={!!owner} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <ModalContent className="max-w-2xl">
+      <ModalContent className="sm:max-w-2xl">
         <ModalHeader>
           <ModalTitle>{owner ? `Payouts — ${owner.name}` : "Payouts"}</ModalTitle>
         </ModalHeader>

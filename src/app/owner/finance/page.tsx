@@ -137,7 +137,58 @@ export default function OwnerFinancePage() {
                 )}
               </AdminCard>
 
-              <AdminTableWrap className="mt-4">
+              {/* Mobile: stacked cards (the 9-column table scrolls awkwardly on phones) */}
+              <div className="mt-4 space-y-3 sm:hidden">
+                {filtered.length === 0 ? (
+                  <AdminCard padding="sm">
+                    <p className="py-6 text-center text-sm text-gray-500">No matching bookings.</p>
+                  </AdminCard>
+                ) : (
+                  filtered.map((b) => (
+                    <button
+                      key={b.id}
+                      type="button"
+                      onClick={() => setSelected(b)}
+                      className="w-full rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-purple-300 active:bg-purple-50/40"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="truncate font-medium text-gray-900">{b.vehicleName}</p>
+                          <p className="font-mono text-xs text-gray-400">{b.id}</p>
+                        </div>
+                        <PayoutStatusBadge status={b.payoutStatus} />
+                      </div>
+                      <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                        <div className="flex justify-between border-b border-gray-50 pb-1">
+                          <span className="text-gray-500">Gross</span>
+                          <span className="tabular-nums text-gray-900">{formatCurrency(b.grossRevenue)}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-50 pb-1">
+                          <span className="text-gray-500">Fees/Exp.</span>
+                          <span className="tabular-nums text-red-600">{formatCurrency(b.processingFees + b.otherExpenses)}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-50 pb-1">
+                          <span className="text-gray-500">Net</span>
+                          <span className="tabular-nums text-gray-900">{formatCurrency(b.netRevenue)}</span>
+                        </div>
+                        <div className="flex justify-between border-b border-gray-50 pb-1">
+                          <span className="text-gray-500">Owner %</span>
+                          <span className="tabular-nums text-gray-900">{b.ownerPercentage}%</span>
+                        </div>
+                        <div className="col-span-2 flex items-center justify-between pt-1">
+                          <span className="font-medium text-gray-700">Payout</span>
+                          <span className="text-base font-bold tabular-nums text-purple-700">{formatCurrency(b.ownerPayout)}</span>
+                        </div>
+                      </div>
+                      {b.payoutDate && (
+                        <p className="mt-2 text-xs text-gray-400">Paid {formatDate(b.payoutDate)}</p>
+                      )}
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <AdminTableWrap className="mt-4 hidden sm:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">

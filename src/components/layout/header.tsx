@@ -17,6 +17,16 @@ export function Header() {
   const { user, isAuthenticated, isLoading: authLoading, logout } = useAuth();
   const menuButtonRef = useRef<HTMLButtonElement>(null);
 
+  // Single source of truth for the role-aware account/panel link.
+  const panelLink =
+    user?.role === "admin"
+      ? { href: "/admin", label: "Admin", staff: true }
+      : user?.role === "manager"
+        ? { href: "/manager", label: "Manager", staff: true }
+        : user?.role === "owner"
+          ? { href: "/owner", label: "Owner", staff: true }
+          : { href: "/account", label: (user?.name || "Account").split(" ")[0], staff: false };
+
   useEffect(() => {
     setIsMobileMenuOpen(false);
   }, [pathname]);
@@ -92,20 +102,16 @@ export function Header() {
             {!authLoading &&
               (isAuthenticated && user ? (
                 <div className="hidden sm:flex items-center gap-2">
-                  {user.role === "admin" || user.role === "manager" ? (
-                    <Link href={user.role === "admin" ? "/admin" : "/manager"}>
-                      <Button variant="outline" size="sm">
-                        <Shield className="h-3.5 w-3.5 mr-1" />{" "}
-                        {user.role === "admin" ? "Admin" : "Manager"}
-                      </Button>
-                    </Link>
-                  ) : (
-                    <Link href="/account">
-                      <Button variant="outline" size="sm">
-                        <User className="h-3.5 w-3.5 mr-1" /> {(user.name || "Account").split(" ")[0]}
-                      </Button>
-                    </Link>
-                  )}
+                  <Link href={panelLink.href}>
+                    <Button variant="outline" size="sm">
+                      {panelLink.staff ? (
+                        <Shield className="h-3.5 w-3.5 mr-1" />
+                      ) : (
+                        <User className="h-3.5 w-3.5 mr-1" />
+                      )}{" "}
+                      {panelLink.label}
+                    </Button>
+                  </Link>
                   <Button
                     variant="outline"
                     size="sm"
@@ -172,26 +178,20 @@ export function Header() {
               </Link>
               {!authLoading &&
                 (isAuthenticated && user ? (
-                  <>
-                    {user.role === "admin" || user.role === "manager" ? (
-                      <Link
-                        href={user.role === "admin" ? "/admin" : "/manager"}
-                        className="flex-1"
-                        onClick={() => setIsMobileMenuOpen(false)}
-                      >
-                        <Button variant="outline" className="w-full" size="sm">
-                          <Shield className="h-3.5 w-3.5 mr-1" />{" "}
-                          {user.role === "admin" ? "Admin" : "Manager"}
-                        </Button>
-                      </Link>
-                    ) : (
-                      <Link href="/account" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
-                        <Button variant="outline" className="w-full" size="sm">
-                          <User className="h-3.5 w-3.5 mr-1" /> Account
-                        </Button>
-                      </Link>
-                    )}
-                  </>
+                  <Link
+                    href={panelLink.href}
+                    className="flex-1"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                  >
+                    <Button variant="outline" className="w-full" size="sm">
+                      {panelLink.staff ? (
+                        <Shield className="h-3.5 w-3.5 mr-1" />
+                      ) : (
+                        <User className="h-3.5 w-3.5 mr-1" />
+                      )}{" "}
+                      {panelLink.label}
+                    </Button>
+                  </Link>
                 ) : (
                   <Link href="/login" className="flex-1" onClick={() => setIsMobileMenuOpen(false)}>
                     <Button variant="outline" className="w-full" size="sm">
