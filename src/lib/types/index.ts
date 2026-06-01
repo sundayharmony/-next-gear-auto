@@ -96,7 +96,7 @@ export interface Customer {
   paymentMethods: PaymentMethod[];
   bookings: string[];
   createdAt: string;
-  role: "customer" | "admin" | "manager";
+  role: "customer" | "admin" | "manager" | "owner";
 }
 
 export interface DriverLicense {
@@ -364,3 +364,89 @@ export const PAYMENT_METHODS = [
 
 /** Booking status progression steps */
 export const STATUS_STEPS = ["pending", "confirmed", "active", "completed", "cancelled", "no-show"] as const;
+
+// ─── Owner Portal (Arbitrage Panel) Types ───────────────────────────
+
+export type PayoutStatus = "pending" | "issued" | "paid";
+
+/** Owner-facing booking status (derived from booking dates + status). */
+export type OwnerBookingStatus = "upcoming" | "active" | "completed" | "cancelled";
+
+/** Payout calculation breakdown shared by API + UI. */
+export interface PayoutBreakdown {
+  grossRevenue: number;
+  processingFees: number;
+  otherExpenses: number;
+  netRevenue: number;
+  platformFees: number;
+  ownerPercentage: number;
+  ownerPayout: number;
+}
+
+/** A booking as the owner sees it (their vehicle only, no other customer PII beyond name). */
+export interface OwnerBooking extends PayoutBreakdown {
+  id: string;
+  vehicleId: string;
+  vehicleName: string;
+  customerName: string;
+  pickupDate: string;
+  returnDate: string;
+  rentalDays: number;
+  status: OwnerBookingStatus;
+  rawStatus: string;
+  payoutStatus: PayoutStatus;
+  payoutDate: string | null;
+  createdAt: string;
+}
+
+/** Aggregated owner dashboard metrics. */
+export interface OwnerDashboardMetrics {
+  totalRevenue: number;
+  upcomingBookings: number;
+  activeRentals: number;
+  completedRentals: number;
+  estimatedPayout: number;
+  pendingPayouts: number;
+  lifetimeEarnings: number;
+  utilizationRate: number;
+  vehicleCount: number;
+  monthlyRevenue: { month: string; revenue: number; payout: number }[];
+}
+
+/** A vehicle owned by an owner (subset for the portal). */
+export interface OwnerVehicle {
+  id: string;
+  year: number;
+  make: string;
+  model: string;
+  category: string;
+  image: string | null;
+  dailyRate: number;
+  ownerPercentage: number;
+  isAvailable: boolean;
+}
+
+export interface OwnerNotification {
+  id: string;
+  type:
+    | "booking_created"
+    | "booking_modified"
+    | "booking_cancelled"
+    | "payout_issued"
+    | "availability_changed";
+  title: string;
+  message: string | null;
+  bookingId: string | null;
+  vehicleId: string | null;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export interface OwnerBlockedDate {
+  id: string;
+  vehicleId: string;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+  source: string;
+}

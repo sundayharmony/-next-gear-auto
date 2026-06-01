@@ -29,6 +29,7 @@ import {
 import { validateBookingStatusPatch } from "@/lib/bookings";
 import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
 import { isValidEmailFormat } from "@/lib/utils/validation";
+import { notifyVehicleOwner } from "@/lib/owner/notifications";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -731,6 +732,15 @@ export async function POST(request: NextRequest) {
       sendAdminNewBooking(emailData).catch(logger.error);
     }
 
+    // Notify the vehicle's owner (if any) about the new booking.
+    notifyVehicleOwner(
+      body.vehicleId,
+      "booking_created",
+      "New booking",
+      `${vehicleName} booked ${body.pickupDate} → ${body.returnDate}.`,
+      bookingId
+    ).catch(logger.error);
+
     return NextResponse.json(
       { data: { id: bookingId, customer_id: customerId }, success: true },
       { status: 201 }
@@ -1087,6 +1097,26 @@ export async function PATCH(request: NextRequest) {
       } catch (regenErr) {
         logger.error("Signed agreement refresh failed after schedule update:", regenErr);
       }
+    }
+
+    // Notify the vehicle's owner about a cancellation or modification.
+    const notifyVehicleId = (updateFields.vehicle_id as string) || booking.vehicle_id;
+    if (updateFields.status === "cancelled" && booking.status !== "cancelled") {
+      notifyVehicleOwner(
+        notifyVehicleId,
+        "booking_cancelled",
+        "Booking cancelled",
+        `Booking ${bookingId} was cancelled.`,
+        bookingId
+      ).catch(logger.error);
+    } else if (scheduleChanged || statusChanged) {
+      notifyVehicleOwner(
+        notifyVehicleId,
+        "booking_modified",
+        "Booking updated",
+        `Booking ${bookingId} was modified.`,
+        bookingId
+      ).catch(logger.error);
     }
 
     // Re-fetch the full updated booking to return to the client

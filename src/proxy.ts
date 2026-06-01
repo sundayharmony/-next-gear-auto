@@ -105,10 +105,13 @@ export async function proxy(req: NextRequest) {
     }
   }
 
-  // ── Staff Panel Protection ───────────────────────────────────────
-  // Protect /admin/* and /manager/* pages.
+  // ── Staff & Owner Panel Protection ───────────────────────────────
+  // Protect /admin/*, /manager/*, and /owner/* pages.
+  const isOwnerRoute = pathname.startsWith("/owner");
   if (
-    ((pathname.startsWith("/admin/") && !pathname.startsWith("/admin/login")) || pathname.startsWith("/manager"))
+    (pathname.startsWith("/admin/") && !pathname.startsWith("/admin/login")) ||
+    pathname.startsWith("/manager") ||
+    isOwnerRoute
   ) {
     const token = req.cookies.get(COOKIE_NAME)?.value;
     const secret = getSecret();
@@ -142,7 +145,7 @@ export async function proxy(req: NextRequest) {
             ? req.headers.get("x-admin-id")
             : null;
         if (!legacyId) {
-          const loginUrl = new URL("/admin", req.url);
+          const loginUrl = new URL(isOwnerRoute ? "/login" : "/admin", req.url);
           loginUrl.searchParams.set("redirect", pathname);
           return NextResponse.redirect(loginUrl);
         }
@@ -163,6 +166,8 @@ export const config = {
     "/admin/:path*",
     // Manager pages
     "/manager/:path*",
+    // Owner portal pages
+    "/owner/:path*",
     // API routes (for CSRF)
     "/api/:path*",
   ],

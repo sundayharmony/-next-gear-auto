@@ -39,6 +39,7 @@ const iconMap: Record<string, PanelIconKey> = {
   tickets: "ticket",
   customers: "users",
   managers: "users",
+  owners: "car",
   promoCodes: "tag",
   reviews: "star",
   messages: "messageSquare",

@@ -47,6 +47,8 @@ type Database = {
       messages: GenericTable;
       notification_outbox: GenericTable;
       push_subscriptions: GenericTable;
+      owner_payouts: GenericTable;
+      owner_notifications: GenericTable;
     };
     Views: Record<string, never>;
     Functions: {
@@ -145,6 +147,39 @@ export interface DbVehicle {
   license_plate: string | null;
   vin: string | null;
   maintenance_status: string;
+  owner_id: string | null;
+  owner_percentage: number | null;
+  created_at: string;
+}
+
+export interface DbOwnerPayout {
+  id: string;
+  owner_id: string;
+  vehicle_id: string | null;
+  booking_id: string | null;
+  gross_revenue: number;
+  platform_fees: number;
+  processing_fees: number;
+  other_expenses: number;
+  net_revenue: number;
+  owner_percentage: number;
+  owner_payout: number;
+  status: "pending" | "issued" | "paid";
+  payout_date: string | null;
+  notes: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface DbOwnerNotification {
+  id: string;
+  owner_id: string;
+  type: string;
+  title: string;
+  message: string | null;
+  booking_id: string | null;
+  vehicle_id: string | null;
+  is_read: boolean;
   created_at: string;
 }
 

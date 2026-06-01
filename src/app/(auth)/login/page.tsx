@@ -32,6 +32,11 @@ function LoginFormInner() {
       if (nextPath?.startsWith("/manager")) return nextPath;
       return "/manager";
     }
+    if (role === "owner") {
+      if (redirectAfter?.startsWith("/owner")) return redirectAfter;
+      if (nextPath?.startsWith("/owner")) return nextPath;
+      return "/owner";
+    }
     if (redirectAfter && redirectAfter.startsWith("/") && !redirectAfter.startsWith("//")) {
       return redirectAfter;
     }

@@ -8,7 +8,10 @@ import { StaffServiceWorkerBootstrap } from "@/components/messaging/staff-sw-boo
 
 export function LayoutShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isPanelRoute = pathname.startsWith("/admin") || pathname.startsWith("/manager");
+  const isPanelRoute =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/manager") ||
+    pathname.startsWith("/owner");
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {

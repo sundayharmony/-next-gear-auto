@@ -1,4 +1,4 @@
-export const APP_ROLES = ["admin", "manager", "customer"] as const;
+export const APP_ROLES = ["admin", "manager", "customer", "owner"] as const;
 
 export type AppRole = (typeof APP_ROLES)[number];
 
@@ -16,6 +16,11 @@ export function isAdminRole(role: AppRole): boolean {
 
 export function isManagerRole(role: AppRole): boolean {
   return role === "manager";
+}
+
+/** Vehicle owner (arbitrage panel) — not staff, scoped to their own vehicles. */
+export function isOwnerRole(role: AppRole): boolean {
+  return role === "owner";
 }
 
 /** JWT / DB role string is staff (admin or manager). */
