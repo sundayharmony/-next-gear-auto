@@ -19,7 +19,7 @@ import {
   AdminSection,
   AdminStatCard,
 } from "@/components/admin/admin-shell";
-import { formatDate, formatTime, getLocalYmd } from "@/lib/utils/date-helpers";
+import { addDaysToYmd, formatDate, formatTime, getLocalYmd } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 
@@ -91,6 +91,21 @@ function buildHighlights(
   const pickups: TodayHighlightLists["pickups"] = [];
   const returns: TodayHighlightLists["returns"] = [];
   const seen = new Set<string>();
+  const tomorrowStr = addDaysToYmd(todayStr, 1);
+
+  function addPickup(b: BookingRow, dayLabel: "Today" | "Tomorrow") {
+    const key = `b-pu-${b.id}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    const vehicle = b.vehicleName || "Vehicle";
+    const timeSuffix = b.pickup_time ? ` · ${formatTime(b.pickup_time)}` : "";
+    pickups.push({
+      key,
+      label: b.customer_name || "Customer",
+      sub: `${dayLabel} · ${vehicle}${timeSuffix}`,
+      href: `/admin/bookings?booking=${b.id}`,
+    });
+  }
 
   // Only website reservations — not blocked_dates / Turo calendar rows (those can disagree with rental pickup/return dates).
   for (const b of bookings) {
@@ -99,21 +114,17 @@ function buildHighlights(
     const pickupDay = bookingCalendarDay(b.pickup_date);
     const returnDay = bookingCalendarDay(b.return_date);
 
-    // Pickups today: rentals not finished before pickup (pending / confirmed / active)
+    // Upcoming pickups: today and tomorrow, rentals not finished before pickup (pending / confirmed / active)
     if (
       pickupDay === todayStr &&
       (b.status === "pending" || b.status === "confirmed" || b.status === "active")
     ) {
-      const key = `b-pu-${b.id}`;
-      if (!seen.has(key)) {
-        seen.add(key);
-        pickups.push({
-          key,
-          label: b.customer_name || "Customer",
-          sub: b.vehicleName || "Vehicle",
-          href: `/admin/bookings?booking=${b.id}`,
-        });
-      }
+      addPickup(b, "Today");
+    } else if (
+      pickupDay === tomorrowStr &&
+      (b.status === "pending" || b.status === "confirmed" || b.status === "active")
+    ) {
+      addPickup(b, "Tomorrow");
     }
 
     // Returns today: any non-cancelled trip whose return day is today
@@ -327,10 +338,10 @@ export default function AdminDashboardPage() {
               {highlights && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                   <HighlightColumn
-                    title="Pickups today"
+                    title="Upcoming Pickups"
                     icon={MapPin}
                     items={highlights.pickups}
-                    emptyText="No pickups scheduled for today."
+                    emptyText="No pickups scheduled for today or tomorrow."
                   />
                   <HighlightColumn
                     title="Returns today"
