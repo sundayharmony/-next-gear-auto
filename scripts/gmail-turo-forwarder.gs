@@ -198,6 +198,46 @@ function backfillRecentTuroEmails(days) {
   }
 }
 
+/**
+ * One-time helper: reprocess Turo cancellation emails (ignores processed flag).
+ * Usage: run backfillCancellationEmails(365) in Apps Script editor.
+ */
+function backfillCancellationEmails(days) {
+  const safeDays = Math.max(1, Math.min(Number(days) || 365, 365));
+  const query = "from:turo.com (cancel OR cancelled OR canceled) newer_than:" + safeDays + "d";
+  const threads = searchThreads(query, MAX_SEARCH_THREADS);
+  Logger.log("Cancellation backfill threads: " + threads.length + " (newer_than " + safeDays + "d)");
+
+  for (const thread of threads) {
+    const messages = thread.getMessages();
+    for (const message of messages) {
+      const from = message.getFrom();
+      if (!from || !from.toLowerCase().includes("turo")) continue;
+      const body = message.getPlainBody() || message.getBody();
+      const subject = message.getSubject();
+      try {
+        const response = UrlFetchApp.fetch(WEBHOOK_URL, {
+          method: "post",
+          contentType: "application/json",
+          headers: {
+            Authorization: "Bearer " + WEBHOOK_SECRET,
+          },
+          payload: JSON.stringify({
+            emailText: body,
+            subject: subject,
+            from: from,
+            date: message.getDate().toISOString(),
+          }),
+          muteHttpExceptions: true,
+        });
+        Logger.log("CANCEL BACKFILL " + response.getResponseCode() + " — " + subject);
+      } catch (err) {
+        Logger.log("CANCEL BACKFILL ERROR: " + err.toString());
+      }
+    }
+  }
+}
+
 // ═══════ HELPERS ═══════
 function processedKey(messageId) {
   return PROCESSED_KEY_PREFIX + String(messageId || "");

@@ -5,6 +5,7 @@ import {
   filterActiveTuroTrips,
   filterManualBlockedDates,
   isActiveCalendarBlock,
+  isBlockedDateCancelled,
   isTuroBlockedSource,
 } from "../src/lib/utils/blocked-dates";
 
@@ -36,7 +37,16 @@ test("filterActiveTuroTrips keeps active Turo only", () => {
   assert.equal(active[0].id, "a");
 });
 
-test("isActiveCalendarBlock false when cancelled_at is set", () => {
+test("isBlockedDateCancelled detects reason prefix fallback", () => {
+  assert.equal(
+    isBlockedDateCancelled({ reason: "[CANCELLED] 2026-06-01 — Turo: Alex" }),
+    true
+  );
+  assert.equal(isBlockedDateCancelled({ reason: "Turo: Alex", cancelled_at: null }), false);
+});
+
+test("isActiveCalendarBlock false when cancelled", () => {
   assert.equal(isActiveCalendarBlock({ cancelled_at: null }), true);
   assert.equal(isActiveCalendarBlock({ cancelled_at: "2026-01-01T00:00:00Z" }), false);
+  assert.equal(isActiveCalendarBlock({ reason: "[CANCELLED] note" }), false);
 });

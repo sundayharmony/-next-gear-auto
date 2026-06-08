@@ -235,7 +235,54 @@ export default function BlockedDatesPage() {
   };
 
   const handleConfirmEmailBlock = async () => {
-    if (!parseResult?.startDate || !parseResult?.endDate || !emailVehicleId) {
+    if (!parseResult?.startDate || !parseResult?.endDate) {
+      setError("Please verify the dates were extracted from the email");
+      return;
+    }
+
+    if (parseResult.isCancellation) {
+      setSavingEmail(true);
+      try {
+        const res = await adminFetch("/api/admin/blocked-dates/sync-cancellations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            emailText,
+            delete: true,
+            purgeAlreadyCancelled: true,
+          }),
+        });
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        if (data.success) {
+          const removed = data.data.deleted + data.data.marked;
+          if (removed > 0) {
+            await fetchData();
+            setSuccess(`Removed ${removed} cancelled Turo trip(s) from the calendar`);
+          } else {
+            setError(
+              data.data.errors?.[0] ||
+                "No matching active Turo trip found for this cancellation email"
+            );
+          }
+          if (removed > 0) {
+            setEmailText("");
+            setParseResult(null);
+            setEmailVehicleId("");
+            setShowEmailForm(false);
+          }
+        } else {
+          setError(data.message || "Failed to process cancellation");
+        }
+      } catch {
+        setError("Network error — could not process cancellation");
+      } finally {
+        setSavingEmail(false);
+      }
+      return;
+    }
+
+    if (!emailVehicleId) {
       setError("Please select a vehicle and verify the dates");
       return;
     }
@@ -501,7 +548,7 @@ export default function BlockedDatesPage() {
               {/* Parse Results */}
               {parseResult && (
                 <div className="mt-4 p-4 bg-white rounded-lg border">
-                  <div className="flex items-center gap-2 mb-3">
+                  <div className="flex items-center gap-2 mb-3 flex-wrap">
                     <Badge
                       className={
                         parseResult.confidence === "high"
@@ -513,6 +560,12 @@ export default function BlockedDatesPage() {
                     >
                       {parseResult.confidence} confidence
                     </Badge>
+                    {parseResult.isCancellation && (
+                      <Badge className="bg-red-100 text-red-800">Cancellation email</Badge>
+                    )}
+                    {parseResult.isExtension && !parseResult.isCancellation && (
+                      <Badge className="bg-blue-100 text-blue-800">Extension</Badge>
+                    )}
                     {parseResult.rawMatches.length > 0 && (
                       <span className="text-xs text-gray-400">
                         Found: {parseResult.rawMatches.join(" · ")}
@@ -555,7 +608,27 @@ export default function BlockedDatesPage() {
                     </div>
                   </div>
 
-                  {parseResult.startDate && parseResult.endDate && (
+                  {parseResult.startDate && parseResult.endDate && parseResult.isCancellation && (
+                    <div className="mt-4 pt-3 border-t">
+                      <p className="text-xs text-red-700 mb-3">
+                        This will find the matching active Turo trip and remove it from the calendar.
+                      </p>
+                      <Button
+                        onClick={handleConfirmEmailBlock}
+                        disabled={savingEmail}
+                        className="bg-red-600 hover:bg-red-700"
+                        size="sm"
+                      >
+                        {savingEmail ? (
+                          <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Removing...</>
+                        ) : (
+                          <>Remove cancelled trip ({parseResult.startDate} → {parseResult.endDate})</>
+                        )}
+                      </Button>
+                    </div>
+                  )}
+
+                  {parseResult.startDate && parseResult.endDate && !parseResult.isCancellation && (
                     <div className="mt-4 pt-3 border-t">
                       <label className="text-xs font-semibold text-gray-700 block mb-1">
                         Select Vehicle to Block

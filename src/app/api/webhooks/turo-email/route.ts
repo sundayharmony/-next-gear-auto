@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { parseTuroEmail } from "@/lib/utils/turo-email-parser";
-import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
+import { TURO_BLOCKED_SOURCE, CANCELLED_REASON_PREFIX } from "@/lib/utils/blocked-dates";
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 
@@ -298,14 +298,36 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (cancelErr && isMissingColumnError(cancelErr)) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "cancelled_at column is missing — run supabase-turo-cancellations.sql in Supabase first",
-          },
-          { status: 500 }
-        );
+        const cancelledAtFallback = new Date().toISOString();
+        const reason = matchedTrip.reason?.startsWith(CANCELLED_REASON_PREFIX)
+          ? matchedTrip.reason
+          : `${CANCELLED_REASON_PREFIX} ${cancelledAtFallback} — ${matchedTrip.reason || "Turo trip"}`;
+        const fallback = await supabase
+          .from("blocked_dates")
+          .update({ reason })
+          .eq("id", matchedTrip.id)
+          .select("id, vehicle_id, start_date, end_date, source, reason")
+          .maybeSingle();
+        cancelled = fallback.data;
+        cancelErr = fallback.error;
+        if (!cancelErr) {
+          logger.info("Turo webhook: trip cancelled via reason prefix (run supabase-turo-cancellations.sql for cancelled_at)", {
+            id: matchedTrip.id,
+          });
+          return NextResponse.json({
+            success: true,
+            action: "cancelled",
+            message: `Marked Turo trip cancelled for ${vehicleLabel} (${matchedTrip.start_date} → ${matchedTrip.end_date})`,
+            data: cancelled,
+            parsed: {
+              confidence: parsed.confidence,
+              guestName: parsed.guestName,
+              vehicleMatched: vehicleLabel,
+              isCancellation: true,
+              usedReasonFallback: true,
+            },
+          });
+        }
       }
 
       if (cancelErr) {
