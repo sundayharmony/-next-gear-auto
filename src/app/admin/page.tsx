@@ -169,20 +169,30 @@ function HighlightColumn({
   icon: Icon,
   items,
   emptyText,
+  href,
 }: {
   title: string;
   icon: LucideIcon;
   items: { key: string; label: string; sub: string; href: string }[];
   emptyText: string;
+  href: string;
 }) {
   return (
-    <AdminCard padding="sm">
-      <div className="flex items-center gap-2 mb-3 text-sm font-semibold text-gray-900">
+    <AdminCard padding="sm" className="h-full">
+      <Link
+        href={href}
+        className="group/title flex items-center gap-2 mb-3 text-sm font-semibold text-gray-900 rounded-lg -mx-1 px-1 py-0.5 hover:text-purple-700 transition-colors"
+      >
         <Icon className="h-4 w-4 text-purple-600 shrink-0" />
         {title}
-      </div>
+      </Link>
       {items.length === 0 ? (
-        <p className="text-xs text-gray-500 py-2">{emptyText}</p>
+        <Link
+          href={href}
+          className="block rounded-lg border border-transparent px-2 py-2 -mx-2 hover:border-purple-100 hover:bg-purple-50/60 transition-colors"
+        >
+          <p className="text-xs text-gray-500">{emptyText}</p>
+        </Link>
       ) : (
         <ul className="space-y-2">
           {items.map((item) => (
@@ -317,11 +327,11 @@ export default function AdminDashboardPage() {
           <>
             <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 mb-8">
               {[
-                { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600", bg: "bg-blue-50" },
-                { label: "Confirmed", value: data.confirmedBookings, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50" },
-                { label: "Pending", value: data.pendingBookings, icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50" },
-                { label: "Revenue", value: formatCurrency(data.totalRevenue ?? 0), icon: DollarSign, color: "text-green-600", bg: "bg-green-50" },
-                { label: "Collected", value: formatCurrency(data.totalDeposits ?? 0), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50" },
+                { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/bookings?status=active" },
+                { label: "Confirmed", value: data.confirmedBookings, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50", href: "/admin/bookings?status=confirmed" },
+                { label: "Pending", value: data.pendingBookings, icon: Clock, color: "text-yellow-600", bg: "bg-yellow-50", href: "/admin/bookings?status=pending" },
+                { label: "Revenue", value: formatCurrency(data.totalRevenue ?? 0), icon: DollarSign, color: "text-green-600", bg: "bg-green-50", href: "/admin/finances" },
+                { label: "Collected", value: formatCurrency(data.totalDeposits ?? 0), icon: TrendingUp, color: "text-emerald-600", bg: "bg-emerald-50", href: "/admin/finances" },
               ].map((stat) => (
                 <AdminStatCard
                   key={stat.label}
@@ -330,6 +340,7 @@ export default function AdminDashboardPage() {
                   icon={stat.icon}
                   iconClassName={stat.color}
                   iconBgClassName={stat.bg}
+                  href={stat.href}
                 />
               ))}
             </div>
@@ -342,18 +353,21 @@ export default function AdminDashboardPage() {
                     icon={MapPin}
                     items={highlights.pickups}
                     emptyText="No pickups scheduled for today or tomorrow."
+                    href="/admin/bookings"
                   />
                   <HighlightColumn
                     title="Returns today"
                     icon={Calendar}
                     items={highlights.returns}
                     emptyText="No returns scheduled for today."
+                    href="/admin/bookings?status=active"
                   />
                   <HighlightColumn
                     title="Maintenance today"
                     icon={Wrench}
                     items={highlights.maintenance}
                     emptyText="No maintenance scheduled for today."
+                    href="/admin/maintenance"
                   />
                 </div>
               )}
@@ -397,11 +411,13 @@ export default function AdminDashboardPage() {
             >
 
             {data.recentBookings.length === 0 ? (
-              <AdminCard className="py-16 text-center">
-                <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" aria-hidden />
-                <p className="text-gray-500 font-medium">No pending or active rentals</p>
-                <p className="text-sm text-gray-400 mt-1">When new bookings need action or vehicles are out, they will appear here.</p>
-              </AdminCard>
+              <Link href="/admin/bookings" className="block rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2">
+                <AdminCard hover className="py-16 text-center cursor-pointer admin-card-press transition-all hover:border-purple-200/80">
+                  <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" aria-hidden />
+                  <p className="text-gray-500 font-medium">No pending or active rentals</p>
+                  <p className="text-sm text-gray-400 mt-1">When new bookings need action or vehicles are out, they will appear here.</p>
+                </AdminCard>
+              </Link>
             ) : (
               <div className="space-y-2.5">
                 {data.recentBookings.map((booking) => {

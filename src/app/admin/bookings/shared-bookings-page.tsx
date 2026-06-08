@@ -65,6 +65,16 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
   } | undefined>(undefined);
 
   const [highlightApplied, setHighlightApplied] = useState(false);
+  const [statusFromUrlApplied, setStatusFromUrlApplied] = useState(false);
+
+  useEffect(() => {
+    if (statusFromUrlApplied) return;
+    const status = searchParams.get("status");
+    if (status && ["all", "pending", "confirmed", "active", "completed", "cancelled"].includes(status)) {
+      setStatusFilter(status);
+    }
+    setStatusFromUrlApplied(true);
+  }, [searchParams, setStatusFilter, statusFromUrlApplied]);
 
   useEffect(() => {
     if (highlightApplied || loading) return;

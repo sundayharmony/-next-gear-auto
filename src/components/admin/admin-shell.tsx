@@ -181,6 +181,7 @@ interface AdminStatCardProps {
   icon: LucideIcon;
   iconClassName?: string;
   iconBgClassName?: string;
+  href?: string;
 }
 
 export function AdminStatCard({
@@ -189,18 +190,40 @@ export function AdminStatCard({
   icon: Icon,
   iconClassName = "text-purple-600",
   iconBgClassName = "bg-purple-50",
+  href,
 }: AdminStatCardProps) {
-  return (
-    <AdminCard padding="sm" className="h-full">
-      <div className="flex items-center gap-3">
-        <div className={cn("rounded-lg p-2.5", iconBgClassName, iconClassName)}>
-          <Icon className="h-5 w-5" aria-hidden />
-        </div>
-        <div className="min-w-0 flex-1">
-          <p className="truncate text-xl font-bold text-gray-900 tabular-nums">{value}</p>
-          <p className="truncate text-xs text-gray-500">{label}</p>
-        </div>
+  const content = (
+    <div className="flex items-center gap-3">
+      <div className={cn("rounded-lg p-2.5", iconBgClassName, iconClassName)}>
+        <Icon className="h-5 w-5" aria-hidden />
       </div>
-    </AdminCard>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-xl font-bold text-gray-900 tabular-nums">{value}</p>
+        <p className="truncate text-xs text-gray-500">{label}</p>
+      </div>
+    </div>
+  );
+
+  if (!href) {
+    return (
+      <AdminCard padding="sm" className="h-full">
+        {content}
+      </AdminCard>
+    );
+  }
+
+  return (
+    <Link
+      href={href}
+      className="block h-full rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
+    >
+      <AdminCard
+        padding="sm"
+        hover
+        className="h-full cursor-pointer admin-card-press transition-all hover:border-purple-200/80"
+      >
+        {content}
+      </AdminCard>
+    </Link>
   );
 }
