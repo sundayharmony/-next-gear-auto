@@ -7,6 +7,7 @@ import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { notifyOwner } from "@/lib/owner/notifications";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
+import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -134,11 +135,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Cannot overlap an existing block.
+    // Cannot overlap another manual/owner block (Turo trips are tracked separately).
     const { data: conflictingBlocks } = await supabase
       .from("blocked_dates")
       .select("id, start_date, end_date")
       .eq("vehicle_id", vehicleId)
+      .neq("source", TURO_BLOCKED_SOURCE)
       .lte("start_date", endDate)
       .gte("end_date", startDate);
     if (conflictingBlocks && conflictingBlocks.length > 0) {

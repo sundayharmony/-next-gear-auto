@@ -24,6 +24,7 @@ export interface TuroEmailParseResult {
   location: string | null;   // e.g. "Newark, NJ Newark Liberty International Airport"
   earnings: number | null;
   isExtension: boolean;           // true if this is a trip extension/modification email
+  isCancellation: boolean;        // true if guest/host cancelled the trip
   originalEndDate: string | null; // previous end date before extension, if extractable
   confidence: "high" | "medium" | "low";
   rawMatches: string[];      // Debug info showing what was matched
@@ -35,6 +36,27 @@ export interface TuroEmailParseResult {
 export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   const text = stripHtml(emailText);
   const rawMatches: string[] = [];
+
+  // ── Detect cancellation emails (before extension — cancel wins) ──
+  let isCancellation = false;
+  const cancellationPatterns = [
+    /has\s+been\s+cancel(?:led|ed)/i,
+    /trip\s+(?:has\s+been\s+)?cancel(?:led|ed)/i,
+    /booking\s+(?:has\s+been\s+)?cancel(?:led|ed)/i,
+    /reservation\s+(?:has\s+been\s+)?cancel(?:led|ed)/i,
+    /cancel(?:led|ed)\s+(?:your\s+)?(?:trip|booking|reservation)/i,
+    /(?:guest|renter|driver)\s+cancel(?:led|ed)/i,
+    /you\s+cancel(?:led|ed)\s+(?:this\s+)?trip/i,
+    /trip\s+cancel(?:lation|led)/i,
+  ];
+  for (const pattern of cancellationPatterns) {
+    if (pattern.test(text)) {
+      isCancellation = true;
+      const m = text.match(pattern);
+      if (m) rawMatches.push(`Cancellation detected: "${m[0]}"`);
+      break;
+    }
+  }
 
   // ── Detect extension / modification emails ──
   let isExtension = false;
@@ -52,7 +74,7 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   ];
 
   for (const pattern of extensionPatterns) {
-    if (pattern.test(text)) {
+    if (!isCancellation && pattern.test(text)) {
       isExtension = true;
       const m = text.match(pattern);
       if (m) rawMatches.push(`Extension detected: "${m[0]}"`);
@@ -366,6 +388,7 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
     location,
     earnings,
     isExtension,
+    isCancellation,
     originalEndDate,
     confidence,
     rawMatches,

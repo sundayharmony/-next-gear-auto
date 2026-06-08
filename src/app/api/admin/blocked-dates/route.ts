@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
+import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
 
 /**
  * GET /api/admin/blocked-dates?vehicleId=...
@@ -21,7 +22,7 @@ export async function GET(req: NextRequest) {
 
     let query = supabase
       .from("blocked_dates")
-      .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date, created_at")
+      .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date, cancelled_at, created_at")
       .order("start_date", { ascending: true });
 
     if (vehicleId) {
@@ -61,6 +62,7 @@ export async function GET(req: NextRequest) {
         earnings: null,
         is_extension: false,
         original_end_date: null,
+        cancelled_at: null,
       }));
       error = fallbackRes.error;
     }
@@ -123,11 +125,12 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Vehicle not found" }, { status: 404 });
     }
 
-    // Check for overlapping blocked dates
+    // Manual blocks only overlap other non-Turo blocks (Turo trips are separate records).
     const { data: existing } = await supabase
       .from("blocked_dates")
       .select("id, start_date, end_date")
       .eq("vehicle_id", vehicleId)
+      .neq("source", TURO_BLOCKED_SOURCE)
       .lte("start_date", endDate)
       .gte("end_date", startDate);
 
@@ -253,7 +256,7 @@ export async function PUT(req: NextRequest) {
     // Fetch current record (needed for overlap check and extension detection)
     const { data: current } = await supabase
       .from("blocked_dates")
-      .select("vehicle_id, start_date, end_date")
+      .select("vehicle_id, start_date, end_date, source")
       .eq("id", id)
       .maybeSingle();
 
@@ -275,15 +278,24 @@ export async function PUT(req: NextRequest) {
       updates.original_end_date = current.end_date;
     }
 
-    // Check for overlapping blocked dates (exclude self)
+    // Overlap only within the same category (Turo vs manual/owner).
     if (updates.start_date || updates.end_date || updates.vehicle_id) {
-      const { data: existing } = await supabase
+      const overlapSource = current.source === TURO_BLOCKED_SOURCE ? TURO_BLOCKED_SOURCE : "manual";
+      let overlapQuery = supabase
         .from("blocked_dates")
         .select("id, start_date, end_date, reason")
         .eq("vehicle_id", checkVehicle)
         .neq("id", id)
         .lte("start_date", checkEnd)
         .gte("end_date", checkStart);
+
+      if (overlapSource === TURO_BLOCKED_SOURCE) {
+        overlapQuery = overlapQuery.eq("source", TURO_BLOCKED_SOURCE);
+      } else {
+        overlapQuery = overlapQuery.neq("source", TURO_BLOCKED_SOURCE);
+      }
+
+      const { data: existing } = await overlapQuery;
 
       if (existing && existing.length > 0 && !forceOverride) {
         return NextResponse.json(

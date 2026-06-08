@@ -6,6 +6,13 @@ import {
   type OccupancyEntry,
 } from "@/lib/admin/vehicle-occupancy";
 
+test("deriveTuroOccupancyStatus: cancelled trip returns cancelled", () => {
+  assert.equal(
+    deriveTuroOccupancyStatus("2026-12-01", "2026-12-10", "2026-06-01", "2026-06-02T00:00:00Z"),
+    "cancelled"
+  );
+});
+
 test("deriveTuroOccupancyStatus: past trip is completed", () => {
   assert.equal(deriveTuroOccupancyStatus("2026-01-01", "2026-01-05", "2026-06-01"), "completed");
 });

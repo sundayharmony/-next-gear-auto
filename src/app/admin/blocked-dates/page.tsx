@@ -46,6 +46,7 @@ interface BlockedDate {
   reason: string | null;
   is_extension: boolean | null;
   original_end_date: string | null;
+  cancelled_at: string | null;
   created_at: string;
 }
 
@@ -66,6 +67,7 @@ interface ParseResult {
   location: string | null;
   earnings: number | null;
   isExtension: boolean;
+  isCancellation: boolean;
   originalEndDate: string | null;
   confidence: "high" | "medium" | "low";
   rawMatches: string[];
@@ -96,6 +98,7 @@ export default function BlockedDatesPage() {
 
   // Filter
   const [filterVehicleId, setFilterVehicleId] = useState("");
+  const [listTab, setListTab] = useState<"all" | "manual" | "turo">("all");
 
   // Deleting
   const [deletingId, setDeletingId] = useState<string | null>(null);
@@ -413,9 +416,17 @@ export default function BlockedDatesPage() {
     return t.substring(0, 5); // "08:00:00" → "08:00"
   };
 
-  const filteredBlocks = filterVehicleId
-    ? blockedDates.filter((b) => b.vehicle_id === filterVehicleId)
-    : blockedDates;
+  const filteredBlocks = useMemo(() => {
+    let rows = filterVehicleId
+      ? blockedDates.filter((b) => b.vehicle_id === filterVehicleId)
+      : blockedDates;
+    if (listTab === "manual") {
+      rows = rows.filter((b) => b.source !== "turo-email");
+    } else if (listTab === "turo") {
+      rows = rows.filter((b) => b.source === "turo-email");
+    }
+    return rows;
+  }, [blockedDates, filterVehicleId, listTab]);
 
   const today = useMemo(() => getLocalYmd(new Date()), []);
 
@@ -428,7 +439,7 @@ export default function BlockedDatesPage() {
             <div>
               <h1 className="text-2xl sm:text-3xl font-bold">Blocked Dates</h1>
               <p className="mt-1 page-hero-subtitle">
-                Block dates manually or from Turo booking emails
+                Manual blocks and Turo trips are tracked separately — they do not merge
               </p>
             </div>
             <div className="flex gap-2">
@@ -649,7 +660,23 @@ export default function BlockedDatesPage() {
         )}
 
         {/* Filter */}
-        <div className="flex items-center gap-3 mb-4">
+        <div className="flex flex-wrap items-center gap-3 mb-4">
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden">
+            {(["all", "manual", "turo"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setListTab(tab)}
+                className={`px-3 py-1.5 text-xs font-medium transition-colors ${
+                  listTab === tab
+                    ? "bg-purple-600 text-white"
+                    : "bg-white text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                {tab === "all" ? "All" : tab === "manual" ? "Manual blocks" : "Turo trips"}
+              </button>
+            ))}
+          </div>
           <label className="text-sm font-medium text-gray-700">Filter by vehicle:</label>
           <Select
             value={filterVehicleId}
@@ -911,6 +938,15 @@ export default function BlockedDatesPage() {
                         Extended
                       </Badge>
                     )}
+                    {block.cancelled_at && (
+                      <Badge
+                        variant="outline"
+                        className="text-red-700 border-red-300 bg-red-50 text-[10px]"
+                        title={`Cancelled ${new Date(block.cancelled_at).toLocaleString()}`}
+                      >
+                        Cancelled
+                      </Badge>
+                    )}
                     <Badge
                       variant="outline"
                       className={
@@ -1001,6 +1037,11 @@ export default function BlockedDatesPage() {
                   <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
                     Extension detected
                     {selectedBlockDetail.original_end_date ? ` — originally ended ${formatDate(selectedBlockDetail.original_end_date)}` : ""}
+                  </div>
+                )}
+                {selectedBlockDetail.cancelled_at && (
+                  <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                    Cancelled on {new Date(selectedBlockDetail.cancelled_at).toLocaleString()}
                   </div>
                 )}
                 <div>

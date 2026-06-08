@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { getBookingOccupancyEndDate } from "@/lib/utils/recurring-booking";
+import { isActiveCalendarBlock } from "@/lib/utils/blocked-dates";
 
 export type BookingOverlapMode = "default" | "manager";
 
@@ -129,13 +130,14 @@ async function hasBlockedDateOverlap(
 ): Promise<boolean> {
   const { data: blocks } = await supabase
     .from("blocked_dates")
-    .select("id")
+    .select("id, cancelled_at")
     .eq("vehicle_id", vehicleId)
     .lte("start_date", returnDate)
     .gte("end_date", pickupDate)
-    .limit(1);
+    .limit(20);
 
-  return !!(blocks && blocks.length > 0);
+  const activeBlocks = (blocks || []).filter(isActiveCalendarBlock);
+  return activeBlocks.length > 0;
 }
 
 export interface CheckBookingOverlapOptions {

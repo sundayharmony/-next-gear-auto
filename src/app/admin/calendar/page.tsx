@@ -217,7 +217,9 @@ export default function AdminCalendarPage() {
     }
     if (blockedRes.ok) {
       const data = await blockedRes.json();
-      setBlockedDates(data.data || []);
+      const rows = (data.data || []) as BlockedDateEntry[];
+      // Manual/owner blocks only — Turo trips appear via bookings (includeTuro).
+      setBlockedDates(rows.filter((bd) => bd.source !== "turo-email"));
     }
   }, [visibleBounds]);
 

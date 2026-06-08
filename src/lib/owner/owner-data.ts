@@ -15,6 +15,7 @@ import {
   DEFAULT_OWNER_PERCENTAGE,
 } from "@/lib/owner/finance";
 import { getTuroDriverFromReason, resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
+import { filterActiveTuroTrips, TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 
 interface VehicleRow {
@@ -158,7 +159,7 @@ export async function loadOwnerDataset(
     );
   }
 
-  const turoBlocks = await fetchOwnerTuroBlocks(supabase, vehicleIds);
+  const turoBlocks = filterActiveTuroTrips(await fetchOwnerTuroBlocks(supabase, vehicleIds));
   for (const row of turoBlocks) {
     const vehicleId = String(row.vehicle_id);
     const vehicle = vehicleMap.get(vehicleId);
@@ -213,14 +214,14 @@ async function fetchOwnerTuroBlocks(
   vehicleIds: string[]
 ): Promise<Record<string, unknown>[]> {
   const fullSelect =
-    "id, vehicle_id, start_date, end_date, earnings, reason, created_at";
+    "id, vehicle_id, start_date, end_date, earnings, reason, cancelled_at, created_at";
   const minimalSelect = "id, vehicle_id, start_date, end_date, source, reason, created_at";
 
   let { data, error } = await supabase
     .from("blocked_dates")
     .select(fullSelect)
     .in("vehicle_id", vehicleIds)
-    .eq("source", "turo-email")
+    .eq("source", TURO_BLOCKED_SOURCE)
     .order("start_date", { ascending: false })
     .limit(2000);
 
@@ -229,12 +230,13 @@ async function fetchOwnerTuroBlocks(
       .from("blocked_dates")
       .select(minimalSelect)
       .in("vehicle_id", vehicleIds)
-      .eq("source", "turo-email")
+      .eq("source", TURO_BLOCKED_SOURCE)
       .order("start_date", { ascending: false })
       .limit(2000);
     data = (fb.data || []).map((r: Record<string, unknown>) => ({
       ...r,
       earnings: null,
+      cancelled_at: null,
     }));
     error = fb.error;
   }

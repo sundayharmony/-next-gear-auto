@@ -86,7 +86,12 @@ export function TuroTripDetailPanel({ booking, onClose }: TuroTripDetailPanelPro
 
           <div>
             <p className="text-xs text-gray-500">Status</p>
-            <Badge className="mt-1">{booking.status}</Badge>
+            <Badge className={`mt-1 ${booking.status === "cancelled" ? "bg-red-100 text-red-800" : ""}`}>
+              {booking.status}
+            </Badge>
+            {booking.status === "cancelled" && (
+              <p className="text-xs text-red-600 mt-1">This Turo trip was cancelled and no longer blocks the calendar.</p>
+            )}
           </div>
 
           <div>

@@ -1,5 +1,6 @@
 import { getVehicleDisplayName } from "@/lib/types";
 import { resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
+import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import type { StaffRole } from "@/lib/admin/vehicle-details-queries";
 import {
@@ -64,8 +65,10 @@ export function todayYmdUtc(): string {
 export function deriveTuroOccupancyStatus(
   startDate: string,
   endDate: string,
-  today: string = todayYmdUtc()
-): Exclude<OccupancyStatus, "pending" | "cancelled"> {
+  today: string = todayYmdUtc(),
+  cancelledAt?: string | null
+): OccupancyStatus {
+  if (cancelledAt) return "cancelled";
   if (endDate < today) return "completed";
   if (startDate <= today && endDate >= today) return "active";
   return "confirmed";
@@ -126,6 +129,7 @@ function normalizeBlockedRow(row: Record<string, unknown>): {
   is_extension: boolean;
   created_at: string;
   location: string | null;
+  cancelled_at: string | null;
 } {
   return {
     id: String(row.id),
@@ -139,6 +143,7 @@ function normalizeBlockedRow(row: Record<string, unknown>): {
     is_extension: Boolean(row.is_extension),
     created_at: String(row.created_at || ""),
     location: (row.location as string | null) ?? null,
+    cancelled_at: (row.cancelled_at as string | null) ?? null,
   };
 }
 
@@ -151,7 +156,7 @@ function mapTuroBlock(
   const n = normalizeBlockedRow(row);
   const revenue = resolveTuroTripRevenue({ earnings: n.earnings, reason: n.reason });
   const canViewPricing = role === "admin";
-  const status = deriveTuroOccupancyStatus(n.start_date, n.end_date);
+  const status = deriveTuroOccupancyStatus(n.start_date, n.end_date, todayYmdUtc(), n.cancelled_at);
   const turoTripName = `${vehicleName || "Unknown Vehicle"} on TURO`;
   return {
     id: `turo:${n.id}`,
@@ -187,10 +192,10 @@ async function fetchTuroBlocksForVehicle(
   query: VehicleOccupancyQuery
 ): Promise<Record<string, unknown>[]> {
   const fullSelect =
-    "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, created_at";
+    "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, cancelled_at, created_at";
   const minimalSelect = "id, vehicle_id, start_date, end_date, source, reason, created_at";
 
-  let dbQuery = supabase.from("blocked_dates").select(fullSelect).eq("vehicle_id", vehicleId).eq("source", "turo-email");
+  let dbQuery = supabase.from("blocked_dates").select(fullSelect).eq("vehicle_id", vehicleId).eq("source", TURO_BLOCKED_SOURCE);
 
   if (role === "manager") {
     dbQuery = dbQuery.gte("end_date", todayYmdUtc());
@@ -209,7 +214,7 @@ async function fetchTuroBlocksForVehicle(
       .from("blocked_dates")
       .select(minimalSelect)
       .eq("vehicle_id", vehicleId)
-      .eq("source", "turo-email")
+      .eq("source", TURO_BLOCKED_SOURCE)
       .order("start_date", { ascending: false })
       .limit(2000);
     data = (fb.data || []).map((r: Record<string, unknown>) => ({
@@ -219,6 +224,7 @@ async function fetchTuroBlocksForVehicle(
       earnings: null,
       is_extension: false,
       location: null,
+      cancelled_at: null,
     }));
     error = fb.error;
   }
@@ -370,9 +376,9 @@ export async function fetchGlobalOccupancy(
   let turoQuery = supabase
     .from("blocked_dates")
     .select(
-      "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, created_at"
+      "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, cancelled_at, created_at"
     )
-    .eq("source", "turo-email")
+    .eq("source", TURO_BLOCKED_SOURCE)
     .order("start_date", { ascending: false })
     .limit(2000);
 
@@ -388,7 +394,7 @@ export async function fetchGlobalOccupancy(
     const fb = await supabase
       .from("blocked_dates")
       .select("id, vehicle_id, start_date, end_date, source, reason, created_at")
-      .eq("source", "turo-email")
+      .eq("source", TURO_BLOCKED_SOURCE)
       .order("start_date", { ascending: false })
       .limit(2000);
     turoData = (fb.data || []).map((r: Record<string, unknown>) => ({
@@ -398,6 +404,7 @@ export async function fetchGlobalOccupancy(
       earnings: null,
       is_extension: false,
       location: null,
+      cancelled_at: null,
     }));
     turoErr = fb.error;
   }

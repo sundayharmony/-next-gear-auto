@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { parseTuroEmail } from "@/lib/utils/turo-email-parser";
+import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 
@@ -178,28 +179,172 @@ export async function POST(req: NextRequest) {
 
     const vehicleLabel = `${matchedVehicle.year} ${matchedVehicle.make} ${matchedVehicle.model}`;
 
+    const turoSelectFull =
+      "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date, cancelled_at";
+    const turoSelectMinimal = "id, vehicle_id, start_date, end_date, source, reason";
+
+    /** Active Turo trips only — never merge/update manual blocks or cancelled rows. */
+    async function findActiveTuroTrips(filters: {
+      startDate?: string;
+      overlapStart?: string;
+      overlapEnd?: string;
+    }) {
+      let q = supabase
+        .from("blocked_dates")
+        .select(turoSelectFull)
+        .eq("vehicle_id", matchedVehicle!.id)
+        .eq("source", TURO_BLOCKED_SOURCE);
+
+      if (filters.startDate) q = q.eq("start_date", filters.startDate);
+      if (filters.overlapStart && filters.overlapEnd) {
+        q = q.lte("start_date", filters.overlapEnd).gte("end_date", filters.overlapStart);
+      }
+
+      let { data, error } = await q.is("cancelled_at", null).order("created_at", { ascending: false }).limit(10);
+
+      if (error && isMissingColumnError(error)) {
+        let fb = supabase
+          .from("blocked_dates")
+          .select(turoSelectMinimal)
+          .eq("vehicle_id", matchedVehicle!.id)
+          .eq("source", TURO_BLOCKED_SOURCE)
+          .order("created_at", { ascending: false })
+          .limit(10);
+        if (filters.startDate) fb = fb.eq("start_date", filters.startDate);
+        if (filters.overlapStart && filters.overlapEnd) {
+          fb = fb.lte("start_date", filters.overlapEnd).gte("end_date", filters.overlapStart);
+        }
+        const res = await fb;
+        data = (res.data || []).map((r: Record<string, unknown>) => ({
+          ...r,
+          cancelled_at: null,
+          pickup_time: null,
+          return_time: null,
+          location: null,
+          earnings: null,
+          is_extension: false,
+          original_end_date: null,
+        }));
+        error = res.error;
+        return { data: data as Record<string, unknown>[], error };
+      }
+
+      if (error) return { data: [] as Record<string, unknown>[], error };
+
+      let rows = (data || []) as Record<string, unknown>[];
+      if (filters.startDate) {
+        rows = rows.filter((r) => r.start_date === filters.startDate);
+      }
+      if (filters.overlapStart && filters.overlapEnd) {
+        rows = rows.filter(
+          (r) =>
+            String(r.start_date) <= filters.overlapEnd! &&
+            String(r.end_date) >= filters.overlapStart!
+        );
+      }
+      return { data: rows, error: null };
+    }
+
+    // ── Handle cancellation emails ──
+    if (parsed.isCancellation) {
+      const { data: candidates, error: findErr } = await findActiveTuroTrips({
+        overlapStart: parsed.startDate!,
+        overlapEnd: parsed.endDate!,
+      });
+
+      if (findErr) {
+        logger.error("Turo webhook: cancellation lookup error", findErr);
+        return NextResponse.json({ success: false, message: findErr.message }, { status: 500 });
+      }
+
+      let matchedTrip = candidates[0] ?? null;
+      if (parsed.guestName && candidates.length > 1) {
+        const guestLower = parsed.guestName.toLowerCase();
+        matchedTrip =
+          candidates.find((r) =>
+            String(r.reason || "")
+              .toLowerCase()
+              .includes(guestLower)
+          ) ?? matchedTrip;
+      }
+
+      if (!matchedTrip) {
+        logger.warn("Turo webhook: cancellation email but no matching active Turo trip", {
+          vehicle: vehicleLabel,
+          startDate: parsed.startDate,
+          endDate: parsed.endDate,
+          guest: parsed.guestName,
+        });
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Could not find an active Turo trip to cancel for these dates",
+            parsed: {
+              confidence: parsed.confidence,
+              guestName: parsed.guestName,
+              isCancellation: true,
+            },
+          },
+          { status: 404 }
+        );
+      }
+
+      const cancelledAt = new Date().toISOString();
+      let { data: cancelled, error: cancelErr } = await supabase
+        .from("blocked_dates")
+        .update({ cancelled_at: cancelledAt })
+        .eq("id", matchedTrip.id)
+        .select(turoSelectFull)
+        .maybeSingle();
+
+      if (cancelErr && isMissingColumnError(cancelErr)) {
+        return NextResponse.json(
+          {
+            success: false,
+            message:
+              "cancelled_at column is missing — run supabase-turo-cancellations.sql in Supabase first",
+          },
+          { status: 500 }
+        );
+      }
+
+      if (cancelErr) {
+        logger.error("Turo webhook: cancellation update error", cancelErr);
+        return NextResponse.json({ success: false, message: cancelErr.message }, { status: 500 });
+      }
+
+      logger.info("Turo webhook: trip cancelled", {
+        id: matchedTrip.id,
+        vehicle: vehicleLabel,
+        dates: `${matchedTrip.start_date} → ${matchedTrip.end_date}`,
+        guest: parsed.guestName,
+      });
+
+      return NextResponse.json({
+        success: true,
+        action: "cancelled",
+        message: `Marked Turo trip cancelled for ${vehicleLabel} (${matchedTrip.start_date} → ${matchedTrip.end_date})`,
+        data: cancelled,
+        parsed: {
+          confidence: parsed.confidence,
+          guestName: parsed.guestName,
+          vehicleMatched: vehicleLabel,
+          isCancellation: true,
+        },
+      });
+    }
+
     // ── Handle extension emails ──
     if (parsed.isExtension) {
-      // Find existing blocked date for this vehicle with matching start date
-      const { data: existingBlocks } = await supabase
-        .from("blocked_dates")
-        .select("id, start_date, end_date, reason")
-        .eq("vehicle_id", matchedVehicle.id)
-        .eq("start_date", parsed.startDate)
-        .order("created_at", { ascending: false })
-        .limit(5);
+      const { data: existingBlocks } = await findActiveTuroTrips({ startDate: parsed.startDate! });
 
       // Also try finding by overlapping date range if exact start match fails
       let matchedBlock = existingBlocks?.[0] ?? null;
       if (!matchedBlock) {
-        const { data: overlapBlocks } = await supabase
-          .from("blocked_dates")
-          .select("id, start_date, end_date, reason")
-          .eq("vehicle_id", matchedVehicle.id)
-          .lte("start_date", parsed.startDate)
-          .gte("end_date", parsed.startDate)
-          .order("created_at", { ascending: false })
-          .limit(5);
+        const { data: overlapBlocks } = await findActiveTuroTrips({
+          overlapStart: parsed.startDate!,
+          overlapEnd: parsed.startDate!,
+        });
         matchedBlock = overlapBlocks?.[0] ?? null;
       }
 
@@ -281,13 +426,11 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // ── Overlapping blocks: merge date range + refresh metadata (fixes calendar when Turo resends or dates shift) ──
-    const { data: overlapping } = await supabase
-      .from("blocked_dates")
-      .select("id, start_date, end_date, source")
-      .eq("vehicle_id", matchedVehicle.id)
-      .lte("start_date", parsed.endDate)
-      .gte("end_date", parsed.startDate);
+    // ── Overlapping Turo trips only: merge date range + refresh metadata ──
+    const { data: overlapping } = await findActiveTuroTrips({
+      overlapStart: parsed.startDate!,
+      overlapEnd: parsed.endDate!,
+    });
 
     if (overlapping && overlapping.length > 0) {
       const row = overlapping[0];
@@ -376,7 +519,7 @@ export async function POST(req: NextRequest) {
         return_time: parsed.returnTime ?? null,
         location: parsed.location ?? null,
         earnings: parsed.earnings ?? null,
-        source: "turo-email",
+        source: TURO_BLOCKED_SOURCE,
         reason,
       })
       .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason")
@@ -389,7 +532,7 @@ export async function POST(req: NextRequest) {
           vehicle_id: matchedVehicle.id,
           start_date: parsed.startDate,
           end_date: parsed.endDate,
-          source: "turo-email",
+          source: TURO_BLOCKED_SOURCE,
           reason,
         })
         .select("id, vehicle_id, start_date, end_date, source, reason")

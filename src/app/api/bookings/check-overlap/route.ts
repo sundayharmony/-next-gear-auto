@@ -14,6 +14,7 @@ import {
   toBookingInterval,
   type BookingOverlapMode,
 } from "@/lib/utils/booking-overlap";
+import { isActiveCalendarBlock } from "@/lib/utils/blocked-dates";
 
 /**
  * GET /api/bookings/check-overlap?vehicleId=...&pickupDate=...&returnDate=...&pickupTime=&returnTime=
@@ -106,12 +107,13 @@ export async function GET(req: NextRequest) {
     if (!hasRealOverlap) {
       const { data: blocks } = await supabase
         .from("blocked_dates")
-        .select("start_date, end_date, source, reason")
+        .select("start_date, end_date, source, reason, cancelled_at")
         .eq("vehicle_id", vehicleId)
         .lte("start_date", returnDate)
         .gte("end_date", pickupDate);
 
-      if (blocks && blocks.length > 0) {
+      const activeBlocks = (blocks || []).filter(isActiveCalendarBlock);
+      if (activeBlocks.length > 0) {
         blockedConflict = true;
       }
     }

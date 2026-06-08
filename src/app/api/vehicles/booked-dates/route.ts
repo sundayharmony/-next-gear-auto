@@ -4,6 +4,7 @@ import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { getBookingOccupancyEndDate } from "@/lib/utils/recurring-booking";
+import { isActiveCalendarBlock } from "@/lib/utils/blocked-dates";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -75,7 +76,7 @@ async function fetchRangesForVehicles(
 
   let { data: blocks, error: blocksError } = await supabase
     .from("blocked_dates")
-    .select("vehicle_id, start_date, end_date, pickup_time, return_time")
+    .select("vehicle_id, start_date, end_date, pickup_time, return_time, cancelled_at")
     .in("vehicle_id", vehicleIds)
     .order("start_date", { ascending: true });
 
@@ -100,6 +101,7 @@ async function fetchRangesForVehicles(
   }
 
   for (const b of blocks || []) {
+    if (!isActiveCalendarBlock(b)) continue;
     const vid = String(b.vehicle_id);
     if (!result[vid]) result[vid] = [];
     result[vid].push({

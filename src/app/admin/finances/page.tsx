@@ -111,6 +111,7 @@ interface BlockedDateFinanceEntry {
   source: string;
   earnings: number | null;
   reason?: string | null;
+  cancelled_at?: string | null;
 }
 
 /** Vehicle with finance fields (matches shared Vehicle type) */
@@ -393,6 +394,7 @@ export default function AdminFinancesPage() {
   const turoRevenueEntries = useMemo(() => {
     return blockedDates
       .filter((block) => block.source === "turo-email")
+      .filter((block) => !block.cancelled_at)
       .filter((block) => block.start_date <= dateRange.to && block.end_date >= dateRange.from)
       .map((block) => ({
         id: block.id,
@@ -577,6 +579,7 @@ export default function AdminFinancesPage() {
       .filter(
         (b) =>
           b.source === "turo-email" &&
+          !b.cancelled_at &&
           b.start_date <= dateRange.to &&
           b.end_date >= dateRange.from
       )
@@ -632,6 +635,7 @@ export default function AdminFinancesPage() {
       .filter(
         (b) =>
           b.source === "turo-email" &&
+          !b.cancelled_at &&
           b.start_date <= dateRange.to &&
           b.end_date >= dateRange.from
       )
@@ -757,6 +761,7 @@ export default function AdminFinancesPage() {
       .filter(
         (b) =>
           b.source === "turo-email" &&
+          !b.cancelled_at &&
           b.start_date <= dateRange.to &&
           b.end_date >= dateRange.from
       )
@@ -795,6 +800,7 @@ export default function AdminFinancesPage() {
       .filter(
         (b) =>
           b.source === "turo-email" &&
+          !b.cancelled_at &&
           b.start_date <= dateRange.to &&
           b.end_date >= dateRange.from
       )
