@@ -40,6 +40,7 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   // ── Detect cancellation emails (before extension — cancel wins) ──
   let isCancellation = false;
   const cancellationPatterns = [
+    /you['\u2019]ve\s+cancel(?:led|ed)\s+.+/i,
     /has\s+cancel(?:led|ed)\s+(?:their|his|her|the|a)\s+trip/i,
     /has\s+been\s+cancel(?:led|ed)/i,
     /trip\s+(?:has\s+been\s+)?cancel(?:led|ed)/i,
@@ -317,8 +318,10 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   // ── Extract guest name ──
   let guestName: string | null = null;
   const guestPatterns = [
+    // "You've cancelled Mario's trip"
+    /you['\u2019]ve\s+cancel(?:led|ed)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)['\u2019]s\s+trip/i,
     // "Zhao has cancelled their trip" / "Marcus has cancelled"
-    /([A-Z][a-z]+)\s+has\s+cancel(?:led|ed)/i,
+    /([A-Za-z]+)\s+has\s+cancel(?:led|ed)/i,
     // "Lucas has an upcoming trip"
     /([A-Z][a-z]+)\s+has\s+an?\s+upcoming\s+trip/i,
     // Name before phone or reservation id in trip block: "Lucas (310) 654-3392 Reservation"

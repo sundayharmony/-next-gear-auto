@@ -40,6 +40,16 @@ test("parseTuroEmail parses cancellation with M/D/YY dates from message thread",
   assert.equal(parsed.guestName, "Marcus");
 });
 
+test("parseTuroEmail detects host cancellation (You've cancelled guest trip)", () => {
+  const text =
+    "You've cancelled Mario's trip with your Ram 1500 Trip start: 6/1/26 6:00 PM Trip end: 6/3/26 6:00 PM Mario Reservation ID #57830782 Vehicle: Ram 1500 2019";
+  const parsed = parseTuroEmail(text);
+  assert.equal(parsed.isCancellation, true);
+  assert.equal(parsed.startDate, "2026-06-01");
+  assert.equal(parsed.endDate, "2026-06-03");
+  assert.equal(parsed.guestName, "Mario");
+});
+
 test("parseTuroEmail prefers cancellation over extension wording", () => {
   const text =
     "Your trip has been cancelled. The checkout date was changed from April 5 to April 8, 2026.";

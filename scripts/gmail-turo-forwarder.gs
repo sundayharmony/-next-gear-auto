@@ -1,43 +1,32 @@
 /**
  * Google Apps Script — Turo Email → NextGearAuto Webhook Forwarder
  *
- * This script runs on a schedule in your Gmail account. It searches for
- * new Turo booking confirmation emails, forwards the email body to
- * your NextGearAuto webhook endpoint, and marks successful messages as read.
+ * SETUP:
+ * 1. Go to https://script.google.com and open your project
+ * 2. Select ALL text in Code.gs, delete it, paste ONLY this file (nothing extra below)
+ * 3. Update WEBHOOK_SECRET below
+ * 4. Run setup() once, then processNewTuroEmails() to test
  *
- * ─── SETUP INSTRUCTIONS ───
- *
- * 1. Go to https://script.google.com and create a new project
- * 2. Delete everything in Code.gs and paste this entire file
- * 3. Update the two constants below (WEBHOOK_URL and WEBHOOK_SECRET)
- * 4. Run `setup()` once from the toolbar (Run → setup)
- *    — It will ask for Gmail permissions; grant them
- *    — It creates a 15-minute timer
- * 5. That's it! The script will auto-check every 15 minutes.
- *
- * To test: Run `processNewTuroEmails()` manually from the toolbar
- * To stop: Run `teardown()` to remove the timer
- * To check logs: View → Execution log
+ * ONE-TIME BACKFILL (run in this order in the Apps Script editor):
+ *   1. backfillRecentTuroEmails(365)   — imports bookings / upcoming trips (skips cancellations)
+ *   2. backfillCancellationEmails(365) — marks cancellations on trips that exist in the calendar
  */
 
 // ═══════ CONFIGURATION — EDIT THESE ═══════
 
-const WEBHOOK_URL = "https://www.rentnextgearauto.com/api/webhooks/turo-email";
-const WEBHOOK_SECRET = "PASTE_YOUR_SECRET_HERE"; // Must match TURO_WEBHOOK_SECRET in Vercel (Production)
+var WEBHOOK_URL = "https://www.rentnextgearauto.com/api/webhooks/turo-email";
+var WEBHOOK_SECRET = "PASTE_YOUR_SECRET_HERE"; // Must match TURO_WEBHOOK_SECRET in Vercel (Production)
 
-// Gmail search query for Turo emails.
-// IMPORTANT: Keep this broad so sender aliases/subdomains don't get skipped.
-// We still parse + dedupe on the webhook side.
-const TURO_SEARCH_QUERY = "from:turo.com newer_than:365d";
-const PROCESSED_KEY_PREFIX = "turo_processed_";
-const PROCESSED_RETENTION_DAYS = 365;
-const SEARCH_BATCH_SIZE = 100;
-const MAX_SEARCH_THREADS = 1200;
+var TURO_SEARCH_QUERY = "from:turo.com newer_than:365d";
+var PROCESSED_KEY_PREFIX = "turo_processed_";
+var PROCESSED_RETENTION_DAYS = 365;
+var SEARCH_BATCH_SIZE = 100;
+var MAX_SEARCH_THREADS = 1200;
 
 // ═══════ MAIN FUNCTION ═══════
 
 function processNewTuroEmails() {
-  const threads = searchThreads(TURO_SEARCH_QUERY, MAX_SEARCH_THREADS);
+  var threads = searchThreads(TURO_SEARCH_QUERY, MAX_SEARCH_THREADS);
   pruneProcessedKeys(PROCESSED_RETENTION_DAYS);
 
   if (threads.length === 0) {
@@ -47,18 +36,20 @@ function processNewTuroEmails() {
 
   Logger.log("Found " + threads.length + " new Turo email thread(s).");
 
-  for (const thread of threads) {
-    const messages = thread.getMessages();
+  for (var t = 0; t < threads.length; t++) {
+    var thread = threads[t];
+    var messages = thread.getMessages();
 
-    for (const message of messages) {
-      const messageId = message.getId();
+    for (var m = 0; m < messages.length; m++) {
+      var message = messages[m];
+      var messageId = message.getId();
       if (isProcessedMessage(messageId)) continue;
-      const subject = message.getSubject();
-      const body = message.getPlainBody() || message.getBody();
-      const from = message.getFrom();
 
-      // Skip if not actually from Turo
-      if (!from.toLowerCase().includes("turo")) {
+      var subject = message.getSubject();
+      var body = message.getPlainBody() || message.getBody();
+      var from = message.getFrom();
+
+      if (!from || from.toLowerCase().indexOf("turo") === -1) {
         continue;
       }
 
@@ -71,50 +62,37 @@ function processNewTuroEmails() {
       Logger.log("Processing: " + subject);
 
       try {
-        const response = UrlFetchApp.fetch(WEBHOOK_URL, {
+        var response = UrlFetchApp.fetch(WEBHOOK_URL, {
           method: "post",
           contentType: "application/json",
           headers: {
-            Authorization: "Bearer " + WEBHOOK_SECRET,
+            Authorization: "Bearer " + WEBHOOK_SECRET
           },
           payload: JSON.stringify({
             emailText: body,
             subject: subject,
             from: from,
-            date: message.getDate().toISOString(),
+            date: message.getDate().toISOString()
           }),
-          muteHttpExceptions: true,
+          muteHttpExceptions: true
         });
 
-        const code = response.getResponseCode();
-        const result = response.getContentText();
+        var code = response.getResponseCode();
+        var result = response.getContentText();
 
         if (code === 201) {
           Logger.log("SUCCESS — Blocked dates created: " + result);
           markProcessedMessage(messageId);
           if (message.isUnread()) message.markRead();
         } else if (code === 200) {
-          // Check if it was an extension or a skip
-          try {
-            var parsed = JSON.parse(result);
-            if (parsed.action === "extended") {
-              Logger.log("EXTENDED — Trip extended: " + result);
-            } else {
-              Logger.log("SKIPPED — Already blocked: " + result);
-            }
-          } catch (e) {
-            Logger.log("SKIPPED — Already blocked: " + result);
-          }
-          // 200 means webhook handled it (extended / merged / already blocked)
+          logWebhookSuccess(result);
           markProcessedMessage(messageId);
           if (message.isUnread()) message.markRead();
         } else {
           Logger.log("RESPONSE " + code + ": " + result);
-          // Do not mark processed so failures can retry automatically.
         }
       } catch (err) {
         Logger.log("ERROR sending to webhook: " + err.toString());
-        // Do not mark processed so webhook failures retry on next run.
         continue;
       }
     }
@@ -125,19 +103,14 @@ function processNewTuroEmails() {
 
 // ═══════ SETUP & TEARDOWN ═══════
 
-/**
- * Run this once to create the Gmail label and set up the 15-minute timer.
- */
 function setup() {
-  // Remove any existing triggers for this function
-  const triggers = ScriptApp.getProjectTriggers();
-  for (const trigger of triggers) {
-    if (trigger.getHandlerFunction() === "processNewTuroEmails") {
-      ScriptApp.deleteTrigger(trigger);
+  var triggers = ScriptApp.getProjectTriggers();
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "processNewTuroEmails") {
+      ScriptApp.deleteTrigger(triggers[i]);
     }
   }
 
-  // Create a 15-minute timer trigger
   ScriptApp.newTrigger("processNewTuroEmails")
     .timeBased()
     .everyMinutes(15)
@@ -147,119 +120,160 @@ function setup() {
   Logger.log("Setup complete! You can also run processNewTuroEmails manually to test.");
 }
 
-/**
- * Run this to stop the automatic checking.
- */
 function teardown() {
-  const triggers = ScriptApp.getProjectTriggers();
-  let removed = 0;
-  for (const trigger of triggers) {
-    if (trigger.getHandlerFunction() === "processNewTuroEmails") {
-      ScriptApp.deleteTrigger(trigger);
+  var triggers = ScriptApp.getProjectTriggers();
+  var removed = 0;
+  for (var i = 0; i < triggers.length; i++) {
+    if (triggers[i].getHandlerFunction() === "processNewTuroEmails") {
+      ScriptApp.deleteTrigger(triggers[i]);
       removed++;
     }
   }
   Logger.log("Removed " + removed + " trigger(s). Auto-checking is now disabled.");
 }
 
-/**
- * One-time helper: backfill recent Turo emails that were missed.
- * Usage: run backfillRecentTuroEmails(60) to process last 60 days.
- *
- * This does NOT mark messages read.
- */
 function backfillRecentTuroEmails(days) {
-  const safeDays = Math.max(1, Math.min(Number(days) || 30, 365));
-  const query = "from:turo.com newer_than:" + safeDays + "d";
-  const threads = searchThreads(query, MAX_SEARCH_THREADS);
-  Logger.log("Backfill threads: " + threads.length + " (newer_than " + safeDays + "d)");
+  var safeDays = Math.max(1, Math.min(Number(days) || 30, 365));
+  var query = "from:turo.com newer_than:" + safeDays + "d";
+  var threads = searchThreads(query, MAX_SEARCH_THREADS);
+  Logger.log("Booking backfill threads: " + threads.length + " (newer_than " + safeDays + "d)");
 
-  for (const thread of threads) {
-    const messages = thread.getMessages();
-    for (const message of messages) {
-      const from = message.getFrom();
-      if (!from || !from.toLowerCase().includes("turo")) continue;
-      const body = message.getPlainBody() || message.getBody();
-      const subject = message.getSubject();
+  var sent = 0;
+  var skipped = 0;
+
+  for (var t = 0; t < threads.length; t++) {
+    var messages = threads[t].getMessages();
+    for (var m = 0; m < messages.length; m++) {
+      var message = messages[m];
+      var from = message.getFrom();
+      if (!from || from.toLowerCase().indexOf("turo") === -1) continue;
+
+      var subject = message.getSubject();
+      var body = message.getPlainBody() || message.getBody();
+
+      if (isCancellationEmail(subject, body)) {
+        skipped++;
+        continue;
+      }
+      if (!isRelevantTuroEmail(subject, body)) {
+        skipped++;
+        continue;
+      }
+
       try {
-        const response = UrlFetchApp.fetch(WEBHOOK_URL, {
+        var response = UrlFetchApp.fetch(WEBHOOK_URL, {
           method: "post",
           contentType: "application/json",
-          headers: {
-            Authorization: "Bearer " + WEBHOOK_SECRET,
-          },
+          headers: { Authorization: "Bearer " + WEBHOOK_SECRET },
           payload: JSON.stringify({
             emailText: body,
             subject: subject,
             from: from,
-            date: message.getDate().toISOString(),
+            date: message.getDate().toISOString()
           }),
-          muteHttpExceptions: true,
+          muteHttpExceptions: true
         });
-        Logger.log("BACKFILL " + response.getResponseCode() + " — " + subject);
+        sent++;
+        Logger.log("BOOKING BACKFILL " + response.getResponseCode() + " — " + subject);
       } catch (err) {
-        Logger.log("BACKFILL ERROR: " + err.toString());
+        Logger.log("BOOKING BACKFILL ERROR: " + err.toString());
       }
     }
   }
+
+  Logger.log("Booking backfill done. Sent: " + sent + ", skipped: " + skipped);
 }
 
-/**
- * One-time helper: reprocess Turo cancellation emails (ignores processed flag).
- * Usage: run backfillCancellationEmails(365) in Apps Script editor.
- */
 function backfillCancellationEmails(days) {
-  const safeDays = Math.max(1, Math.min(Number(days) || 365, 365));
-  const query = "from:turo.com (cancel OR cancelled OR canceled) newer_than:" + safeDays + "d";
-  const threads = searchThreads(query, MAX_SEARCH_THREADS);
+  var safeDays = Math.max(1, Math.min(Number(days) || 365, 365));
+  var query =
+    'from:turo.com (cancel OR cancelled OR canceled OR "you\'ve cancelled" OR "you\'ve canceled") newer_than:' +
+    safeDays +
+    "d";
+  var threads = searchThreads(query, MAX_SEARCH_THREADS);
   Logger.log("Cancellation backfill threads: " + threads.length + " (newer_than " + safeDays + "d)");
 
-  for (const thread of threads) {
-    const messages = thread.getMessages();
-    for (const message of messages) {
-      const from = message.getFrom();
-      if (!from || !from.toLowerCase().includes("turo")) continue;
-      const body = message.getPlainBody() || message.getBody();
-      const subject = message.getSubject();
+  var sent = 0;
+  var skipped = 0;
+
+  for (var t = 0; t < threads.length; t++) {
+    var messages = threads[t].getMessages();
+    for (var m = 0; m < messages.length; m++) {
+      var message = messages[m];
+      var from = message.getFrom();
+      if (!from || from.toLowerCase().indexOf("turo") === -1) continue;
+
+      var subject = message.getSubject();
+      var body = message.getPlainBody() || message.getBody();
+
+      if (!isCancellationEmail(subject, body)) {
+        skipped++;
+        continue;
+      }
+
       try {
-        const response = UrlFetchApp.fetch(WEBHOOK_URL, {
+        var response = UrlFetchApp.fetch(WEBHOOK_URL, {
           method: "post",
           contentType: "application/json",
-          headers: {
-            Authorization: "Bearer " + WEBHOOK_SECRET,
-          },
+          headers: { Authorization: "Bearer " + WEBHOOK_SECRET },
           payload: JSON.stringify({
             emailText: body,
             subject: subject,
             from: from,
-            date: message.getDate().toISOString(),
+            date: message.getDate().toISOString()
           }),
-          muteHttpExceptions: true,
+          muteHttpExceptions: true
         });
+        sent++;
         Logger.log("CANCEL BACKFILL " + response.getResponseCode() + " — " + subject);
       } catch (err) {
         Logger.log("CANCEL BACKFILL ERROR: " + err.toString());
       }
     }
   }
+
+  Logger.log("Cancellation backfill done. Sent: " + sent + ", skipped: " + skipped);
 }
 
 // ═══════ HELPERS ═══════
 
-/** Skip Turo marketing, messages, payouts, and other non-booking notifications. */
+function logWebhookSuccess(result) {
+  try {
+    var parsed = JSON.parse(result);
+    if (parsed.action === "cancelled") {
+      Logger.log("CANCELLED — Trip marked cancelled: " + result);
+    } else if (parsed.action === "extended") {
+      Logger.log("EXTENDED — Trip extended: " + result);
+    } else if (parsed.action === "merged_refresh" || parsed.action === "merged_widened") {
+      Logger.log("REFRESHED — Turo block updated: " + result);
+    } else {
+      Logger.log("OK — " + (parsed.action || "handled") + ": " + result);
+    }
+  } catch (e) {
+    Logger.log("OK — handled: " + result);
+  }
+}
+
+function isCancellationEmail(subject, body) {
+  var s = String(subject || "").toLowerCase();
+  var b = String(body || "").toLowerCase();
+  return (
+    /cancelled|canceled/.test(s) ||
+    /you.?ve\s+cancel/.test(s) ||
+    /has\s+cancel(?:led|ed)/.test(s) ||
+    /trip\s+has\s+been\s+cancel/.test(b)
+  );
+}
+
 function isRelevantTuroEmail(subject, body) {
   var s = String(subject || "").toLowerCase();
   var b = String(body || "").toLowerCase();
 
-  if (
-    /earnings are on the way|security code|confirmation code|reset your password|password reset|rated their trip|sent you a message|reimbursement|protection plan|unlisted due to|congratulations on listing|virtual orientation|buckle up|payout update|ineligible incidental|action required for your vehicle|still need to confirm|added another driver|disputed your|been charged for your|not responded to your|updates to your protection|attend a virtual orientation/i.test(s)
-  ) {
+  if (/earnings are on the way|security code|confirmation code|reset your password|password reset|rated their trip|sent you a message|reimbursement|protection plan|unlisted due to|congratulations on listing|virtual orientation|buckle up|payout update|ineligible incidental|action required for your vehicle|still need to confirm|added another driver|disputed your|been charged for your|not responded to your|updates to your protection|attend a virtual orientation/i.test(s)) {
     return false;
   }
 
-  if (
-    /booked|cancelled|canceled|extension|extended|change request|confirmed.*trip|new trip|upcoming trip|has changed their trip|you.?ve cancelled|you.?ve confirmed/i.test(s)
-  ) {
+  if (/booked|cancelled|canceled|extension|extended|change request|confirmed.*trip|new trip|upcoming trip|has changed their trip|you.?ve cancelled|you.?ve confirmed/i.test(s)) {
     return true;
   }
 
@@ -272,7 +286,7 @@ function processedKey(messageId) {
 
 function isProcessedMessage(messageId) {
   if (!messageId) return false;
-  const value = PropertiesService.getScriptProperties().getProperty(processedKey(messageId));
+  var value = PropertiesService.getScriptProperties().getProperty(processedKey(messageId));
   return Boolean(value);
 }
 
@@ -285,42 +299,47 @@ function markProcessedMessage(messageId) {
 }
 
 function pruneProcessedKeys(retentionDays) {
-  const safeDays = Math.max(1, Math.min(Number(retentionDays) || 365, 3650));
-  const cutoffMs = Date.now() - safeDays * 24 * 60 * 60 * 1000;
-  const props = PropertiesService.getScriptProperties();
-  const all = props.getProperties();
-  const toDelete = [];
+  var safeDays = Math.max(1, Math.min(Number(retentionDays) || 365, 3650));
+  var cutoffMs = Date.now() - safeDays * 24 * 60 * 60 * 1000;
+  var props = PropertiesService.getScriptProperties();
+  var all = props.getProperties();
+  var toDelete = [];
 
-  for (const key in all) {
-    if (!key.startsWith(PROCESSED_KEY_PREFIX)) continue;
-    const ts = Number(all[key]);
-    if (!Number.isFinite(ts) || ts < cutoffMs) {
-      toDelete.push(key);
+  for (var key in all) {
+    if (all.hasOwnProperty(key) && key.indexOf(PROCESSED_KEY_PREFIX) === 0) {
+      var ts = Number(all[key]);
+      if (!isFinite(ts) || ts < cutoffMs) {
+        toDelete.push(key);
+      }
     }
   }
 
+  for (var i = 0; i < toDelete.length; i++) {
+    props.deleteProperty(toDelete[i]);
+  }
   if (toDelete.length > 0) {
-    for (const key of toDelete) {
-      props.deleteProperty(key);
-    }
     Logger.log("Pruned processed message keys: " + toDelete.length);
   }
 }
 
 function searchThreads(query, maxThreads) {
-  const safeMax = Math.max(1, Math.min(Number(maxThreads) || 200, 5000));
-  const allThreads = [];
-  let offset = 0;
+  var safeMax = Math.max(1, Math.min(Number(maxThreads) || 200, 5000));
+  var allThreads = [];
+  var offset = 0;
 
   while (allThreads.length < safeMax) {
-    const remaining = safeMax - allThreads.length;
-    const limit = Math.min(SEARCH_BATCH_SIZE, remaining);
-    const batch = GmailApp.search(query, offset, limit);
+    var remaining = safeMax - allThreads.length;
+    var limit = Math.min(SEARCH_BATCH_SIZE, remaining);
+    var batch = GmailApp.search(query, offset, limit);
     if (!batch || batch.length === 0) break;
-    allThreads.push.apply(allThreads, batch);
+    for (var i = 0; i < batch.length; i++) {
+      allThreads.push(batch[i]);
+    }
     if (batch.length < limit) break;
     offset += batch.length;
   }
 
   return allThreads;
 }
+
+// END OF FILE — do not paste or type anything below this line in Code.gs

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { parseTuroEmail } from "@/lib/utils/turo-email-parser";
 import { TURO_BLOCKED_SOURCE, CANCELLED_REASON_PREFIX } from "@/lib/utils/blocked-dates";
+import { pickTuroCancellationMatch } from "@/lib/utils/turo-cancellation-match";
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 
@@ -298,16 +299,12 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: false, message: findErr.message }, { status: 500 });
       }
 
-      let matchedTrip = candidates[0] ?? null;
-      if (parsed.guestName && candidates.length > 1) {
-        const guestLower = parsed.guestName.toLowerCase();
-        matchedTrip =
-          candidates.find((r) =>
-            (r.reason || "")
-              .toLowerCase()
-              .includes(guestLower)
-          ) ?? matchedTrip;
-      }
+      const matchedTrip = pickTuroCancellationMatch(
+        candidates,
+        parsed.startDate!,
+        parsed.endDate!,
+        parsed.guestName
+      );
 
       if (!matchedTrip) {
         logger.warn("Turo webhook: cancellation email but no matching active Turo trip", {
