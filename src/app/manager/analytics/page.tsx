@@ -1,49 +1,14 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useMemo } from "react";
 import { BarChart3, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout/page-container";
-import { adminFetch } from "@/lib/utils/admin-fetch";
-import { logger } from "@/lib/utils/logger";
-
-interface AnalyticsData {
-  totalBookings: number;
-  totalBookedDays: number;
-  uniqueVehicles: number;
-  avgBookingDurationDays: number;
-  statusCounts: Record<string, number>;
-  leakageSentinel: {
-    expectedOrigin: string;
-    checkedRows: number;
-    nonManagerOriginRows: number;
-  };
-}
+import { useManagerAnalytics } from "@/lib/hooks/use-manager-analytics";
 
 export default function ManagerAnalyticsPage() {
-  const [data, setData] = useState<AnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchAnalytics = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await adminFetch("/api/manager/analytics");
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setData(json.data);
-      }
-    } catch (error) {
-      logger.error("Failed to fetch manager analytics:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchAnalytics();
-  }, [fetchAnalytics]);
-
+  const { data, loading, reload } = useManagerAnalytics();
   const statusEntries = useMemo(() => Object.entries(data?.statusCounts || {}), [data?.statusCounts]);
 
   return (
@@ -54,7 +19,7 @@ export default function ManagerAnalyticsPage() {
             <h1 className="text-2xl sm:text-3xl font-bold">Manager Analytics</h1>
             <p className="mt-1 text-sm sm:text-base page-hero-subtitle">Non-financial analytics scoped to manager panel bookings only.</p>
           </div>
-          <Button variant="outline" size="sm" className="page-hero-btn-outline hidden sm:inline-flex" onClick={fetchAnalytics}>
+          <Button variant="outline" size="sm" className="page-hero-btn-outline hidden sm:inline-flex" onClick={reload}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
           </Button>
         </div>

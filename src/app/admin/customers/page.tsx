@@ -56,24 +56,28 @@ import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { logger } from "@/lib/utils/logger";
-
-interface CustomerRow {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  role: string;
-  createdAt: string;
-  profilePictureUrl?: string;
-  idDocumentUrl?: string | null;
-}
+import { staffBookingsHref } from "@/lib/admin/staff-panel-base";
+import {
+  adminPanelConfig,
+  type StaffPanelConfig,
+} from "@/lib/admin/staff-panel-config";
+import { useCustomersData, type CustomerRow } from "./use-customers-data";
+import { useAuth } from "@/lib/context/auth-context";
+import { userHasRole } from "@/lib/auth/user-roles";
 
 type BookingRow = BookingDbRow;
 
-export default function AdminCustomersPage() {
+export default function AdminCustomersPage({
+  panelConfig = adminPanelConfig,
+}: {
+  panelConfig?: StaffPanelConfig;
+}) {
+  const panelBase = panelConfig.panelBase;
+  const isAdminPanel = panelConfig.panelMode === "admin";
+  const { user } = useAuth();
+  const canMutateCustomers = isAdminPanel && userHasRole(user, "admin");
   const { error: toastError, setError: setToastError, success: toastSuccess, setSuccess: setToastSuccess } = useAutoToast();
-  const [customers, setCustomers] = useState<CustomerRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { customers, setCustomers, loading, fetchCustomers } = useCustomersData();
   const [searchInput, setSearchInput] = useState("");
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerRow | null>(null);
   const [customerBookings, setCustomerBookings] = useState<BookingRow[]>([]);
@@ -113,24 +117,8 @@ export default function AdminCustomersPage() {
   const profileImageFileInputRef = useRef<HTMLInputElement>(null);
   const [cropSourceLabel, setCropSourceLabel] = useState("Driver License");
 
-  const fetchCustomers = useCallback(async (query = "") => {
-    setLoading(true);
-    try {
-      const url = query ? `/api/admin/customers?search=${encodeURIComponent(query)}` : "/api/admin/customers";
-      const res = await adminFetch(url);
-      if (!res.ok) throw new Error("Failed to fetch customers");
-      const data = await res.json();
-      if (data.success) setCustomers(data.data);
-    } catch (err) {
-      logger.error("Failed to fetch customers:", err);
-    }
-    setLoading(false);
-  }, []);
-
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("highlight");
-
-  useEffect(() => { fetchCustomers(); }, []);
 
   // Auto-open customer when navigated with ?highlight=<customerId>
   useEffect(() => {
@@ -1088,7 +1076,7 @@ export default function AdminCustomersPage() {
                       customerEmail: selectedCustomer.email,
                       ...(selectedCustomer.phone ? { customerPhone: selectedCustomer.phone } : {}),
                     });
-                    router.push(`/admin/bookings?${params.toString()}`);
+                    router.push(staffBookingsHref(panelBase, params.toString()));
                   }}
                   variant="outline"
                   className="border-green-300 text-green-600 hover:bg-green-50"
@@ -1096,24 +1084,28 @@ export default function AdminCustomersPage() {
                 >
                   <Plus className="h-3.5 w-3.5 mr-1" /> Create Booking
                 </Button>
-                <Button
-                  onClick={sendPasswordLink}
-                  disabled={sendingPasswordLink}
-                  variant="outline"
-                  className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                  size="sm"
-                >
-                  <KeyRound className="h-3.5 w-3.5 mr-1" /> {sendingPasswordLink ? "Sending..." : "Send Password Link"}
-                </Button>
-                <Button
-                  onClick={deleteCustomer}
-                  disabled={deletingCustomer}
-                  variant="outline"
-                  className="border-red-300 text-red-600 hover:bg-red-50"
-                  size="sm"
-                >
-                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-                </Button>
+                {canMutateCustomers ? (
+                  <>
+                    <Button
+                      onClick={sendPasswordLink}
+                      disabled={sendingPasswordLink}
+                      variant="outline"
+                      className="border-blue-300 text-blue-600 hover:bg-blue-50"
+                      size="sm"
+                    >
+                      <KeyRound className="h-3.5 w-3.5 mr-1" /> {sendingPasswordLink ? "Sending..." : "Send Password Link"}
+                    </Button>
+                    <Button
+                      onClick={deleteCustomer}
+                      disabled={deletingCustomer}
+                      variant="outline"
+                      className="border-red-300 text-red-600 hover:bg-red-50"
+                      size="sm"
+                    >
+                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                    </Button>
+                  </>
+                ) : null}
                 <button
                   onClick={closeCustomer}
                   aria-label="Close customer details"
@@ -1190,7 +1182,7 @@ export default function AdminCustomersPage() {
                     <CardContent className="p-5">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-semibold text-gray-500 uppercase">Customer Info</h3>
-                        {!editingMode ? (
+                        {canMutateCustomers && !editingMode ? (
                           <Button
                             onClick={startEditingCustomer}
                             variant="ghost"
@@ -1611,7 +1603,7 @@ export default function AdminCustomersPage() {
                               return (
                                 <div
                                   key={b.id}
-                                  onClick={() => router.push(`/admin/bookings?booking=${b.id}`)}
+                                  onClick={() => router.push(staffBookingsHref(panelBase, `booking=${b.id}`))}
                                   className="rounded-lg border p-4 hover:border-purple-400 hover:shadow-md transition-all cursor-pointer group"
                                 >
                                   <div className="flex items-start justify-between mb-2 min-w-0">

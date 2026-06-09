@@ -1,43 +1,15 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { Calendar, BarChart3, Car, Clock, RefreshCw } from "lucide-react";
+import { Calendar, BarChart3, Car, Clock, RefreshCw, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { adminFetch } from "@/lib/utils/admin-fetch";
-import { logger } from "@/lib/utils/logger";
 import { PageContainer } from "@/components/layout/page-container";
-
-interface ManagerDashboardData {
-  totalBookings: number;
-  statusCounts: Record<string, number>;
-  totalBookedDays: number;
-  avgBookingDurationDays: number;
-}
+import { useManagerAnalytics } from "@/lib/hooks/use-manager-analytics";
 
 export default function ManagerDashboardPage() {
-  const [data, setData] = useState<ManagerDashboardData | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  const fetchDashboard = useCallback(async () => {
-    setLoading(true);
-    try {
-      const res = await adminFetch("/api/manager/analytics");
-      const json = await res.json();
-      if (res.ok && json.success) {
-        setData(json.data);
-      }
-    } catch (error) {
-      logger.error("Failed to fetch manager dashboard:", error);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+  const { data, loading, reload } = useManagerAnalytics();
 
   return (
     <>
@@ -47,13 +19,21 @@ export default function ManagerDashboardPage() {
             <h1 className="text-2xl sm:text-3xl font-bold">Manager Dashboard</h1>
             <p className="mt-1 text-sm sm:text-base page-hero-subtitle">Operational metrics scoped to manager-created bookings.</p>
           </div>
-          <Button variant="outline" size="sm" className="page-hero-btn-outline hidden sm:inline-flex" onClick={fetchDashboard}>
+          <Button variant="outline" size="sm" className="page-hero-btn-outline hidden sm:inline-flex" onClick={reload}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
           </Button>
         </div>
       </section>
 
       <PageContainer className="py-6 sm:py-8">
+        <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex gap-2">
+          <Info className="h-5 w-5 shrink-0 text-blue-600" />
+          <p>
+            <strong>Bookings</strong> covers day-to-day trip management for manager-origin reservations.
+            <strong> Analytics</strong> shows utilization and status metrics only — no company-wide finances or admin-only revenue.
+          </p>
+        </div>
+
         {loading ? (
           <div className="text-center py-12">
             <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />

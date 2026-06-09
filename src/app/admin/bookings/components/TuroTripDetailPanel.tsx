@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useStaffPanelConfig } from "@/lib/hooks/use-staff-panel-config";
 import { X, Car, MapPin, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -21,7 +21,7 @@ interface TuroTripDetailPanelProps {
 }
 
 export function TuroTripDetailPanel({ booking, onClose }: TuroTripDetailPanelProps) {
-  const pathname = usePathname();
+  const panelConfig = useStaffPanelConfig();
   if (!isTuroRow(booking)) return null;
 
   const driver = getTuroDriverFromReason(booking.turo_reason ?? null) || booking.customer_name || "Turo";
@@ -54,7 +54,7 @@ export function TuroTripDetailPanel({ booking, onClose }: TuroTripDetailPanelPro
           <div>
             <p className="text-xs text-gray-500">Vehicle</p>
             <Link
-              href={getStaffVehicleDetailsHref(booking.vehicle_id, pathname)}
+              href={getStaffVehicleDetailsHref(booking.vehicle_id, panelConfig.panelBase)}
               className="font-semibold text-purple-700 hover:underline inline-flex items-center gap-1"
             >
               <Car className="h-4 w-4 shrink-0" />
@@ -122,12 +122,14 @@ export function TuroTripDetailPanel({ booking, onClose }: TuroTripDetailPanelPro
           ) : null}
 
           <div className="pt-4 border-t border-gray-200 flex flex-wrap gap-2">
-            <Link href={`${pathname.startsWith("/manager") ? "/manager" : "/admin"}/blocked-dates`}>
-              <Button type="button" size="sm" variant="outline">
-                Open blocked dates
-              </Button>
-            </Link>
-            <Link href={getStaffVehicleDetailsHref(booking.vehicle_id, pathname)}>
+            {panelConfig.capabilities.canViewBlockedDatesLink ? (
+              <Link href="/admin/blocked-dates">
+                <Button type="button" size="sm" variant="outline">
+                  Open blocked dates
+                </Button>
+              </Link>
+            ) : null}
+            <Link href={getStaffVehicleDetailsHref(booking.vehicle_id, panelConfig.panelBase)}>
               <Button type="button" size="sm" variant="default">
                 Vehicle page
               </Button>

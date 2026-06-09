@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { jwtVerify, SignJWT } from "jose";
+import { jwtVerify, SignJWT, type JWTPayload } from "jose";
+import { tokenHasOwnerAccess } from "@/lib/auth/roles";
 import {
   buildContentSecurityPolicy,
   shouldApplyDocumentCsp,
@@ -36,6 +37,17 @@ async function isValidJwt(token: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+async function getJwtPayload(token: string): Promise<JWTPayload | null> {
+  try {
+    const secret = getSecret();
+    if (secret.length === 0) return null;
+    const { payload } = await jwtVerify(token, secret, { issuer: "nextgearauto" });
+    return payload;
+  } catch {
+    return null;
   }
 }
 
@@ -148,6 +160,7 @@ export async function proxy(req: NextRequest) {
 
     if (secret.length > 0) {
       let authenticated = token ? await isValidJwt(token) : false;
+      let effectiveToken = token ?? null;
 
       if (!authenticated) {
         const refreshToken = req.cookies.get(REFRESH_COOKIE)?.value;
@@ -162,7 +175,17 @@ export async function proxy(req: NextRequest) {
               maxAge: 60 * 60,
             });
             authenticated = true;
+            effectiveToken = newAccessToken;
           }
+        }
+      }
+
+      if (authenticated && isOwnerRoute) {
+        const payload = effectiveToken ? await getJwtPayload(effectiveToken) : null;
+        if (!payload || !tokenHasOwnerAccess(payload as { role?: unknown; roles?: unknown })) {
+          const loginUrl = new URL("/login", req.url);
+          loginUrl.searchParams.set("redirect", pathname);
+          return NextResponse.redirect(loginUrl);
         }
       }
 

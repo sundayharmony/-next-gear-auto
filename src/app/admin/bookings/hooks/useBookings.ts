@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
+import { useStaffQuery } from "@/lib/hooks/use-staff-query";
 import { logger } from "@/lib/utils/logger";
 import { getDisplayReturnDate } from "@/lib/utils/recurring-booking";
 import type { BookingRow, Vehicle, CustomerOption, SortField, SortOrder } from "../types";
@@ -40,8 +41,13 @@ interface UseBookingsReturn {
 
 export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
   const [bookings, setBookings] = useState<BookingRow[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [allCustomers, setAllCustomers] = useState<CustomerOption[]>([]);
+  const vehiclesQuery = useStaffQuery<Vehicle[]>(
+    ["staff", "vehicles", config.vehiclesEndpoint],
+    config.vehiclesEndpoint,
+    { staleTime: 60_000 }
+  );
+  const vehicles = vehiclesQuery.data ?? [];
   const [loading, setLoading] = useState(true);
   const { error, setError, success, setSuccess } = useAutoToast();
   const [statusFilter, setStatusFilter] = useState("all");
@@ -105,18 +111,6 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
     });
   }, []);
 
-  const fetchVehicles = useCallback(async () => {
-    try {
-      const res = await adminFetch(config.vehiclesEndpoint);
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      if (data.success) setVehicles(data.data || []);
-    } catch (err) {
-      logger.error("Failed to fetch vehicles:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch vehicles");
-    }
-  }, [config.vehiclesEndpoint, setError]);
-
   const fetchCustomers = useCallback(async () => {
     try {
       const res = await adminFetch(config.customersEndpoint);
@@ -149,11 +143,16 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
     };
   }, [fetchBookings]);
 
-  // Fetch vehicles and customers once on mount
   useEffect(() => {
-    fetchVehicles();
+    if (vehiclesQuery.error) {
+      setError(vehiclesQuery.error.message);
+    }
+  }, [vehiclesQuery.error, setError]);
+
+  // Fetch customers once on mount
+  useEffect(() => {
     fetchCustomers();
-  }, [fetchVehicles, fetchCustomers]);
+  }, [fetchCustomers]);
 
   const setSort = useCallback((field: SortField) => {
     if (sortField === field) {

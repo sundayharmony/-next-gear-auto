@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useParams, usePathname } from "next/navigation";
+import { useParams } from "next/navigation";
 import { ArrowLeft, CalendarDays, Car, Wrench, Ticket, DollarSign, Star, FileText } from "lucide-react";
 import { SellVehicleDialog, type VehicleSaleSummary } from "@/app/admin/vehicles/details/SellVehicleDialog";
 import { PageContainer } from "@/components/layout/page-container";
@@ -12,6 +12,10 @@ import { Badge } from "@/components/ui/badge";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
+import {
+  adminPanelConfig,
+  type StaffPanelConfig,
+} from "@/lib/admin/staff-panel-config";
 
 interface VehicleDetails {
   id: string;
@@ -70,8 +74,11 @@ interface VehicleBookingsResponse {
   limit: number;
 }
 
-export function SharedVehicleDetailsPage() {
-  const pathname = usePathname();
+export function SharedVehicleDetailsPage({
+  panelConfig = adminPanelConfig,
+}: {
+  panelConfig?: StaffPanelConfig;
+} = {}) {
   const params = useParams<{ id: string }>();
   const vehicleId = params?.id;
 
@@ -83,8 +90,8 @@ export function SharedVehicleDetailsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [page, setPage] = useState(1);
 
-  const panelBase = pathname.startsWith("/manager") ? "/manager" : "/admin";
-  const isAdminPanel = panelBase === "/admin";
+  const panelBase = panelConfig.panelBase;
+  const isAdminPanel = panelConfig.panelMode === "admin";
   const backHref = `${panelBase}/vehicles`;
 
   const [sale, setSale] = useState<VehicleSaleSummary | null>(null);
@@ -349,7 +356,7 @@ export function SharedVehicleDetailsPage() {
             <Link href={`${panelBase}/maintenance?vehicle_id=${encodeURIComponent(vehicle.id)}`}>
               <Button type="button" size="sm" variant="outline">Maintenance records</Button>
             </Link>
-            <Link href={getStaffVehicleDetailsHref(vehicle.id, pathname)}>
+            <Link href={getStaffVehicleDetailsHref(vehicle.id, panelBase)}>
               <Button type="button" size="sm" variant="outline">
                 <DollarSign className="h-3.5 w-3.5 mr-1" />
                 Refresh details

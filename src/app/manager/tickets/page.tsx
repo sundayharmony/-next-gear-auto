@@ -1,1 +1,5 @@
-export { default } from "@/app/admin/tickets/page";
+import AdminTicketsPage from "@/app/admin/tickets/page";
+
+export default function ManagerTicketsPage() {
+  return <AdminTicketsPage />;
+}

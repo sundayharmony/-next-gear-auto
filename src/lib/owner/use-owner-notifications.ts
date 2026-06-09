@@ -76,9 +76,9 @@ export function useOwnerUnreadCount(enabled: boolean): number {
 
     const load = async () => {
       try {
-        const res = await adminFetch("/api/owner/notifications");
+        const res = await adminFetch("/api/owner/notifications/unread-count");
         const json = await res.json();
-        if (!cancelled && json.success) setCount(json.unreadCount || 0);
+        if (!cancelled && json.success) setCount(json.data?.unreadCount ?? 0);
       } catch {
         /* ignore */
       }

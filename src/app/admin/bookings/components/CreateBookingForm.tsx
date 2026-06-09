@@ -650,6 +650,7 @@ export default function CreateBookingForm({
                 className="focus-visible:outline-2 focus-visible:outline-purple-600"
               />
             </div>
+            {!isOwnerVariant ? (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">ID Document <span className="text-gray-400 font-normal">(optional)</span></label>
               <input
@@ -685,6 +686,7 @@ export default function CreateBookingForm({
                 </button>
               )}
             </div>
+            ) : null}
           </div>
         </section>
 
@@ -982,7 +984,8 @@ export default function CreateBookingForm({
           </div>
         </section>
 
-        {/* ═══ SECTION 6: Recurring Long-Term ═══ */}
+        {/* ═══ SECTION 6: Recurring Long-Term (staff only) ═══ */}
+        {!isOwnerVariant ? (
         <section className="space-y-4">
           <SectionHeader icon={CalendarDays} title="Recurring Long-Term (Optional)" subtitle="Enable for week-to-week long-term renters" />
 
@@ -1020,6 +1023,7 @@ export default function CreateBookingForm({
             </div>
           </div>
         </section>
+        ) : null}
 
         {/* ═══ ACTION BUTTONS ═══ */}
         <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">

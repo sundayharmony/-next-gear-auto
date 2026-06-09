@@ -1,5 +1,7 @@
+import { getStaffPanelBase } from "@/lib/admin/staff-panel-base";
+
 export function getStaffVehicleDetailsHref(vehicleId: string, pathname?: string | null): string {
-  const base = pathname?.startsWith("/manager") ? "/manager/vehicles" : "/admin/vehicles";
-  return `${base}/${encodeURIComponent(vehicleId)}`;
+  const base = getStaffPanelBase(pathname);
+  return `${base}/vehicles/${encodeURIComponent(vehicleId)}`;
 }
 

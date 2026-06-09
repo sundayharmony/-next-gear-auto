@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdminOrManager } from "@/lib/auth/admin-check";
+import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
 import { isValidEmailFormat } from "@/lib/utils/validation";
@@ -157,9 +157,9 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// PATCH: Update a customer by ID
+// PATCH: Update a customer by ID (admin only)
 export async function PATCH(req: NextRequest) {
-  const auth = await verifyAdminOrManager(req);
+  const auth = await verifyAdmin(req);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
 
@@ -256,9 +256,9 @@ export async function PATCH(req: NextRequest) {
   }
 }
 
-// DELETE: Remove a customer by ID
+// DELETE: Remove a customer by ID (admin only)
 export async function DELETE(req: NextRequest) {
-  const auth = await verifyAdminOrManager(req);
+  const auth = await verifyAdmin(req);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
 

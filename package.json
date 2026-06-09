@@ -9,10 +9,11 @@
     "start": "next start",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "npm run check:panel-sync && npm run check:staff-quality && npm run test:messaging",
-    "test:messaging": "tsx --test tests/staff-messaging.test.ts tests/booking-overlap.test.ts tests/booking-dates.test.ts tests/booked-ranges.test.ts tests/turo-blocked-date.test.ts tests/turo-revenue.test.ts tests/turo-email-parser.test.ts tests/turo-cancellation-match.test.ts tests/blocked-dates.test.ts tests/vehicle-occupancy.test.ts tests/price-calculator.test.ts tests/booking-lifecycle.test.ts tests/booking-payments-domain.test.ts tests/booking-upload-limits.test.ts tests/vehicle-sale-guards.test.ts tests/bill-of-sale-template.test.ts tests/recurring-booking.test.ts tests/recurring-occupancy.test.ts tests/recurring-payments.test.ts tests/calendar-booking-display.test.ts tests/safe-url.test.ts tests/vehicle-images.test.ts tests/sanitize-campaign-html.test.ts",
+    "test": "npm run check:panel-sync && npm run check:staff-quality && npm run check:staff-file-size && npm run test:messaging",
+    "test:messaging": "tsx --test tests/manager-panel.test.ts tests/staff-messaging.test.ts tests/booking-overlap.test.ts tests/booking-dates.test.ts tests/booked-ranges.test.ts tests/turo-blocked-date.test.ts tests/turo-revenue.test.ts tests/turo-email-parser.test.ts tests/turo-cancellation-match.test.ts tests/blocked-dates.test.ts tests/vehicle-occupancy.test.ts tests/price-calculator.test.ts tests/booking-lifecycle.test.ts tests/booking-payments-domain.test.ts tests/booking-upload-limits.test.ts tests/vehicle-sale-guards.test.ts tests/bill-of-sale-template.test.ts tests/recurring-booking.test.ts tests/recurring-occupancy.test.ts tests/recurring-payments.test.ts tests/calendar-booking-display.test.ts tests/safe-url.test.ts tests/vehicle-images.test.ts tests/sanitize-campaign-html.test.ts",
     "check:panel-sync": "node ./scripts/check-panel-sync.mjs",
-    "check:staff-quality": "node ./scripts/staff-quality-gates.mjs"
+    "check:staff-quality": "node ./scripts/staff-quality-gates.mjs",
+    "check:staff-file-size": "node ./scripts/check-staff-file-size.mjs"
   },
   "keywords": [],
   "author": "",
@@ -40,6 +41,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@supabase/supabase-js": "^2.101.1",
+    "@tanstack/react-query": "^5.90.5",
     "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^3.0.3",
     "class-variance-authority": "^0.7.1",

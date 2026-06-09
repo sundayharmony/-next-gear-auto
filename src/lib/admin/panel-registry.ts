@@ -52,10 +52,3 @@ export function getManagerFeatures(): Array<PanelFeature & { managerPath: string
 export function getCorrelatedFeatures(): PanelFeature[] {
   return panelFeatureRegistry.filter((feature) => feature.sharedWithManager);
 }
-
-export function getExpiredSyncExceptions(now = new Date()): PanelFeature[] {
-  return panelFeatureRegistry.filter((feature) => {
-    if (!feature.syncException?.expiresAt) return false;
-    return new Date(feature.syncException.expiresAt).getTime() <= now.getTime();
-  });
-}

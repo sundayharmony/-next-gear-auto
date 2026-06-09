@@ -74,6 +74,48 @@ for (const block of source.match(blockRegex) || []) {
   }
 }
 
+// Flag hardcoded admin navigation in manager-shared admin pages (not API paths).
+const sharedAdminPages = [];
+for (const feature of features) {
+  if (!feature.sharedWithManager || !feature.adminPath || managerUiSyncExemptKeys.has(feature.key)) continue;
+  const adminPagePath =
+    feature.adminPath === "/admin"
+      ? path.resolve(process.cwd(), "src/app/admin/page.tsx")
+      : path.resolve(process.cwd(), `src/app${feature.adminPath}/page.tsx`);
+  if (fs.existsSync(adminPagePath)) sharedAdminPages.push(adminPagePath);
+}
+// Shared detail/components used by manager routes
+for (const extra of [
+  "src/app/admin/vehicles/details/shared-vehicle-details-page.tsx",
+  "src/app/admin/bookings/components/BookingDetailPanel.tsx",
+  "src/app/admin/bookings/components/TuroTripDetailPanel.tsx",
+  "src/app/admin/bookings/shared-bookings-page.tsx",
+]) {
+  const full = path.resolve(process.cwd(), extra);
+  if (fs.existsSync(full)) sharedAdminPages.push(full);
+}
+
+const navPathPatterns = [
+  /href\s*=\s*["'`]\/admin\/bookings/g,
+  /href\s*=\s*["'`]\/admin\/customers/g,
+  /router\.push\(\s*["'`]\/admin\/bookings/g,
+  /router\.push\(\s*["'`]\/admin\/customers/g,
+];
+
+for (const file of sharedAdminPages) {
+  const rel = path.relative(process.cwd(), file);
+  if (rel.includes("/api/")) continue;
+  const content = fs.readFileSync(file, "utf8");
+  for (const pattern of navPathPatterns) {
+    if (pattern.test(content)) {
+      failures.push(
+        `${rel}: hardcoded admin navigation path — use panelConfig/staff-panel-base helpers instead`
+      );
+      break;
+    }
+  }
+}
+
 if (failures.length > 0) {
   console.error("Panel sync check failed:");
   for (const failure of failures) {

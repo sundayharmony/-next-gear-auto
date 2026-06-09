@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useEffect, useState, useMemo } from "react";
+import React, { useState, useMemo } from "react";
+import dynamic from "next/dynamic";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { calculateFinancing } from "@/lib/utils/financing";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -51,6 +52,17 @@ import {
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { exportToCSV } from "@/lib/utils/csv-export";
+import { useFinancesData } from "./use-finances-data";
+
+const FinancesOverviewCharts = dynamic(() => import("./finances-charts"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center py-12">
+      <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+    </div>
+  ),
+});
+
 import {
   BarChart,
   Bar,
@@ -275,22 +287,25 @@ function SectionHeader({
 
 // ─── Main Component ───────────────────────────────────────────────
 export default function AdminFinancesPage() {
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [blockedDates, setBlockedDates] = useState<BlockedDateFinanceEntry[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [maintenance, setMaintenance] = useState<MaintenanceRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { error, setError, success, setSuccess } = useAutoToast();
-  const defaultDateRange = useMemo(() => ({
-    from: getLocalYmd(new Date(new Date().getFullYear(), 0, 1)),
-    to: getLocalYmd(new Date()),
-  }), []);
-  // Applied date range — this is what drives data fetching
-  const [dateRange, setDateRange] = useState(defaultDateRange);
-  // Draft state for date inputs — user edits these freely, then clicks Apply
-  const [draftDateRange, setDraftDateRange] = useState(defaultDateRange);
-  const draftDirty = draftDateRange.from !== dateRange.from || draftDateRange.to !== dateRange.to;
+  const {
+    bookings,
+    blockedDates,
+    expenses,
+    vehicles,
+    maintenance,
+    tickets,
+    loading,
+    error,
+    setError,
+    fetchData,
+    dateRange,
+    setDateRange,
+    draftDateRange,
+    setDraftDateRange,
+    draftDirty,
+    defaultDateRange,
+  } = useFinancesData();
+  const { success, setSuccess } = useAutoToast();
   const [addingExpense, setAddingExpense] = useState(false);
   const [newExpense, setNewExpense] = useState({
     vehicleId: "",
@@ -305,7 +320,6 @@ export default function AdminFinancesPage() {
   const [savingExpenseId, setSavingExpenseId] = useState<string | null>(null);
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [showDailyRevenue, setShowDailyRevenue] = useState(false);
-  const [tickets, setTickets] = useState<Array<{ id: string; vehicle_id?: string; amount_due?: number; ticket_type?: string; municipality?: string; state?: string; violation_date?: string; created_at?: string }>>([]);
   const [activeTab, setActiveTab] = useState<"overview" | "expenses" | "revenue" | "profit" | "vehicles">("overview");
 
   // ─── Helper Functions ────────────────────────────────────────────
@@ -327,53 +341,6 @@ export default function AdminFinancesPage() {
     }
     return months;
   };
-
-  // ─── Data Fetching ──────────────────────────────────────────────
-  // Fetch ALL data once on mount. Date filtering is done client-side via useMemo.
-  const fetchData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [bookingsRes, blockedDatesRes, expensesRes, vehiclesRes, maintenanceRes, ticketsRes] = await Promise.all([
-        adminFetch("/api/admin/bookings"),
-        adminFetch("/api/admin/blocked-dates"),
-        adminFetch("/api/admin/expenses"),
-        adminFetch("/api/admin/vehicles"),
-        adminFetch("/api/admin/maintenance"),
-        adminFetch("/api/admin/tickets"),
-      ]);
-
-      if (!bookingsRes.ok || !expensesRes.ok || !vehiclesRes.ok) {
-        throw new Error("Failed to fetch data");
-      }
-
-      const bookingsData = await bookingsRes.json();
-      const blockedDatesData = blockedDatesRes.ok ? await blockedDatesRes.json() : { data: [] };
-      const expensesData = await expensesRes.json();
-      const vehiclesData = await vehiclesRes.json();
-      const maintenanceData = maintenanceRes.ok ? await maintenanceRes.json() : { data: [] };
-      if (!maintenanceRes.ok) logger.warn("Failed to fetch maintenance data");
-      const ticketsData = ticketsRes.ok ? await ticketsRes.json() : { data: [] };
-      if (!ticketsRes.ok) logger.warn("Failed to fetch tickets data");
-
-      setBookings(Array.isArray(bookingsData?.data) ? bookingsData.data : []);
-      setBlockedDates(Array.isArray(blockedDatesData?.data) ? blockedDatesData.data : []);
-      setExpenses(Array.isArray(expensesData?.data) ? expensesData.data : []);
-      setVehicles(Array.isArray(vehiclesData?.data) ? vehiclesData.data : []);
-      setMaintenance(Array.isArray(maintenanceData?.data) ? maintenanceData.data : []);
-      setTickets(Array.isArray(ticketsData?.data) ? ticketsData.data : []);
-    } catch (err) {
-      logger.error("Error fetching data:", err);
-      setError(err instanceof Error ? err.message : "Failed to load dashboard data");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchData();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
 
   // ─── Computed Data ──────────────────────────────────────────────
   // Filter bookings to selected date range (a booking is "in range" if its pickup or return overlaps)

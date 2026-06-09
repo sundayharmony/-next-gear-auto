@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2, ShieldBan, Trash2, Plus } from "lucide-react";
+import { Loader2, ShieldBan, Trash2, Plus } from "lucide-react";
+import { MonthCalendar } from "@/components/owner/month-calendar";
 import {
   AdminPageHeader,
   AdminPageBody,
@@ -41,8 +42,6 @@ interface AvailabilityData {
   bookedRanges: BookedRange[];
 }
 
-const WEEKDAYS = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
-
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
@@ -62,17 +61,6 @@ export default function OwnerAvailabilityPage() {
 
   const vehicles = data?.vehicles ?? [];
   const activeVehicleId = vehicleId || vehicles[0]?.id || "";
-
-  const monthStart = new Date(cursor.getFullYear(), cursor.getMonth(), 1);
-  const cells = useMemo(() => {
-    const start = new Date(monthStart);
-    start.setDate(1 - monthStart.getDay());
-    return Array.from({ length: 42 }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return d;
-    });
-  }, [monthStart]);
 
   const dayStatus = useMemo(() => {
     const map = new Map<string, "booked" | "blocked">();
@@ -142,7 +130,6 @@ export default function OwnerAvailabilityPage() {
   };
 
   const todayKey = ymd(new Date());
-  const monthLabel = cursor.toLocaleString("en-US", { month: "long", year: "numeric" });
 
   return (
     <>
@@ -177,45 +164,35 @@ export default function OwnerAvailabilityPage() {
             </AdminSection>
 
             <AdminCard padding="sm">
-              <div className="mb-3 flex items-center justify-between">
-                <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() - 1, 1))} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Previous month">
-                  <ChevronLeft className="h-5 w-5" />
-                </button>
-                <h2 className="text-base font-semibold text-gray-900">{monthLabel}</h2>
-                <button onClick={() => setCursor(new Date(cursor.getFullYear(), cursor.getMonth() + 1, 1))} className="rounded-lg p-2 text-gray-500 hover:bg-gray-100" aria-label="Next month">
-                  <ChevronRight className="h-5 w-5" />
-                </button>
-              </div>
-              <div className="mb-3 flex flex-wrap gap-3 text-xs text-gray-500">
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-red-500" /> Booked</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Blocked</span>
-                <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-green-500" /> Available</span>
-              </div>
-              <div className="grid grid-cols-7 gap-1">
-                {WEEKDAYS.map((w) => (
-                  <div key={w} className="pb-1 text-center text-[11px] font-semibold uppercase text-gray-400">{w}</div>
-                ))}
-                {cells.map((d, i) => {
-                  const key = ymd(d);
-                  const inMonth = d.getMonth() === cursor.getMonth();
+              <MonthCalendar
+                cursor={cursor}
+                onCursorChange={setCursor}
+                weekdayLabels={["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]}
+                legend={
+                  <>
+                    <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-red-500" /> Booked</span>
+                    <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-amber-500" /> Blocked</span>
+                    <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full bg-green-500" /> Available</span>
+                  </>
+                }
+                renderDay={({ date, key, inMonth, isToday }) => {
                   const st = dayStatus.get(key);
                   return (
                     <div
-                      key={i}
                       className={cn(
                         "flex min-h-[44px] items-center justify-center rounded-lg border text-sm",
                         !inMonth && "opacity-40",
                         st === "booked" ? "border-red-200 bg-red-50 text-red-700"
                           : st === "blocked" ? "border-amber-200 bg-amber-50 text-amber-700"
                           : "border-green-100 bg-green-50/50 text-gray-600",
-                        key === todayKey && "ring-2 ring-purple-400"
+                        isToday && "ring-2 ring-purple-400"
                       )}
                     >
-                      {d.getDate()}
+                      {date.getDate()}
                     </div>
                   );
-                })}
-              </div>
+                }}
+              />
             </AdminCard>
 
             <AdminSection title="Your blocked dates" icon={ShieldBan}>

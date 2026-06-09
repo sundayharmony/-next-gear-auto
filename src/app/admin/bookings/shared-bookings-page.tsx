@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useCallback } from "react";
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeft, Check } from "lucide-react";
@@ -21,7 +22,10 @@ import { useBookings } from "./hooks/useBookings";
 import { TodaySummary } from "./components/TodaySummary";
 import BookingFilters from "./components/BookingFilters";
 import BookingTable from "./components/BookingTable";
-import { BookingDetailPanel } from "./components/BookingDetailPanel";
+const BookingDetailPanel = dynamic(
+  () => import("./components/BookingDetailPanel").then((m) => m.BookingDetailPanel),
+  { ssr: false }
+);
 import { InPersonAgreementSign } from "./components/InPersonAgreementSign";
 import { TuroTripDetailPanel } from "./components/TuroTripDetailPanel";
 import CreateBookingForm from "./components/CreateBookingForm";

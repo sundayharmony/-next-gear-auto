@@ -20,10 +20,10 @@ import {
   AdminCard,
   AdminSection,
 } from "@/components/admin/admin-shell";
-import { useOwnerApi } from "@/lib/owner/use-owner-api";
+import { useOwnerData } from "@/lib/owner/owner-data-context";
 import { OwnerStatusBadge, OwnerBookingDetailModal } from "@/components/owner/owner-shared";
 import { formatCurrency, formatDate } from "@/lib/utils/date-helpers";
-import type { OwnerBooking, OwnerDashboardMetrics } from "@/lib/types";
+import type { OwnerBooking } from "@/lib/types";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -39,8 +39,7 @@ import { Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function OwnerDashboardPage() {
-  const { data: metrics, loading } = useOwnerApi<OwnerDashboardMetrics>("/api/owner/summary");
-  const { data: bookings } = useOwnerApi<OwnerBooking[]>("/api/owner/bookings");
+  const { metrics, bookings, loading } = useOwnerData();
   const [selected, setSelected] = useState<OwnerBooking | null>(null);
 
   const recentBookings = useMemo(() => (bookings || []).slice(0, 8), [bookings]);

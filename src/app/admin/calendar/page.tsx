@@ -2,7 +2,6 @@
 
 import React, { useEffect, useLayoutEffect, useState, useMemo, useCallback } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import type { BookingDbRow, VehicleListItem } from "@/lib/types";
 import {
   ChevronLeft,
@@ -42,19 +41,26 @@ import {
 } from "@/app/admin/bookings/config";
 import type { BookingRow as AdminBookingRow } from "@/app/admin/bookings/types";
 import { AdminStatusBanner } from "@/components/admin/ui-feedback";
+import {
+  adminPanelConfig,
+  type StaffPanelConfig,
+} from "@/lib/admin/staff-panel-config";
+import { useStaffPanelConfig } from "@/lib/hooks/use-staff-panel-config";
+import { useCalendarData } from "./use-calendar-data";
 
 type CalendarBookingRow = AdminBookingRow;
 type Vehicle = VehicleListItem;
 const TIMELINE_WINDOW_DAYS = 180;
 
-export default function AdminCalendarPage() {
-  const pathname = usePathname();
-  const calendarConfig = pathname.startsWith("/manager") ? managerBookingsConfig : adminBookingsConfig;
+export default function AdminCalendarPage({
+  panelConfig = adminPanelConfig,
+}: {
+  panelConfig?: StaffPanelConfig;
+}) {
+  const calendarConfig =
+    panelConfig.panelMode === "manager" ? managerBookingsConfig : adminBookingsConfig;
   const { error, setError, success, setSuccess } = useAutoToast();
   const bookingsEndpoint = calendarConfig.bookingsEndpoint;
-  const [bookings, setBookings] = useState<AdminBookingRow[]>([]);
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"timeline" | "calendar">("timeline");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [vehicleFilter, setVehicleFilter] = useState<string>("all");
@@ -87,17 +93,22 @@ export default function AdminCalendarPage() {
   const [inPersonSignBooking, setInPersonSignBooking] = useState<AdminBookingRow | null>(null);
   const detailDirtyRef = React.useRef(false);
 
-  // Blocked dates state
-  const [blockedDates, setBlockedDates] = useState<BlockedDateEntry[]>([]);
   const [selectedBlocked, setSelectedBlocked] = useState<BlockedDateEntry | null>(null);
 
-  // Track abort controller for fetch cancellation
-  const bookingsAbortControllerRef = React.useRef<AbortController | null>(null);
-  /** Admin /api/bookings date window already loaded (YYYY-MM-DD). Manager route loads all in one shot — ref stays null. */
-  const bookingsRangeRef = React.useRef<{ from: string; to: string } | null>(null);
-  const bookingsEndpointRef = React.useRef(bookingsEndpoint);
-  const managerBookingsFetchedRef = React.useRef(false);
-  const vehiclesLoadedRef = React.useRef(false);
+  const {
+    bookings,
+    setBookings,
+    vehicles,
+    blockedDates,
+    loading,
+    loadBookings,
+    handleRefresh,
+  } = useCalendarData({
+    bookingsEndpoint,
+    view,
+    timelineStart,
+    calendarMonthStart,
+  });
 
   const openBookingDetail = (booking: AdminBookingRow) => {
     setSelectedBooking(booking);
@@ -119,150 +130,6 @@ export default function AdminCalendarPage() {
     return { from: getLocalYmd(first), to: getLocalYmd(last) };
   }, [view, timelineStart, calendarMonthStart]);
 
-  const loadBookings = useCallback(
-    async (options?: { forceReplace?: boolean }) => {
-      const forceReplace = options?.forceReplace ?? false;
-
-      if (bookingsEndpointRef.current !== bookingsEndpoint) {
-        bookingsEndpointRef.current = bookingsEndpoint;
-        bookingsRangeRef.current = null;
-        managerBookingsFetchedRef.current = false;
-      }
-      if (forceReplace) {
-        bookingsRangeRef.current = null;
-        managerBookingsFetchedRef.current = false;
-      }
-
-      if (bookingsAbortControllerRef.current) {
-        bookingsAbortControllerRef.current.abort();
-      }
-      bookingsAbortControllerRef.current = new AbortController();
-      const signal = bookingsAbortControllerRef.current.signal;
-
-      if (bookingsEndpoint === "/api/manager/bookings") {
-        if (!forceReplace && managerBookingsFetchedRef.current) {
-          return;
-        }
-        try {
-          const res = await adminFetch(`${bookingsEndpoint}?status=all&includeTuro=true`, { signal });
-          if (res.ok) {
-            const data = await res.json();
-            setBookings((data.data || []).filter((b: AdminBookingRow) => b.status !== "cancelled"));
-            managerBookingsFetchedRef.current = true;
-          }
-          bookingsRangeRef.current = null;
-        } catch (error) {
-          if (error instanceof Error && error.name === "AbortError") return;
-          logger.error("Failed to fetch bookings:", error);
-        }
-        return;
-      }
-
-      const needFrom = addDaysToYmd(visibleBounds.from, -120);
-      const needTo = addDaysToYmd(visibleBounds.to, 120);
-      const loaded = bookingsRangeRef.current;
-
-      if (
-        !forceReplace &&
-        loaded &&
-        needFrom >= loaded.from &&
-        needTo <= loaded.to
-      ) {
-        return;
-      }
-
-      const newFrom =
-        !loaded || forceReplace ? needFrom : needFrom < loaded.from ? needFrom : loaded.from;
-      const newTo =
-        !loaded || forceReplace ? needTo : needTo > loaded.to ? needTo : loaded.to;
-
-      try {
-        const res = await adminFetch(
-          `${bookingsEndpoint}?from=${newFrom}&to=${newTo}&limit=200&includeTuro=true`,
-          { signal }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setBookings((data.data || []).filter((b: AdminBookingRow) => b.status !== "cancelled"));
-          bookingsRangeRef.current = { from: newFrom, to: newTo };
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") return;
-        logger.error("Failed to fetch bookings:", error);
-      }
-    },
-    [bookingsEndpoint, visibleBounds]
-  );
-
-  const fetchAuxiliaryData = useCallback(async () => {
-    const needFrom = addDaysToYmd(visibleBounds.from, -120);
-    const needTo = addDaysToYmd(visibleBounds.to, 120);
-    const blockedUrl = `/api/admin/blocked-dates?from=${encodeURIComponent(needFrom)}&to=${encodeURIComponent(needTo)}`;
-    const requests: Promise<Response>[] = [adminFetch(blockedUrl)];
-    if (!vehiclesLoadedRef.current) {
-      requests.unshift(adminFetch("/api/admin/vehicles"));
-    }
-    const results = await Promise.all(requests);
-    const vehiclesRes = !vehiclesLoadedRef.current ? results[0] : null;
-    const blockedRes = !vehiclesLoadedRef.current ? results[1] : results[0];
-    if (vehiclesRes?.ok) {
-      const data = await vehiclesRes.json();
-      setVehicles(data.data || []);
-      vehiclesLoadedRef.current = true;
-    }
-    if (blockedRes.ok) {
-      const data = await blockedRes.json();
-      const rows = (data.data || []) as BlockedDateEntry[];
-      // Manual/owner blocks only — Turo trips appear via bookings (includeTuro).
-      setBlockedDates(rows.filter((bd) => bd.source !== "turo-email"));
-    }
-  }, [visibleBounds]);
-
-  const calendarAuxLoadedRef = React.useRef(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      const firstPaint = !calendarAuxLoadedRef.current;
-      if (firstPaint) setLoading(true);
-      try {
-        await loadBookings();
-        if (!calendarAuxLoadedRef.current) {
-          await fetchAuxiliaryData();
-          calendarAuxLoadedRef.current = true;
-        }
-      } catch (error) {
-        logger.error("Failed to fetch calendar data:", error);
-      } finally {
-        if (firstPaint && !cancelled) setLoading(false);
-      }
-    };
-
-    run();
-
-    return () => {
-      cancelled = true;
-      if (bookingsAbortControllerRef.current) {
-        bookingsAbortControllerRef.current.abort();
-      }
-    };
-  }, [loadBookings, fetchAuxiliaryData]);
-
-  useEffect(() => {
-    if (!calendarAuxLoadedRef.current) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        await fetchAuxiliaryData();
-      } catch (e) {
-        if (!cancelled) logger.error("Failed to refresh blocked dates:", e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [visibleBounds, fetchAuxiliaryData]);
-
   // Filter bookings
   const filteredBookings = useMemo(() => {
     return bookings.filter((booking) => {
@@ -276,18 +143,6 @@ export default function AdminCalendarPage() {
     () => filterTimelineVehicles(vehicles),
     [vehicles]
   );
-
-  const handleRefresh = async () => {
-    setLoading(true);
-    try {
-      await loadBookings({ forceReplace: true });
-      await fetchAuxiliaryData();
-    } catch (error) {
-      logger.error("Failed to refresh calendar data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const closeBookingDetail = useCallback(() => {
     setShowBookingDetail(false);
@@ -1059,7 +914,7 @@ function CalendarView({
   onBlockedDateClick,
   onMonthWheel,
 }: CalendarViewProps) {
-  const pathname = usePathname();
+  const panelConfig = useStaffPanelConfig();
   const year = currentMonth.getFullYear();
   const month = currentMonth.getMonth();
 
@@ -1280,7 +1135,7 @@ function CalendarView({
                       </div>
                       <div className="text-xs sm:text-sm text-gray-500 truncate">
                         <Link
-                          href={getStaffVehicleDetailsHref(booking.vehicle_id, pathname)}
+                          href={getStaffVehicleDetailsHref(booking.vehicle_id, panelConfig.panelBase)}
                           onClick={(e) => e.stopPropagation()}
                           className="hover:text-purple-700 hover:underline"
                         >

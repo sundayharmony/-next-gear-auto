@@ -2,7 +2,10 @@
 
 import React, { useEffect, useState, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import {
+  adminPanelConfig,
+  type StaffPanelConfig,
+} from "@/lib/admin/staff-panel-config";
 import { ArrowLeft, Plus, Trash2, RefreshCw, ExternalLink, X, Loader2 } from "lucide-react";
 import { Instagram } from "@/components/icons/instagram";
 import { Card } from "@/components/ui/card";
@@ -25,9 +28,12 @@ interface InstaPost {
   created_at: string;
 }
 
-export default function AdminInstagramPage() {
-  const pathname = usePathname();
-  const homePath = pathname.startsWith("/manager") ? "/manager" : "/admin";
+export default function AdminInstagramPage({
+  panelConfig = adminPanelConfig,
+}: {
+  panelConfig?: StaffPanelConfig;
+}) {
+  const homePath = panelConfig.panelBase;
   const [posts, setPosts] = useState<InstaPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [newUrl, setNewUrl] = useState("");

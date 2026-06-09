@@ -19,11 +19,9 @@ function getEnvFlag(serverKey: string, clientKey?: string): boolean {
 
 export const featureFlags = {
   managerPanelMaster: () => getEnvFlag("FF_MANAGER_PANEL_MASTER", "NEXT_PUBLIC_FF_MANAGER_PANEL_MASTER"),
-  managerRoleEnabled: () => getEnvFlag("FF_MANAGER_ROLE_ENABLED", "NEXT_PUBLIC_FF_MANAGER_ROLE_ENABLED"),
   managerPanelRoutes: () => getEnvFlag("FF_MANAGER_PANEL_ROUTES", "NEXT_PUBLIC_FF_MANAGER_PANEL_ROUTES"),
   managerBookingWrite: () => getEnvFlag("FF_MANAGER_BOOKING_WRITE", "NEXT_PUBLIC_FF_MANAGER_BOOKING_WRITE"),
   managerAnalytics: () => getEnvFlag("FF_MANAGER_ANALYTICS", "NEXT_PUBLIC_FF_MANAGER_ANALYTICS"),
-  adminManagerAccessUi: () => getEnvFlag("FF_ADMIN_MANAGER_ACCESS_UI", "NEXT_PUBLIC_FF_ADMIN_MANAGER_ACCESS_UI"),
   staffMessagingEnabled: () => getEnvFlag("FF_STAFF_MESSAGING_ENABLED", "NEXT_PUBLIC_FF_STAFF_MESSAGING_ENABLED"),
   staffMessagingPushEnabled: () => getEnvFlag("FF_STAFF_MESSAGING_PUSH_ENABLED", "NEXT_PUBLIC_FF_STAFF_MESSAGING_PUSH_ENABLED"),
   staffMessagingEmailEnabled: () => getEnvFlag("FF_STAFF_MESSAGING_EMAIL_ENABLED", "NEXT_PUBLIC_FF_STAFF_MESSAGING_EMAIL_ENABLED"),
