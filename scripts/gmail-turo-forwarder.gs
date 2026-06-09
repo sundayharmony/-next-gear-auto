@@ -22,8 +22,8 @@
 
 // ═══════ CONFIGURATION — EDIT THESE ═══════
 
-const WEBHOOK_URL = "https://rentnextgearauto.com/api/webhooks/turo-email";
-const WEBHOOK_SECRET = "PASTE_YOUR_SECRET_HERE"; // Must match TURO_WEBHOOK_SECRET in Vercel
+const WEBHOOK_URL = "https://www.rentnextgearauto.com/api/webhooks/turo-email";
+const WEBHOOK_SECRET = "PASTE_YOUR_SECRET_HERE"; // Must match TURO_WEBHOOK_SECRET in Vercel (Production)
 
 // Gmail search query for Turo emails.
 // IMPORTANT: Keep this broad so sender aliases/subdomains don't get skipped.
@@ -59,6 +59,12 @@ function processNewTuroEmails() {
 
       // Skip if not actually from Turo
       if (!from.toLowerCase().includes("turo")) {
+        continue;
+      }
+
+      if (!isRelevantTuroEmail(subject, body)) {
+        markProcessedMessage(messageId);
+        Logger.log("SKIP (not a booking email): " + subject);
         continue;
       }
 
@@ -239,6 +245,27 @@ function backfillCancellationEmails(days) {
 }
 
 // ═══════ HELPERS ═══════
+
+/** Skip Turo marketing, messages, payouts, and other non-booking notifications. */
+function isRelevantTuroEmail(subject, body) {
+  var s = String(subject || "").toLowerCase();
+  var b = String(body || "").toLowerCase();
+
+  if (
+    /earnings are on the way|security code|confirmation code|reset your password|password reset|rated their trip|sent you a message|reimbursement|protection plan|unlisted due to|congratulations on listing|virtual orientation|buckle up|payout update|ineligible incidental|action required for your vehicle|still need to confirm|added another driver|disputed your|been charged for your|not responded to your|updates to your protection|attend a virtual orientation/i.test(s)
+  ) {
+    return false;
+  }
+
+  if (
+    /booked|cancelled|canceled|extension|extended|change request|confirmed.*trip|new trip|upcoming trip|has changed their trip|you.?ve cancelled|you.?ve confirmed/i.test(s)
+  ) {
+    return true;
+  }
+
+  return /trip\s+start/i.test(b) && /trip\s+end/i.test(b);
+}
+
 function processedKey(messageId) {
   return PROCESSED_KEY_PREFIX + String(messageId || "");
 }

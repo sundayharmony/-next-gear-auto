@@ -1,6 +1,6 @@
 /**
  * POST cancellation emails to the Turo webhook (local or production).
- * Usage: npx tsx --env-file=.env.local scripts/post-turo-webhook.ts --url https://rentnextgearauto.com/api/webhooks/turo-email --file emails.txt
+ * Usage: npx tsx --env-file=.env.local scripts/post-turo-webhook.ts --url https://www.rentnextgearauto.com/api/webhooks/turo-email --file emails.txt
  */
 import { readFileSync, existsSync } from "fs";
 

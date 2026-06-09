@@ -40,6 +40,7 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   // ── Detect cancellation emails (before extension — cancel wins) ──
   let isCancellation = false;
   const cancellationPatterns = [
+    /has\s+cancel(?:led|ed)\s+(?:their|his|her|the|a)\s+trip/i,
     /has\s+been\s+cancel(?:led|ed)/i,
     /trip\s+(?:has\s+been\s+)?cancel(?:led|ed)/i,
     /booking\s+(?:has\s+been\s+)?cancel(?:led|ed)/i,
@@ -124,14 +125,18 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
 
   // Also try "Trip start 4/9/26 8:00 am" / "Trip end 4/10/26 10:00 am"
   if (!pickupTime) {
-    const tripStartTime = text.match(/trip\s+start\s+\S+\s+(\d{1,2}:\d{2}\s*(?:am|pm))/i);
+    const tripStartTime = text.match(
+      /trip\s+start\s*:?\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s+(\d{1,2}:\d{2}\s*(?:[ap]\.?m\.?))/i
+    );
     if (tripStartTime) {
       pickupTime = to24Hour(tripStartTime[1].trim());
       rawMatches.push(`Pickup time: "${pickupTime}"`);
     }
   }
   if (!returnTime) {
-    const tripEndTime = text.match(/trip\s+end\s+\S+\s+(\d{1,2}:\d{2}\s*(?:am|pm))/i);
+    const tripEndTime = text.match(
+      /trip\s+end\s*:?\s*\d{1,2}\/\d{1,2}\/\d{2,4}\s+(\d{1,2}:\d{2}\s*(?:[ap]\.?m\.?))/i
+    );
     if (tripEndTime) {
       returnTime = to24Hour(tripEndTime[1].trim());
       rawMatches.push(`Return time: "${returnTime}"`);
@@ -173,28 +178,40 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   }
 
   // ── Extract dates ──
-  // Look for patterns like:
-  // "Trip starts: Mon, Apr 5, 2026 at 10:00 AM"
-  // "Trip start: April 5, 2026"
-  // "Check-in: 04/05/2026"
-  // "Start date: 2026-04-05"
-  // "Apr 5 – Apr 8, 2026"
-  // "April 5 - April 8"
   let startDate: string | null = null;
   let endDate: string | null = null;
 
-  // Pattern 1: "Trip starts: <date>" / "Trip begins: <date>" / "Trip ends: <date>"
-  const tripStartMatch = text.match(/trip\s+start[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i)
-    || text.match(/trip\s+begin[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i);
-  const tripEndMatch = text.match(/trip\s+end[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i)
-    || text.match(/trip\s+conclude[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i);
-  if (tripStartMatch) {
-    startDate = parseFlexibleDate(tripStartMatch[1]);
-    rawMatches.push(`Trip start: "${tripStartMatch[1].trim()}"`);
+  // Pattern 0: Gmail plain-text "Trip start: 7/6/26 10:00 AM Trip end: 7/8/26 10:00 AM ..."
+  const inlineTripDates = text.match(
+    /trip\s+start\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(?:\d{1,2}:\d{2}\s*(?:[ap]\.?m\.?)?\s+)?trip\s+end\s*:?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i
+  );
+  if (inlineTripDates) {
+    startDate = parseFlexibleDate(inlineTripDates[1]);
+    endDate = parseFlexibleDate(inlineTripDates[2]);
+    if (startDate) rawMatches.push(`Trip start: "${inlineTripDates[1]}"`);
+    if (endDate) rawMatches.push(`Trip end: "${inlineTripDates[2]}"`);
   }
-  if (tripEndMatch) {
-    endDate = parseFlexibleDate(tripEndMatch[1]);
-    rawMatches.push(`Trip end: "${tripEndMatch[1].trim()}"`);
+
+  // Pattern 1: "Trip starts: <date>" / "Trip end: <date>" (stop before next trip end/start token)
+  if (!startDate) {
+    const tripStartMatch =
+      text.match(/trip\s+start[s]?\s*[:–—-]?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i) ||
+      text.match(/trip\s+start[s]?\s*[:–—-]\s*(.+?)(?=\s+trip\s+end\b|\n|$)/i) ||
+      text.match(/trip\s+begin[s]?\s*[:–—-]\s*(.+?)(?=\s+trip\s+end\b|\n|$)/i);
+    if (tripStartMatch) {
+      startDate = parseFlexibleDate(tripStartMatch[1]);
+      if (startDate) rawMatches.push(`Trip start: "${tripStartMatch[1].trim()}"`);
+    }
+  }
+  if (!endDate) {
+    const tripEndMatch =
+      text.match(/trip\s+end[s]?\s*[:–—-]?\s*(\d{1,2}\/\d{1,2}\/\d{2,4})/i) ||
+      text.match(/trip\s+end[s]?\s*[:–—-]\s*(.+?)(?:\n|reservation\b|view\b|you\s+earn\b|mileage\b|$)/i) ||
+      text.match(/trip\s+conclude[s]?\s*[:–—-]\s*(.+?)(?:\n|$)/i);
+    if (tripEndMatch) {
+      endDate = parseFlexibleDate(tripEndMatch[1]);
+      if (endDate) rawMatches.push(`Trip end: "${tripEndMatch[1].trim()}"`);
+    }
   }
 
   // Pattern 1b: "Pickup on <date>" / "Return on <date>" (common in mobile-style Turo copy)
@@ -300,19 +317,27 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   // ── Extract guest name ──
   let guestName: string | null = null;
   const guestPatterns = [
+    // "Zhao has cancelled their trip" / "Marcus has cancelled"
+    /([A-Z][a-z]+)\s+has\s+cancel(?:led|ed)/i,
+    // "Lucas has an upcoming trip"
+    /([A-Z][a-z]+)\s+has\s+an?\s+upcoming\s+trip/i,
+    // Name before phone or reservation id in trip block: "Lucas (310) 654-3392 Reservation"
+    /trip\s+end\s*:?.+?\s+([A-Z][a-z]+)\s+(?:\(\d{3}\)|\+\d|Reservation\s+ID)/i,
     // "Bob's trip is booked" / "Kati's trip with your..."
     /([A-Z][a-z]+(?:\s+[A-Z][a-z.]+)?)'s\s+trip/i,
     /(?:guest|booked by|renter|driver)\s*[:–—-]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z.]+)?)/i,
     /([A-Z][a-z]+(?:\s+[A-Z]\.?))\s+(?:booked|has booked|reserved|wants to book)/i,
-    /trip\s+with\s+([A-Z][a-z]+(?:\s+[A-Z][a-z.]+)?)/i,
     /new\s+(?:booking|reservation|trip)\s+(?:from|by)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z.]+)?)/i,
   ];
   for (const pattern of guestPatterns) {
     const match = text.match(pattern);
     if (match) {
-      guestName = match[1].trim();
-      rawMatches.push(`Guest: "${guestName}"`);
-      break;
+      const candidate = match[1].trim();
+      if (!/^your$/i.test(candidate)) {
+        guestName = candidate;
+        rawMatches.push(`Guest: "${guestName}"`);
+        break;
+      }
     }
   }
 
@@ -399,13 +424,14 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
  * Convert "8:00 AM" / "10:00 PM" to 24-hour "HH:MM" format.
  */
 function to24Hour(timeStr: string): string {
-  const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(AM|PM)$/i);
-  if (!match) return timeStr;
+  const normalized = timeStr.replace(/\u00a0|\u202f/g, " ").trim();
+  const match = normalized.match(/^(\d{1,2}):(\d{2})\s*([ap])\.?m\.?$/i);
+  if (!match) return normalized;
   let hours = parseInt(match[1], 10);
   const minutes = match[2];
-  const period = match[3].toUpperCase();
-  if (period === "PM" && hours !== 12) hours += 12;
-  if (period === "AM" && hours === 12) hours = 0;
+  const period = match[3].toLowerCase();
+  if (period === "p" && hours !== 12) hours += 12;
+  if (period === "a" && hours === 12) hours = 0;
   return `${String(hours).padStart(2, "0")}:${minutes}`;
 }
 
@@ -421,9 +447,24 @@ function stripHtml(text: string): string {
  */
 function parseFlexibleDate(dateStr: string): string | null {
   if (!dateStr || typeof dateStr !== "string") return null;
+
+  const leadingNumeric = dateStr.trim().match(/^(\d{1,2}\/\d{1,2}\/\d{2,4})/);
+  if (leadingNumeric) {
+    const usOnly = leadingNumeric[1];
+    const usParts = usOnly.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+    if (usParts) {
+      let year = usParts[3];
+      if (year.length === 2) {
+        year = (parseInt(year, 10) >= 70 ? "19" : "20") + year;
+      }
+      return `${year}-${usParts[1].padStart(2, "0")}-${usParts[2].padStart(2, "0")}`;
+    }
+  }
+
   const s = dateStr.trim()
+    .replace(/\u00a0|\u202f/g, " ")
     .replace(/\s+at\s+.*/i, "")
-    .replace(/,?\s+\d{1,2}:\d{2}\s*(AM|PM)?/i, "")
+    .replace(/,?\s+\d{1,2}:\d{2}\s*(?:[ap]\.?m\.?)?/gi, "")
     .replace(/,\s*$/, "")
     .trim();
 

@@ -15,6 +15,31 @@ test("parseTuroEmail detects cancellation emails", () => {
   assert.equal(parsed.endDate, "2026-04-10");
 });
 
+test("parseTuroEmail parses Gmail plain-text Trip start/end on one line", () => {
+  const text = `
+    Zhao has cancelled their trip with your Ram 1500
+    Trip start: 7/6/26 10:00 AM Trip end: 7/8/26 10:00 AM Zhao Reservation ID #57917243
+    Vehicle Ram 1500 2019
+  `;
+  const parsed = parseTuroEmail(text);
+  assert.equal(parsed.isCancellation, true);
+  assert.equal(parsed.startDate, "2026-07-06");
+  assert.equal(parsed.endDate, "2026-07-08");
+  assert.equal(parsed.guestName, "Zhao");
+  assert.equal(parsed.pickupTime, "10:00");
+  assert.equal(parsed.returnTime, "10:00");
+});
+
+test("parseTuroEmail parses cancellation with M/D/YY dates from message thread", () => {
+  const text =
+    "Marcus has cancelled their trip with your Jeep Grand Cherokee Trip start: 6/11/26 7:00 PM Trip end: 6/14/26 9:00 PM Marcus Reservation ID #56788081 Vehicle: Jeep Grand Cherokee 2024";
+  const parsed = parseTuroEmail(text);
+  assert.equal(parsed.isCancellation, true);
+  assert.equal(parsed.startDate, "2026-06-11");
+  assert.equal(parsed.endDate, "2026-06-14");
+  assert.equal(parsed.guestName, "Marcus");
+});
+
 test("parseTuroEmail prefers cancellation over extension wording", () => {
   const text =
     "Your trip has been cancelled. The checkout date was changed from April 5 to April 8, 2026.";
