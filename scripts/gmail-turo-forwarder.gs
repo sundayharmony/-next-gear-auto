@@ -7,9 +7,9 @@
  * 3. Update WEBHOOK_SECRET below
  * 4. Run setup() once, then processNewTuroEmails() to test
  *
- * ONE-TIME BACKFILL (run in this order in the Apps Script editor):
- *   1. backfillRecentTuroEmails(365)   — imports bookings / upcoming trips (skips cancellations)
- *   2. backfillCancellationEmails(365) — marks cancellations on trips that exist in the calendar
+ * ONE-TIME BACKFILL (run in this order — use the function dropdown + Run):
+ *   1. runBookingBackfill365        — imports bookings / upcoming trips (skips cancellations)
+ *   2. runCancellationBackfill365   — marks cancellations on trips that exist in the calendar
  */
 
 // ═══════ CONFIGURATION — EDIT THESE ═══════
@@ -130,6 +130,16 @@ function teardown() {
     }
   }
   Logger.log("Removed " + removed + " trigger(s). Auto-checking is now disabled.");
+}
+
+/** One-click runner for Apps Script toolbar (no parameters needed). */
+function runBookingBackfill365() {
+  backfillRecentTuroEmails(365);
+}
+
+/** One-click runner for Apps Script toolbar (no parameters needed). */
+function runCancellationBackfill365() {
+  backfillCancellationEmails(365);
 }
 
 function backfillRecentTuroEmails(days) {
