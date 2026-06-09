@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { formatTime, formatDate, getLocalYmd, addDaysToYmd } from "@/lib/utils/date-helpers";
 import { statusColors, statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
@@ -32,6 +33,15 @@ import {
   getCalendarPickupDateKey,
   getCalendarReturnDateKey,
 } from "./calendar-booking-display";
+import { BookingDetailPanel } from "@/app/admin/bookings/components/BookingDetailPanel";
+import { TuroTripDetailPanel } from "@/app/admin/bookings/components/TuroTripDetailPanel";
+import { InPersonAgreementSign } from "@/app/admin/bookings/components/InPersonAgreementSign";
+import {
+  adminBookingsConfig,
+  managerBookingsConfig,
+} from "@/app/admin/bookings/config";
+import type { BookingRow as AdminBookingRow } from "@/app/admin/bookings/types";
+import { AdminStatusBanner } from "@/components/admin/ui-feedback";
 
 type BookingRow = BookingDbRow;
 type Vehicle = VehicleListItem;
@@ -39,7 +49,9 @@ const TIMELINE_WINDOW_DAYS = 180;
 
 export default function AdminCalendarPage() {
   const pathname = usePathname();
-  const bookingsEndpoint = pathname.startsWith("/manager") ? "/api/manager/bookings" : "/api/bookings";
+  const calendarConfig = pathname.startsWith("/manager") ? managerBookingsConfig : adminBookingsConfig;
+  const { error, setError, success, setSuccess } = useAutoToast();
+  const bookingsEndpoint = calendarConfig.bookingsEndpoint;
   const [bookings, setBookings] = useState<BookingRow[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +84,8 @@ export default function AdminCalendarPage() {
   // Booking detail panel state
   const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
   const [showBookingDetail, setShowBookingDetail] = useState(false);
+  const [inPersonSignBooking, setInPersonSignBooking] = useState<AdminBookingRow | null>(null);
+  const detailDirtyRef = React.useRef(false);
 
   // Blocked dates state
   const [blockedDates, setBlockedDates] = useState<BlockedDateEntry[]>([]);
@@ -89,25 +103,6 @@ export default function AdminCalendarPage() {
     setSelectedBooking(booking);
     setShowBookingDetail(true);
   };
-
-  const closeBookingDetail = useCallback(() => {
-    setShowBookingDetail(false);
-    setSelectedBooking(null);
-  }, []);
-
-  // Escape key handler for booking detail panel
-  useEffect(() => {
-    const handleEscapeKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && showBookingDetail) {
-        closeBookingDetail();
-      }
-    };
-
-    if (showBookingDetail) {
-      window.addEventListener("keydown", handleEscapeKey);
-      return () => window.removeEventListener("keydown", handleEscapeKey);
-    }
-  }, [showBookingDetail, closeBookingDetail]);
 
   const visibleBounds = useMemo(() => {
     if (view === "timeline") {
@@ -294,6 +289,118 @@ export default function AdminCalendarPage() {
     }
   };
 
+  const closeBookingDetail = useCallback(() => {
+    setShowBookingDetail(false);
+    setSelectedBooking(null);
+    if (detailDirtyRef.current) {
+      detailDirtyRef.current = false;
+      void loadBookings({ forceReplace: true });
+    }
+  }, [loadBookings]);
+
+  const mergeBookingInList = useCallback((updated: AdminBookingRow) => {
+    setBookings((prev) => {
+      const i = prev.findIndex((b) => b.id === updated.id);
+      if (i === -1) return prev;
+      const next = [...prev];
+      next[i] = { ...next[i], ...updated };
+      return next;
+    });
+  }, []);
+
+  const updateBookingStatus = useCallback(
+    async (bookingId: string, newStatus: string): Promise<boolean> => {
+      if (bookingId.startsWith("turo:")) {
+        setError("Turo trips cannot be updated from the calendar.");
+        return false;
+      }
+      const booking = bookings.find((b) => b.id === bookingId) as AdminBookingRow | undefined;
+      if (calendarConfig.mode === "manager" && booking?.canManage === false) {
+        setError("You can only manage bookings you created.");
+        return false;
+      }
+
+      try {
+        const res = await adminFetch("/api/bookings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId, status: newStatus }),
+        });
+        if (!res.ok) throw new Error(`Failed: ${res.status}`);
+        const data = await res.json();
+        if (data.success) {
+          if (newStatus === "cancelled") {
+            setBookings((prev) => prev.filter((b) => b.id !== bookingId));
+            setSuccess("Booking cancelled");
+          } else {
+            setBookings((prev) =>
+              prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b))
+            );
+            setSuccess(`Booking marked ${newStatus}`);
+          }
+          return true;
+        }
+        setError(data.message || `Failed to update booking to "${newStatus}"`);
+        return false;
+      } catch {
+        setError("Network error — could not update booking");
+        return false;
+      }
+    },
+    [bookings, calendarConfig.mode, setError, setSuccess]
+  );
+
+  const handleUpdateBookingInList = useCallback(
+    (updated: AdminBookingRow) => {
+      mergeBookingInList(updated);
+      setSelectedBooking(updated as BookingRow);
+      detailDirtyRef.current = true;
+    },
+    [mergeBookingInList]
+  );
+
+  const handleUpdateStatusFromDetail = useCallback(
+    async (bookingId: string, newStatus: string) => {
+      const ok = await updateBookingStatus(bookingId, newStatus);
+      if (!ok) return false;
+      if (newStatus === "cancelled") {
+        closeBookingDetail();
+      } else {
+        setSelectedBooking((prev) =>
+          prev && prev.id === bookingId ? ({ ...prev, status: newStatus } as BookingRow) : prev
+        );
+      }
+      detailDirtyRef.current = true;
+      return true;
+    },
+    [updateBookingStatus, closeBookingDetail]
+  );
+
+  useEffect(() => {
+    if (!selectedBooking || !showBookingDetail) return;
+    const latest = bookings.find((b) => b.id === selectedBooking.id);
+    if (!latest) {
+      closeBookingDetail();
+      return;
+    }
+    if (latest !== selectedBooking) {
+      setSelectedBooking(latest);
+    }
+  }, [bookings, selectedBooking, showBookingDetail, closeBookingDetail]);
+
+  useEffect(() => {
+    const handleEscapeKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && showBookingDetail) {
+        closeBookingDetail();
+      }
+    };
+
+    if (showBookingDetail) {
+      window.addEventListener("keydown", handleEscapeKey);
+      return () => window.removeEventListener("keydown", handleEscapeKey);
+    }
+  }, [showBookingDetail, closeBookingDetail]);
+
   /** Month grid only: optional wheel nudge (timeline uses horizontal wheel scroll instead). */
   const wheelThrottleRef = React.useRef(0);
   const WHEEL_DAY_THROTTLE_MS = 85;
@@ -345,6 +452,12 @@ export default function AdminCalendarPage() {
       </section>
 
       <PageContainer className="py-4 sm:py-8">
+        {success ? (
+          <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} className="mb-4" />
+        ) : null}
+        {error ? (
+          <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} className="mb-4" />
+        ) : null}
         <div className="mb-8">
 
           {/* Controls */}
@@ -518,163 +631,53 @@ export default function AdminCalendarPage() {
         </div>
       </PageContainer>
 
-      {/* Booking Detail Panel */}
       {showBookingDetail && selectedBooking && (
-        <div className="fixed inset-0 z-50 flex">
-          {/* Backdrop */}
-          <div className="flex-1 bg-black/50" onClick={closeBookingDetail} />
-          {/* Panel */}
-          <div className="w-full max-w-[calc(100vw-1rem)] sm:max-w-lg bg-white shadow-xl overflow-y-auto" tabIndex={0} autoFocus role="dialog" aria-modal="true" aria-label="Booking details">
-            <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between z-10">
-              <h2 className="text-lg font-semibold text-gray-900">Booking Details</h2>
-              <button onClick={closeBookingDetail} aria-label="Close booking details" className="p-2 text-gray-400 hover:text-gray-600 -mr-2">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-            <div className="p-6 space-y-6">
-              {/* Booking ID & Status */}
-              <div>
-                <p className="text-xs text-gray-500">Booking ID</p>
-                <p className="font-mono text-purple-600 font-bold">{selectedBooking.id}</p>
-                <Badge className={`mt-1 ${statusColors[selectedBooking.status] || "bg-gray-100"}`}>
-                  {selectedBooking.status}
-                </Badge>
-              </div>
+        (selectedBooking as AdminBookingRow).occupancy_kind === "turo" ||
+        selectedBooking.id.startsWith("turo:") ? (
+          <TuroTripDetailPanel
+            booking={selectedBooking as AdminBookingRow}
+            onClose={closeBookingDetail}
+          />
+        ) : (
+          <BookingDetailPanel
+            booking={selectedBooking as AdminBookingRow}
+            vehicles={vehicles}
+            onClose={closeBookingDetail}
+            onUpdateBooking={handleUpdateBookingInList}
+            onUpdateStatus={handleUpdateStatusFromDetail}
+            onError={setError}
+            onSuccess={setSuccess}
+            capabilities={{
+              canSendBookingEmail: calendarConfig.capabilities.canSendBookingEmail,
+              canSendInvoice: calendarConfig.capabilities.canSendInvoice,
+              canViewAdminNotes: calendarConfig.capabilities.canViewAdminNotes,
+              canViewActivityTimeline: calendarConfig.capabilities.canViewActivityTimeline,
+              canManagePayments: calendarConfig.capabilities.canManagePayments,
+              canExtendBooking: calendarConfig.capabilities.canExtendBooking,
+              canSignAgreementInPerson: calendarConfig.capabilities.canSignAgreementInPerson,
+              canManageManagerFinancialAccess: calendarConfig.capabilities.canManageManagerFinancialAccess,
+              customerDetailsBasePath: calendarConfig.customerDetailsBasePath,
+              ticketsPagePath: calendarConfig.ticketsPagePath,
+            }}
+            onStartInPersonSign={() => setInPersonSignBooking(selectedBooking as AdminBookingRow)}
+          />
+        )
+      )}
 
-              {/* Customer Info */}
-              <div>
-                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Customer</h3>
-                <p className="font-medium">{selectedBooking.customer_name}</p>
-                <p className="text-sm text-gray-500">{selectedBooking.customer_email}</p>
-                {selectedBooking.customer_phone && (
-                  <p className="text-sm text-gray-500">{selectedBooking.customer_phone}</p>
-                )}
-              </div>
-
-              {/* ID Document */}
-              {selectedBooking.id_document_url && (
-                <div>
-                  <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">ID Document</h3>
-                  <a
-                    href={selectedBooking.id_document_url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                  >
-                    <img
-                      src={selectedBooking.id_document_url}
-                      alt="Customer ID"
-                      loading="lazy"
-                      className="rounded-lg border max-h-48 object-contain"
-                    />
-                    <p className="text-xs text-purple-600 mt-1">Click to view full size</p>
-                  </a>
-                </div>
-              )}
-
-              {/* Vehicle */}
-              <div>
-                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Vehicle</h3>
-                <p className="font-medium">{selectedBooking.vehicleName || "Unknown Vehicle"}</p>
-              </div>
-
-              {/* Dates and Times */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-xs text-gray-500">Pickup Date</p>
-                  <p className="text-lg font-bold text-gray-900">{formatDate(selectedBooking.pickup_date)}</p>
-                  <p className="text-xs text-gray-500 mt-1">Time</p>
-                  <p className="text-xl font-bold text-purple-500">{formatTime(selectedBooking.pickup_time)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-gray-500">Return Date</p>
-                  <p className="text-lg font-bold text-gray-900">
-                    {formatDate(getCalendarReturnDateKey(selectedBooking))}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-1">Time</p>
-                  <p className="text-xl font-bold text-purple-500">{formatTime(selectedBooking.return_time)}</p>
-                </div>
-              </div>
-
-              {/* Insurance Status */}
-              <div>
-                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Insurance</h3>
-                {selectedBooking.insurance_opted_out ? (
-                  <div>
-                    <Badge className="bg-yellow-100 text-yellow-700">Opted Out (Own Coverage)</Badge>
-                    {selectedBooking.insurance_proof_url && (
-                      <a
-                        href={selectedBooking.insurance_proof_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="block mt-2"
-                      >
-                        <img
-                          src={selectedBooking.insurance_proof_url}
-                          alt="Insurance Proof"
-                          loading="lazy"
-                          className="rounded-lg border max-h-48 object-contain"
-                        />
-                        <p className="text-xs text-purple-600 mt-1">Click to view full size</p>
-                      </a>
-                    )}
-                  </div>
-                ) : (
-                  <Badge className="bg-green-100 text-green-700">NextGearAuto Insurance Included</Badge>
-                )}
-              </div>
-
-              {/* Payment */}
-              <div>
-                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Payment</h3>
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-gray-500">Total</span>
-                  <span className="font-bold text-lg text-gray-900">${(selectedBooking.total_price ?? 0).toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-gray-500">Paid</span>
-                  <span className="text-green-600 font-semibold">${(selectedBooking.deposit ?? 0).toFixed(2)}</span>
-                </div>
-              </div>
-
-              {/* Agreement */}
-              <div>
-                <h3 className="font-semibold text-sm text-gray-500 uppercase mb-2">Agreement</h3>
-                {selectedBooking.signed_name || selectedBooking.rental_agreement_url ? (
-                  <>
-                    {selectedBooking.signed_name && (
-                      <p className="font-serif italic">{selectedBooking.signed_name}</p>
-                    )}
-                    <p className="text-xs text-gray-400">
-                      {selectedBooking.agreement_signed_at
-                        ? new Date(selectedBooking.agreement_signed_at).toLocaleString()
-                        : ""}
-                    </p>
-                    {selectedBooking.rental_agreement_url && (
-                      <a
-                        href={selectedBooking.rental_agreement_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="mt-2 inline-flex items-center gap-1.5 text-sm text-purple-600 hover:text-purple-800 font-medium"
-                      >
-                        View Signed Agreement &rarr;
-                      </a>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-xs text-gray-400">Not yet signed</p>
-                )}
-              </div>
-
-              {/* Created at */}
-              <div className="pt-4 border-t border-gray-200">
-                <p className="text-xs text-gray-400">
-                  Created {new Date(selectedBooking.created_at).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+      {inPersonSignBooking && (
+        <InPersonAgreementSign
+          booking={inPersonSignBooking}
+          vehicles={vehicles}
+          onClose={() => setInPersonSignBooking(null)}
+          onSigned={(fields) => {
+            const updated = { ...inPersonSignBooking, ...fields };
+            handleUpdateBookingInList(updated);
+            if (selectedBooking?.id === inPersonSignBooking.id) {
+              setSelectedBooking(updated as BookingRow);
+            }
+            setSuccess("Rental agreement signed in person.");
+          }}
+        />
       )}
 
       {selectedBlocked && (
