@@ -138,7 +138,6 @@ export default function AdminCustomersPage() {
       const found = customers.find((c) => c.id === highlightId);
       if (found) openCustomer(found);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [highlightId, customers, selectedCustomer]);
 
   const handleSearch = () => {
@@ -477,8 +476,11 @@ export default function AdminCustomersPage() {
       let faceFound = false;
       if ("FaceDetector" in window) {
         try {
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const detector = new (window as any).FaceDetector();
+          const detector = new (window as Window & {
+            FaceDetector: new () => {
+              detect: (img: HTMLImageElement) => Promise<Array<{ boundingBox: { x: number; y: number; width: number; height: number } }>>;
+            };
+          }).FaceDetector();
           const faces = await detector.detect(img);
           if (faces.length > 0) {
             const face = faces[0].boundingBox;
@@ -566,7 +568,11 @@ export default function AdminCustomersPage() {
       }
 
       setProfilePictureUrl(null);
-      setCustomers((prev) => prev.map((c) => (c.id === selectedCustomer.id ? { ...c, profilePictureUrl: null } : c)));
+      setCustomers((prev) =>
+        prev.map((c) =>
+          c.id === selectedCustomer.id ? { ...c, profilePictureUrl: undefined } : c
+        )
+      );
       setToastSuccess("Profile photo removed.");
     } catch (err) {
       logger.error("Failed removing profile picture:", err);

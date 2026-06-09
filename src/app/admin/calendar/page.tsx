@@ -43,7 +43,7 @@ import {
 import type { BookingRow as AdminBookingRow } from "@/app/admin/bookings/types";
 import { AdminStatusBanner } from "@/components/admin/ui-feedback";
 
-type BookingRow = BookingDbRow;
+type CalendarBookingRow = AdminBookingRow;
 type Vehicle = VehicleListItem;
 const TIMELINE_WINDOW_DAYS = 180;
 
@@ -52,7 +52,7 @@ export default function AdminCalendarPage() {
   const calendarConfig = pathname.startsWith("/manager") ? managerBookingsConfig : adminBookingsConfig;
   const { error, setError, success, setSuccess } = useAutoToast();
   const bookingsEndpoint = calendarConfig.bookingsEndpoint;
-  const [bookings, setBookings] = useState<BookingRow[]>([]);
+  const [bookings, setBookings] = useState<AdminBookingRow[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<"timeline" | "calendar">("timeline");
@@ -82,7 +82,7 @@ export default function AdminCalendarPage() {
   const [selectedDay, setSelectedDay] = useState<string | null>(null);
 
   // Booking detail panel state
-  const [selectedBooking, setSelectedBooking] = useState<BookingRow | null>(null);
+  const [selectedBooking, setSelectedBooking] = useState<AdminBookingRow | null>(null);
   const [showBookingDetail, setShowBookingDetail] = useState(false);
   const [inPersonSignBooking, setInPersonSignBooking] = useState<AdminBookingRow | null>(null);
   const detailDirtyRef = React.useRef(false);
@@ -99,7 +99,7 @@ export default function AdminCalendarPage() {
   const managerBookingsFetchedRef = React.useRef(false);
   const vehiclesLoadedRef = React.useRef(false);
 
-  const openBookingDetail = (booking: BookingRow) => {
+  const openBookingDetail = (booking: AdminBookingRow) => {
     setSelectedBooking(booking);
     setShowBookingDetail(true);
   };
@@ -147,7 +147,7 @@ export default function AdminCalendarPage() {
           const res = await adminFetch(`${bookingsEndpoint}?status=all&includeTuro=true`, { signal });
           if (res.ok) {
             const data = await res.json();
-            setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
+            setBookings((data.data || []).filter((b: AdminBookingRow) => b.status !== "cancelled"));
             managerBookingsFetchedRef.current = true;
           }
           bookingsRangeRef.current = null;
@@ -183,7 +183,7 @@ export default function AdminCalendarPage() {
         );
         if (res.ok) {
           const data = await res.json();
-          setBookings((data.data || []).filter((b: BookingRow) => b.status !== "cancelled"));
+          setBookings((data.data || []).filter((b: AdminBookingRow) => b.status !== "cancelled"));
           bookingsRangeRef.current = { from: newFrom, to: newTo };
         }
       } catch (error) {
@@ -303,7 +303,7 @@ export default function AdminCalendarPage() {
       const i = prev.findIndex((b) => b.id === updated.id);
       if (i === -1) return prev;
       const next = [...prev];
-      next[i] = { ...next[i], ...updated };
+      next[i] = { ...next[i], ...updated } as AdminBookingRow;
       return next;
     });
   }, []);
@@ -353,7 +353,7 @@ export default function AdminCalendarPage() {
   const handleUpdateBookingInList = useCallback(
     (updated: AdminBookingRow) => {
       mergeBookingInList(updated);
-      setSelectedBooking(updated as BookingRow);
+      setSelectedBooking(updated);
       detailDirtyRef.current = true;
     },
     [mergeBookingInList]
@@ -367,7 +367,7 @@ export default function AdminCalendarPage() {
         closeBookingDetail();
       } else {
         setSelectedBooking((prev) =>
-          prev && prev.id === bookingId ? ({ ...prev, status: newStatus } as BookingRow) : prev
+          prev && prev.id === bookingId ? ({ ...prev, status: newStatus } as AdminBookingRow) : prev
         );
       }
       detailDirtyRef.current = true;
@@ -551,7 +551,7 @@ export default function AdminCalendarPage() {
               {/* Mobile: Agenda-style day view */}
               <div className="sm:hidden">
                 <MobileAgendaView
-                  bookings={filteredBookings}
+                  bookings={filteredBookings as BookingDbRow[]}
                   vehicles={timelineVehicles}
                   blockedDates={blockedDates}
                   start={timelineStart}
@@ -577,7 +577,7 @@ export default function AdminCalendarPage() {
               {/* Desktop: Timeline — vertical wheel pans horizontally; booking fetch uses wide range (see loadBookings). */}
               <div className="hidden sm:block">
                 <TimelineView
-                  bookings={filteredBookings}
+                  bookings={filteredBookings as BookingDbRow[]}
                   vehicles={timelineVehicles}
                   blockedDates={blockedDates}
                   start={timelineStart}
@@ -606,7 +606,7 @@ export default function AdminCalendarPage() {
 
           {!loading && view === "calendar" && (
             <CalendarView
-              bookings={filteredBookings}
+              bookings={filteredBookings as BookingDbRow[]}
               blockedDates={blockedDates}
               currentMonth={calendarMonthStart}
               onPreviousMonth={() => {
@@ -673,7 +673,7 @@ export default function AdminCalendarPage() {
             const updated = { ...inPersonSignBooking, ...fields };
             handleUpdateBookingInList(updated);
             if (selectedBooking?.id === inPersonSignBooking.id) {
-              setSelectedBooking(updated as BookingRow);
+              setSelectedBooking(updated);
             }
             setSuccess("Rental agreement signed in person.");
           }}
@@ -749,14 +749,14 @@ export default function AdminCalendarPage() {
    ═══════════════════════════════════════════════════ */
 
 interface MobileAgendaViewProps {
-  bookings: BookingRow[];
+  bookings: CalendarBookingRow[];
   vehicles: Vehicle[];
   blockedDates: BlockedDateEntry[];
   start: Date;
   onPrevious: () => void;
   onNext: () => void;
   onToday: () => void;
-  onBookingClick: (booking: BookingRow) => void;
+  onBookingClick: (booking: CalendarBookingRow) => void;
   onBlockedDateClick: (blocked: BlockedDateEntry) => void;
 }
 
@@ -1035,14 +1035,14 @@ function MobileAgendaView({
 
 
 interface CalendarViewProps {
-  bookings: BookingRow[];
+  bookings: CalendarBookingRow[];
   blockedDates: BlockedDateEntry[];
   currentMonth: Date;
   onPreviousMonth: () => void;
   onNextMonth: () => void;
   selectedDay: string | null;
   onSelectDay: (day: string | null) => void;
-  onBookingClick: (booking: BookingRow) => void;
+  onBookingClick: (booking: CalendarBookingRow) => void;
   onBlockedDateClick: (blocked: BlockedDateEntry) => void;
   onMonthWheel: (direction: number) => void;
 }
@@ -1080,7 +1080,7 @@ function CalendarView({
   }
 
   // Get bookings for each day
-  const bookingsByDay: Record<string, BookingRow[]> = {};
+  const bookingsByDay: Record<string, CalendarBookingRow[]> = {};
   bookings.forEach((booking) => {
     const pickupDate = new Date(getCalendarPickupDateKey(booking) + "T00:00:00");
     const returnDate = new Date(getCalendarReturnDateKey(booking) + "T00:00:00");

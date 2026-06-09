@@ -153,7 +153,10 @@ export function isRecurringPaymentOverdue(
   if (booking.status && !occupyStatuses.includes(booking.status)) {
     return false;
   }
-  const billing = getRecurringBillingSummary(booking, todayYyyyMmDd);
+  const billing = getRecurringBillingSummary(
+    { ...booking, total_price: booking.total_price ?? null },
+    todayYyyyMmDd
+  );
   if (!billing) return false;
   return billing.balanceDue > 0;
 }

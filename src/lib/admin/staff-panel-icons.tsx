@@ -40,7 +40,7 @@ export const staffPanelIconMap: Record<PanelIconKey, LucideIcon> = {
   tag: Tag,
   star: Star,
   messageSquare: MessageSquare,
-  instagram: Instagram,
+  instagram: Instagram as LucideIcon,
   clipboard: ClipboardList,
   megaphone: Megaphone,
   fileText: FileText,

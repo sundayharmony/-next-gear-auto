@@ -12,8 +12,8 @@ import { useState, useEffect, useRef } from "react";
 export function useAutoToast(errorTimeout = 5000, successTimeout = 3000) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const errorTimeoutRef = useRef<NodeJS.Timeout>();
-  const successTimeoutRef = useRef<NodeJS.Timeout>();
+  const errorTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
+  const successTimeoutRef = useRef<NodeJS.Timeout | undefined>(undefined);
 
   useEffect(() => {
     if (error) {

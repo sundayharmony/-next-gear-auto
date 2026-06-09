@@ -40,7 +40,7 @@ export async function sendMarketingCampaignBatch(
       sent += 1;
     } catch (err) {
       const message = err instanceof Error ? err.message : String(err);
-      logger.error("Marketing email failed for", email, message);
+      logger.error(`Marketing email failed for ${email}`, message);
       failed.push({ email, error: message });
     }
     if (SEND_DELAY_MS > 0) {

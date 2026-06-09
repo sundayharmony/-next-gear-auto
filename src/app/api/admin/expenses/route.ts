@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     const toDate = searchParams.get("to");
     const blockedDateId = searchParams.get("blocked_date_id");
 
-    const applyFilters = <T extends { eq: (column: string, value: unknown) => T; gte: (column: string, value: string) => T; lte: (column: string, value: string) => T }>(baseQuery: T) => {
+    const applyFilters = (baseQuery: any) => {
       let query = baseQuery;
       if (vehicleId) {
         query = query.eq("vehicle_id", vehicleId);
@@ -128,7 +128,10 @@ export async function GET(request: NextRequest) {
           .from("expenses")
           .select("id, vehicle_id, category, amount, description, date, created_at")
       ).order("date", { ascending: false });
-      data = fallback.data;
+      data = (fallback.data || []).map((row: Record<string, unknown>) => ({
+        ...row,
+        blocked_date_id: null,
+      }));
       error = fallback.error;
     }
 

@@ -101,22 +101,22 @@ export async function GET(request: NextRequest) {
     }
 
     // Parse and return clean results
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const results = data.results.slice(0, 5).map((r: any) => {
-      const comps: any[] = r.address_components || [];
+    const results = data.results.slice(0, 5).map((r: Record<string, unknown>) => {
+      const comps = (r.address_components as Array<Record<string, unknown>>) || [];
       let streetNumber = "", route = "", city = "", state = "", zip = "";
       for (const c of comps) {
-        const types: string[] = c.types || [];
-        if (types.includes("street_number")) streetNumber = c.long_name;
-        else if (types.includes("route")) route = c.long_name;
-        else if (types.includes("locality")) city = c.long_name;
-        else if (types.includes("sublocality_level_1") && !city) city = c.long_name;
-        else if (types.includes("administrative_area_level_1")) state = c.short_name;
-        else if (types.includes("postal_code")) zip = c.long_name;
+        const types = (c.types as string[] | undefined) || [];
+        if (types.includes("street_number")) streetNumber = String(c.long_name || "");
+        else if (types.includes("route")) route = String(c.long_name || "");
+        else if (types.includes("locality")) city = String(c.long_name || "");
+        else if (types.includes("sublocality_level_1") && !city) city = String(c.long_name || "");
+        else if (types.includes("administrative_area_level_1")) state = String(c.short_name || "");
+        else if (types.includes("postal_code")) zip = String(c.long_name || "");
       }
-      const loc = r.geometry?.location;
+      const geometry = r.geometry as { location?: { lat?: number; lng?: number } } | undefined;
+      const loc = geometry?.location;
       return {
-        formatted_address: r.formatted_address || "",
+        formatted_address: String(r.formatted_address || ""),
         address: [streetNumber, route].filter(Boolean).join(" "),
         city,
         state,
@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
         lat: loc?.lat ?? null,
         lng: loc?.lng ?? null,
       };
-    }).filter((r: any) => r.lat !== null && r.lng !== null);
+    }).filter((r: { lat: number | null; lng: number | null }) => r.lat !== null && r.lng !== null);
 
     return NextResponse.json({ success: true, results });
   } catch (err) {

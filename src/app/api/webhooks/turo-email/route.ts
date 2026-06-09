@@ -5,6 +5,49 @@ import { TURO_BLOCKED_SOURCE, CANCELLED_REASON_PREFIX } from "@/lib/utils/blocke
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 
+type TuroBlockedRow = {
+  id: string;
+  vehicle_id: string;
+  start_date: string;
+  end_date: string;
+  pickup_time: string | null;
+  return_time: string | null;
+  location: string | null;
+  earnings: number | null;
+  source: string;
+  reason: string | null;
+  is_extension: boolean;
+  original_end_date: string | null;
+  cancelled_at: string | null;
+};
+
+const TURO_SELECT_FULL =
+  "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date, cancelled_at";
+const TURO_SELECT_MINIMAL = "id, vehicle_id, start_date, end_date, source, reason";
+
+function normalizeTuroRow(row: Record<string, unknown>): TuroBlockedRow {
+  return {
+    id: String(row.id),
+    vehicle_id: String(row.vehicle_id),
+    start_date: String(row.start_date),
+    end_date: String(row.end_date),
+    source: String(row.source ?? TURO_BLOCKED_SOURCE),
+    reason: row.reason != null ? String(row.reason) : null,
+    pickup_time: row.pickup_time != null ? String(row.pickup_time) : null,
+    return_time: row.return_time != null ? String(row.return_time) : null,
+    location: row.location != null ? String(row.location) : null,
+    earnings: typeof row.earnings === "number" ? row.earnings : null,
+    is_extension: Boolean(row.is_extension),
+    original_end_date: row.original_end_date != null ? String(row.original_end_date) : null,
+    cancelled_at: row.cancelled_at != null ? String(row.cancelled_at) : null,
+  };
+}
+
+function asTuroRow(row: Record<string, unknown> | null | undefined): TuroBlockedRow | null {
+  if (!row || row.id == null) return null;
+  return normalizeTuroRow(row);
+}
+
 /**
  * POST /api/webhooks/turo-email
  *
@@ -132,7 +175,7 @@ export async function POST(req: NextRequest) {
       }
 
       if (model && model.length > 3) {
-        const modelWords = model.split(/\s+/).filter((w) => w.length > 2);
+        const modelWords = model.split(/\s+/).filter((w: string) => w.length > 2);
         for (const w of modelWords) {
           if (fullText.includes(w.toLowerCase())) score += 1;
         }
@@ -179,19 +222,15 @@ export async function POST(req: NextRequest) {
 
     const vehicleLabel = `${matchedVehicle.year} ${matchedVehicle.make} ${matchedVehicle.model}`;
 
-    const turoSelectFull =
-      "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date, cancelled_at";
-    const turoSelectMinimal = "id, vehicle_id, start_date, end_date, source, reason";
-
     /** Active Turo trips only — never merge/update manual blocks or cancelled rows. */
     async function findActiveTuroTrips(filters: {
       startDate?: string;
       overlapStart?: string;
       overlapEnd?: string;
-    }) {
+    }): Promise<{ data: TuroBlockedRow[]; error: { message: string } | null }> {
       let q = supabase
         .from("blocked_dates")
-        .select(turoSelectFull)
+        .select(TURO_SELECT_FULL)
         .eq("vehicle_id", matchedVehicle!.id)
         .eq("source", TURO_BLOCKED_SOURCE);
 
@@ -205,7 +244,7 @@ export async function POST(req: NextRequest) {
       if (error && isMissingColumnError(error)) {
         let fb = supabase
           .from("blocked_dates")
-          .select(turoSelectMinimal)
+          .select(TURO_SELECT_MINIMAL)
           .eq("vehicle_id", matchedVehicle!.id)
           .eq("source", TURO_BLOCKED_SOURCE)
           .order("created_at", { ascending: false })
@@ -215,31 +254,33 @@ export async function POST(req: NextRequest) {
           fb = fb.lte("start_date", filters.overlapEnd).gte("end_date", filters.overlapStart);
         }
         const res = await fb;
-        data = (res.data || []).map((r: Record<string, unknown>) => ({
-          ...r,
-          cancelled_at: null,
-          pickup_time: null,
-          return_time: null,
-          location: null,
-          earnings: null,
-          is_extension: false,
-          original_end_date: null,
-        }));
-        error = res.error;
-        return { data: data as Record<string, unknown>[], error };
+        let rows = (res.data || [])
+          .map((r) => normalizeTuroRow(r as Record<string, unknown>))
+          .filter((r) => !r.reason?.trimStart().startsWith(CANCELLED_REASON_PREFIX));
+        if (filters.startDate) {
+          rows = rows.filter((r) => r.start_date === filters.startDate);
+        }
+        if (filters.overlapStart && filters.overlapEnd) {
+          rows = rows.filter(
+            (r) =>
+              r.start_date <= filters.overlapEnd! &&
+              r.end_date >= filters.overlapStart!
+          );
+        }
+        return { data: rows, error: res.error };
       }
 
-      if (error) return { data: [] as Record<string, unknown>[], error };
+      if (error) return { data: [], error };
 
-      let rows = (data || []) as Record<string, unknown>[];
+      let rows = (data || []).map((r) => normalizeTuroRow(r as Record<string, unknown>));
       if (filters.startDate) {
         rows = rows.filter((r) => r.start_date === filters.startDate);
       }
       if (filters.overlapStart && filters.overlapEnd) {
         rows = rows.filter(
           (r) =>
-            String(r.start_date) <= filters.overlapEnd! &&
-            String(r.end_date) >= filters.overlapStart!
+            r.start_date <= filters.overlapEnd! &&
+            r.end_date >= filters.overlapStart!
         );
       }
       return { data: rows, error: null };
@@ -262,7 +303,7 @@ export async function POST(req: NextRequest) {
         const guestLower = parsed.guestName.toLowerCase();
         matchedTrip =
           candidates.find((r) =>
-            String(r.reason || "")
+            (r.reason || "")
               .toLowerCase()
               .includes(guestLower)
           ) ?? matchedTrip;
@@ -290,12 +331,14 @@ export async function POST(req: NextRequest) {
       }
 
       const cancelledAt = new Date().toISOString();
-      let { data: cancelled, error: cancelErr } = await supabase
+      const cancelRes = await supabase
         .from("blocked_dates")
         .update({ cancelled_at: cancelledAt })
         .eq("id", matchedTrip.id)
-        .select(turoSelectFull)
+        .select(TURO_SELECT_FULL)
         .maybeSingle();
+      let cancelled: TuroBlockedRow | null = asTuroRow(cancelRes.data as Record<string, unknown>);
+      let cancelErr = cancelRes.error;
 
       if (cancelErr && isMissingColumnError(cancelErr)) {
         const cancelledAtFallback = new Date().toISOString();
@@ -306,9 +349,9 @@ export async function POST(req: NextRequest) {
           .from("blocked_dates")
           .update({ reason })
           .eq("id", matchedTrip.id)
-          .select("id, vehicle_id, start_date, end_date, source, reason")
+          .select(TURO_SELECT_MINIMAL)
           .maybeSingle();
-        cancelled = fallback.data;
+        cancelled = asTuroRow(fallback.data as Record<string, unknown>);
         cancelErr = fallback.error;
         if (!cancelErr) {
           logger.info("Turo webhook: trip cancelled via reason prefix (run supabase-turo-cancellations.sql for cancelled_at)", {
@@ -386,12 +429,14 @@ export async function POST(req: NextRequest) {
         const earningsNote = parsed.earnings ? ` — $${parsed.earnings}` : "";
         updateFields.reason = `Turo (extended)${guestNote}${earningsNote}`;
 
-        let { data: updated, error: updateError } = await supabase
+        const updateRes = await supabase
           .from("blocked_dates")
           .update(updateFields)
           .eq("id", matchedBlock.id)
           .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date")
           .maybeSingle();
+        let updated: TuroBlockedRow | null = asTuroRow(updateRes.data as Record<string, unknown>);
+        let updateError = updateRes.error;
 
         if (updateError && isMissingColumnError(updateError)) {
           const fallbackFields: Record<string, string | number | boolean | null> = {
@@ -402,9 +447,9 @@ export async function POST(req: NextRequest) {
             .from("blocked_dates")
             .update(fallbackFields)
             .eq("id", matchedBlock.id)
-            .select("id, vehicle_id, start_date, end_date, source, reason")
+            .select(TURO_SELECT_MINIMAL)
             .maybeSingle();
-          updated = fallback.data;
+          updated = asTuroRow(fallback.data as Record<string, unknown>);
           updateError = fallback.error;
         }
 
@@ -473,12 +518,14 @@ export async function POST(req: NextRequest) {
       if (parsed.location != null) updateFields.location = parsed.location;
       if (parsed.earnings != null) updateFields.earnings = parsed.earnings;
 
-      let { data: updated, error: mergeErr } = await supabase
+      const mergeRes = await supabase
         .from("blocked_dates")
         .update(updateFields)
         .eq("id", row.id)
         .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason")
         .maybeSingle();
+      let updated: TuroBlockedRow | null = asTuroRow(mergeRes.data as Record<string, unknown>);
+      let mergeErr = mergeRes.error;
 
       if (mergeErr && isMissingColumnError(mergeErr)) {
         const fallbackFields = {
@@ -490,9 +537,9 @@ export async function POST(req: NextRequest) {
           .from("blocked_dates")
           .update(fallbackFields)
           .eq("id", row.id)
-          .select("id, vehicle_id, start_date, end_date, source, reason")
+          .select(TURO_SELECT_MINIMAL)
           .maybeSingle();
-        updated = fallback.data;
+        updated = asTuroRow(fallback.data as Record<string, unknown>);
         mergeErr = fallback.error;
       }
 
@@ -531,7 +578,7 @@ export async function POST(req: NextRequest) {
       ? `Turo: ${parsed.guestName}${parsed.earnings ? ` — $${parsed.earnings}` : ""}`
       : `Turo booking${parsed.earnings ? ` — $${parsed.earnings}` : ""}`;
 
-    let { data: created, error } = await supabase
+    const createRes = await supabase
       .from("blocked_dates")
       .insert({
         vehicle_id: matchedVehicle.id,
@@ -546,6 +593,8 @@ export async function POST(req: NextRequest) {
       })
       .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason")
       .maybeSingle();
+    let created: TuroBlockedRow | null = asTuroRow(createRes.data as Record<string, unknown>);
+    let error = createRes.error;
 
     if (error && isMissingColumnError(error)) {
       const fallback = await supabase
@@ -557,9 +606,9 @@ export async function POST(req: NextRequest) {
           source: TURO_BLOCKED_SOURCE,
           reason,
         })
-        .select("id, vehicle_id, start_date, end_date, source, reason")
+        .select(TURO_SELECT_MINIMAL)
         .maybeSingle();
-      created = fallback.data;
+      created = asTuroRow(fallback.data as Record<string, unknown>);
       error = fallback.error;
     }
 

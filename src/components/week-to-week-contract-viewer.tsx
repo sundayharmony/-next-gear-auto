@@ -50,8 +50,8 @@ export function WeekToWeekContractViewer({
         customerPhone={customerPhone}
         pickupDate={pickupDate}
         returnDate={returnDate}
-        pickupTime={pickupTime}
-        returnTime={returnTime}
+        pickupTime={pickupTime ?? undefined}
+        returnTime={returnTime ?? undefined}
         totalPrice={weeklyPrice}
         totalDays={7}
         weeklyDueDay={weeklyDueDay}

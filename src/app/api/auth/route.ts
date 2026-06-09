@@ -375,6 +375,13 @@ export async function POST(request: Request) {
         );
       }
 
+      if (!newCustomer) {
+        return NextResponse.json(
+          { success: false, message: "Failed to create account. Please try again." },
+          { status: 500 }
+        );
+      }
+
       const mapped = {
         id: newCustomer.id,
         name: newCustomer.name,

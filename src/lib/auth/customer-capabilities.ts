@@ -22,7 +22,7 @@ export function hasManagerPortalAccess(row: CustomerCapabilitiesRow | null | und
   if (!isAppRole(role)) return false;
   if (isManagerRole(role)) return isManagerPanelAccessEnabled(row);
   if (isOwnerRole(role) && row.manager_access_enabled === true) {
-    return row.manager_access_enabled !== false;
+    return true;
   }
   return false;
 }

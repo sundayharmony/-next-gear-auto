@@ -233,11 +233,11 @@ async function fetchOwnerTuroBlocks(
       .eq("source", TURO_BLOCKED_SOURCE)
       .order("start_date", { ascending: false })
       .limit(2000);
-    data = (fb.data || []).map((r: Record<string, unknown>) => ({
-      ...r,
+    data = (fb.data || []).map((r) => ({
+      ...(r as Record<string, unknown>),
       earnings: null,
       cancelled_at: null,
-    }));
+    })) as typeof data;
     error = fb.error;
   }
 

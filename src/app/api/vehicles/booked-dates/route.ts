@@ -74,25 +74,34 @@ async function fetchRangesForVehicles(
     });
   }
 
-  let { data: blocks, error: blocksError } = await supabase
+  type CalendarBlockRow = {
+    vehicle_id: string;
+    start_date: string;
+    end_date: string;
+    pickup_time?: string | null;
+    return_time?: string | null;
+    cancelled_at?: string | null;
+    reason?: string | null;
+  };
+
+  let blocksData: CalendarBlockRow[] | null = null;
+  let blocksError: { message: string } | null = null;
+
+  const primaryBlocks = await supabase
     .from("blocked_dates")
-    .select("vehicle_id, start_date, end_date, pickup_time, return_time, cancelled_at")
+    .select("vehicle_id, start_date, end_date, pickup_time, return_time, cancelled_at, reason")
     .in("vehicle_id", vehicleIds)
     .order("start_date", { ascending: true });
+  blocksData = primaryBlocks.data;
+  blocksError = primaryBlocks.error;
 
   if (blocksError && isMissingColumnError(blocksError)) {
     const fallback = await supabase
       .from("blocked_dates")
-      .select("vehicle_id, start_date, end_date")
+      .select("vehicle_id, start_date, end_date, pickup_time, return_time, reason")
       .in("vehicle_id", vehicleIds)
       .order("start_date", { ascending: true });
-    blocks = fallback.data as Array<{
-      vehicle_id: string;
-      start_date: string;
-      end_date: string;
-      pickup_time?: string | null;
-      return_time?: string | null;
-    }> | null;
+    blocksData = (fallback.data || []).map((row) => ({ ...row, cancelled_at: null }));
     blocksError = fallback.error;
   }
 
@@ -100,7 +109,7 @@ async function fetchRangesForVehicles(
     throw blocksError;
   }
 
-  for (const b of blocks || []) {
+  for (const b of blocksData || []) {
     if (!isActiveCalendarBlock(b)) continue;
     const vid = String(b.vehicle_id);
     if (!result[vid]) result[vid] = [];

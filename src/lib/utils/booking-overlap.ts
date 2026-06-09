@@ -70,6 +70,7 @@ export function bookingIntervalsConflict(
 }
 
 export type OverlapBookingRow = {
+  id?: string;
   pickup_date: string;
   return_date: string;
   pickup_time: string | null;
@@ -130,7 +131,7 @@ async function hasBlockedDateOverlap(
 ): Promise<boolean> {
   const { data: blocks } = await supabase
     .from("blocked_dates")
-    .select("id, cancelled_at")
+    .select("id, cancelled_at, reason")
     .eq("vehicle_id", vehicleId)
     .lte("start_date", returnDate)
     .gte("end_date", pickupDate)
@@ -146,7 +147,7 @@ export interface CheckBookingOverlapOptions {
   excludeBookingId?: string;
 }
 
-export function excludeBookingRow<T extends { id: string }>(
+export function excludeBookingRow<T extends OverlapBookingRow>(
   rows: T[] | null | undefined,
   excludeBookingId: string | undefined,
 ): T[] {

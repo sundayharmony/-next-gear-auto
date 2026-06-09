@@ -145,8 +145,8 @@ export function SignaturePad({
   };
 
   const stopDrawing = (e?: React.MouseEvent | React.TouchEvent) => {
-    if ("touches" in e || e instanceof TouchEvent) {
-      e?.preventDefault();
+    if (e && ("touches" in e || e instanceof TouchEvent)) {
+      e.preventDefault();
     }
     if (isDrawing && hasContent) {
       const canvas = canvasRef.current;

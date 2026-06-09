@@ -6,17 +6,7 @@ import {
 } from "@/lib/bookings/financial-access";
 
 type SupabaseLike = {
-  from: (table: string) => {
-    select: (...args: unknown[]) => any;
-    eq: (...args: unknown[]) => any;
-    order: (...args: unknown[]) => any;
-    limit: (...args: unknown[]) => any;
-    maybeSingle: () => Promise<{ data: unknown; error: unknown }>;
-    not: (...args: unknown[]) => any;
-    gte: (...args: unknown[]) => any;
-    lte: (...args: unknown[]) => any;
-    range: (...args: unknown[]) => Promise<{ data: unknown; error: unknown; count?: number | null }>;
-  };
+  from: (table: string) => any;
 };
 
 export type StaffRole = "admin" | "manager";

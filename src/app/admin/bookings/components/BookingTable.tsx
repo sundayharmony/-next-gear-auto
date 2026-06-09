@@ -275,7 +275,9 @@ export default function BookingTable({
                     {booking.id_document_url && <FileText size={13} className="text-gray-400" />}
                     {booking.insurance_proof_url && <Shield size={13} className="text-gray-400" />}
                     {isAgreementComplete(booking) && <Check size={13} className="text-green-500" />}
-                    {booking.is_overdue && <AlertTriangle size={13} className="text-red-500" title="Return overdue" />}
+                    {booking.is_overdue && (
+                      <AlertTriangle size={13} className="text-red-500" aria-label="Return overdue" />
+                    )}
                     {booking.is_payment_overdue && (
                       <span title="Weekly payment due">
                         <CircleDollarSign size={13} className="text-amber-600" />

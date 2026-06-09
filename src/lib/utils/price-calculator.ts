@@ -141,10 +141,10 @@ export interface PromoDiscount {
 export function applyDiscount(
   pricing: PricingBreakdown,
   discount: PromoDiscount
-): PricingBreakdown & { discount: PromoDiscount } {
+): PricingBreakdown & { discount?: PromoDiscount } {
   // Guard against NaN and Infinity values
   if (!Number.isFinite(discount.discountValue) || discount.discountValue < 0) {
-    return { ...pricing, discount: undefined };
+    return { ...pricing };
   }
 
   const discountAmount = discount.discountType === "percentage"

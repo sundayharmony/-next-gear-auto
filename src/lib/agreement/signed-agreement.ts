@@ -45,6 +45,7 @@ interface AgreementBooking {
   vehicle_id?: string | null;
   agreement_signed_at?: string | null;
   signed_name?: string | null;
+  rental_agreement_url?: string | null;
   admin_notes?: string | null;
 }
 
@@ -312,7 +313,7 @@ export async function regenerateSignedAgreementForBooking(
     booking,
     vehicle,
     signatures,
-    booking.agreement_signed_at,
+    booking.agreement_signed_at ?? new Date().toISOString(),
   );
   const agreementUrl = await uploadSignedAgreementPdf(supabase, booking.id, pdfBytes);
 

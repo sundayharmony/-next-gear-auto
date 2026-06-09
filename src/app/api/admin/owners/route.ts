@@ -27,21 +27,28 @@ export async function GET(req: NextRequest) {
   try {
     const supabase = getServiceSupabase();
 
-    let ownersQuery = await supabase
+    let owners: Array<Record<string, unknown>> | null = null;
+    let ownersError: { message: string } | null = null;
+
+    const ownersPrimary = await supabase
       .from("customers")
       .select("id, name, email, phone, created_at, password_hash, role, owner_portal_enabled")
       .or("role.eq.owner,owner_portal_enabled.eq.true")
       .order("name", { ascending: true });
 
-    if (ownersQuery.error && isMissingColumnError(ownersQuery.error)) {
-      ownersQuery = await supabase
+    if (ownersPrimary.error && isMissingColumnError(ownersPrimary.error)) {
+      const fallback = await supabase
         .from("customers")
         .select("id, name, email, phone, created_at, password_hash, role")
         .eq("role", "owner")
         .order("name", { ascending: true });
+      owners = (fallback.data || []).map((o) => ({ ...o, owner_portal_enabled: null }));
+      ownersError = fallback.error;
+    } else {
+      owners = ownersPrimary.data;
+      ownersError = ownersPrimary.error;
     }
 
-    const { data: owners, error: ownersError } = ownersQuery;
     if (ownersError) {
       logger.error("Admin owners GET error:", ownersError);
       return NextResponse.json({ success: false, message: "Failed to load owners" }, { status: 500 });
@@ -49,7 +56,7 @@ export async function GET(req: NextRequest) {
 
     const [vehicleResult, enriched] = await Promise.all([
       fetchVehiclesForOwnerAssignments(supabase),
-      Promise.all((owners || []).map((o) => enrichOwnerRow(o, { recentBookingsLimit: 0 }))),
+      Promise.all((owners || []).map((o) => enrichOwnerRow(o as unknown as Parameters<typeof enrichOwnerRow>[0], { recentBookingsLimit: 0 }))),
     ]);
     const vehicleRows = vehicleResult.rows;
 

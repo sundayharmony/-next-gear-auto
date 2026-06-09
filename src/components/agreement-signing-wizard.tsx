@@ -116,7 +116,11 @@ export function AgreementSigningWizard({
   const setSignatures = useCallback(
     (updater: (prev: Record<string, string | null>) => Record<string, string | null>) => {
       const base = embedded && controlledSignatures !== undefined ? controlledSignatures : internalSignatures;
-      const next = updater(base);
+      const normalizedBase: Record<string, string | null> = {};
+      for (const [key, val] of Object.entries(base)) {
+        normalizedBase[key] = val ?? null;
+      }
+      const next = updater(normalizedBase);
       if (embedded && onSignaturesChange) {
         onSignaturesChange(next);
       } else {

@@ -22,21 +22,23 @@ export async function GET(req: NextRequest) {
   const supabase = getServiceSupabase();
   try {
     const isManager = auth.role === "manager";
-    const { data, error } = await supabase
-      .from("vehicles")
-      .select(
-        isManager
-          ? "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, maintenance_status, description, color, is_published, created_at"
-          : "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at"
-      )
-      .order("created_at", { ascending: true });
+    const managerSelect =
+      "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, maintenance_status, description, color, is_published, created_at";
+    const adminSelect =
+      "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at";
+    const vehiclesQuery = isManager
+      ? supabase.from("vehicles").select(managerSelect)
+      : supabase.from("vehicles").select(adminSelect);
+    const { data, error } = await vehiclesQuery.order("created_at", { ascending: true });
 
     if (error) {
       logger.error("Admin vehicles GET Supabase error:", error);
       return NextResponse.json({ success: false, message: "Failed to load vehicles" }, { status: 500 });
     }
 
-    const vehicles = (data || []).map((v) => ({
+    const vehicles = (data || []).map((row) => {
+      const v = row as Record<string, unknown>;
+      return {
       id: v.id,
       year: v.year || 2024,
       make: v.make || "",
@@ -50,17 +52,18 @@ export async function GET(req: NextRequest) {
       description: v.description || "",
       color: v.color || "",
       mileage: v.mileage ?? 0,
-      licensePlate: v.license_plate || "",
-      vin: v.vin || "",
+      licensePlate: isManager ? undefined : String(v.license_plate || ""),
+      vin: isManager ? undefined : String(v.vin || ""),
       maintenanceStatus: v.maintenance_status || "good",
-      purchasePrice: isManager ? undefined : (v.purchase_price ?? 0),
-      isFinanced: isManager ? undefined : (v.is_financed ?? false),
-      monthlyPayment: isManager ? undefined : (v.monthly_payment ?? 0),
-      paymentDayOfMonth: isManager ? undefined : (v.payment_day_of_month ?? 1),
-      financingStartDate: isManager ? undefined : (v.financing_start_date || null),
+      purchasePrice: isManager ? undefined : (Number(v.purchase_price) || 0),
+      isFinanced: isManager ? undefined : Boolean(v.is_financed),
+      monthlyPayment: isManager ? undefined : (Number(v.monthly_payment) || 0),
+      paymentDayOfMonth: isManager ? undefined : (Number(v.payment_day_of_month) || 1),
+      financingStartDate: isManager ? undefined : (String(v.financing_start_date || "") || null),
       isPublished: v.is_published !== false,
       createdAt: v.created_at || null,
-    }));
+    };
+    });
     return NextResponse.json({ success: true, data: vehicles }, {
       headers: {
         "Cache-Control": "no-store, no-cache",

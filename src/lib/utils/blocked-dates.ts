@@ -22,7 +22,10 @@ export function isBlockedDateCancelled(row: {
 }
 
 /** Rows that still occupy the vehicle on the public booking calendar. */
-export function isActiveCalendarBlock(row: { cancelled_at?: string | null }): boolean {
+export function isActiveCalendarBlock(row: {
+  cancelled_at?: string | null;
+  reason?: string | null;
+}): boolean {
   return !isBlockedDateCancelled(row);
 }
 

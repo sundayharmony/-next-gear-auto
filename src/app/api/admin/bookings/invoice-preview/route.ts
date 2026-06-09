@@ -33,6 +33,11 @@ function bookingLookupResponse(ctx: Awaited<ReturnType<typeof loadBookingWithVeh
   return null;
 }
 
+type BookingInvoiceCtx = Extract<
+  Awaited<ReturnType<typeof loadBookingWithVehicle>>,
+  { booking: Record<string, unknown> }
+>;
+
 export async function GET(req: NextRequest) {
   const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
@@ -47,9 +52,10 @@ export async function GET(req: NextRequest) {
     }
 
     const supabase = getServiceSupabase();
-    const ctx = await loadBookingWithVehicle(supabase, bookingId);
-    const lookupErr = bookingLookupResponse(ctx);
+    const loaded = await loadBookingWithVehicle(supabase, bookingId);
+    const lookupErr = bookingLookupResponse(loaded);
     if (lookupErr) return lookupErr;
+    const ctx = loaded as BookingInvoiceCtx;
 
     const denied = await authorizeBookingInvoiceAccess(
       auth,
@@ -119,9 +125,10 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getServiceSupabase();
-    const ctx = await loadBookingWithVehicle(supabase, bookingId);
-    const lookupErr = bookingLookupResponse(ctx);
+    const loaded = await loadBookingWithVehicle(supabase, bookingId);
+    const lookupErr = bookingLookupResponse(loaded);
     if (lookupErr) return lookupErr;
+    const ctx = loaded as BookingInvoiceCtx;
 
     const denied = await authorizeBookingInvoiceAccess(
       auth,

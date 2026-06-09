@@ -46,8 +46,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Failed to fetch customers" }, { status: 500 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const customers = (data || []).map((c: any) => ({
+    const customers = (data || []).map((c: Record<string, unknown>) => ({
       id: c.id,
       name: c.name,
       email: c.email,
@@ -238,8 +237,7 @@ export async function PATCH(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Failed to update customer" }, { status: 500 });
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const row: any = data?.[0];
+    const row = data?.[0] as Record<string, unknown> | undefined;
     const customer = row ? {
       id: row.id,
       name: row.name,
