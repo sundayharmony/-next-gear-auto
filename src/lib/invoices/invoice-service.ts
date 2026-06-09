@@ -330,6 +330,65 @@ export async function sendInvoiceEmail(
   };
 }
 
+export async function deleteInvoiceById(
+  supabase: SupabaseClient,
+  invoiceId: string,
+  performedBy: string,
+): Promise<
+  | { ok: true; bookingId: string }
+  | { ok: false; message: string; code: "not_found" | "db_error" }
+> {
+  const { data: invoice, error } = await supabase
+    .from("invoices")
+    .select("id, booking_id, customer_name, customer_email, charges_total, balance_due_snapshot")
+    .eq("id", invoiceId)
+    .maybeSingle();
+
+  if (error) {
+    logger.error("Invoice delete lookup error:", error);
+    const missing = invoiceTableMissingMessage(error);
+    return {
+      ok: false,
+      message: missing ?? "Failed to load invoice",
+      code: "db_error",
+    };
+  }
+  if (!invoice) {
+    return { ok: false, message: "Invoice not found", code: "not_found" };
+  }
+
+  const { error: deleteError } = await supabase.from("invoices").delete().eq("id", invoiceId);
+
+  if (deleteError) {
+    logger.error("Invoice delete error:", deleteError);
+    const missing = invoiceTableMissingMessage(deleteError);
+    return {
+      ok: false,
+      message: missing ?? "Failed to delete invoice",
+      code: "db_error",
+    };
+  }
+
+  const { error: activityError } = await supabase.from("booking_activity").insert({
+    booking_id: invoice.booking_id,
+    action: "invoice_deleted",
+    details: {
+      invoice_id: invoiceId,
+      customer_name: invoice.customer_name,
+      customer_email: invoice.customer_email,
+      charges_total: invoice.charges_total,
+      balance_due_snapshot: invoice.balance_due_snapshot,
+    },
+    performed_by: performedBy,
+  });
+
+  if (activityError) {
+    logger.warn("Invoice deleted but activity log failed:", activityError);
+  }
+
+  return { ok: true, bookingId: invoice.booking_id };
+}
+
 export function enrichInvoiceWithBooking(
   invoice: DbInvoiceRow,
   booking: Record<string, unknown> | null,

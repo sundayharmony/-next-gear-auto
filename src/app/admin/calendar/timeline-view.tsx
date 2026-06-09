@@ -1,14 +1,15 @@
 "use client";
 
-import React, { useEffect, useLayoutEffect, useState, useMemo, useCallback } from "react";
+import React, { useEffect, useLayoutEffect, useState, useMemo, useCallback, useRef } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
+import { ChevronLeft, ChevronRight, Calendar, MousePointerClick } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import type { BookingDbRow, VehicleListItem } from "@/lib/types";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
-import { statusColors, statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
+import { statusBgColors, statusBorderColors } from "@/lib/utils/status-colors";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { getVisibleEventSpan, type BlockedDateEntry } from "./calendar-model";
 import {
@@ -27,13 +28,26 @@ export interface TimelineViewProps {
   start: Date;
   days: number;
   onToday: () => void;
+  onPrevious?: () => void;
+  onNext?: () => void;
   onBookingClick: (booking: BookingRow) => void;
   onBlockedDateClick: (blocked: BlockedDateEntry) => void;
 }
 
 const TIMELINE_WHEEL_LINE_PX = 18;
+const ROW_HEIGHT_PX = 68;
+const DAY_COL_MIN_PX = 112;
+const VEHICLE_COL_PX = 168;
 
-/** Convert wheel delta to pixels for DOM_DELTA_LINE / DOM_DELTA_PAGE (trackpads usually send PIXEL). */
+const STATUS_ACCENT: Record<string, string> = {
+  pending: "border-l-amber-500",
+  confirmed: "border-l-emerald-500",
+  active: "border-l-blue-500",
+  completed: "border-l-slate-400",
+  cancelled: "border-l-red-500",
+  "no-show": "border-l-orange-500",
+};
+
 function scaleWheelAxis(delta: number, deltaMode: number, pageSize: number): number {
   switch (deltaMode) {
     case WheelEvent.DOM_DELTA_LINE:
@@ -55,6 +69,21 @@ function normalizedWheelDeltas(ev: WheelEvent, el: HTMLElement): { dx: number; d
   };
 }
 
+function isTuroBooking(booking: BookingRow): boolean {
+  return booking.id.startsWith("turo:");
+}
+
+function bookingDisplayName(booking: BookingRow): string {
+  const name = booking.customer_name?.trim();
+  if (name) return name.split(" ")[0];
+  return isTuroBooking(booking) ? "Turo" : "Guest";
+}
+
+function bookingBarTitle(booking: BookingRow, pickupDate: string, returnDate: string, daysTotal: number): string {
+  const name = booking.customer_name?.trim() || (isTuroBooking(booking) ? "Turo guest" : "Guest");
+  return `${name}\n${pickupDate} → ${returnDate} (${daysTotal} day${daysTotal === 1 ? "" : "s"})\n$${(booking.total_price ?? 0).toFixed(2)} — ${booking.status || "pending"}\nClick for details`;
+}
+
 export function TimelineView({
   bookings,
   vehicles,
@@ -62,6 +91,8 @@ export function TimelineView({
   start,
   days,
   onToday,
+  onPrevious,
+  onNext,
   onBookingClick,
   onBlockedDateClick,
 }: TimelineViewProps) {
@@ -80,14 +111,13 @@ export function TimelineView({
   };
 
   const dateKeys = dateRange.map(toDateKey);
-  /** Set when the scroll container DOM node mounts — guarantees wheel listener attaches (ref alone can be null on first layout). */
   const [timelineScrollEl, setTimelineScrollEl] = useState<HTMLDivElement | null>(null);
+  const initialScrollDone = useRef(false);
   const [visibleRange, setVisibleRange] = useState<{ startIdx: number; endIdx: number }>({
     startIdx: 0,
     endIdx: Math.max(days - 1, 0),
   });
 
-  // Group bookings by vehicle
   const bookingsByVehicle = useMemo(() => {
     const map: Record<string, BookingRow[]> = {};
     vehicles.forEach((v) => {
@@ -118,13 +148,20 @@ export function TimelineView({
         if (!span) return null;
         return { booking, ...span };
       })
-      .filter(Boolean) as { booking: BookingRow; startIdx: number; endIdx: number; extendsLeft: boolean; extendsRight: boolean; startFraction: number; endFraction: number }[];
+      .filter(Boolean) as {
+      booking: BookingRow;
+      startIdx: number;
+      endIdx: number;
+      extendsLeft: boolean;
+      extendsRight: boolean;
+      startFraction: number;
+      endFraction: number;
+    }[];
   };
 
   const today = getLocalYmd(new Date());
   const isWeekend = (date: Date) => date.getDay() === 0 || date.getDay() === 6;
 
-  // Calculate time-of-day as a percentage for the "now" marker position
   const [nowPercent, setNowPercent] = useState(() => {
     const n = new Date();
     return ((n.getHours() * 60 + n.getMinutes()) / 1440) * 100;
@@ -134,11 +171,10 @@ export function TimelineView({
       const n = new Date();
       setNowPercent(((n.getHours() * 60 + n.getMinutes()) / 1440) * 100);
     };
-    const id = setInterval(tick, 60000); // Update every minute
+    const id = setInterval(tick, 60000);
     return () => clearInterval(id);
   }, []);
 
-  // Count total bookings per vehicle in view
   const vehicleBookingCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     const rangeStart = dateKeys[0];
@@ -152,8 +188,20 @@ export function TimelineView({
     return counts;
   }, [bookingsByVehicle, vehicles, dateKeys, days]);
 
-  // Native non-passive wheel: React's onWheel is passive so preventDefault does not stop page scroll.
-  // Effect depends on timelineScrollEl (ref callback) so we never attach with a null element.
+  const scrollToTodayColumn = useCallback(
+    (behavior: ScrollBehavior = "smooth") => {
+      const el = timelineScrollEl;
+      if (!el) return;
+      const todayIdx = dateKeys.indexOf(today);
+      if (todayIdx < 0) return;
+      const header = el.querySelector<HTMLElement>(`th[data-day-index="${todayIdx}"]`);
+      if (!header) return;
+      const target = header.offsetLeft - Math.min(el.clientWidth * 0.12, 80);
+      el.scrollTo({ left: Math.max(0, target), behavior });
+    },
+    [timelineScrollEl, dateKeys, today]
+  );
+
   useLayoutEffect(() => {
     const el = timelineScrollEl;
     if (!el) return undefined;
@@ -181,6 +229,12 @@ export function TimelineView({
       el.removeEventListener("wheel", onWheel, opts);
     };
   }, [timelineScrollEl]);
+
+  useLayoutEffect(() => {
+    if (!timelineScrollEl || initialScrollDone.current) return;
+    scrollToTodayColumn("auto");
+    initialScrollDone.current = true;
+  }, [timelineScrollEl, scrollToTodayColumn]);
 
   useEffect(() => {
     setVisibleRange({
@@ -234,64 +288,106 @@ export function TimelineView({
 
   const handleTodayClick = useCallback(() => {
     onToday();
-    timelineScrollEl?.scrollTo({ left: 0, behavior: "smooth" });
-  }, [onToday, timelineScrollEl]);
+    requestAnimationFrame(() => scrollToTodayColumn("smooth"));
+  }, [onToday, scrollToTodayColumn]);
+
+  const rangeLabel = `${visibleStartDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+  })} – ${visibleEndDate.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })}`;
+
+  const activeVehicleCount = vehicles.filter((v) => (vehicleBookingCounts[v.id] || 0) > 0).length;
 
   return (
-    <Card className="min-w-0 shadow-sm">
-      <CardContent className="min-w-0 p-6">
-        {/* Date Navigation */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-              <Button onClick={handleTodayClick} variant="ghost" size="sm" className="h-8 px-3 hover:bg-gray-200 text-xs font-semibold">
-                Today
-              </Button>
+    <Card className="min-w-0 shadow-sm overflow-hidden">
+      <CardContent className="min-w-0 p-0">
+        {/* Toolbar */}
+        <div className="flex flex-col gap-3 border-b border-gray-200 bg-gray-50/80 px-4 py-3 sm:px-5 sm:py-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <div className="inline-flex items-center rounded-lg border border-gray-200 bg-white p-0.5 shadow-sm">
+                {onPrevious && (
+                  <Button
+                    type="button"
+                    onClick={onPrevious}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-gray-100"
+                    aria-label="Previous two weeks"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  onClick={handleTodayClick}
+                  variant="ghost"
+                  size="sm"
+                  className="h-8 px-3 text-xs font-semibold hover:bg-purple-50 hover:text-purple-700"
+                >
+                  Today
+                </Button>
+                {onNext && (
+                  <Button
+                    type="button"
+                    onClick={onNext}
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 w-8 p-0 hover:bg-gray-100"
+                    aria-label="Next two weeks"
+                  >
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+              <span className="text-sm font-semibold text-gray-900 tabular-nums">{rangeLabel}</span>
             </div>
-            <span className="text-sm font-semibold text-gray-800">
-              {visibleStartDate.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}{" "}
-              &ndash;{" "}
-              {visibleEndDate.toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-            </span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-gray-500">
-            <div className="flex items-center gap-1">
-              <div className="w-2 h-2 rounded-full bg-red-400" />
-              Today
+
+            <div className="flex flex-wrap items-center gap-2">
+              <Badge variant="secondary" className="font-normal text-xs">
+                {bookings.length} booking{bookings.length === 1 ? "" : "s"}
+              </Badge>
+              <Badge variant="secondary" className="font-normal text-xs">
+                {activeVehicleCount}/{vehicles.length} vehicles in view
+              </Badge>
+              <div className="hidden md:flex items-center gap-1.5 text-[11px] text-gray-500">
+                <div className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                Now
+              </div>
             </div>
-            <span className="text-gray-300">|</span>
-            <span>{bookings.length} bookings</span>
           </div>
+
+          <p className="flex items-center gap-1.5 text-[11px] text-gray-500">
+            <MousePointerClick className="h-3.5 w-3.5 shrink-0" />
+            Scroll horizontally to pan dates · click any bar to open booking details
+          </p>
         </div>
 
-        {/* Never pair overflow-x-auto with overflow-hidden here — overflow shorthand wins and can kill horizontal scroll. minWidth max(100%, …) forces scrollWidth > clientWidth on typical admin widths. */}
         <div
           ref={(node) => setTimelineScrollEl(node)}
-          className="max-w-full min-w-0 overflow-x-auto overflow-y-hidden border border-gray-200 rounded-xl shadow-sm overscroll-x-contain overscroll-y-none"
+          className="timeline-scroll max-w-full min-w-0 overflow-x-auto overflow-y-hidden overscroll-x-contain overscroll-y-none"
+          style={{ minHeight: `${Math.max(vehicles.length * ROW_HEIGHT_PX + 52, 280)}px` }}
         >
           <table
             className="w-full border-collapse"
             style={{
               tableLayout: "fixed",
-              minWidth: `max(100%, ${170 + days * 118}px)`,
+              minWidth: `max(100%, ${VEHICLE_COL_PX + days * DAY_COL_MIN_PX}px)`,
             }}
           >
             <colgroup>
-              <col style={{ width: "170px", minWidth: "170px" }} />
+              <col style={{ width: `${VEHICLE_COL_PX}px`, minWidth: `${VEHICLE_COL_PX}px` }} />
               {dateRange.map((_, i) => (
-                <col key={i} style={{ minWidth: "118px" }} />
+                <col key={i} style={{ minWidth: `${DAY_COL_MIN_PX}px` }} />
               ))}
             </colgroup>
             <thead>
               <tr>
-                <th className="sticky left-0 z-20 bg-gray-50 border-b-2 border-r border-gray-200 p-3 text-left text-xs font-bold text-gray-600 uppercase tracking-wider">
+                <th className="timeline-sticky-col sticky left-0 z-20 border-b-2 border-r border-gray-200 bg-gray-50 p-3 text-left text-[10px] font-bold uppercase tracking-wider text-gray-500">
                   Vehicle
                 </th>
                 {dateRange.map((date, i) => {
@@ -301,28 +397,30 @@ export function TimelineView({
                     <th
                       key={i}
                       data-day-index={i}
-                      className={`border-b-2 border-r border-gray-200 p-2 text-center text-xs font-medium relative ${
+                      className={`border-b-2 border-r border-gray-200 px-1 py-2 text-center text-xs font-medium relative ${
                         isDateToday
-                          ? "bg-purple-100 text-purple-900"
+                          ? "bg-purple-100/90 text-purple-900"
                           : weekend
-                          ? "bg-gray-100 text-gray-500"
+                          ? "bg-gray-100/80 text-gray-500"
                           : "bg-gray-50 text-gray-600"
                       }`}
                     >
-                      <div className={`text-[10px] uppercase tracking-wide ${isDateToday ? "font-bold" : ""}`}>
+                      <div className={`text-[10px] uppercase tracking-wide ${isDateToday ? "font-bold text-purple-700" : ""}`}>
                         {date.toLocaleDateString("en-US", { weekday: "short" })}
                       </div>
-                      <div className={`text-sm ${isDateToday ? "font-extrabold" : "font-semibold"}`}>
+                      <div className={`text-base leading-tight ${isDateToday ? "font-extrabold text-purple-900" : "font-semibold"}`}>
                         {date.getDate()}
                       </div>
-                      {i === 0 || date.getDate() === 1 ? (
-                        <div className="text-[9px] text-gray-400 font-medium">
+                      {(i === 0 || date.getDate() === 1 || date.getDay() === 0) && (
+                        <div className="text-[9px] font-medium text-gray-400">
                           {date.toLocaleDateString("en-US", { month: "short" })}
                         </div>
-                      ) : null}
-                      {/* Today indicator dot — moves with time of day */}
+                      )}
                       {isDateToday && (
-                        <div className="absolute bottom-0 -translate-x-1/2 w-1.5 h-1.5 bg-red-500 rounded-full" style={{ left: `${nowPercent}%` }} />
+                        <div
+                          className="absolute bottom-0 -translate-x-1/2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white z-10"
+                          style={{ left: `${nowPercent}%` }}
+                        />
                       )}
                     </th>
                   );
@@ -336,14 +434,17 @@ export function TimelineView({
                 return (
                   <tr
                     key={vehicle.id}
-                    className={`group ${vehicleIdx % 2 === 0 ? "" : "bg-gray-50/30"}`}
+                    className={`group ${vehicleIdx % 2 === 0 ? "" : "bg-gray-50/40"}`}
                   >
-                    <td className="sticky left-0 z-10 bg-white border-b border-r border-gray-200 p-3 group-hover:bg-purple-50/50 transition-colors">
-                      <div className="flex items-center justify-between gap-2">
+                    <td
+                      className="timeline-sticky-col sticky left-0 z-10 border-b border-r border-gray-200 bg-white p-2.5 group-hover:bg-purple-50/40 transition-colors"
+                      style={{ height: ROW_HEIGHT_PX }}
+                    >
+                      <div className="flex items-center justify-between gap-2 h-full">
                         <div className="min-w-0">
                           <Link
                             href={getStaffVehicleDetailsHref(vehicle.id, pathname)}
-                            className="text-sm font-semibold text-gray-900 truncate hover:text-purple-700 hover:underline"
+                            className="text-sm font-semibold text-gray-900 truncate block hover:text-purple-700 hover:underline"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {vehicle.make} {vehicle.model}
@@ -351,7 +452,7 @@ export function TimelineView({
                           <p className="text-[11px] text-gray-400">{vehicle.year}</p>
                         </div>
                         {count > 0 && (
-                          <span className="flex-shrink-0 inline-flex items-center justify-center w-5 h-5 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold">
+                          <span className="flex-shrink-0 inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-full bg-purple-100 text-purple-700 text-[10px] font-bold">
                             {count}
                           </span>
                         )}
@@ -360,85 +461,100 @@ export function TimelineView({
                     {dateRange.map((date, dateIdx) => {
                       const isDateToday = toDateKey(date) === today;
                       const weekend = isWeekend(date);
-                      const bookingStartingHere = visibleBookings.filter(
-                        (vb) => vb.startIdx === dateIdx
-                      );
+                      const bookingStartingHere = visibleBookings.filter((vb) => vb.startIdx === dateIdx);
 
                       return (
                         <td
                           key={dateIdx}
-                          className={`border-b border-r border-gray-100 p-0 h-14 relative ${
+                          className={`border-b border-r border-gray-100 p-0 relative ${
                             isDateToday
-                              ? "bg-purple-50/40"
+                              ? "bg-purple-50/30"
                               : weekend
-                              ? "bg-gray-50/60"
+                              ? "bg-gray-50/50"
                               : ""
                           }`}
+                          style={{ height: ROW_HEIGHT_PX }}
                         >
-                          {/* Today vertical line — moves with time of day */}
                           {isDateToday && (
-                            <div className="absolute top-0 bottom-0 w-0.5 bg-red-400/60 z-[3] pointer-events-none" style={{ left: `${nowPercent}%` }} />
+                            <div
+                              className="absolute top-0 bottom-0 w-px bg-red-500/70 z-[3] pointer-events-none"
+                              style={{ left: `${nowPercent}%` }}
+                            />
                           )}
                           {bookingStartingHere.map(({ booking, startIdx, endIdx, extendsLeft, extendsRight, startFraction, endFraction }) => {
                             const fullDaySpan = endIdx - startIdx + 1;
-                            // Calculate precise width: subtract the partial start and partial end
-                            // Each cell = 100%. Subtract the portion before pickup on first day,
-                            // and the portion after return on last day.
-                            const trimStart = startFraction; // fraction to trim from the left of the first cell
-                            const trimEnd = 1 - endFraction;  // fraction to trim from the right of the last cell
+                            const trimStart = startFraction;
+                            const trimEnd = 1 - endFraction;
                             const preciseSpan = fullDaySpan - trimStart - trimEnd;
-
-                            // Dynamic rounding: flat edge if booking extends beyond view
-                            const roundLeft = extendsLeft ? "rounded-l-none" : "rounded-l-lg";
-                            const roundRight = extendsRight ? "rounded-r-none" : "rounded-r-lg";
+                            const roundLeft = extendsLeft ? "rounded-l-sm" : "rounded-l-lg";
+                            const roundRight = extendsRight ? "rounded-r-sm" : "rounded-r-lg";
                             const pickupDate = getCalendarPickupDateKey(booking);
                             const returnDate = getCalendarReturnDateKey(booking);
-                            const daysTotal = pickupDate && returnDate ? Math.ceil(
-                              (new Date(returnDate).getTime() - new Date(pickupDate).getTime()) / 86400000
-                            ) + 1 : 1;
+                            const daysTotal =
+                              pickupDate && returnDate
+                                ? Math.ceil(
+                                    (new Date(returnDate).getTime() - new Date(pickupDate).getTime()) / 86400000
+                                  ) + 1
+                                : 1;
+                            const status = booking.status || "pending";
+                            const accent = STATUS_ACCENT[status] || "border-l-gray-400";
+                            const showMeta = preciseSpan >= 0.85;
 
                             return (
                               <div
                                 key={booking.id}
+                                role="button"
+                                tabIndex={0}
                                 onClick={() => onBookingClick(booking)}
-                                className={`absolute top-1.5 bottom-1.5 ${statusBgColors[booking.status]} border ${statusBorderColors[booking.status]} ${roundLeft} ${roundRight} px-2 flex items-center gap-1.5 overflow-hidden cursor-pointer hover:shadow-md hover:scale-[1.02] hover:z-20 transition-all duration-150 z-[5]`}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" || e.key === " ") {
+                                    e.preventDefault();
+                                    onBookingClick(booking);
+                                  }
+                                }}
+                                className={`timeline-booking-bar absolute top-2 bottom-2 border-l-4 ${accent} ${statusBgColors[status]} border ${statusBorderColors[status]} ${roundLeft} ${roundRight} px-2 flex items-center gap-1.5 overflow-hidden cursor-pointer hover:brightness-[0.97] hover:shadow-lg hover:z-20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-1 transition-all duration-150 z-[5]`}
                                 style={{
                                   left: `calc(${trimStart * 100}%)`,
-                                  width: `calc(${preciseSpan * 100}% - 2px)`,
+                                  width: `calc(${preciseSpan * 100}% - 4px)`,
                                 }}
-                                title={`${booking.customer_name || "Unknown"}\n${pickupDate} → ${returnDate} (${daysTotal} days)\n$${(booking.total_price ?? 0).toFixed(2)} — ${booking.status || "pending"}`}
+                                title={bookingBarTitle(booking, pickupDate, returnDate, daysTotal)}
                               >
-                                {/* Left arrow if extends beyond view */}
                                 {extendsLeft && (
-                                  <ChevronLeft className="w-3 h-3 text-gray-500 flex-shrink-0 -ml-1" />
+                                  <ChevronLeft className="w-3 h-3 text-gray-600 flex-shrink-0 -ml-0.5" aria-hidden />
                                 )}
-                                <span className="text-xs font-bold text-gray-900 truncate">
-                                  {(booking.customer_name || "Unknown").split(" ")[0]}
+                                <span className="text-xs font-bold text-gray-900 truncate min-w-0">
+                                  {bookingDisplayName(booking)}
                                 </span>
-                                {fullDaySpan >= 2 && (
-                                  <span className="text-[10px] text-gray-700 truncate hidden sm:inline">
-                                    {daysTotal}d
-                                  </span>
+                                {showMeta && (
+                                  <>
+                                    <span className="text-[10px] font-medium text-gray-700 truncate hidden sm:inline capitalize">
+                                      {status}
+                                    </span>
+                                    {fullDaySpan >= 1 && (
+                                      <span className="text-[10px] text-gray-600 shrink-0">{daysTotal}d</span>
+                                    )}
+                                    {preciseSpan >= 1.4 && (
+                                      <span className="text-[10px] font-semibold text-gray-800 shrink-0 hidden md:inline">
+                                        ${(booking.total_price ?? 0).toFixed(0)}
+                                      </span>
+                                    )}
+                                  </>
                                 )}
-                                {fullDaySpan >= 3 && (
-                                  <span className="text-[10px] font-semibold text-gray-800 truncate hidden md:inline">
-                                    ${(booking.total_price ?? 0).toFixed(0)}
-                                  </span>
-                                )}
-                                {/* Right arrow if extends beyond view */}
                                 {extendsRight && (
-                                  <ChevronRight className="w-3 h-3 text-gray-500 flex-shrink-0 -mr-1 ml-auto" />
+                                  <ChevronRight className="w-3 h-3 text-gray-600 flex-shrink-0 ml-auto" aria-hidden />
                                 )}
                               </div>
                             );
                           })}
-                          {/* Blocked date bars (Turo/manual) */}
                           {blockedDates
                             .filter((bd) => bd.vehicle_id === vehicle.id)
                             .filter((bd) => {
-                              // Only render from the cell where the blocked bar should start
                               const clampedStart = bd.start_date < dateKeys[0] ? dateKeys[0] : bd.start_date;
-                              return toDateKey(date) === clampedStart && bd.end_date >= dateKeys[0] && bd.start_date <= dateKeys[dateKeys.length - 1];
+                              return (
+                                toDateKey(date) === clampedStart &&
+                                bd.end_date >= dateKeys[0] &&
+                                bd.start_date <= dateKeys[dateKeys.length - 1]
+                              );
                             })
                             .map((bd) => {
                               const visibleSpan = getVisibleEventSpan(
@@ -449,27 +565,35 @@ export function TimelineView({
                                 dateKeys
                               );
                               if (!visibleSpan) return null;
-                              const { endIdx, startIdx, extendsLeft, extendsRight, startFraction, endFraction } = visibleSpan;
+                              const { endIdx, startIdx, extendsLeft, extendsRight, startFraction, endFraction } =
+                                visibleSpan;
                               const fullDaySpan = endIdx - startIdx + 1;
                               const trimStart = startFraction;
                               const trimEnd = 1 - endFraction;
                               const preciseSpan = Math.max(0.05, fullDaySpan - trimStart - trimEnd);
-                              const roundLeft = extendsLeft ? "rounded-l-none" : "rounded-l-md";
-                              const roundRight = extendsRight ? "rounded-r-none" : "rounded-r-md";
+                              const roundLeft = extendsLeft ? "rounded-l-sm" : "rounded-l-md";
+                              const roundRight = extendsRight ? "rounded-r-sm" : "rounded-r-md";
                               return (
                                 <div
                                   key={bd.id}
+                                  role="button"
+                                  tabIndex={0}
                                   onClick={() => onBlockedDateClick(bd)}
-                                  className={`absolute top-1 bottom-1 ${roundLeft} ${roundRight} bg-gray-300/50 border border-dashed border-gray-400 z-[4] flex items-center px-2 cursor-pointer`}
+                                  onKeyDown={(e) => {
+                                    if (e.key === "Enter" || e.key === " ") {
+                                      e.preventDefault();
+                                      onBlockedDateClick(bd);
+                                    }
+                                  }}
+                                  className={`absolute top-2.5 bottom-2.5 ${roundLeft} ${roundRight} bg-gray-200/70 border border-dashed border-gray-400 z-[4] flex items-center px-2 cursor-pointer hover:bg-gray-300/80 transition-colors`}
                                   style={{
                                     left: `calc(${trimStart * 100}%)`,
-                                    width: `calc(${preciseSpan * 100}% - 2px)`,
+                                    width: `calc(${preciseSpan * 100}% - 4px)`,
                                   }}
-                                  title={bd.reason || `Blocked (${bd.source})`}
+                                  title={bd.reason || `Blocked (${bd.source}) — click for details`}
                                 >
-                                  <span className="text-[10px] text-gray-500 font-medium truncate">
-                                    {bd.source === "turo-email" ? "Turo Trip" : "Blocked"}
-                                    {bd.reason ? ` — ${bd.reason}` : ""}
+                                  <span className="text-[10px] text-gray-600 font-semibold truncate">
+                                    {bd.source === "turo-email" ? "Turo" : "Blocked"}
                                   </span>
                                 </div>
                               );
@@ -482,15 +606,12 @@ export function TimelineView({
               })}
               {vehicles.length === 0 && (
                 <tr>
-                  <td
-                    colSpan={days + 1}
-                    className="text-center py-16"
-                  >
+                  <td colSpan={days + 1} className="text-center py-16">
                     <div className="text-gray-400 mb-2">
                       <Calendar className="w-10 h-10 mx-auto opacity-50" />
                     </div>
                     <p className="text-gray-500 text-sm font-medium">No vehicles found</p>
-                    <p className="text-gray-400 text-xs mt-1">Add vehicles in the Fleet Management page</p>
+                    <p className="text-gray-400 text-xs mt-1">Add vehicles in Fleet Management</p>
                   </td>
                 </tr>
               )}
@@ -498,22 +619,19 @@ export function TimelineView({
           </table>
         </div>
 
-        {/* Legend */}
-        <div className="mt-5 pt-4 border-t border-gray-100 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs">
-          <span className="text-gray-400 font-medium uppercase tracking-wider text-[10px]">Status:</span>
-          {Object.entries(statusColors)
-            .filter(([status]) => status !== "cancelled")
-            .map(([status]) => (
-              <div key={status} className="flex items-center gap-1.5">
-                <div
-                  className={`w-3 h-3 rounded-sm ${statusBgColors[status]} border ${statusBorderColors[status]}`}
-                />
-                <span className="capitalize text-gray-600">{status}</span>
-              </div>
-            ))}
+        <div className="border-t border-gray-200 bg-gray-50/60 px-4 py-3 sm:px-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
+          <span className="text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Legend</span>
+          {(["pending", "confirmed", "active", "completed", "no-show"] as const).map((status) => (
+            <div key={status} className="flex items-center gap-1.5">
+              <div
+                className={`w-3 h-3 rounded-sm border-l-2 ${STATUS_ACCENT[status]} ${statusBgColors[status]} border ${statusBorderColors[status]}`}
+              />
+              <span className="capitalize text-gray-600">{status === "no-show" ? "No-show" : status}</span>
+            </div>
+          ))}
           <div className="flex items-center gap-1.5">
-            <div className="w-3 h-3 rounded-sm bg-gray-300/50 border border-dashed border-gray-400" />
-            <span className="text-gray-600">Blocks (Turo / manual)</span>
+            <div className="w-3 h-3 rounded-sm bg-gray-200/80 border border-dashed border-gray-400" />
+            <span className="text-gray-600">Manual block</span>
           </div>
         </div>
       </CardContent>

@@ -348,77 +348,81 @@ export default function AdminCalendarPage() {
         <div className="mb-8">
 
           {/* Controls */}
-          <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-6">
-            {/* View Toggle + Refresh (mobile) */}
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex gap-1.5">
-                <Button
-                  onClick={() => setView("timeline")}
-                  variant={view === "timeline" ? "default" : "outline"}
-                  size="sm"
-                  className="gap-1.5 h-8 text-xs sm:text-sm sm:h-9"
+          <div className="flex flex-col gap-3 sm:gap-4 mb-4 sm:mb-5">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+              {/* View Toggle + Refresh (mobile) */}
+              <div className="flex items-center justify-between gap-2">
+                <div className="inline-flex gap-1 rounded-lg border border-gray-200 bg-white p-1 shadow-sm">
+                  <Button
+                    onClick={() => setView("timeline")}
+                    variant={view === "timeline" ? "default" : "ghost"}
+                    size="sm"
+                    className="gap-1.5 h-8 text-xs sm:text-sm"
+                  >
+                    <LayoutList className="w-3.5 h-3.5" />
+                    Timeline
+                  </Button>
+                  <Button
+                    onClick={() => setView("calendar")}
+                    variant={view === "calendar" ? "default" : "ghost"}
+                    size="sm"
+                    className="gap-1.5 h-8 text-xs sm:text-sm"
+                  >
+                    <Calendar className="w-3.5 h-3.5" />
+                    Calendar
+                  </Button>
+                </div>
+                <button
+                  onClick={handleRefresh}
+                  disabled={loading}
+                  aria-label="Refresh calendar"
+                  className="sm:hidden p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 disabled:opacity-50 transition-colors"
                 >
-                  <LayoutList className="w-3.5 h-3.5" />
-                  Timeline
-                </Button>
-                <Button
-                  onClick={() => setView("calendar")}
-                  variant={view === "calendar" ? "default" : "outline"}
-                  size="sm"
-                  className="gap-1.5 h-8 text-xs sm:text-sm sm:h-9"
-                >
-                  <Calendar className="w-3.5 h-3.5" />
-                  Calendar
-                </Button>
+                  <RefreshCw className={`w-4 h-4 text-gray-500 ${loading ? "animate-spin" : ""}`} />
+                </button>
               </div>
-              <button
-                onClick={handleRefresh}
-                disabled={loading}
-                aria-label="Refresh calendar"
-                className="sm:hidden p-2 rounded-lg hover:bg-gray-100 active:bg-gray-200 disabled:opacity-50 transition-colors"
-              >
-                <RefreshCw className={`w-4 h-4 text-gray-500 ${loading ? "animate-spin" : ""}`} />
-              </button>
-            </div>
 
-            {/* Filters — horizontal scroll on mobile */}
-            <div
-              className="flex items-center gap-2 overflow-x-auto pb-1 -mx-4 px-4 sm:mx-0 sm:px-0 sm:overflow-visible sm:flex-wrap scrollbar-hide"
-              role="group"
-              aria-labelledby="calendar-status-filter-label"
-            >
-              <span id="calendar-status-filter-label" className="text-xs sm:text-sm font-medium text-gray-700 shrink-0">
-                Status:
-              </span>
-              {["all", "pending", "confirmed", "active", "completed"].map((status) => (
-                <Button
-                  key={status}
-                  type="button"
-                  onClick={() => setStatusFilter(status)}
-                  variant={statusFilter === status ? "default" : "outline"}
-                  size="sm"
-                  aria-pressed={statusFilter === status}
-                  className="capitalize h-7 text-[11px] sm:text-sm sm:h-9 shrink-0 px-2.5 sm:px-3"
+              {/* Filters — one row on large screens */}
+              <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-center gap-2 sm:gap-3 min-w-0">
+                <div
+                  className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-hide"
+                  role="group"
+                  aria-labelledby="calendar-status-filter-label"
                 >
-                  {status === "all" ? "All" : status}
-                </Button>
-              ))}
-            </div>
+                  <span id="calendar-status-filter-label" className="text-xs font-medium text-gray-500 shrink-0 mr-1">
+                    Status
+                  </span>
+                  {["all", "pending", "confirmed", "active", "completed"].map((status) => (
+                    <Button
+                      key={status}
+                      type="button"
+                      onClick={() => setStatusFilter(status)}
+                      variant={statusFilter === status ? "default" : "outline"}
+                      size="sm"
+                      aria-pressed={statusFilter === status}
+                      className="capitalize h-7 text-[11px] sm:text-xs shrink-0 px-2.5"
+                    >
+                      {status === "all" ? "All" : status}
+                    </Button>
+                  ))}
+                </div>
 
-            {/* Vehicle Filter */}
-            <div className="flex gap-2 items-center">
-              <span className="text-xs sm:text-sm font-medium text-gray-700 shrink-0">Vehicle:</span>
-              <Select
-                value={vehicleFilter}
-                onChange={(e) => setVehicleFilter(e.target.value)}
-              >
-                <option value="all">All Vehicles</option>
-                {timelineVehicles.map((vehicle) => (
-                  <option key={vehicle.id} value={vehicle.id}>
-                    {vehicle.year} {vehicle.make} {vehicle.model}
-                  </option>
-                ))}
-              </Select>
+                <div className="flex gap-2 items-center min-w-0">
+                  <span className="text-xs font-medium text-gray-500 shrink-0">Vehicle</span>
+                  <Select
+                    value={vehicleFilter}
+                    onChange={(e) => setVehicleFilter(e.target.value)}
+                    className="min-w-0 max-w-[220px] sm:max-w-none"
+                  >
+                    <option value="all">All Vehicles</option>
+                    {timelineVehicles.map((vehicle) => (
+                      <option key={vehicle.id} value={vehicle.id}>
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -469,6 +473,16 @@ export default function AdminCalendarPage() {
                     const today = new Date();
                     today.setHours(0, 0, 0, 0);
                     setTimelineStart(today);
+                  }}
+                  onPrevious={() => {
+                    const newStart = new Date(timelineStart);
+                    newStart.setDate(newStart.getDate() - 14);
+                    setTimelineStart(newStart);
+                  }}
+                  onNext={() => {
+                    const newStart = new Date(timelineStart);
+                    newStart.setDate(newStart.getDate() + 14);
+                    setTimelineStart(newStart);
                   }}
                   onBookingClick={openBookingDetail}
                   onBlockedDateClick={setSelectedBlocked}

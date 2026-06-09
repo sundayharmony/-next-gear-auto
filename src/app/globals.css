@@ -867,6 +867,29 @@ body:has(.admin-dark) {
 .admin-dark .border-red-400 { border-color: rgba(239, 68, 68, 0.5) !important; }
 .admin-dark .bg-red-100 { background-color: rgba(239, 68, 68, 0.2) !important; }
 
+/* Timeline v2 — sticky column, toolbar, booking bars */
+.admin-dark .timeline-sticky-col { background-color: #111111 !important; }
+.admin-dark th.timeline-sticky-col { background-color: #0d0d0d !important; }
+.admin-dark .group:hover .timeline-sticky-col { background-color: rgba(124, 58, 237, 0.08) !important; }
+.admin-dark .bg-gray-50\/80 { background-color: rgba(255, 255, 255, 0.04) !important; }
+.admin-dark .bg-gray-50\/60 { background-color: rgba(255, 255, 255, 0.03) !important; }
+.admin-dark th.bg-purple-100\/90 { background-color: rgba(124, 58, 237, 0.28) !important; }
+.admin-dark th.bg-gray-100\/80 { background-color: #111111 !important; }
+.admin-dark .timeline-booking-bar { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+.admin-dark .timeline-booking-bar:hover { box-shadow: 0 6px 16px rgba(0, 0, 0, 0.45), inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
+.admin-dark .timeline-booking-bar .text-gray-900 { color: #f1f5f9 !important; }
+.admin-dark .timeline-booking-bar .text-gray-700 { color: #cbd5e1 !important; }
+.admin-dark .timeline-booking-bar .text-gray-600 { color: #94a3b8 !important; }
+.admin-dark .timeline-booking-bar .text-gray-800 { color: #e2e8f0 !important; }
+.admin-dark .bg-gray-200\/70 { background-color: rgba(100, 100, 100, 0.28) !important; }
+.admin-dark .border-l-amber-500 { border-left-color: #f59e0b !important; }
+.admin-dark .border-l-emerald-500 { border-left-color: #10b981 !important; }
+.admin-dark .border-l-blue-500 { border-left-color: #3b82f6 !important; }
+.admin-dark .border-l-slate-400 { border-left-color: #94a3b8 !important; }
+.admin-dark .border-l-orange-500 { border-left-color: #f97316 !important; }
+.admin-dark .border-l-red-500 { border-left-color: #ef4444 !important; }
+.admin-dark .border-l-gray-400 { border-left-color: #9ca3af !important; }
+
 /* Booking bar text */
 .admin-dark .text-gray-800.truncate { color: #e2e8f0 !important; }
 

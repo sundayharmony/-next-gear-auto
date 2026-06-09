@@ -6,6 +6,7 @@ import {
   enrichInvoiceWithBooking,
   loadBookingWithVehicle,
   upsertInvoiceFromBooking,
+  deleteInvoiceById,
   type DbInvoiceRow,
 } from "@/lib/invoices/invoice-service";
 import { validateAdditionalInvoiceLineItems } from "@/lib/invoices/invoice-line-items";
@@ -193,6 +194,75 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     logger.error("PATCH invoice error:", error);
     return NextResponse.json(
       { success: false, message: "Failed to update invoice" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function DELETE(req: NextRequest, context: RouteContext) {
+  const auth = await verifyAdminOrManager(req);
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const { invoiceId } = await context.params;
+    if (!INV_ID_RE.test(invoiceId)) {
+      return NextResponse.json(
+        { success: false, message: "Invalid invoice ID" },
+        { status: 400 },
+      );
+    }
+
+    const supabase = getServiceSupabase();
+    const { data: invoice } = await supabase
+      .from("invoices")
+      .select("booking_id")
+      .eq("id", invoiceId)
+      .maybeSingle();
+
+    if (!invoice) {
+      return NextResponse.json(
+        { success: false, message: "Invoice not found" },
+        { status: 404 },
+      );
+    }
+
+    const ctx = await loadBookingWithVehicle(supabase, invoice.booking_id);
+    if ("error" in ctx) {
+      return NextResponse.json(
+        { success: false, message: "Booking not found" },
+        { status: 404 },
+      );
+    }
+
+    const denied = await authorizeBookingInvoiceAccess(auth, ctx.booking as {
+      origin_channel: string | null;
+      created_by_user_id: string | null;
+    }, "manage");
+    if (denied) return denied;
+
+    const { data: staff } = await supabase
+      .from("customers")
+      .select("email")
+      .eq("id", auth.userId)
+      .maybeSingle();
+
+    const performedBy = staff?.email || auth.userId;
+    const result = await deleteInvoiceById(supabase, invoiceId, performedBy);
+
+    if (!result.ok) {
+      const status = result.code === "not_found" ? 404 : 500;
+      return NextResponse.json({ success: false, message: result.message }, { status });
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: "Invoice deleted",
+      data: { bookingId: result.bookingId },
+    });
+  } catch (error) {
+    logger.error("DELETE invoice error:", error);
+    return NextResponse.json(
+      { success: false, message: "Failed to delete invoice" },
       { status: 500 },
     );
   }

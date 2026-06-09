@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter, usePathname } from "next/navigation";
 import {
   FileText,
   Mail,
@@ -105,6 +105,8 @@ interface InvoicesPageClientProps {
 
 export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPageClientProps) {
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const pathname = usePathname();
   const { error, setError, success, setSuccess } = useAutoToast();
   const [invoices, setInvoices] = useState<InvoiceListRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -116,6 +118,7 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
   const [drafts, setDrafts] = useState<DraftLine[]>([emptyDraft()]);
   const [dueDate, setDueDate] = useState("");
   const [saving, setSaving] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
   const [detailTab, setDetailTab] = useState<"edit" | "preview">("edit");
   const [htmlPreview, setHtmlPreview] = useState("");
@@ -294,6 +297,40 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
       setError("Network error");
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!detail || deleting) return;
+    const label = detail.customer_name || detail.booking_id;
+    if (
+      !window.confirm(
+        `Delete invoice for ${label}? This removes the invoice record only — the booking is not changed. You can send a new invoice from the booking later.`,
+      )
+    ) {
+      return;
+    }
+
+    setDeleting(true);
+    try {
+      const res = await adminFetch(`/api/admin/invoices/${detail.id}`, { method: "DELETE" });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSuccess(data.message || "Invoice deleted");
+        setSelectedId(null);
+        setDetail(null);
+        const params = new URLSearchParams(searchParams.toString());
+        params.delete("invoice");
+        const query = params.toString();
+        router.replace(query ? `${pathname}?${query}` : pathname);
+        loadList();
+      } else {
+        setError(data.message || "Failed to delete invoice");
+      }
+    } catch {
+      setError("Network error — could not delete invoice");
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -554,7 +591,7 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
                     <Button
                       className="w-full"
                       onClick={handleSaveAndResend}
-                      disabled={saving}
+                      disabled={saving || deleting}
                     >
                       {saving ? (
                         <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -562,6 +599,21 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
                         <Mail className="h-4 w-4 mr-2" />
                       )}
                       Save &amp; re-send
+                    </Button>
+
+                    <Button
+                      type="button"
+                      variant="danger"
+                      className="w-full"
+                      onClick={handleDelete}
+                      disabled={saving || deleting}
+                    >
+                      {deleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                      ) : (
+                        <Trash2 className="h-4 w-4 mr-2" />
+                      )}
+                      Delete invoice
                     </Button>
                       </>
                     )}
