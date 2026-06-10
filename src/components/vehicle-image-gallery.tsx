@@ -1,11 +1,74 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
+import Image from "next/image";
 import { Car, X, ChevronLeft, ChevronRight } from "lucide-react";
+import {
+  isOptimizableVehicleImageUrl,
+  vehicleThumbnailSizes,
+  VEHICLE_THUMBNAIL_WIDTH,
+} from "@/lib/admin/vehicle-images";
 
 interface VehicleImageGalleryProps {
   images: string[];
   alt: string;
+}
+
+function GalleryImage({
+  src,
+  alt,
+  className,
+  fill = false,
+  width,
+  height,
+  sizes,
+  priority = false,
+}: {
+  src: string;
+  alt: string;
+  className?: string;
+  fill?: boolean;
+  width?: number;
+  height?: number;
+  sizes?: string;
+  priority?: boolean;
+}) {
+  const [failed, setFailed] = useState(false);
+
+  if (!isOptimizableVehicleImageUrl(src) || failed) {
+    return (
+      <div className="flex h-full w-full items-center justify-center bg-gray-200">
+        <Car className="h-12 w-12 text-gray-400" aria-hidden />
+      </div>
+    );
+  }
+
+  if (fill) {
+    return (
+      <Image
+        src={src}
+        alt={alt}
+        fill
+        sizes={sizes ?? vehicleThumbnailSizes("gallery")}
+        className={className}
+        priority={priority}
+        onError={() => setFailed(true)}
+      />
+    );
+  }
+
+  return (
+    <Image
+      src={src}
+      alt={alt}
+      width={width ?? VEHICLE_THUMBNAIL_WIDTH}
+      height={height ?? Math.round(VEHICLE_THUMBNAIL_WIDTH * 0.56)}
+      sizes={sizes ?? vehicleThumbnailSizes("gallery")}
+      className={className}
+      priority={priority}
+      onError={() => setFailed(true)}
+    />
+  );
 }
 
 export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
@@ -20,14 +83,12 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
 
   const closeLightbox = () => setLightboxOpen(false);
 
-  // Focus trap: focus close button when lightbox opens
   useEffect(() => {
     if (lightboxOpen && closeButtonRef.current) {
       closeButtonRef.current.focus();
     }
   }, [lightboxOpen]);
 
-  // Prevent background scroll when lightbox is open
   useEffect(() => {
     if (!lightboxOpen) return;
     const originalOverflow = document.body.style.overflow;
@@ -78,55 +139,31 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
 
   return (
     <>
-      {/* Gallery Grid */}
       <div className="grid grid-cols-2 gap-2 p-2">
         <div
-          className="col-span-2 aspect-[16/9] rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 cursor-pointer group"
+          className="relative col-span-2 aspect-[16/9] rounded-lg overflow-hidden bg-gradient-to-br from-gray-100 to-gray-50 cursor-pointer group"
           onClick={() => openLightbox(0)}
         >
-          <img
+          <GalleryImage
             src={images[0]}
             alt={alt}
-            width={800}
-            height={600}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-            onError={(e) => {
-              const target = e.target as HTMLImageElement;
-              target.style.display = "none";
-              const parent = target.parentElement;
-              if (parent) {
-                const placeholder = document.createElement("div");
-                placeholder.className = "h-full w-full bg-gray-200 flex items-center justify-center";
-                placeholder.innerHTML = '<svg class="h-24 w-24 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
-                parent.appendChild(placeholder);
-              }
-            }}
+            fill
+            priority
+            sizes={vehicleThumbnailSizes("hero")}
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         </div>
         {images.slice(1, 3).map((img, i) => (
           <div
             key={img}
-            className="aspect-[16/9] rounded-lg overflow-hidden bg-gray-100 cursor-pointer group"
+            className="relative aspect-[16/9] rounded-lg overflow-hidden bg-gray-100 cursor-pointer group"
             onClick={() => openLightbox(i + 1)}
           >
-            <img
+            <GalleryImage
               src={img}
               alt={`${alt} - ${i + 2}`}
-              width={400}
-              height={300}
-              loading="lazy"
-              className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = "none";
-                const parent = target.parentElement;
-                if (parent) {
-                  const placeholder = document.createElement("div");
-                  placeholder.className = "h-full w-full bg-gray-200 flex items-center justify-center";
-                  placeholder.innerHTML = '<svg class="h-12 w-12 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>';
-                  parent.appendChild(placeholder);
-                }
-              }}
+              fill
+              className="object-cover transition-transform duration-300 group-hover:scale-105"
             />
           </div>
         ))}
@@ -149,7 +186,6 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
         )}
       </div>
 
-      {/* Lightbox Modal */}
       {lightboxOpen && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90"
@@ -159,7 +195,6 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
           aria-modal="true"
           tabIndex={0}
         >
-          {/* Close button */}
           <button
             ref={closeButtonRef}
             onClick={closeLightbox}
@@ -169,12 +204,10 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
             <X className="h-6 w-6" />
           </button>
 
-          {/* Image counter */}
           <div className="absolute top-4 left-4 z-10 rounded-full bg-white/10 px-3 py-1.5 text-sm text-white">
             {activeIndex + 1} / {images.length}
           </div>
 
-          {/* Previous button */}
           {images.length > 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); goPrev(); }}
@@ -185,32 +218,19 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
             </button>
           )}
 
-          {/* Main image */}
           <div
-            className="max-h-[85vh] max-w-[90vw] flex items-center justify-center"
+            className="relative max-h-[85vh] max-w-[90vw] h-[85vh] w-[90vw] flex items-center justify-center"
             onClick={(e) => e.stopPropagation()}
           >
-            <img
+            <GalleryImage
               src={images[activeIndex]}
               alt={`${alt} - ${activeIndex + 1}`}
-              width={1200}
-              height={900}
-              className="max-h-[85vh] max-w-[90vw] object-contain rounded-lg"
-              onError={(e) => {
-                const target = e.target as HTMLImageElement;
-                target.style.display = "none";
-                const parent = target.parentElement;
-                if (parent) {
-                  const placeholder = document.createElement("div");
-                  placeholder.className = "h-64 w-64 bg-gray-200 flex items-center justify-center rounded-lg";
-                  placeholder.innerHTML = '<div class="text-center"><svg class="h-16 w-16 text-gray-400 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg><p class="mt-2 text-gray-500 text-sm">Image not found</p></div>';
-                  parent.appendChild(placeholder);
-                }
-              }}
+              fill
+              sizes="90vw"
+              className="object-contain rounded-lg"
             />
           </div>
 
-          {/* Next button */}
           {images.length > 1 && (
             <button
               onClick={(e) => { e.stopPropagation(); goNext(); }}
@@ -221,7 +241,6 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
             </button>
           )}
 
-          {/* Thumbnail strip */}
           {images.length > 1 && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10 flex gap-2 rounded-lg bg-black/50 p-2">
               {images.map((img, i) => (
@@ -229,11 +248,17 @@ export function VehicleImageGallery({ images, alt }: VehicleImageGalleryProps) {
                   key={img}
                   onClick={(e) => { e.stopPropagation(); setActiveIndex(i); }}
                   aria-label={`View image ${i + 1} of ${images.length}`}
-                  className={`h-12 w-16 rounded overflow-hidden border-2 transition-all ${
+                  className={`relative h-12 w-16 rounded overflow-hidden border-2 transition-all ${
                     i === activeIndex ? "border-purple-500 opacity-100" : "border-transparent opacity-60 hover:opacity-80"
                   }`}
                 >
-                  <img src={img} alt={`${alt} thumbnail ${i + 1}`} width={64} height={48} loading="lazy" className="h-full w-full object-cover" />
+                  <GalleryImage
+                    src={img}
+                    alt={`${alt} thumbnail ${i + 1}`}
+                    fill
+                    sizes="64px"
+                    className="object-cover"
+                  />
                 </button>
               ))}
             </div>

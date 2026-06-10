@@ -19,7 +19,7 @@ export async function POST(req: NextRequest, { params }: Params) {
   if (!auth.authorized) return auth.response;
 
   const ip = getClientIp(req);
-  const rateCheck = passwordEmailLimiter.check(ip);
+  const rateCheck = await passwordEmailLimiter.check(ip);
   if (!rateCheck.allowed) {
     auditLog("RATE_LIMITED", { ip, userId: auth.adminId, details: { action: "owner_send_password_email" } });
     return rateLimitResponse(rateCheck.resetAt);

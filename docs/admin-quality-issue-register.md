@@ -17,7 +17,7 @@ Living document from the senior cleanup audit. Severity: P0 (blocker) → P3 (ni
 
 | ID | Issue | Owner | Status |
 |----|--------|-------|--------|
-| P0-1 | Legacy `x-admin-id` header still sent from `adminFetch` during JWT migration | `admin-fetch.ts`, `admin-check.ts` | Documented; converge on JWT-only |
+| P0-1 | Legacy `x-admin-id` header still sent from `adminFetch` during JWT migration | `admin-fetch.ts`, `admin-check.ts` | **Done** — JWT-only; legacy header path removed (Platform v4 Phase 1) |
 | P0-2 | `adminFetch` 401 redirect always `/admin` — wrong for manager sessions | `admin-fetch.ts` | **Done** — `getStaffLoginRedirectPath()` |
 | P0-3 | Duplicate `/admin/finances` nav entries (Finances + Analytics label clash) | `panel-registry.ts` | **Done** — analytics is manager-only; `finances` is admin |
 

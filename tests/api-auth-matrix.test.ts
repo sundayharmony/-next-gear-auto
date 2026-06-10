@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { execSync } from "node:child_process";
 
 const root = process.cwd();
 
@@ -24,6 +25,14 @@ const ADMIN_ONLY_GET_ROUTES = [
   "src/app/api/admin/managers/route.ts",
   "src/app/api/admin/owners/route.ts",
   "src/app/api/admin/booking-activity/route.ts",
+];
+
+const HIGH_RISK_ROUTES = [
+  { file: "src/app/api/admin/send-password-link/route.ts", verifier: "verifyAdmin" },
+  { file: "src/app/api/webhooks/stripe/route.ts", verifier: "constructEvent" },
+  { file: "src/app/api/webhooks/turo-email/route.ts", verifier: "safeCompareSecret" },
+  { file: "src/app/api/cron/reminders/route.ts", verifier: "CRON_SECRET" },
+  { file: "src/app/api/rental-agreement/generate/route.ts", verifier: "validateAgreementAccessToken" },
 ];
 
 test("owner API routes use verifyOwnerWithPortalAccess", () => {
@@ -56,8 +65,25 @@ test("admin-only GET routes use verifyAdmin", () => {
   }
 });
 
-test(".env.example documents JWT and legacy header flag", () => {
+test("high-risk routes include expected auth markers", () => {
+  for (const { file, verifier } of HIGH_RISK_ROUTES) {
+    const source = fs.readFileSync(path.join(root, file), "utf8");
+    assert.ok(source.includes(verifier), `${file} must reference ${verifier}`);
+  }
+});
+
+test("check-api-auth-matrix script passes for all route files", () => {
+  const out = execSync("node ./scripts/check-api-auth-matrix.mjs", {
+    cwd: root,
+    encoding: "utf8",
+  });
+  assert.match(out, /passed/);
+});
+
+test(".env.example documents JWT, setup-admin, and Upstash", () => {
   const envExample = fs.readFileSync(path.join(root, ".env.example"), "utf8");
   assert.ok(envExample.includes("JWT_SECRET"));
-  assert.ok(envExample.includes("ALLOW_LEGACY_ADMIN_HEADER"));
+  assert.ok(envExample.includes("ALLOW_SETUP_ADMIN"));
+  assert.ok(envExample.includes("UPSTASH_REDIS_REST_URL"));
+  assert.ok(!envExample.includes("ALLOW_LEGACY_ADMIN_HEADER"));
 });

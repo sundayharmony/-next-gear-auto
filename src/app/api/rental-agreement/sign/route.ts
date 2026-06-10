@@ -6,8 +6,15 @@ import {
   completeAgreementSigning,
   validateAgreementSignatures,
 } from "@/lib/agreement/complete-agreement-signing";
+import { agreementSignLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 
 export async function POST(req: NextRequest) {
+  const ip = getClientIp(req);
+  const rateCheck = await agreementSignLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.resetAt);
+  }
+
   try {
     let body: unknown;
     try {

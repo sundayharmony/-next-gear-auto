@@ -2,6 +2,8 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 
 export const VEHICLE_IMAGES_BUCKET = "vehicle-images";
 export const MAX_VEHICLE_IMAGES = 20;
+/** Default width for fleet/booking grid thumbnails (next/image). */
+export const VEHICLE_THUMBNAIL_WIDTH = 640;
 
 const STORAGE_PUBLIC_MARKER = `/storage/v1/object/public/${VEHICLE_IMAGES_BUCKET}/`;
 
@@ -28,6 +30,24 @@ export function isLegacyStaticVehicleImageUrl(url: string): boolean {
     url.startsWith(LEGACY_STATIC_PREFIX) &&
     !url.includes("..")
   );
+}
+
+export function isOptimizableVehicleImageUrl(url: unknown): url is string {
+  return isAllowedVehicleImageUrl(url);
+}
+
+/** `sizes` attribute for responsive vehicle thumbnails. */
+export function vehicleThumbnailSizes(
+  layout: "grid" | "hero" | "gallery" = "grid"
+): string {
+  switch (layout) {
+    case "hero":
+      return "(max-width: 768px) 100vw, 800px";
+    case "gallery":
+      return "(max-width: 768px) 50vw, 400px";
+    default:
+      return "(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw";
+  }
 }
 
 export function isAllowedVehicleImageUrl(url: unknown): url is string {

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { logger } from "@/lib/utils/logger";
+import { mapPublicVehicleRow, PUBLIC_VEHICLE_SELECT } from "@/lib/vehicles/public-vehicle-fields";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -8,11 +9,9 @@ export async function GET(request: Request) {
   const supabase = getServiceSupabase();
 
   try {
-    const selectClause = "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, maintenance_status, color, vin, description";
-
     let query = supabase
       .from("vehicles")
-      .select(selectClause)
+      .select(PUBLIC_VEHICLE_SELECT)
       .eq("is_published", true)
       .order("created_at", { ascending: true })
       .limit(100);
@@ -23,11 +22,10 @@ export async function GET(request: Request) {
 
     let { data, error } = await query;
 
-    // Fallback: if is_published filter returns empty (not on error), retry with is_available
     if (!error && (!data || data.length === 0)) {
       let fallbackQuery = supabase
         .from("vehicles")
-        .select(selectClause)
+        .select(PUBLIC_VEHICLE_SELECT)
         .eq("is_available", true)
         .order("make", { ascending: true })
         .order("model", { ascending: true })
@@ -45,31 +43,13 @@ export async function GET(request: Request) {
     }
 
     if (!error && data && data.length > 0) {
-      const vehicles = data.map((v) => ({
-        id: v.id,
-        year: v.year || 2024,
-        make: v.make || "",
-        model: v.model || "",
-        category: v.category,
-        images: v.images || [],
-        specs: v.specs || {},
-        dailyRate: v.daily_rate,
-        features: v.features || [],
-        isAvailable: v.is_available,
-        description: v.description || "",
-        color: v.color || "",
-        mileage: v.mileage ?? 0,
-        licensePlate: v.license_plate || "",
-        vin: v.vin || "",
-        maintenanceStatus: v.maintenance_status || "good",
-      }));
+      const vehicles = data.map((v) => mapPublicVehicleRow(v as Record<string, unknown>));
       return NextResponse.json(
         { success: true, data: vehicles },
         { headers: { "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120" } }
       );
     }
 
-    // If there was an error, return it (but don't expose internal details)
     if (error) {
       logger.error("Vehicles fetch error:", error);
       return NextResponse.json(
@@ -78,7 +58,6 @@ export async function GET(request: Request) {
       );
     }
 
-    // No vehicles found
     return NextResponse.json({ data: [], success: true });
   } catch (error) {
     logger.error("Vehicles API error:", error);

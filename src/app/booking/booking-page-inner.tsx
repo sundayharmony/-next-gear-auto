@@ -1,5 +1,6 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout/page-container";
@@ -7,16 +8,49 @@ import { WizardProgress } from "@/app/booking/components/wizard-progress";
 import { PriceSummaryBar } from "@/app/booking/components/price-summary-bar";
 import { WizardNav } from "@/app/booking/components/wizard-nav";
 import { DatesStep } from "@/app/booking/steps/dates-step";
-import { VehicleStep } from "@/app/booking/steps/vehicle-step";
-import { ExtrasStep } from "@/app/booking/steps/extras-step";
-import { CustomerStep } from "@/app/booking/steps/customer-step";
-import { VerifyStep } from "@/app/booking/steps/verify-step";
-import { ReviewStep } from "@/app/booking/steps/review-step";
-import { PaymentStep } from "@/app/booking/steps/payment-step";
 import { useBookingWizard } from "@/app/booking/use-booking-wizard";
+import type { BookingLocation } from "@/app/booking/booking-constants";
+import type { PublicVehicleJson } from "@/lib/vehicles/public-vehicle-fields";
 
-export function BookingPageInner() {
-  const w = useBookingWizard();
+const stepLoading = () => (
+  <div className="flex justify-center py-16" role="status" aria-label="Loading step">
+    <div className="h-8 w-8 animate-spin rounded-full border-4 border-purple-600 border-t-transparent" />
+  </div>
+);
+
+const VehicleStep = dynamic(
+  () => import("@/app/booking/steps/vehicle-step").then((m) => ({ default: m.VehicleStep })),
+  { loading: stepLoading }
+);
+const ExtrasStep = dynamic(
+  () => import("@/app/booking/steps/extras-step").then((m) => ({ default: m.ExtrasStep })),
+  { loading: stepLoading }
+);
+const CustomerStep = dynamic(
+  () => import("@/app/booking/steps/customer-step").then((m) => ({ default: m.CustomerStep })),
+  { loading: stepLoading }
+);
+const VerifyStep = dynamic(
+  () => import("@/app/booking/steps/verify-step").then((m) => ({ default: m.VerifyStep })),
+  { loading: stepLoading }
+);
+const ReviewStep = dynamic(
+  () => import("@/app/booking/steps/review-step").then((m) => ({ default: m.ReviewStep })),
+  { loading: stepLoading }
+);
+const PaymentStep = dynamic(
+  () => import("@/app/booking/steps/payment-step").then((m) => ({ default: m.PaymentStep })),
+  { loading: stepLoading }
+);
+
+export function BookingPageInner({
+  initialVehicles,
+  initialLocations,
+}: {
+  initialVehicles: PublicVehicleJson[];
+  initialLocations: BookingLocation[];
+}) {
+  const w = useBookingWizard({ initialVehicles, initialLocations });
 
   const showPriceSummary =
     w.currentStep >= 2 && w.booking.selectedVehicle && w.booking.pickupDate && w.booking.returnDate;

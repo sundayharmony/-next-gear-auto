@@ -11,6 +11,7 @@ import { fmtTime } from "@/lib/email/templates";
 import path from "path";
 import fs from "fs/promises";
 import { logger } from "@/lib/utils/logger";
+import { validateAgreementAccessToken } from "@/lib/agreement/agreement-access-token";
 
 // GET: Generate a pre-filled rental agreement PDF
 // Supports two modes:
@@ -77,17 +78,47 @@ export async function GET(req: NextRequest) {
       }
       booking = b;
 
-      // Verify requester: check email param or admin auth
-      const requesterEmail = searchParams.get("email")?.toLowerCase().trim();
-      if (requesterEmail) {
-        if (b.customer_email && requesterEmail !== b.customer_email.toLowerCase().trim()) {
-          return NextResponse.json({ success: false, error: "Not authorized to view this agreement" }, { status: 403 });
+      const accessToken = searchParams.get("token");
+      if (accessToken) {
+        const claims = validateAgreementAccessToken(accessToken);
+        if (!claims || claims.bookingId !== bookingId) {
+          return NextResponse.json(
+            { success: false, error: "Invalid or expired agreement access token" },
+            { status: 403 }
+          );
+        }
+        if (
+          claims.email &&
+          b.customer_email &&
+          claims.email !== b.customer_email.toLowerCase().trim()
+        ) {
+          return NextResponse.json(
+            { success: false, error: "Not authorized to view this agreement" },
+            { status: 403 }
+          );
         }
       } else {
-        // No email provided - require admin auth
-        const { verifyAdmin } = await import("@/lib/auth/admin-check");
-        const auth = await verifyAdmin(req);
-        if (!auth.authorized) return auth.response;
+        const { verifyAdminOrManager } = await import("@/lib/auth/admin-check");
+        const staffAuth = await verifyAdminOrManager(req);
+        if (staffAuth.authorized) {
+          // staff may generate for any booking
+        } else if (!b.customer_email) {
+          return NextResponse.json(
+            {
+              success: false,
+              error: "Signed access token or staff authorization required for this booking",
+            },
+            { status: 403 }
+          );
+        } else {
+          const requesterEmail = searchParams.get("email")?.toLowerCase().trim();
+          if (!requesterEmail || requesterEmail !== b.customer_email.toLowerCase().trim()) {
+            return NextResponse.json(
+              { success: false, error: "Not authorized to view this agreement" },
+              { status: 403 }
+            );
+          }
+        }
       }
 
       if (booking && booking.vehicle_id) {

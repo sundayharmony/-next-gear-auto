@@ -73,7 +73,7 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   // Rate limiting
   const ip = getClientIp(req);
-  const rateCheck = reviewLimiter.check(ip);
+  const rateCheck = await reviewLimiter.check(ip);
   if (!rateCheck.allowed) {
     return rateLimitResponse(rateCheck.resetAt);
   }

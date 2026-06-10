@@ -24,17 +24,18 @@ import { VEHICLE_CATEGORIES } from "@/lib/constants";
 import { getVehicleDisplayName } from "@/lib/types";
 import { FleetLoadingGrid } from "@/components/public/fleet-loading-grid";
 import { VehicleThumbnail } from "@/components/vehicle-thumbnail";
-import type { Vehicle } from "@/lib/types";
+import type { PublicVehicleJson } from "@/lib/vehicles/public-vehicle-fields";
 
 type SortOption = "price-low" | "price-high" | "name";
 
-export function FleetClient({ initialVehicles }: { initialVehicles: Vehicle[] }) {
+export function FleetClient({ initialVehicles }: { initialVehicles: PublicVehicleJson[] }) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const categoryParam = searchParams.get("category");
 
-  const { vehicles: fetchedVehicles, loading, error: vehicleError, retry } = useVehicles();
-  const vehicles = fetchedVehicles.length > 0 ? fetchedVehicles : initialVehicles;
+  const { vehicles, loading, error: vehicleError, retry } = useVehicles(true, {
+    initialVehicles,
+  });
   const showLoading = loading && initialVehicles.length === 0;
 
   const [activeCategory, setActiveCategory] = useState(

@@ -13,7 +13,7 @@ import { auditLog } from "@/lib/security/audit-log";
 export async function POST(request: Request) {
   try {
     const ip = getClientIp(request);
-    const rateCheck = loginLimiter.check(ip);
+    const rateCheck = await loginLimiter.check(ip);
     if (!rateCheck.allowed) {
       return rateLimitResponse(rateCheck.resetAt);
     }

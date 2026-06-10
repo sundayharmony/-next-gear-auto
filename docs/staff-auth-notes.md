@@ -7,7 +7,9 @@
 ## Current behavior
 
 - `adminFetch` sends cookies (`credentials: "same-origin"`) and CSRF for mutating requests.
-- During migration, a legacy **`x-admin-id`** header may still be sent when `nga_user` exists in `localStorage`. Prefer completing migration to **JWT-only** and removing this header (see `src/lib/utils/admin-fetch.ts`, `src/lib/auth/admin-check.ts`).
+- Staff auth is **JWT-only** (`nga_token` / `nga_refresh` cookies). Legacy `x-admin-id` headers are not accepted (v4).
+- Panel routes (`/admin/*`, `/manager/*`, `/owner/*`) return **503** when `JWT_SECRET` is missing or shorter than 32 characters.
+- `/admin/*` requires an **admin** role in the JWT; managers are redirected to login.
 
 ## Session expiry
 

@@ -13,6 +13,7 @@ permissions:
 jobs:
   lighthouse:
     runs-on: ubuntu-latest
+    # Phase A: informational — do not block merges on scores yet.
     continue-on-error: true
     steps:
       - uses: actions/checkout@v4
@@ -37,12 +38,25 @@ jobs:
           STRIPE_WEBHOOK_SECRET: whsec_placeholder_for_ci_build_only
       - name: Wait for server
         run: npx --yes wait-on http://127.0.0.1:3000 --timeout 120000
+      # Phase B hard-fail thresholds (enable when lab variance is understood):
+      #   - Remove `continue-on-error: true` on this job.
+      #   - Uncomment `configPath: lighthouserc.json` below.
+      #   - Flip assertions in lighthouserc.json from "warn" → "error".
+      #
+      # Suggested Phase B gates (mobile, throttled):
+      #   categories.performance  minScore 0.75
+      #   largest-contentful-paint  maxNumericValue 3500 ms
+      #   total-blocking-time     maxNumericValue 400 ms
+      #   cumulative-layout-shift   maxNumericValue 0.10
+      #   first-contentful-paint    maxNumericValue 2500 ms
       - name: Run Lighthouse
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: |
             http://127.0.0.1:3000/
-            http://127.0.0.1:3000/admin/bookings
+            http://127.0.0.1:3000/fleet
             http://127.0.0.1:3000/booking
+            http://127.0.0.1:3000/admin/bookings
           uploadArtifacts: true
           temporaryPublicStorage: true
+          # configPath: lighthouserc.json

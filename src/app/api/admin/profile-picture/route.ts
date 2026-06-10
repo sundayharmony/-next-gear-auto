@@ -42,6 +42,14 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
+    const { validateImageOrPdfMagicBytes } = await import("@/lib/security/magic-bytes");
+    if (!validateImageOrPdfMagicBytes(buffer, file.type)) {
+      return NextResponse.json(
+        { success: false, error: "File content does not match declared type" },
+        { status: 400 }
+      );
+    }
+
     // Try uploading to profile-pictures bucket
     let bucketName = "profile-pictures";
     let uploadResult = await supabase.storage

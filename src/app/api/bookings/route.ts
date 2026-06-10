@@ -58,21 +58,8 @@ export async function GET(request: NextRequest) {
   let auth: TokenPayload | null = null;
   try { auth = await getAuthFromRequest(request); } catch { /* unauthenticated */ }
 
-  // Legacy fallback: x-admin-id header (opt-in; matches verifyAdmin)
-  let isAdmin = auth?.role === "admin";
+  const isAdmin = auth?.role === "admin";
   const isManager = auth?.role === "manager";
-  if (!auth && process.env.ALLOW_LEGACY_ADMIN_HEADER === "true") {
-    const legacyAdminId = request.headers.get("x-admin-id");
-    if (legacyAdminId) {
-      try {
-        const { data: admin } = await supabase.from("admins").select("id, email").eq("id", legacyAdminId).single();
-        if (admin) {
-          isAdmin = true;
-          auth = { sub: admin.id, email: admin.email || "", role: "admin" } as TokenPayload;
-        }
-      } catch { /* ignore */ }
-    }
-  }
   const callerEmail = auth?.email?.toLowerCase().trim();
 
   // Column mapping for sort parameter

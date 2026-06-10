@@ -27,7 +27,7 @@ function getStripe(): Stripe {
 export async function POST(request: NextRequest) {
   // ─── Rate limiting (Bug 16) ─────────────────────────────────────────
   const ip = getClientIp(request);
-  const rateCheck = checkoutLimiter.check(ip);
+  const rateCheck = await checkoutLimiter.check(ip);
   if (!rateCheck.allowed) {
     return rateLimitResponse(rateCheck.resetAt);
   }

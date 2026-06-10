@@ -11,7 +11,7 @@ export async function POST(request: Request) {
   try {
     // Rate limit contact form submissions
     const ip = getClientIp(request);
-    const rateCheck = contactLimiter.check(ip);
+    const rateCheck = await contactLimiter.check(ip);
     if (!rateCheck.allowed) {
       return rateLimitResponse(rateCheck.resetAt);
     }

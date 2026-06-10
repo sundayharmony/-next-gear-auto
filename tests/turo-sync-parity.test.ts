@@ -1,5 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { pickTuroCancellationMatch } from "../src/lib/utils/turo-cancellation-match";
 import { isBlockedDateCancelled } from "../src/lib/utils/blocked-dates";
 
@@ -73,4 +75,25 @@ test("batch sync matches guest on exact dates when only overlapping row exists",
 test("batch sync disambiguates duplicate exact-date rows by guest name", () => {
   const picked = syncStyleMatch(BATCH_FIXTURE_ROWS, "v1", "2026-07-01", "2026-07-03", "Pat");
   assert.equal(picked?.id, "f");
+});
+
+test("turo webhook uses constant-time secret compare and replay guard", () => {
+  const source = fs.readFileSync(
+    path.join(process.cwd(), "src/app/api/webhooks/turo-email/route.ts"),
+    "utf8"
+  );
+  assert.ok(source.includes("safeCompareSecret"));
+  assert.ok(source.includes("isWebhookReplay"));
+  assert.ok(source.includes("isWebhookTimestampFresh"));
+  assert.ok(source.includes("turoWebhookLimiter"));
+});
+
+test("webhook replay helper rejects stale timestamps", async () => {
+  const { isWebhookTimestampFresh, isWebhookReplay } = await import(
+    "../src/lib/security/webhook-replay"
+  );
+  const stale = Date.now() - 10 * 60 * 1000;
+  assert.equal(isWebhookTimestampFresh(stale), false);
+  assert.equal(isWebhookReplay("unique-key-test-1"), false);
+  assert.equal(isWebhookReplay("unique-key-test-1"), true);
 });

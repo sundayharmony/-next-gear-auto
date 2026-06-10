@@ -15,6 +15,8 @@ const nextConfig: NextConfig = {
     proxyClientMaxBodySize: 10 * 1024 * 1024,
   },
   images: {
+    formats: ["image/avif", "image/webp"],
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920],
     remotePatterns: [
       { protocol: "https", hostname: "images.unsplash.com" },
       { protocol: "https", hostname: "via.placeholder.com" },
@@ -93,6 +95,19 @@ const nextConfig: NextConfig = {
           { key: "Cache-Control", value: "no-store, no-cache, must-revalidate, proxy-revalidate" },
           { key: "Pragma", value: "no-cache" },
           { key: "Expires", value: "0" },
+        ],
+      },
+      // ── Public reference data — CDN cacheable (listed after catch-all to win Cache-Control) ──
+      {
+        source: "/api/vehicles",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=120" },
+        ],
+      },
+      {
+        source: "/api/locations",
+        headers: [
+          { key: "Cache-Control", value: "public, s-maxage=60, stale-while-revalidate=300" },
         ],
       },
     ];

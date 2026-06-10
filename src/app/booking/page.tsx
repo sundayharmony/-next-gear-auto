@@ -1,20 +1,24 @@
-"use client";
+import { fetchPublicVehicles } from "@/lib/vehicles/public-vehicles";
+import { fetchPublicLocations } from "@/lib/locations/public-locations";
+import { BookingPageClient } from "@/app/booking/booking-page-client";
 
-import { Suspense } from "react";
-import { PageContainer } from "@/components/layout/page-container";
-import { FleetLoadingGrid } from "@/components/public/fleet-loading-grid";
-import { BookingPageInner } from "@/app/booking/booking-page-inner";
+/**
+ * Booking performance strategy (Platform v4 Phase 11):
+ * - RSC wrapper seeds vehicles + locations (same queries as GET /api/vehicles, /api/locations).
+ * - BookingPageClient is the wizard island; steps 2–7 lazy-load via next/dynamic.
+ * - useVehicles skips refetch when SSR seed is fresh.
+ */
 
-export default function BookingPage() {
+export default async function BookingPage() {
+  const [initialVehicles, initialLocations] = await Promise.all([
+    fetchPublicVehicles(),
+    fetchPublicLocations(),
+  ]);
+
   return (
-    <Suspense
-      fallback={
-        <PageContainer className="py-12">
-          <FleetLoadingGrid count={3} />
-        </PageContainer>
-      }
-    >
-      <BookingPageInner />
-    </Suspense>
+    <BookingPageClient
+      initialVehicles={initialVehicles}
+      initialLocations={initialLocations}
+    />
   );
 }

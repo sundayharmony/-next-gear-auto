@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import type { Metadata } from "next";
 import { headers } from "next/headers";
 import { Car, Shield, Clock, DollarSign, Star, ArrowRight, Users, Luggage, Fuel, Settings2, Lock, BadgeCheck, MapPin } from "lucide-react";
@@ -7,6 +8,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { HomeReviews } from "@/components/home/home-reviews";
+import { fetchPublicReviews } from "@/lib/reviews/public-reviews";
+import {
+  vehicleThumbnailSizes,
+  VEHICLE_THUMBNAIL_WIDTH,
+} from "@/lib/admin/vehicle-images";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { generateLocalBusinessSchema } from "@/lib/utils/schema-generators";
 import { logger } from "@/lib/utils/logger";
@@ -44,6 +50,7 @@ interface Vehicle {
 
 export default async function HomePage() {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
+  const homeReviews = await fetchPublicReviews(3);
 
   // Fetch featured vehicles from Supabase
   const supabase = getServiceSupabase();
@@ -155,12 +162,12 @@ export default async function HomePage() {
                   <Card className="group h-full card-hover transition-shadow">
                     <div className="relative aspect-[4/3] overflow-hidden rounded-t-xl bg-gradient-to-br from-purple-50 to-gray-100">
                       {vehicle.images?.[0] ? (
-                        <img
+                        <Image
                           src={vehicle.images[0]}
                           alt={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
-                          width={600}
-                          height={450}
-                          loading="lazy"
+                          width={VEHICLE_THUMBNAIL_WIDTH}
+                          height={Math.round(VEHICLE_THUMBNAIL_WIDTH * 0.75)}
+                          sizes={vehicleThumbnailSizes("grid")}
                           className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
                         />
                       ) : (
@@ -249,7 +256,7 @@ export default async function HomePage() {
           <h2 className="text-3xl font-bold text-gray-900">What Our Customers Say</h2>
           <p className="mt-2 text-gray-500">Real reviews from real renters</p>
         </div>
-        <HomeReviews />
+        <HomeReviews reviews={homeReviews} />
       </PageContainer>
 
       {/* Trust Badges */}

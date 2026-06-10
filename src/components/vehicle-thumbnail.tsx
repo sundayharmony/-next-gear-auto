@@ -1,8 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import Image from "next/image";
 import { Car } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import {
+  isOptimizableVehicleImageUrl,
+  vehicleThumbnailSizes,
+} from "@/lib/admin/vehicle-images";
 
 interface VehicleThumbnailProps {
   src?: string | null;
@@ -10,6 +15,7 @@ interface VehicleThumbnailProps {
   className?: string;
   imgClassName?: string;
   loading?: "lazy" | "eager";
+  priority?: boolean;
   fallbackIconClassName?: string;
   showPulseUntilLoad?: boolean;
 }
@@ -23,13 +29,14 @@ export function VehicleThumbnail({
   className,
   imgClassName,
   loading = "lazy",
+  priority = false,
   fallbackIconClassName = "h-10 w-10 text-gray-300",
   showPulseUntilLoad = false,
 }: VehicleThumbnailProps) {
   const [failed, setFailed] = useState(false);
   const [loaded, setLoaded] = useState(false);
 
-  if (!src || failed) {
+  if (!src || failed || !isOptimizableVehicleImageUrl(src)) {
     return (
       <div
         className={cn(
@@ -50,11 +57,14 @@ export function VehicleThumbnail({
         className
       )}
     >
-      <img
+      <Image
         src={src}
         alt={alt}
+        fill
+        sizes={vehicleThumbnailSizes("grid")}
         loading={loading}
-        className={cn("h-full w-full object-cover", imgClassName)}
+        priority={priority}
+        className={cn("object-cover", imgClassName)}
         onLoad={() => setLoaded(true)}
         onError={() => setFailed(true)}
       />

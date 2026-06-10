@@ -7,7 +7,7 @@ export async function POST(req: NextRequest) {
   try {
     // Rate limit promo validation
     const ip = getClientIp(req);
-    const rateCheck = promoLimiter.check(ip);
+    const rateCheck = await promoLimiter.check(ip);
     if (!rateCheck.allowed) {
       return rateLimitResponse(rateCheck.resetAt);
     }

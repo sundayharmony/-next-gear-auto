@@ -106,7 +106,7 @@ export async function POST(request: Request) {
   try {
     // Rate limit login/signup attempts
     const ip = getClientIp(request);
-    const rateCheck = loginLimiter.check(ip);
+    const rateCheck = await loginLimiter.check(ip);
     if (!rateCheck.allowed) {
       return rateLimitResponse(rateCheck.resetAt);
     }

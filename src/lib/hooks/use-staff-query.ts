@@ -17,9 +17,13 @@ interface StaffJsonResponse<T> {
   message?: string;
 }
 
+/** Stale window for low-churn reference data (vehicles, locations). */
+export const STALE_REFERENCE_DATA_MS = 120_000;
+
 export const staffKeys = {
   all: ["staff"] as const,
   vehicles: (endpoint = "/api/admin/vehicles") => ["staff", "vehicles", endpoint] as const,
+  locations: (endpoint = "/api/admin/locations") => ["staff", "locations", endpoint] as const,
   bookings: (filters?: Record<string, unknown>) =>
     filters ? (["staff", "bookings", filters] as const) : (["staff", "bookings"] as const),
   blockedDates: (range: { from: string; to: string }) =>

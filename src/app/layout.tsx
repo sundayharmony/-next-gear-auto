@@ -1,14 +1,20 @@
 import type { Metadata, Viewport } from "next";
+import { Inter } from "next/font/google";
 import { headers } from "next/headers";
 import "./globals.css";
 import { AuthProvider } from "@/lib/context/auth-context";
-import { BookingProvider } from "@/lib/context/booking-context";
 import { NotificationProvider } from "@/lib/context/notification-context";
 import { NotificationToasts } from "@/components/layout/notification-toasts";
 import { LayoutShell } from "@/components/layout/layout-shell";
 import { Analytics } from "@vercel/analytics/next";
 import { generateOrganizationSchema } from "@/lib/utils/schema-generators";
 import { SITE_URL } from "@/lib/constants";
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -70,16 +76,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="en">
       <head>
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://maps.googleapis.com" />
-        <link rel="preconnect" href="https://checkout.stripe.com" />
-        <link
-          href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-          rel="stylesheet"
-        />
       </head>
-      <body className="min-h-screen flex flex-col">
+      <body className={`${inter.className} min-h-screen flex flex-col`}>
         <script
           type="application/ld+json"
           nonce={nonce}
@@ -89,12 +88,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           }}
         />
         <AuthProvider>
-          <BookingProvider>
-            <NotificationProvider>
-              <LayoutShell>{children}</LayoutShell>
-              <NotificationToasts />
-            </NotificationProvider>
-          </BookingProvider>
+          <NotificationProvider>
+            <LayoutShell>{children}</LayoutShell>
+            <NotificationToasts />
+          </NotificationProvider>
         </AuthProvider>
         <Analytics />
       </body>

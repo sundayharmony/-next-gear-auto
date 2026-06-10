@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
+import { uploadTempLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
+import { validateImageOrPdfMagicBytes } from "@/lib/security/magic-bytes";
 
 export async function POST(request: NextRequest) {
+  const ip = getClientIp(request);
+  const rateCheck = await uploadTempLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.resetAt);
+  }
+
   try {
     // Require authentication — prevent anonymous uploads
     let auth;
@@ -56,6 +64,13 @@ export async function POST(request: NextRequest) {
     const fileName = `temp/insurance_${crypto.randomUUID()}.${fileExt}`;
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
+
+    if (!validateImageOrPdfMagicBytes(buffer, file.type)) {
+      return NextResponse.json(
+        { success: false, error: "File content does not match declared type" },
+        { status: 400 }
+      );
+    }
 
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from("booking-documents")

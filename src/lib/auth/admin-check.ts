@@ -1,43 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
-import { loginLimiter, getClientIp } from "@/lib/security/rate-limit";
 import { getTokenStaffRole, isAdminRole, tokenHasStaffAccess } from "@/lib/auth/roles";
-import { isValidEmailFormat } from "@/lib/utils/validation";
 import {
   fetchCustomerManagerAccessRow,
   isManagerPanelAccessEnabled,
 } from "@/lib/auth/manager-access";
 
 /**
- * Verify the request comes from an authenticated admin.
- *
- * Authentication methods (checked in order):
- *   1. JWT in HTTP-only cookie or Authorization header (preferred)
- *   2. Legacy x-admin-id header (opt-in via ALLOW_LEGACY_ADMIN_HEADER=true)
- *
- * Returns the admin ID if valid, or a 401/403 response if not.
+ * Verify the request comes from an authenticated admin via JWT
+ * (HTTP-only cookie or Authorization header).
  */
 export async function verifyAdmin(
   req: NextRequest
 ): Promise<{ authorized: true; adminId: string } | { authorized: false; response: NextResponse }> {
-  // ── Method 1: JWT-based auth (preferred) ──────────────────────────
   const tokenPayload = await getAuthFromRequest(req);
-  if (tokenPayload) {
-    if (!isAdminRole(tokenPayload.role)) {
-      return {
-        authorized: false,
-        response: NextResponse.json(
-          { success: false, message: "Admin access required" },
-          { status: 403 }
-        ),
-      };
-    }
-    return { authorized: true, adminId: tokenPayload.sub };
-  }
-
-  // ── Method 2: Legacy header-based auth (opt-in) ───────────────────
-  if (process.env.ALLOW_LEGACY_ADMIN_HEADER !== "true") {
+  if (!tokenPayload) {
     return {
       authorized: false,
       response: NextResponse.json(
@@ -47,69 +25,17 @@ export async function verifyAdmin(
     };
   }
 
-  const clientIp = getClientIp(req);
-  const rateCheck = loginLimiter.check(`admin-legacy:${clientIp}`);
-  if (!rateCheck.allowed) {
-    return {
-      authorized: false,
-      response: new NextResponse(
-        JSON.stringify({ success: false, message: "Too many requests. Please try again later." }),
-        { status: 429, headers: { "Content-Type": "application/json", "Retry-After": String(Math.max(0, Math.ceil((rateCheck.resetAt - Date.now()) / 1000))) } }
-      ),
-    };
-  }
-
-  const adminId = req.headers.get("x-admin-id");
-  if (!adminId) {
+  if (!isAdminRole(tokenPayload.role)) {
     return {
       authorized: false,
       response: NextResponse.json(
-        { success: false, message: "Authentication required" },
-        { status: 401 }
-      ),
-    };
-  }
-
-  // Validate adminId format: UUID or email
-  const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-  if (!uuidRegex.test(adminId) && !isValidEmailFormat(adminId)) {
-    return {
-      authorized: false,
-      response: NextResponse.json(
-        { success: false, message: "Unauthorized" },
+        { success: false, message: "Admin access required" },
         { status: 403 }
       ),
     };
   }
 
-  try {
-    const supabase = getServiceSupabase();
-    const { data: admin, error } = await supabase
-      .from("admins")
-      .select("id")
-      .eq("id", adminId)
-      .single();
-
-    if (error || !admin) {
-      return {
-        authorized: false,
-        response: NextResponse.json(
-          { success: false, message: "Unauthorized" },
-          { status: 403 }
-        ),
-      };
-    }
-
-    return { authorized: true, adminId: admin.id };
-  } catch {
-    return {
-      authorized: false,
-      response: NextResponse.json(
-        { success: false, message: "Authentication failed" },
-        { status: 500 }
-      ),
-    };
-  }
+  return { authorized: true, adminId: tokenPayload.sub };
 }
 
 export async function verifyAdminOrManager(

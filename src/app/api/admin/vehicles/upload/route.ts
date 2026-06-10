@@ -26,10 +26,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/svg+xml"];
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json(
-        { success: false, error: "Invalid file type. Use JPG, PNG, WebP, or SVG." },
+        { success: false, error: "Invalid file type. Use JPG, PNG, or WebP." },
         { status: 400 }
       );
     }
@@ -47,7 +47,6 @@ export async function POST(request: NextRequest) {
       "image/jpeg": "jpg",
       "image/png": "png",
       "image/webp": "webp",
-      "image/svg+xml": "svg",
     };
     const ext = SAFE_EXTENSIONS[file.type] || "jpg";
     const folder = vehicleId || "temp";
@@ -56,31 +55,8 @@ export async function POST(request: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    const magicBytes = new Uint8Array(arrayBuffer.slice(0, 12));
-    const isJpeg = magicBytes[0] === 0xff && magicBytes[1] === 0xd8 && magicBytes[2] === 0xff;
-    const isPng =
-      magicBytes[0] === 0x89 &&
-      magicBytes[1] === 0x50 &&
-      magicBytes[2] === 0x4e &&
-      magicBytes[3] === 0x47;
-    const isWebp =
-      magicBytes[0] === 0x52 &&
-      magicBytes[1] === 0x49 &&
-      magicBytes[2] === 0x46 &&
-      magicBytes[3] === 0x46 &&
-      magicBytes[8] === 0x57 &&
-      magicBytes[9] === 0x45 &&
-      magicBytes[10] === 0x42 &&
-      magicBytes[11] === 0x50;
-    const isSvg = file.type === "image/svg+xml";
-
-    const magicValid =
-      (file.type === "image/jpeg" && isJpeg) ||
-      (file.type === "image/png" && isPng) ||
-      (file.type === "image/webp" && isWebp) ||
-      isSvg;
-
-    if (!magicValid) {
+    const { validateImageOrPdfMagicBytes } = await import("@/lib/security/magic-bytes");
+    if (!validateImageOrPdfMagicBytes(buffer, file.type)) {
       return NextResponse.json(
         { success: false, error: "File content does not match declared type" },
         { status: 400 }

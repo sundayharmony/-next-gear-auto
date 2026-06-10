@@ -1,14 +1,25 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { Vehicle } from "@/lib/types";
+import type { PublicVehicleJson } from "@/lib/vehicles/public-vehicle-fields";
 import { logger } from "@/lib/utils/logger";
 
 /** Shared in-memory cache so fleet, booking, and account do not refetch on every mount. */
 const CACHE_TTL_MS = 60_000;
 
+export interface UseVehiclesOptions {
+  /** SSR-seeded list — skips client refetch on first mount when non-empty. */
+  initialVehicles?: PublicVehicleJson[];
+}
+
+/** Prime the shared cache from RSC/SSR data. */
+export function seedVehiclesCache(vehicles: PublicVehicleJson[]) {
+  if (vehicles.length === 0) return;
+  cache = { entry: { vehicles, error: null }, fetchedAt: Date.now() };
+}
+
 interface VehiclesCacheEntry {
-  vehicles: Vehicle[];
+  vehicles: PublicVehicleJson[];
   error: string | null;
 }
 
@@ -70,13 +81,18 @@ function loadVehiclesShared(signal?: AbortSignal): Promise<VehiclesCacheEntry> {
  * @param enabled - Whether to fetch on mount (default: true).
  *                  Pass `false` if fetch should be deferred (e.g. until auth is ready).
  */
-export function useVehicles(enabled = true) {
-  const [vehicles, setVehicles] = useState<Vehicle[]>(() =>
-    cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS ? cache.entry.vehicles : []
-  );
-  const [loading, setLoading] = useState(
-    () => !(cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS)
-  );
+export function useVehicles(enabled = true, options?: UseVehiclesOptions) {
+  const { initialVehicles } = options ?? {};
+  const hasSsrSeed = Boolean(initialVehicles && initialVehicles.length > 0);
+
+  const [vehicles, setVehicles] = useState<PublicVehicleJson[]>(() => {
+    if (hasSsrSeed) return initialVehicles!;
+    return cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS ? cache.entry.vehicles : [];
+  });
+  const [loading, setLoading] = useState(() => {
+    if (hasSsrSeed) return false;
+    return !(cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS);
+  });
   const [error, setError] = useState<string | null>(() =>
     cache && Date.now() - cache.fetchedAt < CACHE_TTL_MS ? cache.entry.error : null
   );
@@ -84,6 +100,14 @@ export function useVehicles(enabled = true) {
 
   useEffect(() => {
     if (!enabled) return;
+
+    if (hasSsrSeed && refetchCount === 0) {
+      seedVehiclesCache(initialVehicles!);
+      setVehicles(initialVehicles!);
+      setLoading(false);
+      setError(null);
+      return;
+    }
 
     let cancelled = false;
     const controller = new AbortController();
@@ -121,7 +145,7 @@ export function useVehicles(enabled = true) {
       clearTimeout(timeoutId);
       controller.abort();
     };
-  }, [enabled, refetchCount]);
+  }, [enabled, refetchCount, hasSsrSeed, initialVehicles]);
 
   const retry = () => {
     invalidateVehiclesCache();

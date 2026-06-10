@@ -7,12 +7,22 @@ import { createRateLimiter, getClientIp } from "@/lib/security/rate-limit";
 // Strict rate limit: 3 calls per 24 hours per IP
 const setupLimiter = createRateLimiter({ windowMs: 24 * 60 * 60 * 1000, max: 3 });
 
-// One-time setup: creates or updates the admin account with a hashed password
-// Call this once via: POST /api/auth/setup-admin with { "secret": "SUPABASE_SERVICE_KEY first 20 chars" }
+// One-time setup: creates or updates the admin account with a hashed password.
+// Disabled in production unless ALLOW_SETUP_ADMIN=true.
 export async function POST(request: Request) {
+  if (
+    process.env.NODE_ENV === "production" &&
+    process.env.ALLOW_SETUP_ADMIN !== "true"
+  ) {
+    return NextResponse.json(
+      { success: false, message: "Not found" },
+      { status: 404 }
+    );
+  }
+
   // Rate limit to prevent brute force
   const ip = getClientIp(request);
-  const rateCheck = setupLimiter.check(`setup-admin:${ip}`);
+  const rateCheck = await setupLimiter.check(`setup-admin:${ip}`);
   if (!rateCheck.allowed) {
     return NextResponse.json(
       { success: false, message: "Too many requests. Please try again later." },

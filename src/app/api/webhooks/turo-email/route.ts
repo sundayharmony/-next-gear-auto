@@ -5,6 +5,16 @@ import { TURO_BLOCKED_SOURCE, CANCELLED_REASON_PREFIX } from "@/lib/utils/blocke
 import { pickTuroCancellationMatch } from "@/lib/utils/turo-cancellation-match";
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
+import { safeCompareSecret } from "@/lib/security/constant-time";
+import {
+  getClientIp,
+  rateLimitResponse,
+  turoWebhookLimiter,
+} from "@/lib/security/rate-limit";
+import {
+  isWebhookReplay,
+  isWebhookTimestampFresh,
+} from "@/lib/security/webhook-replay";
 
 type TuroBlockedRow = {
   id: string;
@@ -68,7 +78,12 @@ function asTuroRow(row: Record<string, unknown> | null | undefined): TuroBlocked
  *   500 — server error
  */
 export async function POST(req: NextRequest) {
-  // ── Auth: verify shared secret ──
+  const ip = getClientIp(req);
+  const rateCheck = await turoWebhookLimiter.check(ip);
+  if (!rateCheck.allowed) {
+    return rateLimitResponse(rateCheck.resetAt);
+  }
+
   const secret = process.env.TURO_WEBHOOK_SECRET;
   if (!secret) {
     logger.error("TURO_WEBHOOK_SECRET env var is not configured");
@@ -80,10 +95,35 @@ export async function POST(req: NextRequest) {
 
   const authHeader = req.headers.get("authorization") || "";
   const token = authHeader.replace(/^Bearer\s+/i, "").trim();
-  if (!token || token !== secret) {
+  if (!token || !safeCompareSecret(token, secret)) {
     return NextResponse.json(
       { success: false, message: "Unauthorized" },
       { status: 401 }
+    );
+  }
+
+  const timestampHeader =
+    req.headers.get("x-turo-timestamp") ||
+    req.headers.get("x-webhook-timestamp") ||
+    req.headers.get("x-idempotency-timestamp");
+  if (timestampHeader) {
+    const ts = parseInt(timestampHeader, 10);
+    if (!isWebhookTimestampFresh(ts)) {
+      return NextResponse.json(
+        { success: false, message: "Request timestamp outside replay window" },
+        { status: 401 }
+      );
+    }
+  }
+
+  const idempotencyKey =
+    req.headers.get("x-idempotency-key") ||
+    req.headers.get("x-turo-idempotency-key") ||
+    "";
+  if (idempotencyKey && isWebhookReplay(idempotencyKey)) {
+    return NextResponse.json(
+      { success: true, action: "duplicate", message: "Already processed" },
+      { status: 200 }
     );
   }
 

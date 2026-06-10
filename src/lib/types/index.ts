@@ -24,8 +24,8 @@ export interface Vehicle {
   description: string;
   color: string;
   mileage: number;
-  licensePlate: string;
-  vin: string;
+  licensePlate?: string;
+  vin?: string;
   maintenanceStatus: "good" | "needs-service" | "in-maintenance";
   isPublished?: boolean;
   purchasePrice?: number;

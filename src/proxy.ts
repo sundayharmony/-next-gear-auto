@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, SignJWT, type JWTPayload } from "jose";
-import { tokenHasOwnerAccess, tokenHasStaffAccess } from "@/lib/auth/roles";
+import { isAdminRole, tokenHasOwnerAccess, tokenHasStaffAccess } from "@/lib/auth/roles";
+import { logger } from "@/lib/utils/logger";
 import {
   buildContentSecurityPolicy,
   shouldApplyDocumentCsp,
@@ -142,6 +143,7 @@ export async function proxy(req: NextRequest) {
     const csrfHeader = req.headers.get("x-csrf-token");
 
     if (!csrfCookie || !csrfHeader || csrfCookie !== csrfHeader) {
+      logger.warn("CSRF_REJECTED", { path: pathname, method: req.method });
       return NextResponse.json(
         { success: false, message: "Invalid CSRF token" },
         { status: 403 }
@@ -149,67 +151,74 @@ export async function proxy(req: NextRequest) {
     }
   }
 
+  const isAdminRoute =
+    pathname.startsWith("/admin/") && !pathname.startsWith("/admin/login");
   const isOwnerRoute = pathname.startsWith("/owner");
   const isManagerRoute = pathname.startsWith("/manager");
-  if (
-    (pathname.startsWith("/admin/") && !pathname.startsWith("/admin/login")) ||
-    isManagerRoute ||
-    isOwnerRoute
-  ) {
+  if (isAdminRoute || isManagerRoute || isOwnerRoute) {
     const token = req.cookies.get(COOKIE_NAME)?.value;
     const secret = getSecret();
 
-    if (secret.length > 0) {
-      let authenticated = token ? await isValidJwt(token) : false;
-      let effectiveToken = token ?? null;
+    if (secret.length === 0) {
+      logger.error("JWT_SECRET missing or too short — panel routes denied");
+      return NextResponse.json(
+        { success: false, message: "Authentication service unavailable" },
+        { status: 503 }
+      );
+    }
 
-      if (!authenticated) {
-        const refreshToken = req.cookies.get(REFRESH_COOKIE)?.value;
-        if (refreshToken) {
-          const newAccessToken = await tryRefreshToken(refreshToken);
-          if (newAccessToken) {
-            response.cookies.set(COOKIE_NAME, newAccessToken, {
-              httpOnly: true,
-              secure: process.env.NODE_ENV === "production",
-              sameSite: "strict",
-              path: "/",
-              maxAge: 60 * 60,
-            });
-            authenticated = true;
-            effectiveToken = newAccessToken;
-          }
+    let authenticated = token ? await isValidJwt(token) : false;
+    let effectiveToken = token ?? null;
+
+    if (!authenticated) {
+      const refreshToken = req.cookies.get(REFRESH_COOKIE)?.value;
+      if (refreshToken) {
+        const newAccessToken = await tryRefreshToken(refreshToken);
+        if (newAccessToken) {
+          response.cookies.set(COOKIE_NAME, newAccessToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "strict",
+            path: "/",
+            maxAge: 60 * 60,
+          });
+          authenticated = true;
+          effectiveToken = newAccessToken;
         }
       }
+    }
 
-      const payload = effectiveToken ? await getJwtPayload(effectiveToken) : null;
+    const payload = effectiveToken ? await getJwtPayload(effectiveToken) : null;
 
-      if (authenticated && isManagerRoute) {
-        if (!payload || !tokenHasStaffAccess(payload as { role?: unknown; roles?: unknown })) {
-          const loginUrl = new URL("/admin", req.url);
-          loginUrl.searchParams.set("redirect", pathname);
-          return NextResponse.redirect(loginUrl);
-        }
+    if (authenticated && isAdminRoute) {
+      const role = payload?.role;
+      if (!payload || !isAdminRole(role as Parameters<typeof isAdminRole>[0])) {
+        const loginUrl = new URL("/admin", req.url);
+        loginUrl.searchParams.set("redirect", pathname);
+        return NextResponse.redirect(loginUrl);
       }
+    }
 
-      if (authenticated && isOwnerRoute) {
-        if (!payload || !tokenHasOwnerAccess(payload as { role?: unknown; roles?: unknown })) {
-          const loginUrl = new URL("/login", req.url);
-          loginUrl.searchParams.set("redirect", pathname);
-          return NextResponse.redirect(loginUrl);
-        }
+    if (authenticated && isManagerRoute) {
+      if (!payload || !tokenHasStaffAccess(payload as { role?: unknown; roles?: unknown })) {
+        const loginUrl = new URL("/admin", req.url);
+        loginUrl.searchParams.set("redirect", pathname);
+        return NextResponse.redirect(loginUrl);
       }
+    }
 
-      if (!authenticated) {
-        const legacyId =
-          process.env.ALLOW_LEGACY_ADMIN_HEADER === "true"
-            ? req.headers.get("x-admin-id")
-            : null;
-        if (!legacyId) {
-          const loginUrl = new URL(isOwnerRoute ? "/login" : "/admin", req.url);
-          loginUrl.searchParams.set("redirect", pathname);
-          return NextResponse.redirect(loginUrl);
-        }
+    if (authenticated && isOwnerRoute) {
+      if (!payload || !tokenHasOwnerAccess(payload as { role?: unknown; roles?: unknown })) {
+        const loginUrl = new URL("/login", req.url);
+        loginUrl.searchParams.set("redirect", pathname);
+        return NextResponse.redirect(loginUrl);
       }
+    }
+
+    if (!authenticated) {
+      const loginUrl = new URL(isOwnerRoute ? "/login" : "/admin", req.url);
+      loginUrl.searchParams.set("redirect", pathname);
+      return NextResponse.redirect(loginUrl);
     }
   }
 

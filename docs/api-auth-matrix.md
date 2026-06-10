@@ -1,6 +1,6 @@
 # API auth matrix
 
-Static expectations for staff and owner API authorization. Automated check: `npm run check:api-auth-matrix`.
+Static expectations for API authorization across all `src/app/api/**/route.ts` handlers. Automated check: `npm run check:api-auth-matrix`.
 
 ## Roles
 
@@ -12,42 +12,59 @@ Static expectations for staff and owner API authorization. Automated check: `npm
 
 Server routes are the security boundary; client layouts only improve UX.
 
-## Panel registry → API access
+## Route categories
 
-Features in `src/lib/admin/panel-registry.ts` with `sharedWithManager: false` are **admin-only UI**. Their primary read APIs should use `verifyAdmin(req)` on **GET**, not `verifyAdminOrManager`.
+| Category | Expected verifier(s) | Examples |
+|----------|---------------------|----------|
+| `public` | None (may use rate limits) | `/api/vehicles`, `/api/checkout`, `/api/contact` |
+| `public-gated` | Env gate | `/api/auth/setup-admin` (`ALLOW_SETUP_ADMIN`) |
+| `staff` | `verifyAdmin`, `verifyAdminOrManager`, `verifyManagerWithPanelAccess`, or `getAuthFromRequest` + `tokenHasStaffAccess` | `/api/admin/*`, `/api/manager/*` |
+| `admin-only` | `verifyAdmin` on all methods | `/api/admin/blocked-dates`, `/api/admin/managers` |
+| `owner` | `verifyOwnerWithPortalAccess` | `/api/owner/*` |
+| `webhook` | Shared secret or Stripe signature | `/api/webhooks/turo-email`, `/api/webhooks/stripe` |
+| `cron` | `CRON_SECRET` bearer | `/api/cron/reminders` |
+| `mixed` | Per-method (documented in script) | `/api/bookings`, `/api/reviews`, `/api/rental-agreement/generate` |
+| `staff-auth` | `getAuthFromRequest` (any authenticated user) | `/api/upload-temp`, `/api/bookings/upload` |
 
-| Feature | Example GET routes | Expected auth |
-|---------|-------------------|---------------|
-| `blockedDates` | `/api/admin/blocked-dates` | `verifyAdmin` |
-| `finances` | `/api/admin/expenses`, `/api/admin/owner-payouts`, `/api/admin/booking-payments` | `verifyAdmin` |
-| `managers` | `/api/admin/managers` | `verifyAdmin` |
-| `owners` | `/api/admin/owners` | `verifyAdmin` |
-| `vehicles` | `/api/admin/vehicles` | `verifyAdminOrManager` (managers need fleet read for bookings) |
-| `marketing` | POST-only campaign send | `verifyAdmin` on mutations |
+## Admin-only GET (panel registry)
 
-## Shared with manager
+Features in `src/lib/admin/panel-registry.ts` with `sharedWithManager: false` use `verifyAdmin` on **GET**:
 
-Routes backing `sharedWithManager: true` features may use `verifyAdminOrManager` or `verifyManagerWithPanelAccess` (analytics). Examples:
+| Feature | GET routes |
+|---------|------------|
+| `blockedDates` | `/api/admin/blocked-dates` |
+| `finances` | `/api/admin/expenses`, `/api/admin/owner-payouts`, `/api/admin/booking-payments` |
+| `managers` | `/api/admin/managers` |
+| `owners` | `/api/admin/owners` |
+| `bookingActivity` | `/api/admin/booking-activity` |
 
-- `/api/manager/bookings` — manager-scoped list with financial redaction
-- `/api/admin/messages/*` — staff messaging
-- `/api/admin/customers` — read for shared customers UI
+## High-risk routes
+
+| Route | Auth |
+|-------|------|
+| `/api/admin/send-password-link` | `verifyAdmin` |
+| `/api/rental-agreement/generate` | Signed `token`, matching `email`, or staff JWT |
+| `/api/rental-agreement/sign` | Customer email match + rate limit |
+| `/api/bookings/override-signature` | `verifyAdmin` |
 
 ## Owner routes
 
-All `/api/owner/*` routes use `verifyOwnerWithPortalAccess(req)`, which enforces JWT owner role **and** live `owner_portal_enabled` on the customer record (revoked owners get 403). Consolidated load:
+All `/api/owner/*` routes use `verifyOwnerWithPortalAccess(req)` (JWT + live `owner_portal_enabled`). Prefer `GET /api/owner/dataset` for consolidated loads.
 
-- `GET /api/owner/dataset` — metrics + bookings + vehicles in one call
+## Public fleet data
 
-Legacy per-resource routes (`/summary`, `/bookings`, `/vehicles`) remain for backward compatibility but should prefer the dataset endpoint.
+`GET /api/vehicles` and `fetchPublicVehicles()` expose **no VIN or license plate** — see [`public-vehicles.ts`](../src/lib/vehicles/public-vehicles.ts).
 
-## High-risk admin-only mutations
+## Inventory (85 routes)
 
-Always `verifyAdmin`:
+Run `API_AUTH_MATRIX_INVENTORY=1 npm run check:api-auth-matrix` for machine-readable JSON. Summary:
 
-- `/api/admin/send-password-link`
-- `/api/admin/blocked-dates` GET (read)
-- Manager/owner lifecycle (`/api/admin/managers`, `/api/admin/owners`)
+- **Public**: 14 routes (vehicles, locations, checkout, contact, auth flows, agreement sign, …)
+- **Staff / admin**: 58 routes under `/api/admin` and `/api/manager`
+- **Owner**: 8 routes
+- **Webhooks**: 2 routes
+- **Cron**: 2 routes
+- **Mixed**: bookings, reviews, instagram, rental-agreement generate, check-overlap
 
 ## CI
 
@@ -55,6 +72,6 @@ Always `verifyAdmin`:
 npm run check:api-auth-matrix
 ```
 
-Fails when an admin-only GET handler uses `verifyAdminOrManager` or omits `verifyAdmin`, or when an owner route omits `verifyOwnerWithPortalAccess`.
+Fails when a handler lacks the expected verifier for its category, when admin-only GET uses `verifyAdminOrManager`, or when owner routes omit `verifyOwnerWithPortalAccess`.
 
-See also [staff-auth-notes.md](staff-auth-notes.md) and [manager-panel-sync.md](manager-panel-sync.md).
+See also [staff-auth-notes.md](staff-auth-notes.md), [rate-limits.md](rate-limits.md), and [manager-panel-sync.md](manager-panel-sync.md).

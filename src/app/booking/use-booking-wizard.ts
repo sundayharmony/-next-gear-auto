@@ -18,15 +18,35 @@ import {
 import { AGREEMENT_SIGNATURE_FIELDS } from "@/data/agreement-fields";
 import extras from "@/data/extras.json";
 import { logger } from "@/lib/utils/logger";
-import type { BookingExtra, Vehicle } from "@/lib/types";
+import type { BookingExtra } from "@/lib/types";
+import type { PublicVehicleJson } from "@/lib/vehicles/public-vehicle-fields";
 import type { BookingLocation } from "@/app/booking/booking-constants";
 
-export function useBookingWizard() {
+export interface UseBookingWizardOptions {
+  initialVehicles?: PublicVehicleJson[];
+  initialLocations?: BookingLocation[];
+}
+
+function applyDefaultLocations(
+  locations: BookingLocation[],
+  setPickup: (id: string) => void,
+  setReturn: (id: string) => void
+) {
+  const defaultLoc = locations.find((l) => l.is_default);
+  if (defaultLoc) {
+    setPickup(defaultLoc.id);
+    setReturn(defaultLoc.id);
+  }
+}
+
+export function useBookingWizard(options?: UseBookingWizardOptions) {
+  const { initialVehicles, initialLocations } = options ?? {};
+  const hasSsrLocations = Boolean(initialLocations && initialLocations.length > 0);
   const booking = useBooking();
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
 
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [vehicles, setVehicles] = useState<PublicVehicleJson[]>([]);
   const [vehiclesLoading, setVehiclesLoading] = useState(true);
   const [vehiclesError, setVehiclesError] = useState<string | null>(null);
 
@@ -47,7 +67,12 @@ export function useBookingWizard() {
   const [insuranceUploadError, setInsuranceUploadError] = useState("");
   const [showInsuranceWarning, setShowInsuranceWarning] = useState(false);
 
-  const { vehicles: hookVehicles, loading: hookLoading, error: hookError, retry: retryVehicles } = useVehicles();
+  const {
+    vehicles: hookVehicles,
+    loading: hookLoading,
+    error: hookError,
+    retry: retryVehicles,
+  } = useVehicles(true, { initialVehicles });
   const vehicleIds = useMemo(() => hookVehicles.map((v) => v.id), [hookVehicles]);
   const datesReady = Boolean(booking.pickupDate && booking.returnDate);
   const {
@@ -83,13 +108,26 @@ export function useBookingWizard() {
     }
   }, [searchParams, booking.selectedVehicle, preSelected, vehicles, vehiclesLoading, booking]);
 
-  const [locations, setLocationsData] = useState<BookingLocation[]>([]);
-  const [locationsLoading, setLocationsLoading] = useState(true);
+  const [locations, setLocationsData] = useState<BookingLocation[]>(
+    () => initialLocations ?? []
+  );
+  const [locationsLoading, setLocationsLoading] = useState(!hasSsrLocations);
   const [selectedPickupLocation, setSelectedPickupLocation] = useState("");
   const [selectedReturnLocation, setSelectedReturnLocation] = useState("");
   const [differentDropoff, setDifferentDropoff] = useState(false);
 
   useEffect(() => {
+    if (hasSsrLocations && initialLocations) {
+      setLocationsData(initialLocations);
+      applyDefaultLocations(
+        initialLocations,
+        setSelectedPickupLocation,
+        setSelectedReturnLocation
+      );
+      setLocationsLoading(false);
+      return;
+    }
+
     let cancelled = false;
     async function fetchLocations() {
       try {
@@ -98,11 +136,11 @@ export function useBookingWizard() {
         const data = await res.json();
         if (data.success && !cancelled) {
           setLocationsData(data.data);
-          const defaultLoc = data.data.find((l: BookingLocation) => l.is_default);
-          if (defaultLoc) {
-            setSelectedPickupLocation(defaultLoc.id);
-            setSelectedReturnLocation(defaultLoc.id);
-          }
+          applyDefaultLocations(
+            data.data,
+            setSelectedPickupLocation,
+            setSelectedReturnLocation
+          );
         } else if (!cancelled) {
           logger.error("Failed to fetch locations:", data.error);
         }
@@ -115,7 +153,7 @@ export function useBookingWizard() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [hasSsrLocations, initialLocations]);
 
   useEffect(() => {
     if (booking.pickupLocationId) setSelectedPickupLocation(booking.pickupLocationId);
