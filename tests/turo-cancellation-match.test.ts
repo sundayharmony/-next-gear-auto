@@ -15,8 +15,8 @@ test("reasonMatchesTuroGuest matches standard Turo reason lines", () => {
 test("pickTuroCancellationMatch prefers exact date match", () => {
   const picked = pickTuroCancellationMatch(
     [
-      { start_date: "2026-06-01", end_date: "2026-06-03", reason: "Turo: Mario" },
-      { start_date: "2026-06-02", end_date: "2026-06-04", reason: "Turo: Brent — $94.50" },
+      { id: "a", start_date: "2026-06-01", end_date: "2026-06-03", reason: "Turo: Mario" },
+      { id: "b", start_date: "2026-06-02", end_date: "2026-06-04", reason: "Turo: Brent — $94.50" },
     ],
     "2026-06-02",
     "2026-06-04",
@@ -27,7 +27,7 @@ test("pickTuroCancellationMatch prefers exact date match", () => {
 
 test("pickTuroCancellationMatch refuses overlapping wrong guest (Brent vs Mario)", () => {
   const picked = pickTuroCancellationMatch(
-    [{ start_date: "2026-06-01", end_date: "2026-06-03", reason: "Turo: Mario" }],
+    [{ id: "c", start_date: "2026-06-01", end_date: "2026-06-03", reason: "Turo: Mario" }],
     "2026-06-02",
     "2026-06-04",
     "Brent"
@@ -37,7 +37,7 @@ test("pickTuroCancellationMatch refuses overlapping wrong guest (Brent vs Mario)
 
 test("pickTuroCancellationMatch matches guest when only overlapping row exists", () => {
   const picked = pickTuroCancellationMatch(
-    [{ start_date: "2026-06-01", end_date: "2026-06-03", reason: "Turo: Mario" }],
+    [{ id: "d", start_date: "2026-06-01", end_date: "2026-06-03", reason: "Turo: Mario" }],
     "2026-06-01",
     "2026-06-03",
     "Mario"

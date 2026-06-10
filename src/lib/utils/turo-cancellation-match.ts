@@ -1,4 +1,5 @@
 export type TuroCancellationCandidate = {
+  id: string;
   start_date: string;
   end_date: string;
   reason: string | null;
