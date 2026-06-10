@@ -33,6 +33,7 @@ Open [http://localhost:3000](http://localhost:3000).
 | `npm run check:panel-sync` | Admin/manager shared UI contract |
 | `npm run check:staff-file-size` | Staff file line limits |
 | `npm run check:api-auth-matrix` | Admin-only API GET auth |
+| `npm run check:bundle-budget` | First Load JS vs [perf baselines](docs/perf-baselines.md) (run after `npm run build`) |
 
 ### Bundle analyzer
 
@@ -56,8 +57,9 @@ Baselines: see [docs/perf-baselines.md](docs/perf-baselines.md) (`/admin/booking
 | `STRIPE_SECRET_KEY` | Stripe payments |
 | `STRIPE_WEBHOOK_SECRET` | Stripe webhooks |
 | `FF_STAFF_MESSAGING_ENABLED` | Internal staff messaging |
+| `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | **Required in Vercel production** for distributed rate limits |
 
-See deployment docs in `docs/` for panel-specific flags (`manager_access_enabled`, `owner_portal_enabled`, messaging email/push).
+See [docs/vercel-upstash-setup.md](docs/vercel-upstash-setup.md) for Upstash on Vercel. Other deployment flags: `docs/` (`owner_portal_enabled`, messaging email/push).
 
 ## Documentation
 
@@ -68,6 +70,8 @@ See deployment docs in `docs/` for panel-specific flags (`manager_access_enabled
 - [Staff query guide](docs/staff-query-guide.md)
 - [Admin quality register](docs/admin-quality-issue-register.md)
 - [Performance baselines](docs/perf-baselines.md)
+- [Vercel + Upstash rate limits](docs/vercel-upstash-setup.md)
+- [Rate limits](docs/rate-limits.md)
 
 ## Panels
 

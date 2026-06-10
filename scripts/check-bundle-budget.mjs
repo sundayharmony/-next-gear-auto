@@ -1,7 +1,9 @@
 /**
  * Bundle budget check — compares measured First Load JS to docs/perf-baselines.md.
  * Reads Next.js 16+ route stats from .next/diagnostics/route-bundle-stats.json
- * (produced by `npm run build`). Warns at baseline +10%; always exits 0.
+ * (produced by `npm run build`). Fails CI at baseline +10%.
+ *
+ * Escape hatch for local dev without a build: BUNDLE_BUDGET_WARN_ONLY=true
  *
  * Run: node scripts/check-bundle-budget.mjs
  * Prerequisite: npm run build
@@ -13,6 +15,7 @@ const root = process.cwd();
 const docPath = path.join(root, "docs/perf-baselines.md");
 const statsPath = path.join(root, ".next/diagnostics/route-bundle-stats.json");
 const TOLERANCE = 1.1;
+const warnOnly = process.env.BUNDLE_BUDGET_WARN_ONLY === "true";
 
 /** @type {Map<string, number>} */
 const baselines = new Map();
@@ -71,7 +74,7 @@ loadBaselines();
 
 if (baselines.size === 0) {
   console.warn("check-bundle-budget: no route baselines parsed — add rows to perf-baselines.md.");
-  process.exit(0);
+  process.exit(warnOnly ? 0 : 1);
 }
 
 let measured = loadMeasuredSizes();
@@ -81,42 +84,53 @@ if (measured.size === 0 && process.env.BUILD_OUTPUT) {
 }
 
 if (measured.size === 0) {
-  console.warn(
-    "check-bundle-budget: no build stats found — run `npm run build` first, then re-run this check."
-  );
-  process.exit(0);
+  const msg =
+    "check-bundle-budget: no build stats found — run `npm run build` first, then re-run this check.";
+  if (warnOnly) {
+    console.warn(msg);
+    process.exit(0);
+  }
+  console.error(msg);
+  process.exit(1);
 }
 
-let warned = 0;
+let failures = 0;
 
-console.log("Bundle budget check (First Load JS kB, warn at baseline × 1.10):\n");
+const modeLabel = warnOnly ? "warn" : "FAIL";
+console.log(
+  `Bundle budget check (First Load JS kB, ${warnOnly ? "warn" : "fail"} at baseline × 1.10):\n`
+);
 
 for (const [route, baselineKb] of baselines) {
   const actualKb = measured.get(route);
   const thresholdKb = Math.round(baselineKb * TOLERANCE);
 
   if (actualKb == null) {
-    console.warn(` ⚠ ${route}: not found in build stats (baseline ${baselineKb} kB)`);
-    warned++;
+    const line = ` ✗ ${route}: not found in build stats (baseline ${baselineKb} kB)`;
+    console.error(line);
+    failures++;
     continue;
   }
 
-  const status = actualKb > thresholdKb ? "WARN" : "ok";
-  const line = ` ${status === "ok" ? "✓" : "⚠"} ${route}: ${actualKb} kB (baseline ${baselineKb} kB, warn > ${thresholdKb} kB)`;
-  if (status === "WARN") {
-    console.warn(line);
-    warned++;
+  const over = actualKb > thresholdKb;
+  const line = ` ${over ? "✗" : "✓"} ${route}: ${actualKb} kB (baseline ${baselineKb} kB, max ${thresholdKb} kB)`;
+  if (over) {
+    console.error(line);
+    failures++;
   } else {
     console.log(line);
   }
 }
 
-if (warned > 0) {
-  console.warn(
-    `\ncheck-bundle-budget: ${warned} route(s) at or above warn threshold — review before release (exits 0).`
-  );
-} else {
-  console.log("\ncheck-bundle-budget: all tracked routes within budget.");
+if (failures > 0) {
+  const summary = `check-bundle-budget: ${failures} route(s) exceed baseline × ${TOLERANCE}.`;
+  if (warnOnly) {
+    console.warn(`\n${summary} (BUNDLE_BUDGET_WARN_ONLY=true — exiting 0)`);
+    process.exit(0);
+  }
+  console.error(`\n${summary}`);
+  process.exit(1);
 }
 
+console.log("\ncheck-bundle-budget: all tracked routes within budget.");
 process.exit(0);

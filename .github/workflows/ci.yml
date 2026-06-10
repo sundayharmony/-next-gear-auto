@@ -19,7 +19,6 @@ jobs:
           node-version: "22"
           cache: "npm"
       - run: npm ci
-      - run: npm test
       - run: npm run lint
       - run: npm run typecheck
       - run: npm audit --audit-level=high
@@ -33,3 +32,4 @@ jobs:
           SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSJ9.placeholder
           STRIPE_SECRET_KEY: sk_test_placeholder_for_ci_build_only
           STRIPE_WEBHOOK_SECRET: whsec_placeholder_for_ci_build_only
+      - run: npm test

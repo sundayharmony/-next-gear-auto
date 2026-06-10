@@ -1,6 +1,13 @@
 # Rate limits
 
-Distributed rate limiting uses **Upstash Redis** when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set (Vercel production). Local development falls back to per-instance in-memory windows.
+Distributed rate limiting uses **Upstash Redis** when `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN` are set.
+
+| Environment | Expected backend |
+|-------------|------------------|
+| **Vercel production** | Upstash (required — see [vercel-upstash-setup.md](vercel-upstash-setup.md)) |
+| Preview / local dev | In-memory fallback when Upstash unset |
+
+Without Upstash in production, each serverless instance rate-limits independently (weaker protection). Startup logs a warning via [`src/instrumentation.ts`](../src/instrumentation.ts).
 
 Implementation: [`src/lib/security/rate-limit.ts`](../src/lib/security/rate-limit.ts).
 
