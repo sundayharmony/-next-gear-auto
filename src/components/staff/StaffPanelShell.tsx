@@ -34,6 +34,10 @@ export interface StaffPanelShellProps {
   pendingBookingsNotifications?: boolean;
   useSessionGuard?: boolean;
   messagesHref?: string;
+  /** When set, shows this count on `unreadHref` instead of polling staff messages. */
+  unreadCount?: number;
+  /** Nav href that receives the unread badge (defaults to messagesHref). */
+  unreadHref?: string;
 }
 
 function StaffPanelShellInner({
@@ -47,6 +51,8 @@ function StaffPanelShellInner({
   pendingBookingsNotifications = false,
   useSessionGuard = false,
   messagesHref,
+  unreadCount,
+  unreadHref,
 }: StaffPanelShellProps) {
   const pathname = usePathname();
   const router = useRouter();
@@ -55,9 +61,13 @@ function StaffPanelShellInner({
   const [loggingOut, setLoggingOut] = useState(false);
 
   const resolvedMessagesHref = messagesHref ?? `${panelConfig.panelBase}/messages`;
-  const onMessagesRoute = pathname.startsWith(resolvedMessagesHref);
+  const resolvedUnreadHref = unreadHref ?? resolvedMessagesHref;
+  const onUnreadRoute = pathname.startsWith(resolvedUnreadHref);
   const hasAccess = isAuthenticated && userHasRole(user, requiredRole);
-  const unreadMessages = useStaffMessageUnreadCount(hasAccess && !authLoading && !onMessagesRoute);
+  const staffUnreadMessages = useStaffMessageUnreadCount(
+    unreadCount === undefined && hasAccess && !authLoading && !onUnreadRoute
+  );
+  const badgeUnreadCount = unreadCount ?? staffUnreadMessages;
 
   useStaffSessionGuard(useSessionGuard && hasAccess && !authLoading);
 
@@ -162,6 +172,7 @@ function StaffPanelShellInner({
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={isActive(item.href) ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors",
                   isActive(item.href)
@@ -173,9 +184,9 @@ function StaffPanelShellInner({
               >
                 <item.icon className="h-4.5 w-4.5 shrink-0" />
                 {item.label}
-                {item.href === resolvedMessagesHref && unreadMessages > 0 && (
+                {item.href === resolvedUnreadHref && badgeUnreadCount > 0 && (
                   <span className="ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-purple-500 px-1.5 text-[10px] font-bold text-white">
-                    {unreadMessages}
+                    {badgeUnreadCount}
                   </span>
                 )}
                 {isActive(item.href) && <ChevronRight className="h-3.5 w-3.5 ml-auto" />}

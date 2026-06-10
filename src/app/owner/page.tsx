@@ -61,7 +61,7 @@ export default function OwnerDashboardPage() {
       <AdminPageBody>
         {loading && !metrics ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading dashboard" />
           </div>
         ) : (
           <>

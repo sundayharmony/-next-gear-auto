@@ -3,6 +3,7 @@
 import React, { Suspense } from "react";
 import { SharedBookingsPage } from "@/app/admin/bookings/shared-bookings-page";
 import { managerBookingsConfig } from "@/app/admin/bookings/config";
+import { managerPanelConfig } from "@/lib/admin/staff-panel-config";
 
 export default function ManagerBookingsPage() {
   return (
@@ -13,7 +14,14 @@ export default function ManagerBookingsPage() {
         </div>
       }
     >
-      <SharedBookingsPage config={managerBookingsConfig} />
+      <SharedBookingsPage
+        config={{
+          ...managerBookingsConfig,
+          homeHref: managerPanelConfig.panelBase,
+          customerDetailsBasePath: `${managerPanelConfig.panelBase}/customers`,
+          ticketsPagePath: `${managerPanelConfig.panelBase}/tickets`,
+        }}
+      />
     </Suspense>
   );
 }

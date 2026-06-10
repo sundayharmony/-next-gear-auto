@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { tokenHasOwnerAccess } from "@/lib/auth/roles";
+import {
+  CUSTOMER_CAPABILITIES_SELECT,
+  hasOwnerPortalAccess,
+} from "@/lib/auth/customer-capabilities";
 
 export type OwnerAuthResult =
   | { authorized: true; ownerId: string; email: string }
@@ -24,6 +28,40 @@ export async function verifyOwner(req: NextRequest): Promise<OwnerAuthResult> {
     };
   }
   return { authorized: true, ownerId: tokenPayload.sub, email: tokenPayload.email };
+}
+
+/** Owner auth with DB check that owner portal access has not been revoked. */
+export async function verifyOwnerWithPortalAccess(req: NextRequest): Promise<OwnerAuthResult> {
+  const auth = await verifyOwner(req);
+  if (!auth.authorized) return auth;
+
+  try {
+    const supabase = getServiceSupabase();
+    const { data: customer } = await supabase
+      .from("customers")
+      .select(CUSTOMER_CAPABILITIES_SELECT)
+      .eq("id", auth.ownerId)
+      .maybeSingle();
+
+    if (!hasOwnerPortalAccess(customer)) {
+      return {
+        authorized: false,
+        response: NextResponse.json(
+          { success: false, message: "Owner portal access has been revoked." },
+          { status: 403 }
+        ),
+      };
+    }
+    return auth;
+  } catch {
+    return {
+      authorized: false,
+      response: NextResponse.json(
+        { success: false, message: "Authentication failed" },
+        { status: 500 }
+      ),
+    };
+  }
 }
 
 /**

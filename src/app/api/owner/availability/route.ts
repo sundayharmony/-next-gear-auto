@@ -7,7 +7,7 @@ import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { notifyOwner } from "@/lib/owner/notifications";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
-import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
+import { filterActiveTuroTrips, TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -54,6 +54,22 @@ export async function GET(req: NextRequest) {
       )
     );
 
+    const turoBookedRanges = filterActiveTuroTrips(blocked || []).map((b) => ({
+      id: `turo:${b.id}`,
+      vehicleId: b.vehicle_id,
+      startDate: b.start_date,
+      endDate: b.end_date,
+      status: "turo",
+    }));
+
+    const bookingRanges = visibleBookings.map((b) => ({
+      id: b.id,
+      vehicleId: b.vehicle_id,
+      startDate: b.pickup_date,
+      endDate: b.return_date,
+      status: b.status,
+    }));
+
     return NextResponse.json(
       {
         success: true,
@@ -69,13 +85,7 @@ export async function GET(req: NextRequest) {
             // Only owner-created blocks (source 'owner' + owner_id match) are removable here.
             removable: b.source === "owner" && b.owner_id === auth.ownerId,
           })),
-          bookedRanges: visibleBookings.map((b) => ({
-            id: b.id,
-            vehicleId: b.vehicle_id,
-            startDate: b.pickup_date,
-            endDate: b.return_date,
-            status: b.status,
-          })),
+          bookedRanges: [...bookingRanges, ...turoBookedRanges],
         },
       },
       { headers: { "Cache-Control": "no-store" } }

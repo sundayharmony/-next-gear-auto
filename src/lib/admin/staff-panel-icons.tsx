@@ -18,6 +18,7 @@ import {
   ClipboardList,
   Megaphone,
   FileText,
+  Bell,
 } from "lucide-react";
 import { Instagram } from "@/components/icons/instagram";
 import type { PanelIconKey } from "@/lib/admin/panel-navigation";
@@ -44,4 +45,5 @@ export const staffPanelIconMap: Record<PanelIconKey, LucideIcon> = {
   clipboard: ClipboardList,
   megaphone: Megaphone,
   fileText: FileText,
+  bell: Bell,
 };

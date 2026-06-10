@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useState } from "react";
 import { useStaffQuery } from "@/lib/hooks/use-staff-query";
 
 interface PendingBookingRow {
@@ -30,7 +30,7 @@ function normalizePendingBookings(data: PendingBookingRow[]): PendingBookingsPay
 
 /** Admin pending-booking notifications via react-query polling. */
 export function useStaffNotifications(enabled: boolean) {
-  const jitter = useMemo(() => 45_000 + Math.random() * 30_000, []);
+  const [jitter] = useState(() => 45_000 + Math.random() * 30_000);
 
   const query = useStaffQuery<PendingBookingRow[]>(
     ["staff", "pending-bookings"],

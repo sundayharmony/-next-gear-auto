@@ -62,6 +62,7 @@ import {
   type StaffPanelConfig,
 } from "@/lib/admin/staff-panel-config";
 import { useCustomersData, type CustomerRow } from "./use-customers-data";
+import { CustomerListPanel } from "./customer-list-panel";
 import { useAuth } from "@/lib/context/auth-context";
 import { userHasRole } from "@/lib/auth/user-roles";
 
@@ -1802,139 +1803,24 @@ export default function AdminCustomersPage({
       <AdminPageHeader
         title="Customers"
         subtitle={`${customers.length} total customers`}
-        actions={
-          <Button
-            onClick={() => setShowAddCustomerModal(true)}
-            className="bg-white text-purple-900 hover:bg-purple-50"
-          >
-            <Plus className="h-4 w-4 mr-2" /> Add Customer
-          </Button>
-        }
       />
 
-      <AdminPageBody>
-        {/* Search */}
-        <div className="flex gap-2 mb-4">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-            <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              placeholder="Search by name or email..."
-              className="pl-9 pr-9"
-              aria-label="Search customers by name or email"
-            />
-            {searchInput && (
-              <button
-                onClick={() => { setSearchInput(""); fetchCustomers(); }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                aria-label="Clear search"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-          <Button onClick={handleSearch} variant="outline">Search</Button>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => { setSearchInput(""); fetchCustomers(); }}
-            disabled={loading}
-          >
-            <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
-          </Button>
-        </div>
-
-        {/* Customer Cards Grid */}
-        {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
-            <p className="mt-4 text-gray-500">Loading customers...</p>
-          </div>
-        ) : customers.length === 0 ? (
-          <AdminEmptyState
-            title={searchInput ? "No customers match your search" : "No customers yet"}
-            description={searchInput ? "Try a different name or email" : "Customers will appear here after their first booking"}
-          />
-        ) : (
-          <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {paginateArray(customers).map((c) => (
-              <Card
-                key={c.id}
-                className="rounded-xl border border-gray-200/80 shadow-sm hover:border-purple-300 hover:shadow-md transition-all"
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div
-                      className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
-                      onClick={() => openCustomer(c)}
-                    >
-                      {c.profilePictureUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={c.profilePictureUrl}
-                          alt={c.name}
-                          className="h-10 w-10 rounded-full object-cover border border-purple-200 flex-shrink-0"
-                        />
-                      ) : (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-purple-100 text-purple-700 font-bold text-sm flex-shrink-0">
-                          {c.name?.charAt(0)?.toUpperCase() || "?"}
-                        </div>
-                      )}
-                      <div className="min-w-0">
-                        <p className="font-semibold text-gray-900 truncate" title={c.name}>{c.name}</p>
-                        <p className="text-xs text-gray-500 truncate" title={c.email}>{c.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-1 flex-shrink-0">
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteFromList(c);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
-                        aria-label={`Delete customer ${c.name}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                      <ChevronRight className="h-4 w-4 text-gray-400 mt-1" />
-                    </div>
-                  </div>
-
-                  <div
-                    className="flex items-center justify-between mt-3 pt-3 border-t border-gray-100 cursor-pointer"
-                    onClick={() => openCustomer(c)}
-                  >
-                    <div className="flex items-center gap-1 text-xs text-gray-500">
-                      <Calendar className="h-3 w-3" />
-                      <span className="font-semibold text-black">{formatDate(c.createdAt)}</span>
-                    </div>
-                    {c.phone && (
-                      <span className="text-xs text-gray-400">{c.phone}</span>
-                    )}
-                    {(c.role === "admin" || c.role === "manager") && (
-                      <Badge className="bg-purple-100 text-purple-700 text-xs">{c.role === "admin" ? "Admin" : "Manager"}</Badge>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-          <Pagination
-            currentPage={currentPage}
-            totalItems={customers.length}
-            pageSize={pageSize}
-            onPageChange={handlePageChange}
-            onPageSizeChange={handlePageSizeChange}
-            pageSizeOptions={[12, 24, 48, 96]}
-          />
-          </>
-        )}
-      </AdminPageBody>
+      <CustomerListPanel
+        customers={customers}
+        paginatedCustomers={paginateArray(customers)}
+        loading={loading}
+        searchInput={searchInput}
+        onSearchInputChange={setSearchInput}
+        onSearch={handleSearch}
+        onRefresh={() => { setSearchInput(""); fetchCustomers(); }}
+        onOpenCustomer={openCustomer}
+        onDeleteCustomer={handleDeleteFromList}
+        onAddCustomer={() => setShowAddCustomerModal(true)}
+        currentPage={currentPage}
+        pageSize={pageSize}
+        onPageChange={handlePageChange}
+        onPageSizeChange={handlePageSizeChange}
+      />
 
       {showAddCustomerModal && <AddCustomerModal />}
       {cropModal}

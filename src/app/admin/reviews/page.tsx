@@ -11,6 +11,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
+import { adminPanelConfig, type StaffPanelConfig } from "@/lib/admin/staff-panel-config";
 
 interface Review {
   id: string;
@@ -25,7 +26,11 @@ interface Review {
 
 const STATUS_OPTIONS = ["all", "pending", "approved", "rejected"];
 
-export default function AdminReviewsPage() {
+export default function AdminReviewsPage({
+  panelConfig: _panelConfig = adminPanelConfig,
+}: {
+  panelConfig?: StaffPanelConfig;
+}) {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");

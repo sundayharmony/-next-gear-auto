@@ -4,6 +4,10 @@ import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { loginLimiter, getClientIp } from "@/lib/security/rate-limit";
 import { getTokenStaffRole, isAdminRole, tokenHasStaffAccess } from "@/lib/auth/roles";
 import { isValidEmailFormat } from "@/lib/utils/validation";
+import {
+  fetchCustomerManagerAccessRow,
+  isManagerPanelAccessEnabled,
+} from "@/lib/auth/manager-access";
 
 /**
  * Verify the request comes from an authenticated admin.
@@ -123,4 +127,39 @@ export async function verifyAdminOrManager(
     };
   }
   return { authorized: true, userId: tokenPayload.sub, role: staffRole };
+}
+
+/** Staff auth with DB check that manager panel access has not been revoked. */
+export async function verifyManagerWithPanelAccess(
+  req: NextRequest
+): Promise<
+  | { authorized: true; userId: string; role: "admin" | "manager" }
+  | { authorized: false; response: NextResponse }
+> {
+  const auth = await verifyAdminOrManager(req);
+  if (!auth.authorized) return auth;
+  if (auth.role === "admin") return auth;
+
+  try {
+    const supabase = getServiceSupabase();
+    const row = await fetchCustomerManagerAccessRow(supabase, auth.userId);
+    if (!isManagerPanelAccessEnabled(row)) {
+      return {
+        authorized: false,
+        response: NextResponse.json(
+          { success: false, message: "Manager access has been revoked." },
+          { status: 403 }
+        ),
+      };
+    }
+    return auth;
+  } catch {
+    return {
+      authorized: false,
+      response: NextResponse.json(
+        { success: false, message: "Authentication failed" },
+        { status: 500 }
+      ),
+    };
+  }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
@@ -10,29 +10,14 @@ import {
   AdminCard,
 } from "@/components/admin/admin-shell";
 import { Button } from "@/components/ui/button";
-import { useOwnerApi } from "@/lib/owner/use-owner-api";
-import CreateBookingForm from "@/app/admin/bookings/components/CreateBookingForm";
-import type { Vehicle } from "@/app/admin/bookings/types";
-import type { OwnerVehicle } from "@/lib/types";
-
-function toFormVehicles(vehicles: OwnerVehicle[]): Vehicle[] {
-  return vehicles.map((v) => ({
-    id: v.id,
-    year: v.year,
-    make: v.make,
-    model: v.model,
-    dailyRate: v.dailyRate,
-    isAvailable: v.isAvailable,
-  }));
-}
+import { useOwnerData } from "@/lib/owner/owner-data-context";
+import { OwnerCreateBookingForm } from "@/components/owner/OwnerCreateBookingForm";
 
 export default function OwnerCreateBookingPage() {
   const router = useRouter();
-  const { data: vehicles, loading, error, reload } = useOwnerApi<OwnerVehicle[]>("/api/owner/vehicles");
-  const [toastError, setToastError] = useState<string | null>(null);
-  const [toastSuccess, setToastSuccess] = useState<string | null>(null);
-
-  const formVehicles = useMemo(() => toFormVehicles(vehicles || []), [vehicles]);
+  const { vehicles, loading, error, reload } = useOwnerData();
+  const [toastError, setToastError] = React.useState<string | null>(null);
+  const [toastSuccess, setToastSuccess] = React.useState<string | null>(null);
 
   return (
     <>
@@ -60,26 +45,23 @@ export default function OwnerCreateBookingPage() {
           </div>
         )}
 
-        {loading && !vehicles ? (
+        {loading && vehicles.length === 0 ? (
           <div className="flex justify-center py-16">
-            <Loader2 className="h-8 w-8 animate-spin text-purple-600" />
+            <Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading vehicles" />
           </div>
         ) : error ? (
           <AdminCard>
             <p className="py-6 text-center text-sm text-red-600">{error}</p>
           </AdminCard>
-        ) : formVehicles.length === 0 ? (
+        ) : vehicles.length === 0 ? (
           <AdminCard>
             <p className="py-6 text-center text-sm text-gray-500">
               No vehicles are assigned to your owner account yet. Contact admin to assign vehicles before creating bookings.
             </p>
           </AdminCard>
         ) : (
-          <CreateBookingForm
-            variant="owner"
-            createEndpoint="/api/owner/bookings"
-            vehicles={formVehicles}
-            allCustomers={[]}
+          <OwnerCreateBookingForm
+            vehicles={vehicles}
             onClose={() => router.push("/owner/calendar")}
             onCreated={() => {
               reload();

@@ -2,9 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import dynamic from "next/dynamic";
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ArrowLeft, Check } from "lucide-react";
+import { Check, Info } from "lucide-react";
 import { AdminPageHeader, AdminPageBody } from "@/components/admin/admin-shell";
 import { AdminStatusBanner } from "@/components/admin/ui-feedback";
 import { Pagination, usePagination } from "@/components/ui/pagination";
@@ -28,7 +27,9 @@ const BookingDetailPanel = dynamic(
 );
 import { InPersonAgreementSign } from "./components/InPersonAgreementSign";
 import { TuroTripDetailPanel } from "./components/TuroTripDetailPanel";
-import CreateBookingForm from "./components/CreateBookingForm";
+const CreateBookingForm = dynamic(() => import("./components/CreateBookingForm"), {
+  ssr: false,
+});
 import type { BookingRow } from "./types";
 import type { BookingsPageConfig } from "./config";
 
@@ -300,21 +301,26 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
 
   return (
     <>
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <Link href={config.homeHref} className="text-purple-300 hover:text-white transition-colors">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">{config.title}</h1>
-              <p className="mt-1 text-sm sm:text-base page-hero-subtitle">{config.subtitle}</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <AdminPageHeader
+        title={config.title}
+        subtitle={config.subtitle}
+        backHref={config.homeHref}
+        backLabel="Back to dashboard"
+      />
 
       <AdminPageBody>
+        {config.mode === "manager" && (
+          <div
+            className="mb-4 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex gap-2"
+            title="Manager bookings show all fleet trips; Analytics is scoped to manager-origin bookings only."
+          >
+            <Info className="h-5 w-5 shrink-0 text-blue-600" aria-hidden />
+            <p>
+              This list shows <strong>all active and upcoming fleet trips</strong>, including Turo and admin-created bookings.
+              Use it for day-to-day trip management. <strong>Analytics</strong> on the manager dashboard counts only bookings you created.
+            </p>
+          </div>
+        )}
         {success ? (
           <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} />
         ) : null}

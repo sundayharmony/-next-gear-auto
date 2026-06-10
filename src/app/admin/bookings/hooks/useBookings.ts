@@ -1,13 +1,21 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
-import { useStaffQuery } from "@/lib/hooks/use-staff-query";
+import { staffKeys, useStaffQuery } from "@/lib/hooks/use-staff-query";
 import { logger } from "@/lib/utils/logger";
 import { getDisplayReturnDate } from "@/lib/utils/recurring-booking";
 import type { BookingRow, Vehicle, CustomerOption, SortField, SortOrder } from "../types";
 import type { BookingsPageConfig } from "../config";
+
+interface CustomerApiRow {
+  id: string;
+  name: string;
+  email: string;
+  phone?: string;
+}
 
 interface UseBookingsReturn {
   bookings: BookingRow[];
@@ -40,15 +48,7 @@ interface UseBookingsReturn {
 }
 
 export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
-  const [bookings, setBookings] = useState<BookingRow[]>([]);
-  const [allCustomers, setAllCustomers] = useState<CustomerOption[]>([]);
-  const vehiclesQuery = useStaffQuery<Vehicle[]>(
-    ["staff", "vehicles", config.vehiclesEndpoint],
-    config.vehiclesEndpoint,
-    { staleTime: 60_000 }
-  );
-  const vehicles = vehiclesQuery.data ?? [];
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const { error, setError, success, setSuccess } = useAutoToast();
   const [statusFilter, setStatusFilter] = useState("all");
   const [vehicleFilter, setVehicleFilter] = useState("all");
@@ -57,91 +57,92 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
   const [updating, setUpdating] = useState<string | null>(null);
 
-  // Track abort controller for fetch cancellation
-  const abortControllerRef = React.useRef<AbortController | null>(null);
+  const bookingFilters = useMemo(
+    () => ({
+      endpoint: config.bookingsEndpoint,
+      status: statusFilter,
+      search: searchQuery.trim(),
+      sort: sortField,
+      order: sortOrder,
+      mode: config.mode,
+    }),
+    [config.bookingsEndpoint, config.mode, statusFilter, searchQuery, sortField, sortOrder]
+  );
 
-  const fetchBookings = useCallback(async () => {
-    // Abort previous request if it's still pending
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-    }
+  const bookingsUrl = useMemo(() => {
+    const params = new URLSearchParams();
+    if (statusFilter !== "all") params.set("status", statusFilter);
+    if (searchQuery.trim()) params.set("search", searchQuery.trim());
+    params.set("sort", sortField);
+    params.set("order", sortOrder);
+    params.set("includeTuro", "true");
+    return `${config.bookingsEndpoint}${params.toString() ? `?${params}` : ""}`;
+  }, [config.bookingsEndpoint, statusFilter, searchQuery, sortField, sortOrder]);
 
-    // Create new abort controller for this fetch
-    abortControllerRef.current = new AbortController();
-    setLoading(true);
-    try {
-      const params = new URLSearchParams();
-      if (statusFilter !== "all") params.set("status", statusFilter);
-      if (searchQuery.trim()) params.set("search", searchQuery.trim());
-      params.set("sort", sortField);
-      params.set("order", sortOrder);
-      params.set("includeTuro", "true");
-
-      const url = `${config.bookingsEndpoint}${params.toString() ? `?${params}` : ""}`;
-      const res = await adminFetch(url, { signal: abortControllerRef.current?.signal });
-      if (!res.ok) throw new Error(`Failed to fetch bookings: ${res.status}`);
-      const data = await res.json();
-      if (data.success) {
-        let results = data.data || [];
-        // Admin list hides cancelled rows in default view. Manager feed already excludes them server-side.
+  const bookingsQuery = useStaffQuery<BookingRow[]>(
+    staffKeys.bookings(bookingFilters),
+    bookingsUrl,
+    {
+      queryFn: async () => {
+        const res = await adminFetch(bookingsUrl);
+        if (!res.ok) throw new Error(`Failed to fetch bookings: ${res.status}`);
+        const data = await res.json();
+        if (!data.success) throw new Error(data.message || "Failed to fetch bookings");
+        let results: BookingRow[] = data.data || [];
         if (statusFilter === "all" && config.mode === "admin") {
-          results = results.filter((b: BookingRow) => b.status !== "cancelled");
+          results = results.filter((b) => b.status !== "cancelled");
         }
-        // Client-side vehicle filter
-        if (vehicleFilter && vehicleFilter !== "all") {
-          results = results.filter((b: BookingRow) => b.vehicleName === vehicleFilter);
-        }
-        setBookings(results);
-      }
-    } catch (err) {
-      // Ignore abort errors
-      if (err instanceof Error && err.name === "AbortError") return;
-      logger.error("Failed to fetch bookings:", err);
+        return results;
+      },
+      placeholderData: (prev) => prev,
     }
-    setLoading(false);
-  }, [config.bookingsEndpoint, config.mode, statusFilter, vehicleFilter, searchQuery, sortField, sortOrder]);
+  );
 
-  const mergeBookingInList = useCallback((updated: BookingRow) => {
-    setBookings((prev) => {
-      const i = prev.findIndex((b) => b.id === updated.id);
-      if (i === -1) return prev;
-      const next = [...prev];
-      next[i] = { ...prev[i], ...updated };
-      return next;
-    });
-  }, []);
-
-  const fetchCustomers = useCallback(async () => {
-    try {
-      const res = await adminFetch(config.customersEndpoint);
-      if (!res.ok) throw new Error("Failed to fetch");
-      const data = await res.json();
-      if (data.success) {
-        setAllCustomers(
-          (data.data || []).map((c: { id: string; name: string; email: string; phone?: string }) => ({
-            id: c.id,
-            name: c.name,
-            email: c.email,
-            phone: c.phone || "",
-          }))
-        );
-      }
-    } catch (err) {
-      logger.error("Failed to fetch customers:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch customers");
+  const bookings = useMemo(() => {
+    let results = bookingsQuery.data ?? [];
+    if (vehicleFilter && vehicleFilter !== "all") {
+      results = results.filter((b) => b.vehicleName === vehicleFilter);
     }
-  }, [config.customersEndpoint, setError]);
+    return results;
+  }, [bookingsQuery.data, vehicleFilter]);
 
-  // Fetch bookings when filters change
+  const vehiclesQuery = useStaffQuery<Vehicle[]>(
+    staffKeys.vehicles(config.vehiclesEndpoint),
+    config.vehiclesEndpoint,
+    { staleTime: 60_000 }
+  );
+  const vehicles = vehiclesQuery.data ?? [];
+
+  const customersQuery = useStaffQuery<CustomerApiRow[]>(
+    staffKeys.customers(),
+    config.customersEndpoint,
+    { staleTime: 60_000 }
+  );
+
+  const allCustomers = useMemo(
+    () =>
+      (customersQuery.data ?? []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phone || "",
+      })),
+    [customersQuery.data]
+  );
+
+  const loading = bookingsQuery.isFetching;
+
   useEffect(() => {
-    fetchBookings();
-    return () => {
-      // Cleanup: abort any pending fetch on unmount or dependency change
-      if (abortControllerRef.current) {
-        abortControllerRef.current.abort();
-      }
-    };
-  }, [fetchBookings]);
+    if (bookingsQuery.error) {
+      setError(bookingsQuery.error.message);
+    }
+  }, [bookingsQuery.error, setError]);
+
+  useEffect(() => {
+    if (customersQuery.error) {
+      setError(customersQuery.error.message);
+    }
+  }, [customersQuery.error, setError]);
 
   useEffect(() => {
     if (vehiclesQuery.error) {
@@ -149,114 +150,136 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
     }
   }, [vehiclesQuery.error, setError]);
 
-  // Fetch customers once on mount
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+  const fetchBookings = useCallback(async () => {
+    await bookingsQuery.refetch();
+  }, [bookingsQuery]);
 
-  const setSort = useCallback((field: SortField) => {
-    if (sortField === field) {
-      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
-    } else {
-      setSortField(field);
-      setSortOrder("desc");
-    }
-  }, [sortField]);
-
-  const updateStatus = useCallback(async (bookingId: string, newStatus: string): Promise<boolean> => {
-    if (bookingId.startsWith("turo:")) {
-      setError("Turo trips cannot be updated from the bookings list.");
-      return false;
-    }
-    const booking = bookings.find((b) => b.id === bookingId);
-    if (config.mode === "manager" && booking && booking.canManage === false) {
-      setError("You can only manage bookings you created.");
-      return false;
-    }
-
-    setUpdating(bookingId);
-    try {
-      const res = await adminFetch("/api/bookings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId, status: newStatus }),
+  const mergeBookingInList = useCallback(
+    (updated: BookingRow) => {
+      queryClient.setQueryData<BookingRow[]>(staffKeys.bookings(bookingFilters), (prev) => {
+        if (!prev) return prev;
+        const i = prev.findIndex((b) => b.id === updated.id);
+        if (i === -1) return prev;
+        const next = [...prev];
+        next[i] = { ...prev[i], ...updated };
+        return next;
       });
-      if (!res.ok) throw new Error(`Failed: ${res.status}`);
-      const data = await res.json();
-      if (data.success) {
-        if (newStatus === "cancelled") {
-          setBookings((prev) => prev.filter((b) => b.id !== bookingId));
-        } else {
-          setBookings((prev) =>
-            prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b))
-          );
-        }
-        setSuccess(`Booking ${newStatus} successfully!`);
-        return true;
+    },
+    [queryClient, bookingFilters]
+  );
+
+  const setSort = useCallback(
+    (field: SortField) => {
+      if (sortField === field) {
+        setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
       } else {
-        setError(data.message || `Failed to update booking to "${newStatus}"`);
+        setSortField(field);
+        setSortOrder("desc");
+      }
+    },
+    [sortField]
+  );
+
+  const updateStatus = useCallback(
+    async (bookingId: string, newStatus: string): Promise<boolean> => {
+      if (bookingId.startsWith("turo:")) {
+        setError("Turo trips cannot be updated from the bookings list.");
         return false;
       }
-    } catch {
-      setError("Network error — could not update booking status");
-      return false;
-    } finally {
-      setUpdating(null);
-    }
-  }, [bookings, config.mode, setSuccess, setError]);
+      const booking = bookings.find((b) => b.id === bookingId);
+      if (config.mode === "manager" && booking && booking.canManage === false) {
+        setError("You can only manage bookings you created.");
+        return false;
+      }
 
-  const bulkUpdateStatus = useCallback(async (ids: Set<string>, newStatus: string): Promise<number> => {
-    const targetIds = config.mode === "manager"
-      ? Array.from(ids).filter((id) => {
-          if (id.startsWith("turo:")) return false;
-          const booking = bookings.find((b) => b.id === id);
-          return booking?.canManage !== false;
-        })
-      : Array.from(ids).filter((id) => !id.startsWith("turo:"));
-
-    if (targetIds.length === 0) {
-      setError("No selectable bookings can be updated.");
-      return 0;
-    }
-
-    const promises = targetIds.map((id) =>
-      adminFetch("/api/bookings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ bookingId: id, status: newStatus }),
-      }).then(async (res) => {
+      setUpdating(bookingId);
+      try {
+        const res = await adminFetch("/api/bookings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId, status: newStatus }),
+        });
         if (!res.ok) throw new Error(`Failed: ${res.status}`);
         const data = await res.json();
-        return { id, success: data.success };
-      }).catch(() => ({ id, success: false }))
-    );
-
-    const results = await Promise.allSettled(promises);
-    let successCount = 0;
-    const failedIds: string[] = [];
-
-    results.forEach((result) => {
-      if (result.status === "fulfilled" && result.value.success) {
-        successCount++;
-      } else if (result.status === "fulfilled") {
-        failedIds.push(result.value.id);
-      } else {
-        failedIds.push("unknown");
+        if (data.success) {
+          queryClient.setQueryData<BookingRow[]>(staffKeys.bookings(bookingFilters), (prev) => {
+            if (!prev) return prev;
+            if (newStatus === "cancelled") {
+              return prev.filter((b) => b.id !== bookingId);
+            }
+            return prev.map((b) => (b.id === bookingId ? { ...b, status: newStatus } : b));
+          });
+          setSuccess(`Booking ${newStatus} successfully!`);
+          return true;
+        }
+        setError(data.message || `Failed to update booking to "${newStatus}"`);
+        return false;
+      } catch {
+        setError("Network error — could not update booking status");
+        return false;
+      } finally {
+        setUpdating(null);
       }
-    });
+    },
+    [bookings, bookingFilters, config.mode, queryClient, setSuccess, setError]
+  );
 
-    if (failedIds.length > 0) {
-      setError(`Failed to update ${failedIds.length} booking${failedIds.length > 1 ? "s" : ""}`);
-    }
-    if (successCount > 0) {
-      setSuccess(`${successCount} booking${successCount > 1 ? "s" : ""} updated to ${newStatus}`);
-      fetchBookings();
-    }
-    return successCount;
-  }, [bookings, config.mode, fetchBookings, setError, setSuccess]);
+  const bulkUpdateStatus = useCallback(
+    async (ids: Set<string>, newStatus: string): Promise<number> => {
+      const targetIds =
+        config.mode === "manager"
+          ? Array.from(ids).filter((id) => {
+              if (id.startsWith("turo:")) return false;
+              const booking = bookings.find((b) => b.id === id);
+              return booking?.canManage !== false;
+            })
+          : Array.from(ids).filter((id) => !id.startsWith("turo:"));
 
-  // Computed: today's pickups, returns, overdue
-  // Note: Don't memoize 'today' as it causes stale values past midnight
+      if (targetIds.length === 0) {
+        setError("No selectable bookings can be updated.");
+        return 0;
+      }
+
+      const promises = targetIds.map((id) =>
+        adminFetch("/api/bookings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ bookingId: id, status: newStatus }),
+        })
+          .then(async (res) => {
+            if (!res.ok) throw new Error(`Failed: ${res.status}`);
+            const data = await res.json();
+            return { id, success: data.success };
+          })
+          .catch(() => ({ id, success: false }))
+      );
+
+      const results = await Promise.allSettled(promises);
+      let successCount = 0;
+      const failedIds: string[] = [];
+
+      results.forEach((result) => {
+        if (result.status === "fulfilled" && result.value.success) {
+          successCount++;
+        } else if (result.status === "fulfilled") {
+          failedIds.push(result.value.id);
+        } else {
+          failedIds.push("unknown");
+        }
+      });
+
+      if (failedIds.length > 0) {
+        setError(`Failed to update ${failedIds.length} booking${failedIds.length > 1 ? "s" : ""}`);
+      }
+      if (successCount > 0) {
+        setSuccess(`${successCount} booking${successCount > 1 ? "s" : ""} updated to ${newStatus}`);
+        void queryClient.invalidateQueries({ queryKey: staffKeys.bookings() });
+      }
+      return successCount;
+    },
+    [bookings, config.mode, queryClient, setError, setSuccess]
+  );
+
   const isWebsiteBooking = (b: BookingRow) =>
     b.occupancy_kind !== "turo" && !b.id.startsWith("turo:");
 
@@ -293,13 +316,31 @@ export function useBookings(config: BookingsPageConfig): UseBookingsReturn {
   );
 
   return {
-    bookings, vehicles, allCustomers, loading,
-    error, success, setError, setSuccess,
-    statusFilter, setStatusFilter,
-    vehicleFilter, setVehicleFilter,
-    searchQuery, setSearchQuery,
-    sortField, sortOrder, setSort,
-    fetchBookings, mergeBookingInList, updateStatus, bulkUpdateStatus, updating,
-    todayPickups, todayReturns, overdueBookings, paymentDueBookings,
+    bookings,
+    vehicles,
+    allCustomers,
+    loading,
+    error,
+    success,
+    setError,
+    setSuccess,
+    statusFilter,
+    setStatusFilter,
+    vehicleFilter,
+    setVehicleFilter,
+    searchQuery,
+    setSearchQuery,
+    sortField,
+    sortOrder,
+    setSort,
+    fetchBookings,
+    mergeBookingInList,
+    updateStatus,
+    bulkUpdateStatus,
+    updating,
+    todayPickups,
+    todayReturns,
+    overdueBookings,
+    paymentDueBookings,
   };
 }

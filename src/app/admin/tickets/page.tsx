@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import type { VehicleListItem, BookingDbRow } from "@/lib/types";
@@ -31,54 +30,26 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AdminPageHeader } from "@/components/admin/admin-shell";
 import { PageContainer } from "@/components/layout/page-container";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
+import { adminPanelConfig, type StaffPanelConfig } from "@/lib/admin/staff-panel-config";
 
-// ─── Types ────────────────────────────────────────────────────
-interface TicketRecord {
-  id: string;
-  bookingId: string | null;
-  customerId: string | null;
-  vehicleId: string | null;
-  licensePlate: string;
-  ticketType: "traffic" | "parking";
-  violationDate: string;
-  state: string;
-  municipality: string;
-  courtId: string;
-  prefix: string;
-  ticketNumber: string;
-  amountDue: number;
-  status: "unpaid" | "paid" | "disputed" | "dismissed";
-  notes: string;
-  createdAt: string;
-  vehicleName: string;
-  customerName: string;
-  bookingDates: string;
-}
+import { STATUS_COLORS, TYPE_COLORS, type TicketRecord } from "./tickets-shared";
 
 type Vehicle = VehicleListItem;
 type Booking = BookingDbRow;
 
-// ─── Constants ────────────────────────────────────────────────
-const STATUS_COLORS: Record<string, string> = {
-  unpaid: "bg-red-100 text-red-700 border-red-200",
-  paid: "bg-green-100 text-green-700 border-green-200",
-  disputed: "bg-amber-100 text-amber-700 border-amber-200",
-  dismissed: "bg-gray-100 text-gray-600 border-gray-200",
-};
-
-const TYPE_COLORS: Record<string, string> = {
-  traffic: "bg-blue-100 text-blue-700",
-  parking: "bg-purple-100 text-purple-700",
-};
-
 // ─── Main Component ───────────────────────────────────────────
-export default function AdminTicketsPage() {
-  const pathname = usePathname();
+export default function AdminTicketsPage({
+  panelConfig = adminPanelConfig,
+}: {
+  panelConfig?: StaffPanelConfig;
+}) {
+  const panelBase = panelConfig.panelBase;
   const [tickets, setTickets] = useState<TicketRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -487,7 +458,7 @@ export default function AdminTicketsPage() {
                       <span className="font-medium">
                         {selectedTicket.vehicleId ? (
                           <Link
-                            href={getStaffVehicleDetailsHref(selectedTicket.vehicleId, pathname)}
+                            href={getStaffVehicleDetailsHref(selectedTicket.vehicleId, panelBase)}
                             className="hover:text-purple-700 hover:underline"
                           >
                             {selectedTicket.vehicleName}
@@ -730,58 +701,50 @@ export default function AdminTicketsPage() {
   // ─── Main List View ───────────────────────────────────────
   return (
     <>
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Ticket className="h-8 w-8" />
-              <div>
-                <h1 className="text-2xl sm:text-3xl font-bold">Tickets</h1>
-                <p className="text-gray-300 mt-1">Traffic &amp; parking violations linked to trips</p>
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={fetchData}
-                variant="outline"
-                size="sm"
-                className="border-white/20 text-white hover:bg-white/10 bg-transparent"
-              >
-                <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-                Refresh
-              </Button>
-              <Button
-                onClick={() => { resetForm(); setAdding(true); }}
-                size="sm"
-                className="bg-white text-gray-900 hover:bg-gray-100"
-              >
-                <Plus className="h-4 w-4 mr-1" />
-                Add Ticket
-              </Button>
-            </div>
+      <AdminPageHeader
+        title="Tickets"
+        subtitle="Traffic & parking violations linked to trips"
+        actions={
+          <>
+            <Button
+              onClick={fetchData}
+              variant="outline"
+              size="sm"
+              className="page-hero-btn-outline"
+            >
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Button
+              onClick={() => { resetForm(); setAdding(true); }}
+              size="sm"
+              className="bg-white text-purple-900 hover:bg-purple-50"
+            >
+              <Plus className="h-4 w-4 mr-1" />
+              Add Ticket
+            </Button>
+          </>
+        }
+      >
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+          <div className="bg-white/10 rounded-lg p-3">
+            <p className="text-2xl font-bold">{tickets.length}</p>
+            <p className="text-xs page-hero-subtitle">Total Tickets</p>
           </div>
-
-          {/* Summary cards */}
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6">
-            <div className="bg-white/10 rounded-lg p-3">
-              <p className="text-2xl font-bold">{tickets.length}</p>
-              <p className="text-xs text-gray-300">Total Tickets</p>
-            </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <p className="text-2xl font-bold text-red-300">{statusCounts.unpaid}</p>
-              <p className="text-xs text-gray-300">Unpaid</p>
-            </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <p className="text-2xl font-bold">${totalUnpaid.toLocaleString()}</p>
-              <p className="text-xs text-gray-300">Outstanding Amount</p>
-            </div>
-            <div className="bg-white/10 rounded-lg p-3">
-              <p className="text-2xl font-bold">${totalAll.toLocaleString()}</p>
-              <p className="text-xs text-gray-300">Total Amount</p>
-            </div>
+          <div className="bg-white/10 rounded-lg p-3">
+            <p className="text-2xl font-bold text-red-300">{statusCounts.unpaid}</p>
+            <p className="text-xs page-hero-subtitle">Unpaid</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3">
+            <p className="text-2xl font-bold">${totalUnpaid.toLocaleString()}</p>
+            <p className="text-xs page-hero-subtitle">Outstanding Amount</p>
+          </div>
+          <div className="bg-white/10 rounded-lg p-3">
+            <p className="text-2xl font-bold">${totalAll.toLocaleString()}</p>
+            <p className="text-xs page-hero-subtitle">Total Amount</p>
           </div>
         </div>
-      </section>
+      </AdminPageHeader>
 
       <PageContainer>
         {success && (
@@ -903,7 +866,7 @@ export default function AdminTicketsPage() {
                             <Car className="h-3 w-3" />
                             {t.vehicleId ? (
                               <Link
-                                href={getStaffVehicleDetailsHref(t.vehicleId, pathname)}
+                                href={getStaffVehicleDetailsHref(t.vehicleId, panelBase)}
                                 className="hover:text-purple-700 hover:underline"
                                 onClick={(e) => e.stopPropagation()}
                               >

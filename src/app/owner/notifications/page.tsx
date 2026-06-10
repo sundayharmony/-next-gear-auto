@@ -56,7 +56,7 @@ export default function OwnerNotificationsPage() {
       />
       <AdminPageBody>
         {loading ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" /></div>
+          <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading notifications" /></div>
         ) : notifications.length === 0 ? (
           <AdminCard>
             <div className="flex flex-col items-center gap-2 py-10 text-center">

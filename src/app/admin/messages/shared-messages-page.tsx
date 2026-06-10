@@ -2,172 +2,37 @@
 
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ChevronLeft, FileText, Hash, Loader2, MessageSquare, Paperclip, Plus, Send, Trash2, X } from "lucide-react";
+import { ChevronLeft, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select } from "@/components/ui/select";
 import { PageContainer } from "@/components/layout/page-container";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { MessagingPushRegistration } from "@/components/messaging/push-registration";
 import { ToastContainer, ToastNotification } from "@/components/ui/toast";
 import { cn } from "@/lib/utils/cn";
-import { isImageAttachmentUrl, parseMessageBodyRuns } from "@/lib/messaging/service";
+import { parseMessageBodyRuns } from "@/lib/messaging/service";
+import { MessageAttachments } from "./messages/attachment-preview";
 import {
-  STAFF_ATTACHMENT_ACCEPT_ATTR,
+  MessageComposer,
   STAFF_ATTACHMENT_ALLOWED_MIMES,
   STAFF_ATTACHMENT_MAX_BYTES,
-} from "@/lib/messaging/staff-attachment-allowlist";
-import { escapeHtml } from "@/lib/utils/validation";
-import DOMPurify from "isomorphic-dompurify";
-
-interface ThreadRow {
-  id: string;
-  thread_type: "dm" | "channel";
-  title: string | null;
-  display_title?: string;
-  counterpart: { id: string; role: string; name: string; email: string } | null;
-  unread_count: number;
-  last_message: {
-    id: string;
-    body: string;
-    preview?: string;
-    created_at: string;
-    sender_user_id: string;
-  } | null;
-}
-
-interface MessageRow {
-  id: string;
-  body: string;
-  sender_user_id: string;
-  sender_role: "admin" | "manager";
-  created_at: string;
-  metadata?: { image_urls?: string[] } | null;
-}
-
-interface StaffRow {
-  id: string;
-  role: "admin" | "manager";
-  name: string;
-  email: string;
-}
-
-type InboundToast = { key: string; type: "info"; title: string; message?: string };
-
-const TOAST_THROTTLE_MS = 4000;
-const MAX_TOAST_DEDUPE_IDS = 400;
-
-const MAX_MESSAGE_ATTACHMENTS = 6;
-const MAX_MESSAGE_BODY_CHARS = 4000;
-
-function sanitizeEditorHtml(html: string): string {
-  return DOMPurify.sanitize(html, {
-    ALLOWED_TAGS: ["b", "strong", "i", "em", "br", "div", "p"],
-    ALLOWED_ATTR: [],
-  });
-}
-
-function applyMarkdownMarkers(text: string, bold: boolean, italic: boolean): string {
-  if (!text) return "";
-  if (bold && italic) return `***${text}***`;
-  if (bold) return `**${text}**`;
-  if (italic) return `*${text}*`;
-  return text;
-}
-
-function editorHtmlToMarkdown(html: string): string {
-  if (!html) return "";
-  const root = document.createElement("div");
-  root.innerHTML = sanitizeEditorHtml(html);
-
-  const walk = (node: Node, fmt: { bold: boolean; italic: boolean }): string => {
-    if (node.nodeType === Node.TEXT_NODE) {
-      const text = node.textContent || "";
-      return applyMarkdownMarkers(text, fmt.bold, fmt.italic);
-    }
-    if (node.nodeType !== Node.ELEMENT_NODE) return "";
-    const el = node as HTMLElement;
-    const tag = el.tagName.toLowerCase();
-
-    if (tag === "br") return "\n";
-
-    const nextFmt = {
-      bold: fmt.bold || tag === "b" || tag === "strong",
-      italic: fmt.italic || tag === "i" || tag === "em",
-    };
-
-    let out = "";
-    el.childNodes.forEach((child) => {
-      out += walk(child, nextFmt);
-    });
-    if (tag === "div" || tag === "p") out += "\n";
-    return out;
-  };
-
-  let markdown = "";
-  root.childNodes.forEach((n) => {
-    markdown += walk(n, { bold: false, italic: false });
-  });
-
-  return markdown.replace(/\n{3,}/g, "\n\n").trim();
-}
-
-function markdownToEditorHtml(markdown: string): string {
-  if (!markdown) return "";
-  const lines = markdown.split("\n");
-  const rendered = lines.map((line) => {
-    const escaped = escapeHtml(line);
-    return escaped
-      .replace(/\*\*\*([^*]+)\*\*\*/g, "<strong><em>$1</em></strong>")
-      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
-      .replace(/\*([^*]+)\*/g, "<em>$1</em>");
-  });
-  return rendered.join("<br>");
-}
-
-function placeCaretAtEnd(el: HTMLElement): void {
-  const selection = window.getSelection();
-  if (!selection) return;
-  const range = document.createRange();
-  range.selectNodeContents(el);
-  range.collapse(false);
-  selection.removeAllRanges();
-  selection.addRange(range);
-}
-
-function fileLabelFromUrl(url: string): string {
-  try {
-    const seg = decodeURIComponent(new URL(url).pathname.split("/").pop() || "");
-    return seg || "File";
-  } catch {
-    return "File";
-  }
-}
-
-function formatShortTime(iso: string): string {
-  const d = new Date(iso);
-  const now = new Date();
-  const diffMs = now.getTime() - d.getTime();
-  if (diffMs < 0) return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  const mins = Math.floor(diffMs / 60000);
-  if (mins < 1) return "Just now";
-  if (mins < 60) return `${mins}m`;
-  const hours = Math.floor(mins / 60);
-  if (hours < 24 && d.toDateString() === now.toDateString()) return `${hours}h`;
-  const days = Math.floor(hours / 24);
-  if (days === 1) return "Yesterday";
-  if (days < 7) return `${days}d`;
-  return d.toLocaleDateString([], { month: "short", day: "numeric" });
-}
-
-function formatMessageDetailTime(iso: string): string {
-  const d = new Date(iso);
-  const now = new Date();
-  if (d.toDateString() === now.toDateString()) {
-    return d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
-  }
-  return d.toLocaleString([], { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
-}
+  MAX_MESSAGE_ATTACHMENTS,
+} from "./messages/message-composer";
+import {
+  editorHtmlToMarkdown,
+  fileLabelFromUrl,
+  formatMessageDetailTime,
+  markdownToEditorHtml,
+} from "./messages/message-utils";
+import { ThreadList } from "./messages/thread-list";
+import {
+  MAX_MESSAGE_BODY_CHARS,
+  MAX_TOAST_DEDUPE_IDS,
+  TOAST_THROTTLE_MS,
+  type InboundToast,
+  type MessageRow,
+  type StaffRow,
+  type ThreadRow,
+} from "./messages/types";
 
 export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/admin/messages" | "/manager/messages"; panelTitle: string }) {
   const searchParams = useSearchParams();
@@ -230,11 +95,8 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     if (!draftStorageKey || typeof window === "undefined") return;
     try {
       const trimmed = composer.trim();
-      if (!trimmed) {
-        window.localStorage.removeItem(draftStorageKey);
-      } else {
-        window.localStorage.setItem(draftStorageKey, composer);
-      }
+      if (!trimmed) window.localStorage.removeItem(draftStorageKey);
+      else window.localStorage.setItem(draftStorageKey, composer);
     } catch {
       // Ignore storage errors
     }
@@ -245,16 +107,12 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     if (!el) return;
     if (document.activeElement === el) return;
     const html = markdownToEditorHtml(composer);
-    if (el.innerHTML !== html) {
-      el.innerHTML = html;
-    }
+    if (el.innerHTML !== html) el.innerHTML = html;
   }, [composer, selectedThreadId]);
 
   useEffect(() => {
     if (!selectedThreadId || !serverMessagingOn) return;
-    requestAnimationFrame(() => {
-      composerRef.current?.focus();
-    });
+    requestAnimationFrame(() => composerRef.current?.focus());
   }, [selectedThreadId, serverMessagingOn]);
 
   useLayoutEffect(() => {
@@ -269,9 +127,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     const el = messagesScrollRef.current;
     if (!el) return;
     const threadChanged = lastRenderedThreadRef.current !== selectedThreadId;
-    if (threadChanged || shouldStickToBottomRef.current) {
-      el.scrollTop = el.scrollHeight;
-    }
+    if (threadChanged || shouldStickToBottomRef.current) el.scrollTop = el.scrollHeight;
     lastRenderedThreadRef.current = selectedThreadId;
   }, [messages, selectedThreadId]);
 
@@ -284,46 +140,42 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     setToasts((prev) => prev.filter((t) => t.key !== id));
   }, []);
 
-  const maybeNotifyInbound = useCallback(
-    (incoming: ThreadRow[], viewerId: string | null) => {
-      if (!viewerId || typeof document === "undefined") return;
-      if (document.visibilityState !== "visible") return;
+  const maybeNotifyInbound = useCallback((incoming: ThreadRow[], viewerId: string | null) => {
+    if (!viewerId || typeof document === "undefined") return;
+    if (document.visibilityState !== "visible") return;
 
-      const baseline = threadLastMessageBaselineRef.current;
-      const nextMap = new Map<string, string | null>(incoming.map((t) => [t.id, t.last_message?.id ?? null]));
+    const baseline = threadLastMessageBaselineRef.current;
+    const nextMap = new Map<string, string | null>(incoming.map((t) => [t.id, t.last_message?.id ?? null]));
 
-      if (baseline === null) {
-        threadLastMessageBaselineRef.current = nextMap;
-        return;
-      }
-
-      const now = Date.now();
-      for (const t of incoming) {
-        const mid = t.last_message?.id ?? null;
-        const prev = baseline.get(t.id) ?? null;
-        if (!mid || mid === prev) continue;
-        if (!t.last_message || t.last_message.sender_user_id === viewerId) continue;
-        if (t.id === selectedThreadIdRef.current) continue;
-        if (toastShownMessageIdsRef.current.has(mid)) continue;
-        if (now - lastToastAtRef.current < TOAST_THROTTLE_MS) continue;
-
-        toastShownMessageIdsRef.current.add(mid);
-        if (toastShownMessageIdsRef.current.size > MAX_TOAST_DEDUPE_IDS) {
-          const arr = [...toastShownMessageIdsRef.current];
-          toastShownMessageIdsRef.current = new Set(arr.slice(-200));
-        }
-        lastToastAtRef.current = now;
-
-        const title = t.display_title || t.title || "New message";
-        const preview =
-          (t.last_message.preview ?? t.last_message.body)?.slice(0, 120) || "";
-        setToasts((prev) => [...prev, { key: mid, type: "info", title, message: preview || undefined }]);
-      }
-
+    if (baseline === null) {
       threadLastMessageBaselineRef.current = nextMap;
-    },
-    []
-  );
+      return;
+    }
+
+    const now = Date.now();
+    for (const t of incoming) {
+      const mid = t.last_message?.id ?? null;
+      const prev = baseline.get(t.id) ?? null;
+      if (!mid || mid === prev) continue;
+      if (!t.last_message || t.last_message.sender_user_id === viewerId) continue;
+      if (t.id === selectedThreadIdRef.current) continue;
+      if (toastShownMessageIdsRef.current.has(mid)) continue;
+      if (now - lastToastAtRef.current < TOAST_THROTTLE_MS) continue;
+
+      toastShownMessageIdsRef.current.add(mid);
+      if (toastShownMessageIdsRef.current.size > MAX_TOAST_DEDUPE_IDS) {
+        const arr = [...toastShownMessageIdsRef.current];
+        toastShownMessageIdsRef.current = new Set(arr.slice(-200));
+      }
+      lastToastAtRef.current = now;
+
+      const title = t.display_title || t.title || "New message";
+      const preview = (t.last_message.preview ?? t.last_message.body)?.slice(0, 120) || "";
+      setToasts((prev) => [...prev, { key: mid, type: "info", title, message: preview || undefined }]);
+    }
+
+    threadLastMessageBaselineRef.current = nextMap;
+  }, []);
 
   const fetchThreads = useCallback(async () => {
     const res = await adminFetch("/api/admin/messages/threads");
@@ -394,11 +246,8 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
           setNotificationChannels({ email: threadsJson.channels.email, push: threadsJson.channels.push });
         }
         if (threadsJson.viewer?.userId) setViewerUserId(threadsJson.viewer.userId);
-        if (messagingOn) {
-          maybeNotifyInbound(list, threadsJson.viewer?.userId ?? null);
-        } else {
-          threadLastMessageBaselineRef.current = null;
-        }
+        if (messagingOn) maybeNotifyInbound(list, threadsJson.viewer?.userId ?? null);
+        else threadLastMessageBaselineRef.current = null;
         if (!messagingOn) {
           setSelectedThreadId(null);
           setMessages([]);
@@ -441,7 +290,6 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     fetchMessages(selectedThreadId).catch((e) => setError(e instanceof Error ? e.message : String(e)));
   }, [selectedThreadId, fetchMessages, serverMessagingOn]);
 
-  const selectedThread = useMemo(() => threads.find((t) => t.id === selectedThreadId) || null, [threads, selectedThreadId]);
   const unreadCount = useMemo(() => threads.reduce((sum, t) => sum + (t.unread_count || 0), 0), [threads]);
 
   const filteredThreads = useMemo(() => {
@@ -458,6 +306,8 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     if (!viewerUserId) return staff;
     return staff.filter((s) => s.id !== viewerUserId);
   }, [staff, viewerUserId]);
+
+  const selectedThread = useMemo(() => threads.find((t) => t.id === selectedThreadId) || null, [threads, selectedThreadId]);
 
   const threadHeaderTitle = selectedThread
     ? selectedThread.display_title || selectedThread.title || (selectedThread.thread_type === "dm" ? "Direct message" : "Channel")
@@ -520,22 +370,16 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     }
   };
 
-  const uploadAttachment = useCallback(
-    async (file: File, threadId: string): Promise<{ url: string; name: string }> => {
-      const fd = new FormData();
-      fd.append("file", file);
-      const res = await adminFetch(`/api/admin/messages/threads/${threadId}/attachments`, {
-        method: "POST",
-        body: fd,
-      });
-      const json = await res.json();
-      if (!res.ok || !json.success) throw new Error(json.message || "Upload failed");
-      const url = json.url as string;
-      const name = typeof json.filename === "string" && json.filename.trim() ? json.filename.trim() : fileLabelFromUrl(url);
-      return { url, name };
-    },
-    []
-  );
+  const uploadAttachment = useCallback(async (file: File, threadId: string): Promise<{ url: string; name: string }> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await adminFetch(`/api/admin/messages/threads/${threadId}/attachments`, { method: "POST", body: fd });
+    const json = await res.json();
+    if (!res.ok || !json.success) throw new Error(json.message || "Upload failed");
+    const url = json.url as string;
+    const name = typeof json.filename === "string" && json.filename.trim() ? json.filename.trim() : fileLabelFromUrl(url);
+    return { url, name };
+  }, []);
 
   const onAttachmentFilesSelected = async (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
@@ -551,9 +395,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     const list = Array.from(files).slice(0, remaining);
     for (const file of list) {
       if (!STAFF_ATTACHMENT_ALLOWED_MIMES.has(file.type)) {
-        setError(
-          "Unsupported file type. Use images, PDF, TXT, CSV, or Word/Excel/PowerPoint files (see upload restrictions)."
-        );
+        setError("Unsupported file type. Use images, PDF, TXT, CSV, or Word/Excel/PowerPoint files (see upload restrictions).");
         return;
       }
       if (file.size > STAFF_ATTACHMENT_MAX_BYTES) {
@@ -566,10 +408,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     setError(null);
     try {
       const added: Array<{ url: string; name: string }> = [];
-      for (const file of list) {
-        const item = await uploadAttachment(file, selectedThreadId);
-        added.push(item);
-      }
+      for (const file of list) added.push(await uploadAttachment(file, selectedThreadId));
       setPendingAttachments((prev) => [...prev, ...added]);
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
@@ -610,17 +449,12 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       }
       setComposer("");
       setPendingAttachments([]);
-      if (composerRef.current) {
-        composerRef.current.innerHTML = "";
-      }
-      if (draftStorageKey && typeof window !== "undefined") {
-        window.localStorage.removeItem(draftStorageKey);
-      }
+      if (composerRef.current) composerRef.current.innerHTML = "";
+      if (draftStorageKey && typeof window !== "undefined") window.localStorage.removeItem(draftStorageKey);
       setError(null);
-      void Promise.all([
-        fetchMessages(selectedThreadId),
-        fetchThreads(),
-      ]).catch((e) => setError(e instanceof Error ? e.message : String(e)));
+      void Promise.all([fetchMessages(selectedThreadId), fetchThreads()]).catch((e) =>
+        setError(e instanceof Error ? e.message : String(e))
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -644,9 +478,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     if (!window.confirm("Delete this message? This cannot be undone.")) return;
     setDeletingId(messageId);
     try {
-      const res = await adminFetch(`/api/admin/messages/threads/${selectedThreadId}/messages/${messageId}`, {
-        method: "DELETE",
-      });
+      const res = await adminFetch(`/api/admin/messages/threads/${selectedThreadId}/messages/${messageId}`, { method: "DELETE" });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to delete message");
       await fetchMessages(selectedThreadId);
@@ -661,7 +493,6 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
 
   const showThreadList = !isNarrow || mobileTab === "list";
   const showConversation = !isNarrow || mobileTab === "chat";
-  const composerChars = composer.length;
 
   return (
     <>
@@ -701,103 +532,25 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
         )}
         {error && <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>}
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(260px,320px)_1fr]">
-          <div
-            className={cn(
-              "flex flex-col rounded-lg border border-gray-200 bg-white p-3 space-y-3",
-              !showThreadList && "hidden",
-              "lg:flex"
-            )}
-          >
-            <div className="flex items-center gap-2 text-sm font-semibold text-gray-900">
-              <MessageSquare className="h-4 w-4 shrink-0" /> Threads
-            </div>
-            <Input
-              value={threadSearch}
-              onChange={(e) => setThreadSearch(e.target.value)}
-              placeholder="Search threads..."
-              disabled={!serverMessagingOn}
-              className="text-sm"
-              aria-label="Search threads"
-            />
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
-              <Select value={dmTarget} onChange={(e) => setDmTarget(e.target.value)} disabled={!serverMessagingOn} className="min-w-0 flex-1">
-                <option value="">Start direct message...</option>
-                {staffForDm.map((s) => (
-                  <option key={`${s.role}:${s.id}`} value={`${s.role}:${s.id}`}>
-                    {s.name} ({s.role})
-                  </option>
-                ))}
-              </Select>
-              <Button size="sm" type="button" className="shrink-0" onClick={createDm} disabled={!serverMessagingOn || busy || !dmTarget}>
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-              <Input
-                value={channelTitle}
-                onChange={(e) => setChannelTitle(e.target.value)}
-                placeholder="Channel title"
-                disabled={!serverMessagingOn}
-                className="min-w-0 flex-1"
-              />
-              <Button
-                size="sm"
-                type="button"
-                variant="outline"
-                className="shrink-0 whitespace-nowrap"
-                onClick={createChannel}
-                disabled={!serverMessagingOn || busy || !channelTitle.trim()}
-              >
-                Create Channel
-              </Button>
-            </div>
-            <div className="space-y-2">
-              {loading && <p className="text-xs text-gray-500">Loading threads...</p>}
-              {!loading && serverMessagingOn && filteredThreads.length === 0 && (
-                <p className="text-xs text-gray-500">{threads.length === 0 ? "No threads yet." : "No matching threads."}</p>
-              )}
-              {!loading && !serverMessagingOn && <p className="text-xs text-gray-500">Messaging is disabled.</p>}
-              {filteredThreads.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => openThread(t.id)}
-                  className={cn(
-                    "w-full rounded-md border px-3 py-2 text-left transition-colors",
-                    selectedThreadId === t.id ? "border-purple-400 bg-purple-50 ring-1 ring-purple-200" : "border-gray-200 bg-white hover:bg-gray-50"
-                  )}
-                >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex min-w-0 flex-1 items-start gap-2">
-                      <span className="mt-0.5 shrink-0 text-purple-600" aria-hidden>
-                        {t.thread_type === "channel" ? <Hash className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />}
-                      </span>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-medium text-gray-900 truncate">
-                          {t.display_title || t.title || (t.thread_type === "dm" ? "Direct message" : "Channel")}
-                        </p>
-                        {t.last_message && (
-                          <p className="text-xs text-gray-500 truncate mt-0.5">
-                            {t.last_message.preview ?? t.last_message.body}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex shrink-0 flex-col items-end gap-1">
-                      {t.last_message && (
-                        <span className="text-[10px] text-gray-400 whitespace-nowrap">{formatShortTime(t.last_message.created_at)}</span>
-                      )}
-                      {t.unread_count > 0 && (
-                        <span className="rounded-full bg-purple-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
-                          {t.unread_count}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
+          <ThreadList
+            threadSearch={threadSearch}
+            onThreadSearchChange={setThreadSearch}
+            dmTarget={dmTarget}
+            onDmTargetChange={setDmTarget}
+            channelTitle={channelTitle}
+            onChannelTitleChange={setChannelTitle}
+            loading={loading}
+            serverMessagingOn={serverMessagingOn}
+            busy={busy}
+            filteredThreads={filteredThreads}
+            threads={threads}
+            selectedThreadId={selectedThreadId}
+            staffForDm={staffForDm}
+            onCreateDm={createDm}
+            onCreateChannel={createChannel}
+            onOpenThread={openThread}
+            showThreadList={showThreadList}
+          />
 
           <div
             className={cn(
@@ -820,8 +573,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
               className="min-h-0 flex-1 overflow-y-auto space-y-3 px-3 py-3"
               onScroll={(e) => {
                 const el = e.currentTarget;
-                const distanceToBottom = el.scrollHeight - el.scrollTop - el.clientHeight;
-                shouldStickToBottomRef.current = distanceToBottom <= 80;
+                shouldStickToBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight <= 80;
               }}
             >
               {!selectedThreadId && <p className="text-sm text-gray-500">Choose or create a thread to start messaging.</p>}
@@ -870,67 +622,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                             </Button>
                           )}
                         </div>
-                        {attachmentUrls.length > 0 && (
-                          <div className={cn("gap-2", showText ? "mb-2" : "")}>
-                            {attachmentUrls.every(isImageAttachmentUrl) && attachmentUrls.length > 1 ? (
-                              <div className="grid grid-cols-2 gap-2">
-                                {attachmentUrls.map((src) => (
-                                  <a
-                                    key={src}
-                                    href={src}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="block aspect-square overflow-hidden rounded-lg ring-1 ring-black/10"
-                                  >
-                                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                                    <img src={src} alt="" className="h-full w-full object-cover" />
-                                  </a>
-                                ))}
-                              </div>
-                            ) : (
-                              <div className="flex flex-col gap-2">
-                                {attachmentUrls.map((src) => {
-                                  const label = fileLabelFromUrl(src);
-                                  if (isImageAttachmentUrl(src)) {
-                                    return (
-                                      <a
-                                        key={src}
-                                        href={src}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="block overflow-hidden rounded-lg ring-1 ring-black/10"
-                                      >
-                                        {/* eslint-disable-next-line @next/next/no-img-element */}
-                                        <img
-                                          src={src}
-                                          alt=""
-                                          className="max-h-64 w-full max-w-full object-contain"
-                                        />
-                                      </a>
-                                    );
-                                  }
-                                  return (
-                                    <a
-                                      key={src}
-                                      href={src}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className={cn(
-                                        "flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition-colors",
-                                        isOwn
-                                          ? "border-white/30 bg-white/10 text-white hover:bg-white/15"
-                                          : "border-gray-200 bg-white text-gray-900 hover:bg-gray-50"
-                                      )}
-                                    >
-                                      <FileText className="h-4 w-4 shrink-0 opacity-90" aria-hidden />
-                                      <span className="min-w-0 truncate">{label}</span>
-                                    </a>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        )}
+                        <MessageAttachments urls={attachmentUrls} isOwn={isOwn} showText={showText} />
                         {showText && (
                           <p className={cn("text-sm whitespace-pre-wrap break-words pr-1", isOwn ? "text-white" : "text-gray-900")}>
                             {formattedLines.map((line, lineIdx) => (
@@ -954,185 +646,23 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
                 })}
             </div>
 
-            <div
-              className={cn(
-                "mt-auto flex shrink-0 flex-col gap-2 border-t border-gray-200 p-3",
-                "pb-[calc(0.75rem+env(safe-area-inset-bottom,0px)+12px)] lg:pb-3"
-              )}
-            >
-              <input
-                ref={attachmentInputRef}
-                type="file"
-                accept={STAFF_ATTACHMENT_ACCEPT_ATTR}
-                multiple
-                className="hidden"
-                aria-hidden
-                onChange={onAttachmentFilesSelected}
-              />
-              {pendingAttachments.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {pendingAttachments.map((p) => (
-                    <div
-                      key={p.url}
-                      className={cn(
-                        "relative flex shrink-0 overflow-hidden rounded-md border border-gray-200 bg-gray-100",
-                        isImageAttachmentUrl(p.url) ? "h-16 w-16" : "h-16 max-w-[200px] min-w-[120px] items-center px-2"
-                      )}
-                    >
-                      {isImageAttachmentUrl(p.url) ? (
-                        <>
-                          {/* eslint-disable-next-line @next/next/no-img-element */}
-                          <img src={p.url} alt="" className="h-full w-full object-cover" />
-                        </>
-                      ) : (
-                        <div className="flex w-full items-center gap-1.5 px-1">
-                          <FileText className="h-4 w-4 shrink-0 text-gray-600" aria-hidden />
-                          <span className="truncate text-xs text-gray-800" title={p.name}>
-                            {p.name}
-                          </span>
-                        </div>
-                      )}
-                      <button
-                        type="button"
-                        className="absolute right-0.5 top-0.5 rounded-full bg-black/60 p-0.5 text-white hover:bg-black/80"
-                        onClick={() => removePendingAttachment(p.url)}
-                        disabled={busy || uploadingAttachments}
-                        aria-label="Remove attachment"
-                      >
-                        <X className="h-3.5 w-3.5" aria-hidden />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-              <div className="flex items-center justify-end gap-2 text-[11px] text-gray-500">
-                <div className="flex items-center gap-2">
-                  {composer.trim().length > 0 && (
-                    <button
-                      type="button"
-                      onClick={() => setComposer("")}
-                      className="rounded px-1.5 py-0.5 text-gray-600 hover:bg-gray-100 hover:text-gray-900"
-                    >
-                      Clear draft
-                    </button>
-                  )}
-                  <span className={cn(composerChars > MAX_MESSAGE_BODY_CHARS * 0.9 && "text-amber-600")}>
-                    {composerChars}/{MAX_MESSAGE_BODY_CHARS}
-                  </span>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <div className="relative w-full flex-1">
-                  {composerChars === 0 && (
-                    <div className="pointer-events-none absolute left-3 top-2 text-sm text-muted-foreground">
-                      Type a message...
-                    </div>
-                  )}
-                  <div
-                    ref={composerRef}
-                    contentEditable={serverMessagingOn && !!selectedThreadId}
-                    suppressContentEditableWarning
-                    role="textbox"
-                    aria-multiline="true"
-                    aria-label="Type a message"
-                    className={cn(
-                      "min-h-[44px] max-h-[160px] w-full flex-1 overflow-y-auto rounded-md border border-input bg-background px-3 py-2 text-sm",
-                      "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                      (!serverMessagingOn || !selectedThreadId) && "cursor-not-allowed bg-gray-100 text-gray-500"
-                    )}
-                    onInput={(e) => {
-                      const editor = e.currentTarget as HTMLDivElement;
-                      const html = sanitizeEditorHtml(editor.innerHTML);
-                      const markdownRaw = editorHtmlToMarkdown(html);
-                      const tooLong = markdownRaw.length > MAX_MESSAGE_BODY_CHARS;
-                      const markdown = tooLong
-                        ? markdownRaw.slice(0, MAX_MESSAGE_BODY_CHARS)
-                        : markdownRaw;
-
-                      if (tooLong) {
-                        setError(`Message text is too long (${markdownRaw.length}/${MAX_MESSAGE_BODY_CHARS}).`);
-                        const normalizedHtml = markdownToEditorHtml(markdown);
-                        if (editor.innerHTML !== normalizedHtml) {
-                          editor.innerHTML = normalizedHtml;
-                          placeCaretAtEnd(editor);
-                        }
-                      } else if (error && error.startsWith("Message text is too long")) {
-                        setError(null);
-                      }
-
-                      setComposer(markdown);
-                    }}
-                    onKeyDown={(e) => {
-                    if (e.key === "Enter" && (e.nativeEvent as KeyboardEvent).isComposing) {
-                      return;
-                    }
-                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "b") {
-                      e.preventDefault();
-                      applyComposerFormat("bold");
-                      return;
-                    }
-                    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "i") {
-                      e.preventDefault();
-                      applyComposerFormat("italic");
-                      return;
-                    }
-                    if (e.key === "Enter" && !e.shiftKey) {
-                      e.preventDefault();
-                      const hasContent = composer.trim().length > 0 || pendingAttachments.length > 0;
-                      if (hasContent && !busy && !uploadingAttachments && selectedThreadId && serverMessagingOn) {
-                        sendMessage();
-                      }
-                      return;
-                    }
-                    if (e.key === "Escape" && error) {
-                      e.preventDefault();
-                      setError(null);
-                    }
-                  }}
-                  />
-                </div>
-                <div className="flex shrink-0 flex-col gap-1 self-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="icon"
-                    className="h-10 w-10"
-                    disabled={
-                      !serverMessagingOn ||
-                      busy ||
-                      uploadingAttachments ||
-                      !selectedThreadId ||
-                      pendingAttachments.length >= MAX_MESSAGE_ATTACHMENTS
-                    }
-                    onClick={() => attachmentInputRef.current?.click()}
-                    aria-label="Attach files"
-                    title="Attach images, PDF, or Office files (max 10MB each)"
-                  >
-                    {uploadingAttachments ? (
-                      <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
-                    ) : (
-                      <Paperclip className="h-4 w-4" aria-hidden />
-                    )}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    className="h-10 w-10"
-                    onClick={sendMessage}
-                    disabled={
-                      !serverMessagingOn ||
-                      busy ||
-                      uploadingAttachments ||
-                      !selectedThreadId ||
-                      (!composer.trim() && pendingAttachments.length === 0)
-                    }
-                    aria-label="Send message"
-                  >
-                    <Send className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
+            <MessageComposer
+              serverMessagingOn={serverMessagingOn}
+              selectedThreadId={selectedThreadId}
+              composer={composer}
+              onComposerChange={setComposer}
+              pendingAttachments={pendingAttachments}
+              uploadingAttachments={uploadingAttachments}
+              busy={busy}
+              error={error}
+              onErrorChange={setError}
+              onSend={sendMessage}
+              onRemoveAttachment={removePendingAttachment}
+              onAttachmentFilesSelected={onAttachmentFilesSelected}
+              applyComposerFormat={applyComposerFormat}
+              attachmentInputRef={attachmentInputRef}
+              composerRef={composerRef}
+            />
           </div>
         </div>
       </PageContainer>

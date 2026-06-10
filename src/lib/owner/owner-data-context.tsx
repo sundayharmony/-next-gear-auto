@@ -1,8 +1,15 @@
 "use client";
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { ownerKeys, useStaffQuery } from "@/lib/hooks/use-staff-query";
 import type { OwnerBooking, OwnerDashboardMetrics, OwnerVehicle } from "@/lib/types";
+
+interface OwnerDataset {
+  metrics: OwnerDashboardMetrics;
+  bookings: OwnerBooking[];
+  vehicles: OwnerVehicle[];
+}
 
 interface OwnerDataContextValue {
   metrics: OwnerDashboardMetrics | null;
@@ -15,54 +22,40 @@ interface OwnerDataContextValue {
 
 const OwnerDataContext = createContext<OwnerDataContextValue | null>(null);
 
+async function fetchOwnerDataset(): Promise<OwnerDataset> {
+  const res = await adminFetch("/api/owner/dataset");
+  const json = await res.json();
+  if (!res.ok || !json.success) {
+    throw new Error(json.message || "Failed to load owner dataset");
+  }
+  return json.data as OwnerDataset;
+}
+
 export function OwnerDataProvider({ children }: { children: React.ReactNode }) {
-  const [metrics, setMetrics] = useState<OwnerDashboardMetrics | null>(null);
-  const [bookings, setBookings] = useState<OwnerBooking[]>([]);
-  const [vehicles, setVehicles] = useState<OwnerVehicle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useStaffQuery<OwnerDataset>(
+    ownerKeys.dataset(),
+    null,
+    {
+      queryFn: fetchOwnerDataset,
+      staleTime: 30_000,
+    }
+  );
 
   const reload = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [summaryRes, bookingsRes, vehiclesRes] = await Promise.all([
-        adminFetch("/api/owner/summary"),
-        adminFetch("/api/owner/bookings"),
-        adminFetch("/api/owner/vehicles"),
-      ]);
-      const [summaryJson, bookingsJson, vehiclesJson] = await Promise.all([
-        summaryRes.json(),
-        bookingsRes.json(),
-        vehiclesRes.json(),
-      ]);
-
-      if (!summaryRes.ok || !summaryJson.success) {
-        throw new Error(summaryJson.message || "Failed to load owner summary");
-      }
-      if (!bookingsRes.ok || !bookingsJson.success) {
-        throw new Error(bookingsJson.message || "Failed to load owner bookings");
-      }
-      if (!vehiclesRes.ok || !vehiclesJson.success) {
-        throw new Error(vehiclesJson.message || "Failed to load owner vehicles");
-      }
-
-      setMetrics(summaryJson.data as OwnerDashboardMetrics);
-      setBookings((bookingsJson.data as OwnerBooking[]) || []);
-      setVehicles((vehiclesJson.data as OwnerVehicle[]) || []);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load owner data");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    reload();
-  }, [reload]);
+    await query.refetch();
+  }, [query]);
 
   return (
-    <OwnerDataContext.Provider value={{ metrics, bookings, vehicles, loading, error, reload }}>
+    <OwnerDataContext.Provider
+      value={{
+        metrics: query.data?.metrics ?? null,
+        bookings: query.data?.bookings ?? [],
+        vehicles: query.data?.vehicles ?? [],
+        loading: query.isLoading,
+        error: query.error?.message ?? null,
+        reload,
+      }}
+    >
       {children}
     </OwnerDataContext.Provider>
   );

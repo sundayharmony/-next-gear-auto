@@ -1,6 +1,6 @@
 "use client";
 
-import { useStaffQuery } from "@/lib/hooks/use-staff-query";
+import { staffKeys, useStaffQuery } from "@/lib/hooks/use-staff-query";
 
 export interface ManagerAnalyticsData {
   totalBookings: number;
@@ -18,7 +18,7 @@ export interface ManagerAnalyticsData {
 /** Shared react-query cache between manager dashboard and analytics pages. */
 export function useManagerAnalytics() {
   const query = useStaffQuery<ManagerAnalyticsData>(
-    ["staff", "manager-analytics"],
+    staffKeys.managerAnalytics(),
     "/api/manager/analytics",
     { staleTime: 30_000 }
   );

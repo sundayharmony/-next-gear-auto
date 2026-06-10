@@ -3,7 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { VehicleListItem } from "@/lib/types";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { useStaffQuery } from "@/lib/hooks/use-staff-query";
+import { staffKeys, useStaffQuery } from "@/lib/hooks/use-staff-query";
 import { addDaysToYmd, getLocalYmd } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
 import type { BookingRow as AdminBookingRow } from "@/app/admin/bookings/types";
@@ -25,10 +25,10 @@ export function useCalendarData({
   calendarMonthStart,
 }: UseCalendarDataOptions) {
   const [bookings, setBookings] = useState<AdminBookingRow[]>([]);
-  const [blockedDates, setBlockedDates] = useState<BlockedDateEntry[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+
   const vehiclesQuery = useStaffQuery<VehicleListItem[]>(
-    ["staff", "vehicles", "/api/admin/vehicles"],
+    staffKeys.vehicles("/api/admin/vehicles"),
     "/api/admin/vehicles",
     { staleTime: 60_000 }
   );
@@ -38,7 +38,6 @@ export function useCalendarData({
   const bookingsRangeRef = useRef<{ from: string; to: string } | null>(null);
   const bookingsEndpointRef = useRef(bookingsEndpoint);
   const managerBookingsFetchedRef = useRef(false);
-  const calendarAuxLoadedRef = useRef(false);
 
   const visibleBounds = useMemo(() => {
     if (view === "timeline") {
@@ -54,6 +53,27 @@ export function useCalendarData({
     const last = new Date(y, m + 1, 0);
     return { from: getLocalYmd(first), to: getLocalYmd(last) };
   }, [view, timelineStart, calendarMonthStart]);
+
+  const blockedRange = useMemo(
+    () => ({
+      from: addDaysToYmd(visibleBounds.from, -120),
+      to: addDaysToYmd(visibleBounds.to, 120),
+    }),
+    [visibleBounds]
+  );
+
+  const blockedDatesUrl = `/api/admin/blocked-dates?from=${encodeURIComponent(blockedRange.from)}&to=${encodeURIComponent(blockedRange.to)}`;
+
+  const blockedDatesQuery = useStaffQuery<BlockedDateEntry[]>(
+    staffKeys.blockedDates(blockedRange),
+    blockedDatesUrl,
+    {
+      select: (rows) => rows.filter((bd) => bd.source !== "turo-email"),
+      staleTime: 30_000,
+    }
+  );
+
+  const blockedDates = blockedDatesQuery.data ?? [];
 
   const loadBookings = useCallback(
     async (options?: { forceReplace?: boolean }) => {
@@ -121,37 +141,16 @@ export function useCalendarData({
     [bookingsEndpoint, visibleBounds]
   );
 
-  const fetchAuxiliaryData = useCallback(async () => {
-    const needFrom = addDaysToYmd(visibleBounds.from, -120);
-    const needTo = addDaysToYmd(visibleBounds.to, 120);
-    const blockedUrl = `/api/admin/blocked-dates?from=${encodeURIComponent(needFrom)}&to=${encodeURIComponent(needTo)}`;
-    try {
-      const blockedRes = await adminFetch(blockedUrl);
-      if (blockedRes.ok) {
-        const data = await blockedRes.json();
-        const rows = (data.data || []) as BlockedDateEntry[];
-        setBlockedDates(rows.filter((bd) => bd.source !== "turo-email"));
-      }
-    } catch (error) {
-      logger.error("Failed to fetch blocked dates:", error);
-    }
-  }, [visibleBounds]);
-
   useEffect(() => {
     let cancelled = false;
     const run = async () => {
-      const firstPaint = !calendarAuxLoadedRef.current;
-      if (firstPaint) setLoading(true);
+      setBookingsLoading(true);
       try {
         await loadBookings();
-        if (!calendarAuxLoadedRef.current) {
-          await fetchAuxiliaryData();
-          calendarAuxLoadedRef.current = true;
-        }
       } catch (error) {
         logger.error("Failed to fetch calendar data:", error);
       } finally {
-        if (firstPaint && !cancelled) setLoading(false);
+        if (!cancelled) setBookingsLoading(false);
       }
     };
     run();
@@ -159,34 +158,24 @@ export function useCalendarData({
       cancelled = true;
       bookingsAbortControllerRef.current?.abort();
     };
-  }, [loadBookings, fetchAuxiliaryData]);
-
-  useEffect(() => {
-    if (!calendarAuxLoadedRef.current) return;
-    let cancelled = false;
-    (async () => {
-      try {
-        await fetchAuxiliaryData();
-      } catch (e) {
-        if (!cancelled) logger.error("Failed to refresh blocked dates:", e);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, [visibleBounds, fetchAuxiliaryData]);
+  }, [loadBookings]);
 
   const handleRefresh = useCallback(async () => {
-    setLoading(true);
+    setBookingsLoading(true);
     try {
       await loadBookings({ forceReplace: true });
-      await fetchAuxiliaryData();
+      await blockedDatesQuery.refetch();
     } catch (error) {
       logger.error("Failed to refresh calendar data:", error);
     } finally {
-      setLoading(false);
+      setBookingsLoading(false);
     }
-  }, [loadBookings, fetchAuxiliaryData]);
+  }, [loadBookings, blockedDatesQuery]);
+
+  const loading =
+    bookingsLoading ||
+    blockedDatesQuery.isLoading ||
+    vehiclesQuery.isLoading;
 
   return {
     bookings,

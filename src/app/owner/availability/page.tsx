@@ -136,7 +136,7 @@ export default function OwnerAvailabilityPage() {
       <AdminPageHeader title="Availability" subtitle="Block dates when your vehicle is unavailable" />
       <AdminPageBody>
         {loading && !data ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" /></div>
+          <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading availability" /></div>
         ) : vehicles.length === 0 ? (
           <AdminCard><p className="py-6 text-center text-sm text-gray-500">No vehicles assigned to your account yet.</p></AdminCard>
         ) : (
@@ -156,7 +156,7 @@ export default function OwnerAvailabilityPage() {
                   <DatePicker label="To" value={to} onChange={setTo} min={from || todayKey} />
                   <Input label="Reason (optional)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Maintenance, personal use…" />
                   <Button onClick={submitBlock} disabled={submitting}>
-                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                    {submitting ? <Loader2 className="h-4 w-4 animate-spin" role="status" aria-label="Adding block" /> : <Plus className="h-4 w-4" />}
                     Block dates
                   </Button>
                 </div>

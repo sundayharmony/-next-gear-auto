@@ -2,7 +2,6 @@
 
 import React, { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { compressImage } from "@/lib/utils/compress-image";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -29,12 +28,14 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { AdminPageHeader } from "@/components/admin/admin-shell";
 import { PageContainer } from "@/components/layout/page-container";
 import { Vehicle, getVehicleDisplayName } from "@/lib/types";
 import { MaintenancePhotoGallery } from "@/components/maintenance-photo-gallery";
 import { logger } from "@/lib/utils/logger";
 import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
+import { adminPanelConfig, type StaffPanelConfig } from "@/lib/admin/staff-panel-config";
 
 interface MaintenanceRecord {
   id: string;
@@ -66,8 +67,12 @@ const emptyRecord: Omit<MaintenanceRecord, "id" | "createdAt"> = {
 
 interface FormState extends Omit<MaintenanceRecord, "id" | "createdAt"> {}
 
-export default function AdminMaintenancePage() {
-  const pathname = usePathname();
+export default function AdminMaintenancePage({
+  panelConfig = adminPanelConfig,
+}: {
+  panelConfig?: StaffPanelConfig;
+}) {
+  const panelBase = panelConfig.panelBase;
   const [records, setRecords] = useState<MaintenanceRecord[]>([]);
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [loading, setLoading] = useState(true);
@@ -758,31 +763,23 @@ export default function AdminMaintenancePage() {
 
   return (
     <>
-      {/* Header Section */}
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <div className="flex items-center gap-3">
-                <Wrench className="h-8 w-8" />
-                <h1 className="text-2xl sm:text-3xl font-bold">Maintenance Records</h1>
-              </div>
-              <p className="mt-1 page-hero-subtitle">Manage vehicle maintenance and repairs</p>
-            </div>
-            <Button
-              onClick={() => setShowAddForm(!showAddForm)}
-              className="bg-white text-purple-900 hover:bg-gray-100"
-              aria-expanded={showAddForm}
-            >
-              {showAddForm ? (
-                <><X className="h-4 w-4 mr-2" /> Cancel</>
-              ) : (
-                <><Plus className="h-4 w-4 mr-2" /> Add Record</>
-              )}
-            </Button>
-          </div>
-        </div>
-      </section>
+      <AdminPageHeader
+        title="Maintenance Records"
+        subtitle="Manage vehicle maintenance and repairs"
+        actions={
+          <Button
+            onClick={() => setShowAddForm(!showAddForm)}
+            className="bg-white text-purple-900 hover:bg-purple-50"
+            aria-expanded={showAddForm}
+          >
+            {showAddForm ? (
+              <><X className="h-4 w-4 mr-2" /> Cancel</>
+            ) : (
+              <><Plus className="h-4 w-4 mr-2" /> Add Record</>
+            )}
+          </Button>
+        }
+      />
 
       <PageContainer className="py-8">
         {/* Error Banner */}
@@ -947,7 +944,7 @@ export default function AdminMaintenancePage() {
                         <span className="font-medium text-gray-900 truncate block" title={record.vehicleName || undefined}>
                           {record.vehicleId ? (
                             <Link
-                              href={getStaffVehicleDetailsHref(record.vehicleId, pathname)}
+                              href={getStaffVehicleDetailsHref(record.vehicleId, panelBase)}
                               className="hover:text-purple-700 hover:underline"
                               onClick={(e) => e.stopPropagation()}
                             >
@@ -1015,7 +1012,7 @@ export default function AdminMaintenancePage() {
                   <p className="text-sm text-gray-500 truncate">
                     {selectedRecord.vehicleId ? (
                       <Link
-                        href={getStaffVehicleDetailsHref(selectedRecord.vehicleId, pathname)}
+                        href={getStaffVehicleDetailsHref(selectedRecord.vehicleId, panelBase)}
                         className="hover:text-purple-700 hover:underline"
                       >
                         {selectedRecord.vehicleName}

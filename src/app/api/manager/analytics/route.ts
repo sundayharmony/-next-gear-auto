@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdminOrManager } from "@/lib/auth/admin-check";
+import { verifyManagerWithPanelAccess } from "@/lib/auth/admin-check";
 import { isManagerFeatureEnabled } from "@/lib/config/feature-flags";
 import { logger } from "@/lib/utils/logger";
 
@@ -16,7 +16,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, message: "Manager analytics is disabled." }, { status: 403 });
   }
 
-  const auth = await verifyAdminOrManager(req);
+  const auth = await verifyManagerWithPanelAccess(req);
   if (!auth.authorized) return auth.response;
 
   const supabase = getServiceSupabase();

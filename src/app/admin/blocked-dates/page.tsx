@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
-import { AdminPageBody } from "@/components/admin/admin-shell";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { PageContainer } from "@/components/layout/page-container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -479,34 +479,27 @@ export default function BlockedDatesPage() {
 
   return (
     <>
-      {/* Header */}
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Blocked Dates</h1>
-              <p className="mt-1 page-hero-subtitle">
-                Manual blocks and Turo trips are tracked separately — they do not merge
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                onClick={() => { setShowEmailForm(!showEmailForm); setShowManualForm(false); }}
-                variant="outline"
-                className="border-purple-300 text-purple-100 hover:bg-purple-800/30"
-              >
-                {showEmailForm ? <><X className="h-4 w-4 mr-2" /> Cancel</> : <><Mail className="h-4 w-4 mr-2" /> Paste Turo Email</>}
-              </Button>
-              <Button
-                onClick={() => { setShowManualForm(!showManualForm); setShowEmailForm(false); }}
-                className="bg-white text-purple-900 hover:bg-gray-100"
-              >
-                {showManualForm ? <><X className="h-4 w-4 mr-2" /> Cancel</> : <><Plus className="h-4 w-4 mr-2" /> Block Dates</>}
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <AdminPageHeader
+        title="Blocked Dates"
+        subtitle="Manual blocks and Turo trips are tracked separately — they do not merge"
+        actions={
+          <>
+            <Button
+              onClick={() => { setShowEmailForm(!showEmailForm); setShowManualForm(false); }}
+              variant="outline"
+              className="page-hero-btn-outline"
+            >
+              {showEmailForm ? <><X className="h-4 w-4 mr-2" /> Cancel</> : <><Mail className="h-4 w-4 mr-2" /> Paste Turo Email</>}
+            </Button>
+            <Button
+              onClick={() => { setShowManualForm(!showManualForm); setShowEmailForm(false); }}
+              className="bg-white text-purple-900 hover:bg-purple-50"
+            >
+              {showManualForm ? <><X className="h-4 w-4 mr-2" /> Cancel</> : <><Plus className="h-4 w-4 mr-2" /> Block Dates</>}
+            </Button>
+          </>
+        }
+      />
 
       <AdminPageBody>
         {/* Toasts */}

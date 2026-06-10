@@ -1,40 +1,30 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { staffKeys, useStaffQuery } from "@/lib/hooks/use-staff-query";
 
 export function useStaffMessageUnreadCount(enabled = true, intervalMs = 15000) {
-  const [count, setCount] = useState(0);
+  const [jitter] = useState(() => intervalMs + Math.random() * 5000);
 
-  const load = useCallback(async () => {
-    if (!enabled) return;
-    try {
-      const res = await adminFetch("/api/admin/messages/threads");
-      const json = await res.json();
-      if (!res.ok || !json?.success) return;
-      if (json.messagingEnabled === false) {
-        setCount(0);
-        return;
-      }
-      const total =
-        typeof json.unread_total === "number"
-          ? json.unread_total
-          : (json.data || []).reduce((sum: number, t: { unread_count?: number }) => sum + (t.unread_count || 0), 0);
-      setCount(total);
-    } catch {
-      // best-effort polling only
+  const query = useStaffQuery<number>(
+    staffKeys.messageUnreadCount(),
+    enabled ? "/api/admin/messages/unread-count" : null,
+    {
+      enabled,
+      queryFn: async () => {
+        const res = await adminFetch("/api/admin/messages/unread-count");
+        const json = await res.json();
+        if (!res.ok || !json?.success) return 0;
+        if (json.messagingEnabled === false) return 0;
+        return typeof json.data?.unreadCount === "number" ? json.data.unreadCount : 0;
+      },
+      refetchInterval: enabled
+        ? () => (typeof document !== "undefined" && document.hidden ? false : jitter)
+        : false,
+      staleTime: 10_000,
     }
-  }, [enabled]);
+  );
 
-  useEffect(() => {
-    if (!enabled) return;
-    load();
-    const timer = setInterval(() => {
-      if (typeof document !== "undefined" && document.hidden) return;
-      load();
-    }, intervalMs);
-    return () => clearInterval(timer);
-  }, [enabled, intervalMs, load]);
-
-  return count;
+  return query.data ?? 0;
 }

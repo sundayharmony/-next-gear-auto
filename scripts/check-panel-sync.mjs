@@ -58,6 +58,11 @@ for (const feature of features) {
         `Shared feature "${feature.key}" must reuse admin/shared UI source (missing '@/app/admin/' import/reference): ${path.relative(process.cwd(), managerPagePath)}`
       );
     }
+    if (!managerPageSource.includes("managerPanelConfig")) {
+      failures.push(
+        `Shared feature "${feature.key}" manager wrapper must pass managerPanelConfig: ${path.relative(process.cwd(), managerPagePath)}`
+      );
+    }
   }
 }
 

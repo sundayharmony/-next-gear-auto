@@ -93,7 +93,7 @@ export default function OwnerFinancePage() {
       <AdminPageHeader title="Finance & Earnings" subtitle="Revenue and payout history across your vehicles" />
       <AdminPageBody>
         {loading && !data ? (
-          <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" /></div>
+          <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading finance" /></div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">

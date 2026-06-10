@@ -14,6 +14,7 @@ import { PageContainer } from "@/components/layout/page-container";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { AdminStatusBanner } from "@/components/admin/ui-feedback";
+import { adminPanelConfig, type StaffPanelConfig } from "@/lib/admin/staff-panel-config";
 
 interface PromoCode {
   code: string;
@@ -27,7 +28,11 @@ interface PromoCode {
   isActive?: boolean;
 }
 
-export default function AdminPromoCodesPage() {
+export default function AdminPromoCodesPage({
+  panelConfig: _panelConfig = adminPanelConfig,
+}: {
+  panelConfig?: StaffPanelConfig;
+}) {
   const [codes, setCodes] = useState<PromoCode[]>([]);
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);

@@ -13,6 +13,7 @@ import {
   redactBookingFinancials,
 } from "../src/lib/bookings/financial-access";
 import { isManagerPanelAccessEnabled } from "../src/lib/auth/manager-access";
+import { hasOwnerPortalAccess } from "../src/lib/auth/customer-capabilities";
 import { managerBookingsConfig } from "../src/app/admin/bookings/config";
 
 const root = process.cwd();
@@ -91,4 +92,38 @@ test("manager bookings config restricts bulk and export capabilities", () => {
   assert.equal(managerBookingsConfig.capabilities.canBulkUpdate, false);
   assert.equal(managerBookingsConfig.capabilities.canExportCsv, false);
   assert.equal(managerBookingsConfig.capabilities.canCreateBookings, true);
+});
+
+test("owner_portal_enabled revocation blocks owner portal access", () => {
+  assert.equal(hasOwnerPortalAccess({ role: "owner", owner_portal_enabled: true }), true);
+  assert.equal(hasOwnerPortalAccess({ role: "owner", owner_portal_enabled: false }), true);
+  assert.equal(hasOwnerPortalAccess({ role: "customer", owner_portal_enabled: true }), true);
+  assert.equal(hasOwnerPortalAccess({ role: "customer", owner_portal_enabled: false }), false);
+});
+
+test("blocked-dates GET requires admin auth only", () => {
+  const source = fs.readFileSync(
+    path.join(root, "src/app/api/admin/blocked-dates/route.ts"),
+    "utf8"
+  );
+  const getBlock = source.slice(source.indexOf("export async function GET"));
+  assert.ok(getBlock.includes("verifyAdmin(req)"), "blocked-dates GET should use verifyAdmin");
+  assert.ok(!getBlock.includes("verifyAdminOrManager(req)"), "blocked-dates GET should not allow managers");
+});
+
+test("send-password-link is admin-only", () => {
+  const source = fs.readFileSync(
+    path.join(root, "src/app/api/admin/send-password-link/route.ts"),
+    "utf8"
+  );
+  assert.ok(source.includes("verifyAdmin(req)"));
+  assert.ok(!source.includes("verifyAdminOrManager"));
+});
+
+test("manager analytics uses panel access verification", () => {
+  const source = fs.readFileSync(
+    path.join(root, "src/app/api/manager/analytics/route.ts"),
+    "utf8"
+  );
+  assert.ok(source.includes("verifyManagerWithPanelAccess"));
 });

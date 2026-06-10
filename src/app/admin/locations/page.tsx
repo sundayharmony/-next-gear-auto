@@ -13,6 +13,7 @@ import { AddressAutocomplete } from "@/components/address-autocomplete";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
+import { adminPanelConfig, type StaffPanelConfig } from "@/lib/admin/staff-panel-config";
 
 /* ── Types ────────────────────────────────────── */
 
@@ -34,7 +35,11 @@ const blank: LocationForm = { name: "", address: "", city: "", state: "", zip: "
 
 /* ── Page ─────────────────────────────────────── */
 
-export default function AdminLocationsPage() {
+export default function AdminLocationsPage({
+  panelConfig: _panelConfig = adminPanelConfig,
+}: {
+  panelConfig?: StaffPanelConfig;
+}) {
   const [locations, setLocations] = useState<Location[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);

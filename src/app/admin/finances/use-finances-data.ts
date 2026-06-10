@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { adminFetch } from "@/lib/utils/admin-fetch";
+import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
+import { staffKeys, staffQueryFetcher } from "@/lib/hooks/use-staff-query";
 import type { Vehicle as SharedVehicle } from "@/lib/types";
 
 export interface FinanceBooking {
@@ -62,14 +63,21 @@ export interface FinanceTicketRow {
   created_at?: string;
 }
 
+async function fetchFinanceResource<T>(url: string, optional = false): Promise<T[]> {
+  try {
+    const data = await staffQueryFetcher<T[]>(url);
+    return Array.isArray(data) ? data : [];
+  } catch (err) {
+    if (optional) {
+      logger.warn(`Failed to fetch optional finance resource ${url}:`, err);
+      return [];
+    }
+    throw err;
+  }
+}
+
 export function useFinancesData() {
-  const [bookings, setBookings] = useState<FinanceBooking[]>([]);
-  const [blockedDates, setBlockedDates] = useState<BlockedDateFinanceEntry[]>([]);
-  const [expenses, setExpenses] = useState<FinanceExpense[]>([]);
-  const [vehicles, setVehicles] = useState<FinanceVehicle[]>([]);
-  const [maintenance, setMaintenance] = useState<FinanceMaintenanceRecord[]>([]);
-  const [tickets, setTickets] = useState<FinanceTicketRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [error, setError] = useState<string | null>(null);
 
   const defaultDateRange = useMemo(
@@ -84,58 +92,64 @@ export function useFinancesData() {
   const [draftDateRange, setDraftDateRange] = useState(defaultDateRange);
   const draftDirty = draftDateRange.from !== dateRange.from || draftDateRange.to !== dateRange.to;
 
-  const fetchData = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [bookingsRes, blockedDatesRes, expensesRes, vehiclesRes, maintenanceRes, ticketsRes] =
-        await Promise.all([
-          adminFetch("/api/admin/bookings"),
-          adminFetch("/api/admin/blocked-dates"),
-          adminFetch("/api/admin/expenses"),
-          adminFetch("/api/admin/vehicles"),
-          adminFetch("/api/admin/maintenance"),
-          adminFetch("/api/admin/tickets"),
-        ]);
+  const financeKey = staffKeys.finances(dateRange);
 
-      if (!bookingsRes.ok || !expensesRes.ok || !vehiclesRes.ok) {
-        throw new Error("Failed to fetch data");
-      }
+  const results = useQueries({
+    queries: [
+      {
+        queryKey: [...financeKey, "bookings"],
+        queryFn: () => fetchFinanceResource<FinanceBooking>("/api/admin/bookings"),
+        staleTime: 30_000,
+      },
+      {
+        queryKey: [...financeKey, "blockedDates"],
+        queryFn: () => fetchFinanceResource<BlockedDateFinanceEntry>("/api/admin/blocked-dates", true),
+        staleTime: 30_000,
+      },
+      {
+        queryKey: [...financeKey, "expenses"],
+        queryFn: () => fetchFinanceResource<FinanceExpense>("/api/admin/expenses"),
+        staleTime: 30_000,
+      },
+      {
+        queryKey: [...financeKey, "vehicles"],
+        queryFn: () => fetchFinanceResource<FinanceVehicle>("/api/admin/vehicles"),
+        staleTime: 60_000,
+      },
+      {
+        queryKey: [...financeKey, "maintenance"],
+        queryFn: () => fetchFinanceResource<FinanceMaintenanceRecord>("/api/admin/maintenance", true),
+        staleTime: 30_000,
+      },
+      {
+        queryKey: [...financeKey, "tickets"],
+        queryFn: () => fetchFinanceResource<FinanceTicketRow>("/api/admin/tickets", true),
+        staleTime: 30_000,
+      },
+    ],
+  });
 
-      const bookingsData = await bookingsRes.json();
-      const blockedDatesData = blockedDatesRes.ok ? await blockedDatesRes.json() : { data: [] };
-      const expensesData = await expensesRes.json();
-      const vehiclesData = await vehiclesRes.json();
-      const maintenanceData = maintenanceRes.ok ? await maintenanceRes.json() : { data: [] };
-      if (!maintenanceRes.ok) logger.warn("Failed to fetch maintenance data");
-      const ticketsData = ticketsRes.ok ? await ticketsRes.json() : { data: [] };
-      if (!ticketsRes.ok) logger.warn("Failed to fetch tickets data");
+  const [bookingsQ, blockedDatesQ, expensesQ, vehiclesQ, maintenanceQ, ticketsQ] = results;
 
-      setBookings(Array.isArray(bookingsData?.data) ? bookingsData.data : []);
-      setBlockedDates(Array.isArray(blockedDatesData?.data) ? blockedDatesData.data : []);
-      setExpenses(Array.isArray(expensesData?.data) ? expensesData.data : []);
-      setVehicles(Array.isArray(vehiclesData?.data) ? vehiclesData.data : []);
-      setMaintenance(Array.isArray(maintenanceData?.data) ? maintenanceData.data : []);
-      setTickets(Array.isArray(ticketsData?.data) ? ticketsData.data : []);
-    } catch (err) {
-      logger.error("Error fetching data:", err);
-      setError(err instanceof Error ? err.message : "Failed to load dashboard data");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const loading = results.some((q) => q.isLoading);
 
   useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+    const fetchError =
+      bookingsQ.error?.message || expensesQ.error?.message || vehiclesQ.error?.message || null;
+    if (fetchError) setError(fetchError);
+  }, [bookingsQ.error, expensesQ.error, vehiclesQ.error]);
+
+  const fetchData = useCallback(async () => {
+    await queryClient.invalidateQueries({ queryKey: staffKeys.finances(dateRange) });
+  }, [queryClient, dateRange]);
 
   return {
-    bookings,
-    blockedDates,
-    expenses,
-    vehicles,
-    maintenance,
-    tickets,
+    bookings: bookingsQ.data ?? [],
+    blockedDates: blockedDatesQ.data ?? [],
+    expenses: expensesQ.data ?? [],
+    vehicles: vehiclesQ.data ?? [],
+    maintenance: maintenanceQ.data ?? [],
+    tickets: ticketsQ.data ?? [],
     loading,
     error,
     setError,

@@ -10,7 +10,7 @@ import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
  * List blocked dates, optionally filtered by vehicle.
  */
 export async function GET(req: NextRequest) {
-  const auth = await verifyAdminOrManager(req);
+  const auth = await verifyAdmin(req);
   if (!auth.authorized) return auth.response;
 
   try {

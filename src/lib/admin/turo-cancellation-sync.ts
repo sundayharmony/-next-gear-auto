@@ -1,6 +1,7 @@
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getVehicleDisplayName } from "@/lib/types";
 import { parseTuroEmail } from "@/lib/utils/turo-email-parser";
+import { pickTuroCancellationMatch } from "@/lib/utils/turo-cancellation-match";
 import {
   CANCELLED_REASON_PREFIX,
   TURO_BLOCKED_SOURCE,
@@ -63,20 +64,16 @@ function matchTrip(
   endDate: string,
   guestName: string | null
 ): TuroTripRow | null {
-  const candidates = rows.filter(
+  const overlapping = rows.filter(
     (r) =>
       !isBlockedDateCancelled(r) &&
       r.vehicle_id === vehicleId &&
       r.start_date <= endDate &&
       r.end_date >= startDate
   );
-  if (!candidates.length) return null;
-  if (guestName && candidates.length > 1) {
-    const guestLower = guestName.toLowerCase();
-    const byGuest = candidates.find((r) => (r.reason || "").toLowerCase().includes(guestLower));
-    if (byGuest) return byGuest;
-  }
-  return candidates.sort((a, b) => b.created_at.localeCompare(a.created_at))[0];
+  const picked = pickTuroCancellationMatch(overlapping, startDate, endDate, guestName);
+  if (!picked) return null;
+  return rows.find((r) => r.id === picked.id) ?? null;
 }
 
 async function matchVehicle(

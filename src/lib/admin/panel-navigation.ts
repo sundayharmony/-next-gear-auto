@@ -17,7 +17,8 @@ export type PanelIconKey =
   | "clipboard"
   | "messageSquare"
   | "megaphone"
-  | "fileText";
+  | "fileText"
+  | "bell";
 
 export interface PanelNavItem {
   key: string;

@@ -123,7 +123,7 @@ export function TuroTripDetailPanel({ booking, onClose }: TuroTripDetailPanelPro
 
           <div className="pt-4 border-t border-gray-200 flex flex-wrap gap-2">
             {panelConfig.capabilities.canViewBlockedDatesLink ? (
-              <Link href="/admin/blocked-dates">
+              <Link href={`${panelConfig.panelBase}/blocked-dates`}>
                 <Button type="button" size="sm" variant="outline">
                   Open blocked dates
                 </Button>

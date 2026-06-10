@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
-import { adminFetch } from "@/lib/utils/admin-fetch";
-import { logger } from "@/lib/utils/logger";
+import { useCallback, useState, type SetStateAction } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { staffKeys, useStaffQuery } from "@/lib/hooks/use-staff-query";
 
 export interface CustomerRow {
   id: string;
@@ -16,28 +16,37 @@ export interface CustomerRow {
 }
 
 export function useCustomersData() {
-  const [customers, setCustomers] = useState<CustomerRow[]>([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
 
-  const fetchCustomers = useCallback(async (query = "") => {
-    setLoading(true);
-    try {
-      const url = query
-        ? `/api/admin/customers?search=${encodeURIComponent(query)}`
-        : "/api/admin/customers";
-      const res = await adminFetch(url);
-      if (!res.ok) throw new Error("Failed to fetch customers");
-      const data = await res.json();
-      if (data.success) setCustomers(data.data);
-    } catch (err) {
-      logger.error("Failed to fetch customers:", err);
-    }
-    setLoading(false);
+  const customersUrl = search
+    ? `/api/admin/customers?search=${encodeURIComponent(search)}`
+    : "/api/admin/customers";
+
+  const query = useStaffQuery<CustomerRow[]>(
+    staffKeys.customers(search),
+    customersUrl,
+    { placeholderData: (prev) => prev }
+  );
+
+  const fetchCustomers = useCallback((queryStr = "") => {
+    setSearch(queryStr);
   }, []);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, [fetchCustomers]);
+  const setCustomers = useCallback(
+    (updater: SetStateAction<CustomerRow[]>) => {
+      queryClient.setQueryData<CustomerRow[]>(staffKeys.customers(search), (prev) =>
+        typeof updater === "function" ? updater(prev ?? []) : updater
+      );
+    },
+    [queryClient, search]
+  );
 
-  return { customers, setCustomers, loading, fetchCustomers };
+  return {
+    customers: query.data ?? [],
+    setCustomers,
+    loading: query.isFetching,
+    fetchCustomers,
+    refetch: () => query.refetch(),
+  };
 }

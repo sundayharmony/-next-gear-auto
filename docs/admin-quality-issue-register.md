@@ -34,8 +34,9 @@ Living document from the senior cleanup audit. Severity: P0 (blocker) → P3 (ni
 | ID | Issue | Status |
 |----|--------|--------|
 | P2-1 | Layout unread badge + messages page both poll threads every 15s | **Done** — layout hook disabled on `/admin/messages` and `/manager/messages`; tab-hidden skips ticks |
-| P2-2 | Oversized `admin/calendar/page.tsx`, `customers/page.tsx`, etc. | Ongoing: extract modules incrementally |
-| P2-3 | Admin vs manager shell duplication | Ongoing: shared icon map + tab bar patterns |
+| P2-2 | Oversized `admin/calendar/page.tsx`, `customers/page.tsx`, etc. | Ongoing: extract modules incrementally; `shared-messages-page` split in Phase 7 |
+| P2-3 | Admin vs manager shell duplication | **Improved** — `StaffPanelShell` + universal `managerPanelConfig` wrappers (Phase 8) |
+| P2-4 | Owner layout triple-fetch (summary + bookings + vehicles) | **Done** — `GET /api/owner/dataset` + single Query in `OwnerDataProvider` |
 
 ## Route ownership (admin-first)
 
@@ -48,5 +49,6 @@ Living document from the senior cleanup audit. Severity: P0 (blocker) → P3 (ni
 
 1. Full JWT migration; remove `x-admin-id`.
 2. Focus trap + focus restore for notifications dropdown.
-3. Decompose largest admin pages into `hooks/` + `components/`.
-4. Optional Playwright smoke for auth redirect + nav.
+3. Decompose remaining grandfathered admin pages (finances, customers, calendar).
+4. Record bundle analyzer baselines for bookings/finances/calendar (`ANALYZE=true npm run analyze`).
+5. Optional Playwright smoke for auth redirect + nav.

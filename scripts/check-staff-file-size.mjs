@@ -3,15 +3,18 @@ import path from "node:path";
 
 const root = process.cwd();
 const MAX_LINES = 600;
-/** Pre-existing admin mega-pages tracked for Phase 3 splits — must not grow. */
+/** Pre-existing admin mega-pages tracked for phased splits — must not grow. */
 const GRANDFATHERED_MAX = new Map([
-  ["src/app/admin/blocked-dates/page.tsx", 1138],
-  ["src/app/admin/calendar/page.tsx", 1220],
-  ["src/app/admin/customers/page.tsx", 1945],
-  ["src/app/admin/finances/page.tsx", 2656],
-  ["src/app/admin/maintenance/page.tsx", 1320],
-  ["src/app/admin/tickets/page.tsx", 946],
-  ["src/app/admin/vehicles/page.tsx", 1503],
+  ["src/app/admin/blocked-dates/page.tsx", 1131],
+  ["src/app/admin/customers/page.tsx", 1831],
+  ["src/app/admin/finances/page.tsx", 2454],
+  ["src/app/admin/maintenance/page.tsx", 1317],
+  ["src/app/admin/tickets/page.tsx", 909],
+  ["src/app/admin/vehicles/page.tsx", 1194],
+]);
+/** Heavy shared components — shrink-only caps (must not grow). */
+const SHRINK_CAPS = new Map([
+  ["src/app/admin/bookings/components/BookingDetailPanel.tsx", 2360],
 ]);
 const failures = [];
 
@@ -30,17 +33,30 @@ function walk(dir, out = []) {
   return out;
 }
 
+function checkFile(rel, allowed) {
+  const file = path.join(root, rel);
+  if (!fs.existsSync(file)) return;
+  const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).length;
+  if (lines > allowed) {
+    failures.push(`${rel}: ${lines} lines (max ${allowed})`);
+  }
+}
+
 for (const rel of panelDirs) {
   const abs = path.join(root, rel);
   if (!fs.existsSync(abs)) continue;
   for (const file of walk(abs)) {
-    const rel = path.relative(root, file).replace(/\\/g, "/");
+    const relPath = path.relative(root, file).replace(/\\/g, "/");
     const lines = fs.readFileSync(file, "utf8").split(/\r?\n/).length;
-    const allowed = GRANDFATHERED_MAX.get(rel) ?? MAX_LINES;
+    const allowed = GRANDFATHERED_MAX.get(relPath) ?? MAX_LINES;
     if (lines > allowed) {
-      failures.push(`${rel}: ${lines} lines (max ${allowed})`);
+      failures.push(`${relPath}: ${lines} lines (max ${allowed})`);
     }
   }
+}
+
+for (const [rel, allowed] of SHRINK_CAPS) {
+  checkFile(rel, allowed);
 }
 
 if (failures.length > 0) {

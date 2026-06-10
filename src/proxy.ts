@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { jwtVerify, SignJWT, type JWTPayload } from "jose";
-import { tokenHasOwnerAccess } from "@/lib/auth/roles";
+import { tokenHasOwnerAccess, tokenHasStaffAccess } from "@/lib/auth/roles";
 import {
   buildContentSecurityPolicy,
   shouldApplyDocumentCsp,
@@ -150,9 +150,10 @@ export async function proxy(req: NextRequest) {
   }
 
   const isOwnerRoute = pathname.startsWith("/owner");
+  const isManagerRoute = pathname.startsWith("/manager");
   if (
     (pathname.startsWith("/admin/") && !pathname.startsWith("/admin/login")) ||
-    pathname.startsWith("/manager") ||
+    isManagerRoute ||
     isOwnerRoute
   ) {
     const token = req.cookies.get(COOKIE_NAME)?.value;
@@ -180,8 +181,17 @@ export async function proxy(req: NextRequest) {
         }
       }
 
+      const payload = effectiveToken ? await getJwtPayload(effectiveToken) : null;
+
+      if (authenticated && isManagerRoute) {
+        if (!payload || !tokenHasStaffAccess(payload as { role?: unknown; roles?: unknown })) {
+          const loginUrl = new URL("/admin", req.url);
+          loginUrl.searchParams.set("redirect", pathname);
+          return NextResponse.redirect(loginUrl);
+        }
+      }
+
       if (authenticated && isOwnerRoute) {
-        const payload = effectiveToken ? await getJwtPayload(effectiveToken) : null;
         if (!payload || !tokenHasOwnerAccess(payload as { role?: unknown; roles?: unknown })) {
           const loginUrl = new URL("/login", req.url);
           loginUrl.searchParams.set("redirect", pathname);
