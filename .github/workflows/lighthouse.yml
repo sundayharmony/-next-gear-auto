@@ -1,0 +1,48 @@
+name: Lighthouse
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci
+      - run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSJ9.placeholder
+          SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSJ9.placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder_for_ci_build_only
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder_for_ci_build_only
+      - run: npm run start &
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSJ9.placeholder
+          SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSJ9.placeholder
+          STRIPE_SECRET_KEY: sk_test_placeholder_for_ci_build_only
+          STRIPE_WEBHOOK_SECRET: whsec_placeholder_for_ci_build_only
+      - name: Wait for server
+        run: npx --yes wait-on http://127.0.0.1:3000 --timeout 120000
+      - name: Run Lighthouse
+        uses: treosh/lighthouse-ci-action@v12
+        with:
+          urls: |
+            http://127.0.0.1:3000/
+            http://127.0.0.1:3000/admin/bookings
+            http://127.0.0.1:3000/booking
+          uploadArtifacts: true
+          temporaryPublicStorage: true

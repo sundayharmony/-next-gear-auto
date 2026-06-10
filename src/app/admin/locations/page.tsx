@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { Location } from "@/lib/types";
 import { AddressAutocomplete } from "@/components/address-autocomplete";
@@ -306,27 +306,32 @@ export default function AdminLocationsPage({
         </div>
       )}
 
-      {/* Header */}
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Locations</h1>
-              <p className="mt-1 page-hero-subtitle">Manage pickup and dropoff locations</p>
-            </div>
-            <Button onClick={() => { setEditId(null); setShowAdd(!showAdd); if (showAdd) setAddForm({ ...blank }); }}
-              className="bg-white text-purple-900 hover:bg-gray-100">
-              {showAdd ? (
-                <><X className="h-4 w-4 mr-2" /> Cancel</>
-              ) : (
-                <><Plus className="h-4 w-4 mr-2" /> Add Location</>
-              )}
-            </Button>
-          </div>
-        </div>
-      </section>
+      <AdminPageHeader
+        title="Locations"
+        subtitle="Manage pickup and dropoff locations"
+        actions={
+          <Button
+            onClick={() => {
+              setEditId(null);
+              setShowAdd(!showAdd);
+              if (showAdd) setAddForm({ ...blank });
+            }}
+            className="bg-white text-purple-900 hover:bg-gray-100"
+          >
+            {showAdd ? (
+              <>
+                <X className="h-4 w-4 mr-2" /> Cancel
+              </>
+            ) : (
+              <>
+                <Plus className="h-4 w-4 mr-2" /> Add Location
+              </>
+            )}
+          </Button>
+        }
+      />
 
-      <PageContainer className="py-8">
+      <AdminPageBody>
 
       {/* Stats */}
       {!loading && (
@@ -420,7 +425,7 @@ export default function AdminLocationsPage({
           </CardContent>
         </Card>
       )}
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

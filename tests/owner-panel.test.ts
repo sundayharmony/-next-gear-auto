@@ -11,7 +11,7 @@ test("owner navigation includes create booking entry", () => {
   const create = OWNER_NAV_ITEMS.find((item) => item.key === "createBooking");
   assert.ok(create);
   assert.equal(create.href, "/owner/bookings/create");
-  assert.equal(create.primary, false);
+  assert.equal(create.primary, true);
 });
 
 test("owner dataset uses single consolidated API", () => {

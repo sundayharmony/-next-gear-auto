@@ -1,6 +1,6 @@
 # Next Gear Auto
 
-Next.js 15 automotive rental platform with admin, manager, and owner staff panels.
+Next.js 16 automotive rental platform with admin, manager, and owner staff panels.
 
 ## Requirements
 
@@ -11,9 +11,11 @@ Next.js 15 automotive rental platform with admin, manager, and owner staff panel
 
 ```bash
 npm ci
-cp .env.example .env.local   # if present — configure Supabase, Stripe, email
+cp .env.example .env.local   # copy from repo root — see .env.example for all variables
 npm run dev
 ```
+
+Environment template: [`.env.example`](.env.example) (Supabase, JWT, Stripe, SMTP, feature flags).
 
 Open [http://localhost:3000](http://localhost:3000).
 
@@ -42,7 +44,7 @@ ANALYZE=true npm run analyze
 $env:ANALYZE="true"; npm run analyze
 ```
 
-Baselines worth tracking: `/admin/bookings`, `/admin/finances`, `/admin/calendar`.
+Baselines: see [docs/perf-baselines.md](docs/perf-baselines.md) (`/admin/bookings`, `/admin/finances`, `/admin/calendar`, `/booking`).
 
 ## Environment variables (common)
 
@@ -65,6 +67,7 @@ See deployment docs in `docs/` for panel-specific flags (`manager_access_enabled
 - [API auth matrix](docs/api-auth-matrix.md)
 - [Staff query guide](docs/staff-query-guide.md)
 - [Admin quality register](docs/admin-quality-issue-register.md)
+- [Performance baselines](docs/perf-baselines.md)
 
 ## Panels
 

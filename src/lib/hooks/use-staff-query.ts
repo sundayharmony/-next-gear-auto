@@ -29,10 +29,14 @@ export const staffKeys = {
     period ? (["staff", "finances", period] as const) : (["staff", "finances"] as const),
   managerAnalytics: () => ["staff", "manager-analytics"] as const,
   messageUnreadCount: () => ["staff", "messages", "unread-count"] as const,
+  messageThreads: (panelPath: string) => ["staff", "messages", "threads", panelPath] as const,
+  calendarBookings: (endpoint: string, range: Record<string, string>) =>
+    ["staff", "calendar", "bookings", endpoint, range] as const,
 };
 
 export const ownerKeys = {
   dataset: () => ["owner", "dataset"] as const,
+  availability: () => ["owner", "availability"] as const,
 };
 
 export async function staffQueryFetcher<T>(url: string): Promise<T> {

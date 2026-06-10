@@ -3,18 +3,20 @@
 import React, { createContext, useCallback, useContext } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { ownerKeys, useStaffQuery } from "@/lib/hooks/use-staff-query";
-import type { OwnerBooking, OwnerDashboardMetrics, OwnerVehicle } from "@/lib/types";
+import type { OwnerBlockedDate, OwnerBooking, OwnerDashboardMetrics, OwnerVehicle } from "@/lib/types";
 
 interface OwnerDataset {
   metrics: OwnerDashboardMetrics;
   bookings: OwnerBooking[];
   vehicles: OwnerVehicle[];
+  blockedDates: OwnerBlockedDate[];
 }
 
 interface OwnerDataContextValue {
   metrics: OwnerDashboardMetrics | null;
   bookings: OwnerBooking[];
   vehicles: OwnerVehicle[];
+  blockedDates: OwnerBlockedDate[];
   loading: boolean;
   error: string | null;
   reload: () => Promise<void>;
@@ -51,6 +53,7 @@ export function OwnerDataProvider({ children }: { children: React.ReactNode }) {
         metrics: query.data?.metrics ?? null,
         bookings: query.data?.bookings ?? [],
         vehicles: query.data?.vehicles ?? [],
+        blockedDates: query.data?.blockedDates ?? [],
         loading: query.isLoading,
         error: query.error?.message ?? null,
         reload,

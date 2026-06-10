@@ -4,8 +4,9 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { useRouter, useSearchParams } from "next/navigation";
 import { ChevronLeft, Loader2, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { staffKeys, useStaffQuery } from "@/lib/hooks/use-staff-query";
 import { MessagingPushRegistration } from "@/components/messaging/push-registration";
 import { ToastContainer, ToastNotification } from "@/components/ui/toast";
 import { cn } from "@/lib/utils/cn";
@@ -34,10 +35,16 @@ import {
   type ThreadRow,
 } from "./messages/types";
 
+interface ThreadsQueryPayload {
+  threads: ThreadRow[];
+  messagingEnabled: boolean;
+  channels?: { email: boolean; push: boolean };
+  viewerUserId: string | null;
+}
+
 export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/admin/messages" | "/manager/messages"; panelTitle: string }) {
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [threads, setThreads] = useState<ThreadRow[]>([]);
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [staff, setStaff] = useState<StaffRow[]>([]);
   const [selectedThreadId, setSelectedThreadId] = useState<string | null>(null);
@@ -45,19 +52,49 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   const [dmTarget, setDmTarget] = useState("");
   const [channelTitle, setChannelTitle] = useState("All Staff");
   const [threadSearch, setThreadSearch] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [staffLoading, setStaffLoading] = useState(true);
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [busy, setBusy] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [serverMessagingOn, setServerMessagingOn] = useState(true);
-  const [viewerUserId, setViewerUserId] = useState<string | null>(null);
   const [toasts, setToasts] = useState<InboundToast[]>([]);
   const [isNarrow, setIsNarrow] = useState(false);
   const [mobileTab, setMobileTab] = useState<"list" | "chat">("list");
   const [pendingAttachments, setPendingAttachments] = useState<Array<{ url: string; name: string }>>([]);
   const [uploadingAttachments, setUploadingAttachments] = useState(false);
   const [notificationChannels, setNotificationChannels] = useState<{ email: boolean; push: boolean } | null>(null);
+
+  const threadsQuery = useStaffQuery<ThreadsQueryPayload>(
+    staffKeys.messageThreads(panelPath),
+    "/api/admin/messages/threads",
+    {
+      queryFn: async () => {
+        const res = await adminFetch("/api/admin/messages/threads");
+        const json = await res.json();
+        if (!res.ok || !json.success) throw new Error(json.message || "Failed to load threads");
+        const messagingEnabled = json.messagingEnabled !== false;
+        return {
+          threads: messagingEnabled ? (json.data || []) : [],
+          messagingEnabled,
+          channels:
+            json.channels &&
+            typeof json.channels.email === "boolean" &&
+            typeof json.channels.push === "boolean"
+              ? { email: json.channels.email, push: json.channels.push }
+              : undefined,
+          viewerUserId: json.viewer?.userId ?? null,
+        };
+      },
+      refetchInterval: () =>
+        typeof document !== "undefined" && document.hidden ? false : 15_000,
+      staleTime: 10_000,
+    }
+  );
+
+  const threads = threadsQuery.data?.threads ?? [];
+  const viewerUserId = threadsQuery.data?.viewerUserId ?? null;
+  const loading = threadsQuery.isLoading || staffLoading;
 
   const selectedThreadIdRef = useRef<string | null>(null);
   const threadLastMessageBaselineRef = useRef<Map<string, string | null> | null>(null);
@@ -177,27 +214,9 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
     threadLastMessageBaselineRef.current = nextMap;
   }, []);
 
-  const fetchThreads = useCallback(async () => {
-    const res = await adminFetch("/api/admin/messages/threads");
-    const json = await res.json();
-    if (!res.ok || !json.success) throw new Error(json.message || "Failed to load threads");
-    const on = json.messagingEnabled !== false;
-    setServerMessagingOn(on);
-    const list: ThreadRow[] = on ? json.data || [] : [];
-    setThreads(list);
-    if (json.channels && typeof json.channels.email === "boolean" && typeof json.channels.push === "boolean") {
-      setNotificationChannels({ email: json.channels.email, push: json.channels.push });
-    }
-    const vid = json.viewer?.userId ?? null;
-    if (vid) setViewerUserId(vid);
-    if (on) maybeNotifyInbound(list, vid);
-    if (!on) {
-      setSelectedThreadId(null);
-      setMessages([]);
-      threadLastMessageBaselineRef.current = null;
-      router.replace(panelPath);
-    }
-  }, [router, panelPath, maybeNotifyInbound]);
+  const refreshThreads = useCallback(async () => {
+    await threadsQuery.refetch();
+  }, [threadsQuery]);
 
   const fetchMessages = useCallback(
     async (threadId: string) => {
@@ -222,37 +241,33 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
   );
 
   useEffect(() => {
+    if (!threadsQuery.data) return;
+    const { threads: list, messagingEnabled, channels, viewerUserId: vid } = threadsQuery.data;
+    setServerMessagingOn(messagingEnabled);
+    if (channels) setNotificationChannels(channels);
+    if (messagingEnabled) maybeNotifyInbound(list, vid);
+    else threadLastMessageBaselineRef.current = null;
+    if (!messagingEnabled) {
+      setSelectedThreadId(null);
+      setMessages([]);
+      router.replace(panelPath);
+    }
+  }, [threadsQuery.data, maybeNotifyInbound, router, panelPath]);
+
+  useEffect(() => {
+    if (threadsQuery.error) {
+      setError(threadsQuery.error.message);
+    }
+  }, [threadsQuery.error]);
+
+  useEffect(() => {
     let mounted = true;
     const run = async () => {
       try {
-        setLoading(true);
-        const [threadsRes, staffRes] = await Promise.all([
-          adminFetch("/api/admin/messages/threads"),
-          adminFetch("/api/admin/messages/staff"),
-        ]);
-        const threadsJson = await threadsRes.json();
+        setStaffLoading(true);
+        const staffRes = await adminFetch("/api/admin/messages/staff");
         const staffJson = await staffRes.json();
         if (!mounted) return;
-        if (!threadsRes.ok || !threadsJson.success) throw new Error(threadsJson.message || "Failed to load threads");
-        const messagingOn = threadsJson.messagingEnabled !== false;
-        setServerMessagingOn(messagingOn);
-        const list: ThreadRow[] = messagingOn ? threadsJson.data || [] : [];
-        setThreads(list);
-        if (
-          threadsJson.channels &&
-          typeof threadsJson.channels.email === "boolean" &&
-          typeof threadsJson.channels.push === "boolean"
-        ) {
-          setNotificationChannels({ email: threadsJson.channels.email, push: threadsJson.channels.push });
-        }
-        if (threadsJson.viewer?.userId) setViewerUserId(threadsJson.viewer.userId);
-        if (messagingOn) maybeNotifyInbound(list, threadsJson.viewer?.userId ?? null);
-        else threadLastMessageBaselineRef.current = null;
-        if (!messagingOn) {
-          setSelectedThreadId(null);
-          setMessages([]);
-          router.replace(panelPath);
-        }
         if (staffRes.ok && staffJson.success) {
           setStaff(staffJson.messagingEnabled === false ? [] : staffJson.data || []);
         }
@@ -260,18 +275,14 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       } catch (e) {
         if (mounted) setError(e instanceof Error ? e.message : String(e));
       } finally {
-        if (mounted) setLoading(false);
+        if (mounted) setStaffLoading(false);
       }
     };
     run();
-    const timer = setInterval(() => {
-      fetchThreads().catch(() => undefined);
-    }, 15000);
     return () => {
       mounted = false;
-      clearInterval(timer);
     };
-  }, [fetchThreads, router, panelPath, maybeNotifyInbound]);
+  }, []);
 
   useEffect(() => {
     const urlThread = searchParams.get("thread");
@@ -337,7 +348,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to create DM");
-      await fetchThreads();
+      await refreshThreads();
       openThread(json.data.id);
       setDmTarget("");
       setError(null);
@@ -360,7 +371,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       });
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to create channel");
-      await fetchThreads();
+      await refreshThreads();
       openThread(json.data.id);
       setError(null);
     } catch (e) {
@@ -452,7 +463,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       if (composerRef.current) composerRef.current.innerHTML = "";
       if (draftStorageKey && typeof window !== "undefined") window.localStorage.removeItem(draftStorageKey);
       setError(null);
-      void Promise.all([fetchMessages(selectedThreadId), fetchThreads()]).catch((e) =>
+      void Promise.all([fetchMessages(selectedThreadId), refreshThreads()]).catch((e) =>
         setError(e instanceof Error ? e.message : String(e))
       );
     } catch (e) {
@@ -482,7 +493,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
       const json = await res.json();
       if (!res.ok || !json.success) throw new Error(json.message || "Failed to delete message");
       await fetchMessages(selectedThreadId);
-      await fetchThreads();
+      await refreshThreads();
       setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -502,14 +513,12 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
         ))}
       </ToastContainer>
 
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <h1 className="text-2xl sm:text-3xl font-bold">{panelTitle}</h1>
-          <p className="mt-1 page-hero-subtitle">Unread messages: {unreadCount}</p>
-        </div>
-      </section>
+      <AdminPageHeader
+        title={panelTitle}
+        subtitle={`Unread messages: ${unreadCount}`}
+      />
 
-      <PageContainer className="py-5 sm:py-8 space-y-4">
+      <AdminPageBody className="py-5 sm:py-8 space-y-4">
         <MessagingPushRegistration />
         {!serverMessagingOn && (
           <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900">
@@ -665,7 +674,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
             />
           </div>
         </div>
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

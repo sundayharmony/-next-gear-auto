@@ -406,6 +406,18 @@ export interface OwnerBooking extends PayoutBreakdown {
   originChannel?: "public_checkout" | "admin_panel" | "manager_panel" | "owner_panel" | "unknown" | null;
 }
 
+/** Blocked date range visible to the owner (manual blocks + Turo trips). */
+export interface OwnerBlockedDate {
+  id: string;
+  vehicleId: string;
+  startDate: string;
+  endDate: string;
+  reason: string | null;
+  source: string;
+  /** True when the owner created the block and can remove it from the portal. */
+  removable: boolean;
+}
+
 /** Aggregated owner dashboard metrics. */
 export interface OwnerDashboardMetrics {
   totalRevenue: number;
@@ -418,6 +430,15 @@ export interface OwnerDashboardMetrics {
   utilizationRate: number;
   vehicleCount: number;
   monthlyRevenue: { month: string; revenue: number; payout: number }[];
+}
+
+/** Finance page summary derived from owner bookings. */
+export interface OwnerFinanceSummary {
+  currentMonthRevenue: number;
+  currentMonthPayout: number;
+  lifetimeRevenue: number;
+  lifetimePayouts: number;
+  pendingPayouts: number;
 }
 
 /** A vehicle owned by an owner (subset for the portal). */

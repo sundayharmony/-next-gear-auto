@@ -1,11 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyOwner } from "@/lib/owner/owner-check";
+import { verifyOwnerWithPortalAccess } from "@/lib/owner/owner-check";
 import { loadOwnerDataset } from "@/lib/owner/owner-data";
 import { computeOwnerDashboardMetrics } from "@/lib/owner/owner-metrics";
 import { logger } from "@/lib/utils/logger";
 
+/**
+ * @deprecated Legacy owner endpoint. Prefer GET /api/owner/dataset (metrics slice).
+ * Thin wrapper kept for backward compatibility; new portal pages should use OwnerDataProvider.
+ */
 export async function GET(req: NextRequest) {
-  const auth = await verifyOwner(req);
+  const auth = await verifyOwnerWithPortalAccess(req);
   if (!auth.authorized) return auth.response;
 
   try {

@@ -5,6 +5,7 @@ export default defineConfig([
   ...nextVitals,
   {
     rules: {
+      "react-hooks/rules-of-hooks": "error",
       // Valid patterns (URL sync, theme mount, data fetch on open) — too noisy as errors project-wide
       "react-hooks/set-state-in-effect": "off",
       "react/no-unescaped-entities": "off",

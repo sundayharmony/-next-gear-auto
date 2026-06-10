@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useMemo, type SetStateAction } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import type { VehicleListItem } from "@/lib/types";
-import { adminFetch } from "@/lib/utils/admin-fetch";
 import { staffKeys, useStaffQuery } from "@/lib/hooks/use-staff-query";
 import { addDaysToYmd, getLocalYmd } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
@@ -18,14 +18,18 @@ interface UseCalendarDataOptions {
   calendarMonthStart: Date;
 }
 
+function filterActiveBookings(rows: AdminBookingRow[]): AdminBookingRow[] {
+  return rows.filter((b) => b.status !== "cancelled");
+}
+
 export function useCalendarData({
   bookingsEndpoint,
   view,
   timelineStart,
   calendarMonthStart,
 }: UseCalendarDataOptions) {
-  const [bookings, setBookings] = useState<AdminBookingRow[]>([]);
-  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const queryClient = useQueryClient();
+  const isManagerAll = bookingsEndpoint === "/api/manager/bookings";
 
   const vehiclesQuery = useStaffQuery<VehicleListItem[]>(
     staffKeys.vehicles("/api/admin/vehicles"),
@@ -33,11 +37,6 @@ export function useCalendarData({
     { staleTime: 60_000 }
   );
   const vehicles = vehiclesQuery.data ?? [];
-
-  const bookingsAbortControllerRef = useRef<AbortController | null>(null);
-  const bookingsRangeRef = useRef<{ from: string; to: string } | null>(null);
-  const bookingsEndpointRef = useRef(bookingsEndpoint);
-  const managerBookingsFetchedRef = useRef(false);
 
   const visibleBounds = useMemo(() => {
     if (view === "timeline") {
@@ -53,6 +52,35 @@ export function useCalendarData({
     const last = new Date(y, m + 1, 0);
     return { from: getLocalYmd(first), to: getLocalYmd(last) };
   }, [view, timelineStart, calendarMonthStart]);
+
+  const bookingsRange = useMemo(
+    () => ({
+      from: addDaysToYmd(visibleBounds.from, -120),
+      to: addDaysToYmd(visibleBounds.to, 120),
+    }),
+    [visibleBounds]
+  );
+
+  const bookingsRangeKey = useMemo(
+    () => (isManagerAll ? ({ mode: "all" } as const) : bookingsRange),
+    [isManagerAll, bookingsRange]
+  );
+
+  const bookingsUrl = isManagerAll
+    ? `${bookingsEndpoint}?status=all&includeTuro=true`
+    : `${bookingsEndpoint}?from=${bookingsRange.from}&to=${bookingsRange.to}&limit=200&includeTuro=true`;
+
+  const bookingsQuery = useStaffQuery<AdminBookingRow[]>(
+    staffKeys.calendarBookings(bookingsEndpoint, bookingsRangeKey),
+    bookingsUrl,
+    {
+      select: filterActiveBookings,
+      staleTime: 30_000,
+      placeholderData: (prev) => prev,
+    }
+  );
+
+  const bookings = bookingsQuery.data ?? [];
 
   const blockedRange = useMemo(
     () => ({
@@ -75,105 +103,45 @@ export function useCalendarData({
 
   const blockedDates = blockedDatesQuery.data ?? [];
 
-  const loadBookings = useCallback(
-    async (options?: { forceReplace?: boolean }) => {
-      const forceReplace = options?.forceReplace ?? false;
-
-      if (bookingsEndpointRef.current !== bookingsEndpoint) {
-        bookingsEndpointRef.current = bookingsEndpoint;
-        bookingsRangeRef.current = null;
-        managerBookingsFetchedRef.current = false;
-      }
-      if (forceReplace) {
-        bookingsRangeRef.current = null;
-        managerBookingsFetchedRef.current = false;
-      }
-
-      if (bookingsAbortControllerRef.current) {
-        bookingsAbortControllerRef.current.abort();
-      }
-      bookingsAbortControllerRef.current = new AbortController();
-      const signal = bookingsAbortControllerRef.current.signal;
-
-      if (bookingsEndpoint === "/api/manager/bookings") {
-        if (!forceReplace && managerBookingsFetchedRef.current) return;
-        try {
-          const res = await adminFetch(`${bookingsEndpoint}?status=all&includeTuro=true`, { signal });
-          if (res.ok) {
-            const data = await res.json();
-            setBookings((data.data || []).filter((b: AdminBookingRow) => b.status !== "cancelled"));
-            managerBookingsFetchedRef.current = true;
-          }
-          bookingsRangeRef.current = null;
-        } catch (error) {
-          if (error instanceof Error && error.name === "AbortError") return;
-          logger.error("Failed to fetch bookings:", error);
+  const setBookings = useCallback(
+    (updater: SetStateAction<AdminBookingRow[]>) => {
+      queryClient.setQueryData<AdminBookingRow[]>(
+        staffKeys.calendarBookings(bookingsEndpoint, bookingsRangeKey),
+        (prev) => {
+          const current = prev ?? [];
+          return typeof updater === "function" ? updater(current) : updater;
         }
-        return;
-      }
-
-      const needFrom = addDaysToYmd(visibleBounds.from, -120);
-      const needTo = addDaysToYmd(visibleBounds.to, 120);
-      const loaded = bookingsRangeRef.current;
-
-      if (!forceReplace && loaded && needFrom >= loaded.from && needTo <= loaded.to) {
-        return;
-      }
-
-      const newFrom = !loaded || forceReplace ? needFrom : needFrom < loaded.from ? needFrom : loaded.from;
-      const newTo = !loaded || forceReplace ? needTo : needTo > loaded.to ? needTo : loaded.to;
-
-      try {
-        const res = await adminFetch(
-          `${bookingsEndpoint}?from=${newFrom}&to=${newTo}&limit=200&includeTuro=true`,
-          { signal }
-        );
-        if (res.ok) {
-          const data = await res.json();
-          setBookings((data.data || []).filter((b: AdminBookingRow) => b.status !== "cancelled"));
-          bookingsRangeRef.current = { from: newFrom, to: newTo };
-        }
-      } catch (error) {
-        if (error instanceof Error && error.name === "AbortError") return;
-        logger.error("Failed to fetch bookings:", error);
-      }
+      );
     },
-    [bookingsEndpoint, visibleBounds]
+    [queryClient, bookingsEndpoint, bookingsRangeKey]
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    const run = async () => {
-      setBookingsLoading(true);
-      try {
-        await loadBookings();
-      } catch (error) {
-        logger.error("Failed to fetch calendar data:", error);
-      } finally {
-        if (!cancelled) setBookingsLoading(false);
+  const loadBookings = useCallback(
+    async (options?: { forceReplace?: boolean }) => {
+      if (options?.forceReplace) {
+        await queryClient.invalidateQueries({
+          queryKey: staffKeys.calendarBookings(bookingsEndpoint, bookingsRangeKey),
+        });
       }
-    };
-    run();
-    return () => {
-      cancelled = true;
-      bookingsAbortControllerRef.current?.abort();
-    };
-  }, [loadBookings]);
+      await bookingsQuery.refetch();
+    },
+    [bookingsQuery, queryClient, bookingsEndpoint, bookingsRangeKey]
+  );
 
   const handleRefresh = useCallback(async () => {
-    setBookingsLoading(true);
     try {
-      await loadBookings({ forceReplace: true });
-      await blockedDatesQuery.refetch();
+      await Promise.all([
+        loadBookings({ forceReplace: true }),
+        blockedDatesQuery.refetch(),
+        vehiclesQuery.refetch(),
+      ]);
     } catch (error) {
       logger.error("Failed to refresh calendar data:", error);
-    } finally {
-      setBookingsLoading(false);
     }
-  }, [loadBookings, blockedDatesQuery]);
+  }, [loadBookings, blockedDatesQuery, vehiclesQuery]);
 
   const loading =
-    bookingsLoading ||
+    bookingsQuery.isLoading ||
     blockedDatesQuery.isLoading ||
     vehiclesQuery.isLoading;
 

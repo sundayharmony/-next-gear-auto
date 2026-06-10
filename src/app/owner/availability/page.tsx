@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 import { Loader2, ShieldBan, Trash2, Plus } from "lucide-react";
 import { MonthCalendar } from "@/components/owner/month-calendar";
+import { OwnerMobileAgendaView } from "@/components/owner/mobile-agenda-view";
 import {
   AdminPageHeader,
   AdminPageBody,
@@ -13,44 +14,18 @@ import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { useOwnerApi } from "@/lib/owner/use-owner-api";
+import { useOwnerData } from "@/lib/owner/owner-data-context";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useNotification } from "@/lib/context/notification-context";
 import { formatDate } from "@/lib/utils/date-helpers";
-import type { OwnerVehicle } from "@/lib/types";
 import { cn } from "@/lib/utils/cn";
-
-interface BlockedDate {
-  id: string;
-  vehicleId: string;
-  startDate: string;
-  endDate: string;
-  reason: string | null;
-  source: string;
-  removable: boolean;
-}
-interface BookedRange {
-  id: string;
-  vehicleId: string;
-  startDate: string;
-  endDate: string;
-  status: string;
-}
-interface AvailabilityData {
-  vehicles: OwnerVehicle[];
-  blockedDates: BlockedDate[];
-  bookedRanges: BookedRange[];
-}
 
 function ymd(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-function inRange(day: string, start: string, end: string): boolean {
-  return day >= start && day <= end;
-}
 
 export default function OwnerAvailabilityPage() {
-  const { data, loading, reload } = useOwnerApi<AvailabilityData>("/api/owner/availability");
+  const { vehicles, bookings, blockedDates, loading, reload } = useOwnerData();
   const { showToast } = useNotification();
   const [vehicleId, setVehicleId] = useState("");
   const [from, setFrom] = useState("");
@@ -58,29 +33,46 @@ export default function OwnerAvailabilityPage() {
   const [reason, setReason] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [cursor, setCursor] = useState(() => new Date());
+  const [agendaStart, setAgendaStart] = useState<Date>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
 
-  const vehicles = data?.vehicles ?? [];
   const activeVehicleId = vehicleId || vehicles[0]?.id || "";
+
+  const bookedRanges = useMemo(
+    () =>
+      bookings
+        .filter((b) => b.status !== "cancelled")
+        .map((b) => ({
+          id: b.id,
+          vehicleId: b.vehicleId,
+          startDate: b.pickupDate,
+          endDate: b.returnDate,
+        })),
+    [bookings]
+  );
 
   const dayStatus = useMemo(() => {
     const map = new Map<string, "booked" | "blocked">();
-    if (!data || !activeVehicleId) return map;
-    for (const r of data.bookedRanges.filter((r) => r.vehicleId === activeVehicleId)) {
+    if (!activeVehicleId) return map;
+    for (const r of bookedRanges.filter((r) => r.vehicleId === activeVehicleId)) {
       for (let d = new Date(`${r.startDate}T00:00:00`); ymd(d) <= r.endDate; d.setDate(d.getDate() + 1)) {
         map.set(ymd(d), "booked");
       }
     }
-    for (const b of data.blockedDates.filter((b) => b.vehicleId === activeVehicleId)) {
+    for (const b of blockedDates.filter((b) => b.vehicleId === activeVehicleId)) {
       for (let d = new Date(`${b.startDate}T00:00:00`); ymd(d) <= b.endDate; d.setDate(d.getDate() + 1)) {
         if (!map.has(ymd(d))) map.set(ymd(d), "blocked");
       }
     }
     return map;
-  }, [data, activeVehicleId]);
+  }, [bookedRanges, blockedDates, activeVehicleId]);
 
   const ownerBlocks = useMemo(
-    () => (data?.blockedDates ?? []).filter((b) => b.removable),
-    [data]
+    () => blockedDates.filter((b) => b.removable),
+    [blockedDates]
   );
 
   const submitBlock = async () => {
@@ -102,7 +94,9 @@ export default function OwnerAvailabilityPage() {
       const json = await res.json();
       if (json.success) {
         showToast("success", "Dates blocked", "These dates are now unavailable for booking.");
-        setFrom(""); setTo(""); setReason("");
+        setFrom("");
+        setTo("");
+        setReason("");
         await reload();
       } else {
         showToast("error", "Could not block", json.message || "Try again.");
@@ -129,13 +123,21 @@ export default function OwnerAvailabilityPage() {
     }
   };
 
+  const shiftAgendaWeek = (delta: number) => {
+    setAgendaStart((prev) => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() + delta);
+      return next;
+    });
+  };
+
   const todayKey = ymd(new Date());
 
   return (
     <>
       <AdminPageHeader title="Availability" subtitle="Block dates when your vehicle is unavailable" />
       <AdminPageBody>
-        {loading && !data ? (
+        {loading && vehicles.length === 0 ? (
           <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading availability" /></div>
         ) : vehicles.length === 0 ? (
           <AdminCard><p className="py-6 text-center text-sm text-gray-500">No vehicles assigned to your account yet.</p></AdminCard>
@@ -163,7 +165,27 @@ export default function OwnerAvailabilityPage() {
               </AdminCard>
             </AdminSection>
 
-            <AdminCard padding="sm">
+            <div className="sm:hidden">
+              <OwnerMobileAgendaView
+                bookings={bookings}
+                blockedDates={blockedDates}
+                vehicleId={activeVehicleId}
+                start={agendaStart}
+                onPrevious={() => shiftAgendaWeek(-7)}
+                onNext={() => shiftAgendaWeek(7)}
+                onToday={() => {
+                  const today = new Date();
+                  today.setHours(0, 0, 0, 0);
+                  setAgendaStart(today);
+                }}
+                onBookingClick={() => {}}
+                onBlockedDateClick={(bd) => {
+                  if (bd.removable) void removeBlock(bd.id);
+                }}
+              />
+            </div>
+
+            <AdminCard padding="sm" className="hidden sm:block">
               <MonthCalendar
                 cursor={cursor}
                 onCursorChange={setCursor}

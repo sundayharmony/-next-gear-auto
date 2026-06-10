@@ -1,6 +1,40 @@
 import { isRevenueBooking } from "@/lib/owner/finance";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
-import type { OwnerBooking, OwnerDashboardMetrics, OwnerVehicle } from "@/lib/types";
+import type { OwnerBooking, OwnerDashboardMetrics, OwnerFinanceSummary, OwnerVehicle } from "@/lib/types";
+
+export function computeOwnerFinanceSummary(bookings: OwnerBooking[]): OwnerFinanceSummary {
+  const now = new Date();
+  const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  let currentMonthRevenue = 0;
+  let currentMonthPayout = 0;
+  let lifetimeRevenue = 0;
+  let lifetimePayouts = 0;
+  let pendingPayouts = 0;
+
+  for (const b of bookings) {
+    if (b.status === "cancelled") continue;
+    if (!isRevenueBooking(b.rawStatus)) continue;
+
+    lifetimeRevenue += b.grossRevenue;
+    if (b.payoutStatus === "paid") lifetimePayouts += b.ownerPayout;
+    else if (b.status === "completed") pendingPayouts += b.ownerPayout;
+
+    if ((b.pickupDate || "").slice(0, 7) === currentMonthKey) {
+      currentMonthRevenue += b.grossRevenue;
+      currentMonthPayout += b.ownerPayout;
+    }
+  }
+
+  const round = (n: number) => Math.round(n * 100) / 100;
+  return {
+    currentMonthRevenue: round(currentMonthRevenue),
+    currentMonthPayout: round(currentMonthPayout),
+    lifetimeRevenue: round(lifetimeRevenue),
+    lifetimePayouts: round(lifetimePayouts),
+    pendingPayouts: round(pendingPayouts),
+  };
+}
 
 /** Inclusive overlap (in days) between [aStart,aEnd] and [bStart,bEnd], YYYY-MM-DD. */
 function overlapDays(aStart: string, aEnd: string, bStart: string, bEnd: string): number {

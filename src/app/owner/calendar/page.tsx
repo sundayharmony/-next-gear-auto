@@ -11,6 +11,7 @@ import {
 } from "@/components/admin/admin-shell";
 import { useOwnerData } from "@/lib/owner/owner-data-context";
 import { MonthCalendar } from "@/components/owner/month-calendar";
+import { OwnerMobileAgendaView } from "@/components/owner/mobile-agenda-view";
 import { OwnerStatusBadge, OwnerBookingDetailModal } from "@/components/owner/owner-shared";
 import { formatCurrency, formatDate } from "@/lib/utils/date-helpers";
 import type { OwnerBooking, OwnerBookingStatus } from "@/lib/types";
@@ -34,8 +35,13 @@ function ymd(d: Date): string {
 }
 
 export default function OwnerCalendarPage() {
-  const { bookings, loading } = useOwnerData();
+  const { bookings, blockedDates, loading } = useOwnerData();
   const [cursor, setCursor] = useState(() => new Date());
+  const [agendaStart, setAgendaStart] = useState<Date>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
   const [selected, setSelected] = useState<OwnerBooking | null>(null);
 
   const byDay = useMemo(() => {
@@ -53,6 +59,14 @@ export default function OwnerCalendarPage() {
     return map;
   }, [bookings]);
 
+  const shiftAgendaWeek = (delta: number) => {
+    setAgendaStart((prev) => {
+      const next = new Date(prev);
+      next.setDate(next.getDate() + delta);
+      return next;
+    });
+  };
+
   return (
     <>
       <AdminPageHeader
@@ -68,7 +82,23 @@ export default function OwnerCalendarPage() {
         }
       />
       <AdminPageBody>
-        <AdminCard padding="sm">
+        <div className="sm:hidden">
+          <OwnerMobileAgendaView
+            bookings={bookings || []}
+            blockedDates={blockedDates}
+            start={agendaStart}
+            onPrevious={() => shiftAgendaWeek(-7)}
+            onNext={() => shiftAgendaWeek(7)}
+            onToday={() => {
+              const today = new Date();
+              today.setHours(0, 0, 0, 0);
+              setAgendaStart(today);
+            }}
+            onBookingClick={setSelected}
+          />
+        </div>
+
+        <AdminCard padding="sm" className="hidden sm:block">
           <MonthCalendar
             cursor={cursor}
             onCursorChange={setCursor}
@@ -123,7 +153,7 @@ export default function OwnerCalendarPage() {
           />
         </AdminCard>
 
-        <div className="space-y-2">
+        <div className="hidden space-y-2 sm:block">
           <h2 className="text-base font-semibold text-gray-900">All trips</h2>
           {(bookings || []).length === 0 ? (
             <AdminCard><p className="py-6 text-center text-sm text-gray-500">No bookings or Turo trips yet.</p></AdminCard>

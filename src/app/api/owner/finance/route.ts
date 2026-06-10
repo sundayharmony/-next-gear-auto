@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyOwner } from "@/lib/owner/owner-check";
+import { verifyOwnerWithPortalAccess } from "@/lib/owner/owner-check";
 import { loadOwnerDataset } from "@/lib/owner/owner-data";
 import { isRevenueBooking } from "@/lib/owner/finance";
 import { logger } from "@/lib/utils/logger";
 
 export async function GET(req: NextRequest) {
-  const auth = await verifyOwner(req);
+  const auth = await verifyOwnerWithPortalAccess(req);
   if (!auth.authorized) return auth.response;
 
   try {

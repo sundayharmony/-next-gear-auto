@@ -3,7 +3,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import {
-  Megaphone,
   Send,
   Car,
   Users,
@@ -14,7 +13,7 @@ import {
   Square,
 } from "lucide-react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -255,23 +254,12 @@ export default function AdminMarketingPage() {
 
   return (
     <>
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold flex items-center gap-2">
-                <Megaphone className="h-7 w-7" aria-hidden />
-                Marketing
-              </h1>
-              <p className="mt-1 page-hero-subtitle">
-                Compose and send email campaigns to customers with optional vehicle highlights.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <AdminPageHeader
+        title="Marketing"
+        subtitle="Compose and send email campaigns to customers with optional vehicle highlights."
+      />
 
-      <PageContainer className="py-8 space-y-6">
+      <AdminPageBody className="space-y-6">
         {error ? <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} /> : null}
         {success ? (
           <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} />
@@ -517,7 +505,7 @@ export default function AdminMarketingPage() {
             </div>
           </CardContent>
         </Card>
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

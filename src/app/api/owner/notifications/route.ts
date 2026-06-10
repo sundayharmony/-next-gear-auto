@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyOwner } from "@/lib/owner/owner-check";
+import { verifyOwnerWithPortalAccess } from "@/lib/owner/owner-check";
 import type { OwnerNotification } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 
 /** GET /api/owner/notifications → the owner's notifications (newest first). */
 export async function GET(req: NextRequest) {
-  const auth = await verifyOwner(req);
+  const auth = await verifyOwnerWithPortalAccess(req);
   if (!auth.authorized) return auth.response;
 
   try {
@@ -50,7 +50,7 @@ export async function GET(req: NextRequest) {
  * Body: { id } to mark one read, or { all: true } to mark all read.
  */
 export async function PATCH(req: NextRequest) {
-  const auth = await verifyOwner(req);
+  const auth = await verifyOwnerWithPortalAccess(req);
   if (!auth.authorized) return auth.response;
 
   try {

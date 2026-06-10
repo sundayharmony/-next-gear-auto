@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyOwner, getOwnerVehicleIds } from "@/lib/owner/owner-check";
+import { verifyOwnerWithPortalAccess, getOwnerVehicleIds } from "@/lib/owner/owner-check";
 import { loadOwnerDataset } from "@/lib/owner/owner-data";
 import { logger } from "@/lib/utils/logger";
 import { getServiceSupabase } from "@/lib/db/supabase";
@@ -12,11 +12,14 @@ import {
  * GET /api/owner/bookings            → all bookings for the owner's vehicles
  * GET /api/owner/bookings?id=bk123   → a single booking (owner-scoped)
  *
+ * @deprecated For list/dashboard data prefer GET /api/owner/dataset (bookings slice).
+ * POST remains the canonical owner booking-create endpoint.
+ *
  * Owners only ever see bookings tied to vehicles they own; the dataset loader
  * filters by owner_id from the JWT, so no client-supplied id can widen scope.
  */
 export async function GET(req: NextRequest) {
-  const auth = await verifyOwner(req);
+  const auth = await verifyOwnerWithPortalAccess(req);
   if (!auth.authorized) return auth.response;
 
   try {
@@ -56,7 +59,7 @@ export async function GET(req: NextRequest) {
  * Vehicle id is validated server-side; clients cannot book vehicles they do not own.
  */
 export async function POST(req: NextRequest) {
-  const auth = await verifyOwner(req);
+  const auth = await verifyOwnerWithPortalAccess(req);
   if (!auth.authorized) return auth.response;
 
   let body: Record<string, unknown>;

@@ -16,6 +16,7 @@ function read(rel) {
 for (const rel of [
   "src/components/admin/bottom-tab-bar.tsx",
   "src/components/manager/bottom-tab-bar.tsx",
+  "src/components/owner/bottom-tab-bar.tsx",
 ]) {
   const s = read(rel);
   if (s.includes('role="tablist"') || s.includes("role='tablist'")) {

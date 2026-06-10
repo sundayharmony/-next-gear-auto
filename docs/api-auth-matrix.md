@@ -35,9 +35,11 @@ Routes backing `sharedWithManager: true` features may use `verifyAdminOrManager`
 
 ## Owner routes
 
-All `/api/owner/*` routes use `verifyOwner(req)`, which enforces vehicle ownership scope server-side. Consolidated load:
+All `/api/owner/*` routes use `verifyOwnerWithPortalAccess(req)`, which enforces JWT owner role **and** live `owner_portal_enabled` on the customer record (revoked owners get 403). Consolidated load:
 
 - `GET /api/owner/dataset` — metrics + bookings + vehicles in one call
+
+Legacy per-resource routes (`/summary`, `/bookings`, `/vehicles`) remain for backward compatibility but should prefer the dataset endpoint.
 
 ## High-risk admin-only mutations
 
@@ -53,6 +55,6 @@ Always `verifyAdmin`:
 npm run check:api-auth-matrix
 ```
 
-Fails when an admin-only GET handler uses `verifyAdminOrManager` or omits `verifyAdmin`.
+Fails when an admin-only GET handler uses `verifyAdminOrManager` or omits `verifyAdmin`, or when an owner route omits `verifyOwnerWithPortalAccess`.
 
 See also [staff-auth-notes.md](staff-auth-notes.md) and [manager-panel-sync.md](manager-panel-sync.md).

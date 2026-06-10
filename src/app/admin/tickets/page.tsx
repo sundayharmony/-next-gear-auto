@@ -9,27 +9,15 @@ import {
   Ticket,
   Plus,
   Check,
-  X,
-  Pencil,
-  Trash2,
   Car,
   Calendar,
-  DollarSign,
   AlertCircle,
   RefreshCw,
   MapPin,
-  FileText,
-  Filter,
-  ArrowLeft,
-  Loader2,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
 import { AdminPageHeader } from "@/components/admin/admin-shell";
 import { PageContainer } from "@/components/layout/page-container";
 import { Pagination, usePagination } from "@/components/ui/pagination";
@@ -37,13 +25,33 @@ import { formatDate } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { adminPanelConfig, type StaffPanelConfig } from "@/lib/admin/staff-panel-config";
-
 import { STATUS_COLORS, TYPE_COLORS, type TicketRecord } from "./tickets-shared";
+import {
+  TicketDetailView,
+  TicketEditPanel,
+  TicketForm,
+  type TicketFormState,
+} from "./ticket-detail-panel";
 
 type Vehicle = VehicleListItem;
 type Booking = BookingDbRow;
 
-// ─── Main Component ───────────────────────────────────────────
+const emptyForm = (): TicketFormState => ({
+  bookingId: "",
+  vehicleId: "",
+  licensePlate: "",
+  ticketType: "traffic",
+  violationDate: new Date().toISOString().split("T")[0],
+  state: "NJ",
+  municipality: "",
+  courtId: "",
+  prefix: "",
+  ticketNumber: "",
+  amountDue: "",
+  status: "unpaid",
+  notes: "",
+});
+
 export default function AdminTicketsPage({
   panelConfig = adminPanelConfig,
 }: {
@@ -65,23 +73,8 @@ export default function AdminTicketsPage({
   const [isDeleting, setIsDeleting] = useState(false);
   const { currentPage, pageSize, handlePageChange, handlePageSizeChange, resetPage, paginateArray } = usePagination(10);
 
-  const [form, setForm] = useState({
-    bookingId: "",
-    vehicleId: "",
-    licensePlate: "",
-    ticketType: "traffic",
-    violationDate: new Date().toISOString().split("T")[0],
-    state: "NJ",
-    municipality: "",
-    courtId: "",
-    prefix: "",
-    ticketNumber: "",
-    amountDue: "",
-    status: "unpaid",
-    notes: "",
-  });
+  const [form, setForm] = useState<TicketFormState>(emptyForm);
 
-  // ─── Data Fetching ──────────────────────────────────────────
   const fetchData = async () => {
     setLoading(true);
     setError(null);
@@ -133,23 +126,8 @@ export default function AdminTicketsPage({
     fetchData();
   }, []);
 
-  // ─── Form Helpers ─────────────────────────────────────────
   const resetForm = () => {
-    setForm({
-      bookingId: "",
-      vehicleId: "",
-      licensePlate: "",
-      ticketType: "traffic",
-      violationDate: new Date().toISOString().split("T")[0],
-      state: "NJ",
-      municipality: "",
-      courtId: "",
-      prefix: "",
-      ticketNumber: "",
-      amountDue: "",
-      status: "unpaid",
-      notes: "",
-    });
+    setForm(emptyForm());
   };
 
   const populateFormFromTicket = (t: TicketRecord) => {
@@ -170,7 +148,6 @@ export default function AdminTicketsPage({
     });
   };
 
-  // When a booking is selected, auto-fill vehicle and customer
   const handleBookingSelect = (bookingId: string) => {
     setForm((f) => ({ ...f, bookingId }));
     if (bookingId) {
@@ -185,7 +162,6 @@ export default function AdminTicketsPage({
     }
   };
 
-  // ─── CRUD ─────────────────────────────────────────────────
   const handleCreate = async () => {
     if (!form.violationDate) {
       setError("Violation date is required");
@@ -198,7 +174,6 @@ export default function AdminTicketsPage({
     }
     try {
       setIsSubmitting(true);
-      // Resolve customerId from booking
       let customerId = "";
       if (form.bookingId) {
         const booking = bookings.find((b) => b.id === form.bookingId);
@@ -281,10 +256,8 @@ export default function AdminTicketsPage({
     }
   };
 
-  // Reset page when filters change
   useEffect(() => { resetPage(); }, [statusFilter, typeFilter]);
 
-  // ─── Filtered Data ──────────────────────────────────────────
   const filtered = tickets.filter((t) => {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
     if (typeFilter !== "all" && t.ticketType !== typeFilter) return false;
@@ -305,389 +278,43 @@ export default function AdminTicketsPage({
 
   const totalAll = tickets.reduce((s, t) => s + (t.amountDue ?? 0), 0);
 
-  // ─── Detail View ──────────────────────────────────────────
   if (selectedTicket && !editMode) {
     return (
-      <PageContainer>
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => setSelectedTicket(null)}
-              aria-label="Back to tickets list"
-              className="p-2 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-gray-900">
-                Ticket {selectedTicket.prefix && selectedTicket.ticketNumber
-                  ? `${selectedTicket.prefix}-${selectedTicket.ticketNumber}`
-                  : selectedTicket.id.slice(0, 12)}
-              </h1>
-              <p className="text-sm text-gray-500">
-                {selectedTicket.ticketType === "traffic" ? "Traffic Violation" : "Parking Violation"}
-              </p>
-            </div>
-            <div className="flex gap-2">
-              <Button
-                size="sm"
-                variant="outline"
-                onClick={() => {
-                  populateFormFromTicket(selectedTicket);
-                  setEditMode(true);
-                }}
-              >
-                <Pencil className="h-4 w-4 mr-1" /> Edit
-              </Button>
-              {deleteConfirm === selectedTicket.id ? (
-                <div className="flex gap-1">
-                  <Button
-                    size="sm"
-                    variant="danger"
-                    onClick={() => handleDelete(selectedTicket.id)}
-                    disabled={isDeleting}
-                  >
-                    {isDeleting ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                        Deleting...
-                      </>
-                    ) : (
-                      "Confirm Delete"
-                    )}
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setDeleteConfirm(null)}
-                    disabled={isDeleting}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="text-red-600 hover:bg-red-50"
-                  onClick={() => setDeleteConfirm(selectedTicket.id)}
-                >
-                  <Trash2 className="h-4 w-4 mr-1" /> Delete
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Status + Amount header */}
-          <div className="bg-gradient-to-br from-gray-900 to-red-900 rounded-xl p-4 sm:p-6 text-white">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
-              <div>
-                <p className="text-gray-300 text-xs font-medium uppercase tracking-wider">Amount Due</p>
-                <p className="text-3xl font-bold mt-1">${selectedTicket.amountDue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}</p>
-              </div>
-              <div>
-                <p className="text-gray-300 text-xs font-medium uppercase tracking-wider">Status</p>
-                <Badge className={`mt-2 text-sm ${STATUS_COLORS[selectedTicket.status]}`}>
-                  {selectedTicket.status.charAt(0).toUpperCase() + selectedTicket.status.slice(1)}
-                </Badge>
-              </div>
-              <div>
-                <p className="text-gray-300 text-xs font-medium uppercase tracking-wider">Type</p>
-                <p className="text-lg font-bold mt-1 capitalize">{selectedTicket.ticketType}</p>
-              </div>
-              <div>
-                <p className="text-gray-300 text-xs font-medium uppercase tracking-wider">Violation Date</p>
-                <p className="text-lg font-bold mt-1">{formatDate(selectedTicket.violationDate)}</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Details grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Card>
-              <CardContent className="p-5 space-y-4">
-                <h3 className="font-bold text-gray-900">Ticket Information</h3>
-                <div className="space-y-3 text-sm">
-                  {selectedTicket.state && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">State</span>
-                      <span className="font-medium">{selectedTicket.state}</span>
-                    </div>
-                  )}
-                  {selectedTicket.municipality && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Municipality</span>
-                      <span className="font-medium">{selectedTicket.municipality}</span>
-                    </div>
-                  )}
-                  {selectedTicket.courtId && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Court ID</span>
-                      <span className="font-medium">{selectedTicket.courtId}</span>
-                    </div>
-                  )}
-                  {selectedTicket.prefix && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Prefix</span>
-                      <span className="font-medium">{selectedTicket.prefix}</span>
-                    </div>
-                  )}
-                  {selectedTicket.ticketNumber && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Ticket Number</span>
-                      <span className="font-medium font-mono">{selectedTicket.ticketNumber}</span>
-                    </div>
-                  )}
-                  {selectedTicket.licensePlate && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">License Plate</span>
-                      <span className="font-medium font-mono">{selectedTicket.licensePlate}</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardContent className="p-5 space-y-4">
-                <h3 className="font-bold text-gray-900">Linked Trip</h3>
-                <div className="space-y-3 text-sm">
-                  {selectedTicket.vehicleName && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Vehicle</span>
-                      <span className="font-medium">
-                        {selectedTicket.vehicleId ? (
-                          <Link
-                            href={getStaffVehicleDetailsHref(selectedTicket.vehicleId, panelBase)}
-                            className="hover:text-purple-700 hover:underline"
-                          >
-                            {selectedTicket.vehicleName}
-                          </Link>
-                        ) : (
-                          selectedTicket.vehicleName
-                        )}
-                      </span>
-                    </div>
-                  )}
-                  {selectedTicket.customerName && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Driver</span>
-                      <span className="font-medium">{selectedTicket.customerName}</span>
-                    </div>
-                  )}
-                  {selectedTicket.bookingDates && (
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Trip Dates</span>
-                      <span className="font-medium">{selectedTicket.bookingDates}</span>
-                    </div>
-                  )}
-                  {!selectedTicket.bookingId && (
-                    <p className="text-gray-400 text-center py-4">No booking linked</p>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-
-          {selectedTicket.notes && (
-            <Card>
-              <CardContent className="p-5">
-                <h3 className="font-bold text-gray-900 mb-2">Notes</h3>
-                <p className="text-sm text-gray-600 whitespace-pre-wrap">{selectedTicket.notes}</p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      </PageContainer>
+      <TicketDetailView
+        ticket={selectedTicket}
+        panelBase={panelBase}
+        deleteConfirm={deleteConfirm}
+        isDeleting={isDeleting}
+        onBack={() => setSelectedTicket(null)}
+        onEdit={() => {
+          populateFormFromTicket(selectedTicket);
+          setEditMode(true);
+        }}
+        onDeleteConfirm={() => setDeleteConfirm(selectedTicket.id)}
+        onDeleteCancel={() => setDeleteConfirm(null)}
+        onDelete={() => handleDelete(selectedTicket.id)}
+      />
     );
   }
 
-  // ─── Edit View ────────────────────────────────────────────
   if (selectedTicket && editMode) {
     return (
-      <PageContainer>
-        <div className="space-y-6">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => { setEditMode(false); setSelectedTicket(null); }}
-              aria-label="Back to tickets list"
-              className="p-2 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </button>
-            <h1 className="text-2xl font-bold text-gray-900">Edit Ticket</h1>
-          </div>
-          {renderForm(true)}
-        </div>
-      </PageContainer>
+      <TicketEditPanel
+        form={form}
+        setForm={setForm}
+        bookings={bookings}
+        vehicles={vehicles}
+        onBookingSelect={handleBookingSelect}
+        onSubmit={handleUpdate}
+        onCancel={() => {
+          setEditMode(false);
+          setSelectedTicket(null);
+        }}
+        isSubmitting={isSubmitting}
+      />
     );
   }
 
-  // ─── Form Renderer ────────────────────────────────────────
-  function renderForm(isEdit: boolean) {
-    return (
-      <Card>
-        <CardContent className="p-5 space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Type</label>
-              <Select
-                value={form.ticketType}
-                onChange={(e) => setForm((f) => ({ ...f, ticketType: e.target.value }))}
-              >
-                <option value="traffic">Traffic</option>
-                <option value="parking">Parking</option>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Violation Date *</label>
-              <DatePicker
-                value={form.violationDate}
-                onChange={(val) => setForm((f) => ({ ...f, violationDate: val }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Amount Due</label>
-              <Input
-                type="number"
-                step="0.01"
-                placeholder="0.00"
-                value={form.amountDue}
-                onChange={(e) => setForm((f) => ({ ...f, amountDue: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">State</label>
-              <Input
-                placeholder="NJ"
-                value={form.state}
-                onChange={(e) => setForm((f) => ({ ...f, state: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Municipality</label>
-              <Input
-                placeholder="Jersey City"
-                value={form.municipality}
-                onChange={(e) => setForm((f) => ({ ...f, municipality: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Court ID</label>
-              <Input
-                placeholder="e.g. 0906"
-                value={form.courtId}
-                onChange={(e) => setForm((f) => ({ ...f, courtId: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Prefix</label>
-              <Input
-                placeholder="e.g. S"
-                value={form.prefix}
-                onChange={(e) => setForm((f) => ({ ...f, prefix: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Ticket Number</label>
-              <Input
-                placeholder="e.g. 123456"
-                value={form.ticketNumber}
-                onChange={(e) => setForm((f) => ({ ...f, ticketNumber: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">License Plate</label>
-              <Input
-                placeholder="e.g. ABC-1234"
-                value={form.licensePlate}
-                onChange={(e) => setForm((f) => ({ ...f, licensePlate: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Status</label>
-              <Select
-                value={form.status}
-                onChange={(e) => setForm((f) => ({ ...f, status: e.target.value }))}
-              >
-                <option value="unpaid">Unpaid</option>
-                <option value="paid">Paid</option>
-                <option value="disputed">Disputed</option>
-                <option value="dismissed">Dismissed</option>
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Linked Booking</label>
-              <Select
-                value={form.bookingId}
-                onChange={(e) => handleBookingSelect(e.target.value)}
-              >
-                <option value="">No booking</option>
-                {bookings
-                  .filter((b) => ["confirmed", "active", "completed"].includes(b.status))
-                  .sort((a, b) => new Date(b.pickup_date + "T00:00:00").getTime() - new Date(a.pickup_date + "T00:00:00").getTime())
-                  .map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.customer_name} — {b.vehicleName || "Vehicle"} ({b.pickup_date})
-                    </option>
-                  ))}
-              </Select>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Vehicle</label>
-              <Select
-                value={form.vehicleId}
-                onChange={(e) => setForm((f) => ({ ...f, vehicleId: e.target.value }))}
-              >
-                <option value="">Select vehicle</option>
-                {vehicles.map((v) => (
-                  <option key={v.id} value={v.id}>
-                    {v.year} {v.make} {v.model}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          </div>
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Notes</label>
-            <Textarea
-              rows={3}
-              placeholder="Additional details..."
-              value={form.notes}
-              onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
-            />
-          </div>
-          <div className="flex gap-2">
-            <Button
-              onClick={isEdit ? handleUpdate : handleCreate}
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  {isEdit ? "Saving..." : "Adding..."}
-                </>
-              ) : (
-                isEdit ? "Save Changes" : "Add Ticket"
-              )}
-            </Button>
-            <Button
-              variant="outline"
-              onClick={() => {
-                if (isEdit) { setEditMode(false); setSelectedTicket(null); }
-                else { setAdding(false); resetForm(); }
-              }}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  // ─── Loading ──────────────────────────────────────────────
   if (loading) {
     return (
       <PageContainer>
@@ -698,7 +325,6 @@ export default function AdminTicketsPage({
     );
   }
 
-  // ─── Main List View ───────────────────────────────────────
   return (
     <>
       <AdminPageHeader
@@ -760,15 +386,26 @@ export default function AdminTicketsPage({
           </div>
         )}
 
-        {/* Add ticket form */}
         {adding && (
           <div className="mb-6">
             <h2 className="text-lg font-bold text-gray-900 mb-3">New Ticket</h2>
-            {renderForm(false)}
+            <TicketForm
+              form={form}
+              setForm={setForm}
+              bookings={bookings}
+              vehicles={vehicles}
+              onBookingSelect={handleBookingSelect}
+              onSubmit={handleCreate}
+              onCancel={() => {
+                setAdding(false);
+                resetForm();
+              }}
+              isEdit={false}
+              isSubmitting={isSubmitting}
+            />
           </div>
         )}
 
-        {/* Filters */}
         <div className="flex flex-wrap gap-2 mb-4">
           <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
             {(["all", "unpaid", "paid", "disputed", "dismissed"] as const).map((s) => (
@@ -802,7 +439,6 @@ export default function AdminTicketsPage({
           </div>
         </div>
 
-        {/* Ticket List */}
         {filtered.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
@@ -836,14 +472,12 @@ export default function AdminTicketsPage({
               >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
-                    {/* Type icon */}
                     <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
                       t.ticketType === "traffic" ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"
                     }`}>
                       {t.ticketType === "traffic" ? <Car className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
                     </div>
 
-                    {/* Main info */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="font-semibold text-gray-900">
@@ -882,10 +516,9 @@ export default function AdminTicketsPage({
                       </div>
                     </div>
 
-                    {/* Amount */}
                     <div className="text-right shrink-0">
                       <p className={`text-lg font-bold ${t.status === "unpaid" ? "text-red-600" : t.status === "paid" ? "text-green-600" : "text-gray-600"}`}>
-                        ${t.amountDue.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2})}
+                        ${t.amountDue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                       </p>
                     </div>
                   </div>

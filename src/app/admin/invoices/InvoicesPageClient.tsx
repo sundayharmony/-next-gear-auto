@@ -1,19 +1,8 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { useSearchParams, useRouter, usePathname } from "next/navigation";
-import {
-  FileText,
-  Mail,
-  Plus,
-  Trash2,
-  X,
-  Loader2,
-  RefreshCw,
-  ExternalLink,
-  Search,
-} from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { FileText, Loader2, RefreshCw, Search } from "lucide-react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { PageContainer } from "@/components/layout/page-container";
@@ -21,82 +10,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import {
   INVOICE_STATUS_COLORS,
   INVOICE_STATUS_LABELS,
   type InvoicePaymentStatus,
 } from "@/lib/invoices/invoice-status";
-import {
-  MAX_ADDITIONAL_INVOICE_LINES,
-  type AdditionalInvoiceLineItemInput,
-} from "@/lib/invoices/invoice-line-items";
 import { formatDate } from "@/lib/utils/date-helpers";
-
-type DraftLine = {
-  id: string;
-  label: string;
-  amount: string;
-  isCredit: boolean;
-};
-
-type InvoiceListRow = {
-  id: string;
-  booking_id: string;
-  customer_name: string | null;
-  customer_email: string | null;
-  charges_total: number;
-  balance_due_snapshot: number;
-  due_date: string;
-  sent_at: string | null;
-  send_count: number;
-  vehicleName: string;
-  liveBalance: number;
-  paymentStatus: InvoicePaymentStatus;
-};
-
-type SendHistoryRow = {
-  id: string;
-  created_at: string;
-  performed_by: string | null;
-  details: Record<string, unknown>;
-};
-
-type InvoiceDetail = InvoiceListRow & {
-  additional_line_items: AdditionalInvoiceLineItemInput[];
-  line_items: { label: string; amount: number; isCredit?: boolean }[];
-  amount_paid_snapshot: number;
-  sendHistory: SendHistoryRow[];
-};
-
-function emptyDraft(): DraftLine {
-  return { id: crypto.randomUUID(), label: "", amount: "", isCredit: false };
-}
-
-function parseDraftLines(drafts: DraftLine[]): AdditionalInvoiceLineItemInput[] {
-  return drafts
-    .map((d) => ({
-      label: d.label.trim(),
-      amount: Number.parseFloat(d.amount),
-      isCredit: d.isCredit || undefined,
-    }))
-    .filter((d) => d.label && Number.isFinite(d.amount) && d.amount >= 0);
-}
-
-function draftsFromAdditional(items: AdditionalInvoiceLineItemInput[]): DraftLine[] {
-  if (!items.length) return [emptyDraft()];
-  return items.map((item) => ({
-    id: crypto.randomUUID(),
-    label: item.label,
-    amount: String(item.amount),
-    isCredit: !!item.isCredit,
-  }));
-}
-
-function fmt(n: number): string {
-  return `$${(Number.isFinite(n) ? n : 0).toFixed(2)}`;
-}
+import { InvoicePreviewPanel } from "./invoice-preview-panel";
+import { fmt, type InvoiceDetail, type InvoiceListRow } from "./invoice-types";
 
 interface InvoicesPageClientProps {
   bookingsHref: string;
@@ -105,8 +27,6 @@ interface InvoicesPageClientProps {
 
 export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPageClientProps) {
   const searchParams = useSearchParams();
-  const router = useRouter();
-  const pathname = usePathname();
   const { error, setError, success, setSuccess } = useAutoToast();
   const [invoices, setInvoices] = useState<InvoiceListRow[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,17 +35,7 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
-  const [drafts, setDrafts] = useState<DraftLine[]>([emptyDraft()]);
-  const [dueDate, setDueDate] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [deleting, setDeleting] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
-  const [detailTab, setDetailTab] = useState<"edit" | "preview">("edit");
-  const [htmlPreview, setHtmlPreview] = useState("");
-  const [loadingHtml, setLoadingHtml] = useState(false);
-  const [htmlError, setHtmlError] = useState("");
-
-  const additionalItems = useMemo(() => parseDraftLines(drafts), [drafts]);
 
   const loadList = useCallback(async () => {
     setLoading(true);
@@ -157,78 +67,33 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
     if (inv) setSelectedId(inv);
   }, [searchParams]);
 
-  const loadDetail = useCallback(async (invoiceId: string) => {
-    setDetailLoading(true);
-    try {
-      const res = await adminFetch(`/api/admin/invoices/${invoiceId}`);
-      const data = await res.json();
-      if (res.ok && data.success) {
-        const d = data.data as InvoiceDetail;
-        setDetail(d);
-        setDueDate(d.due_date);
-        setDrafts(draftsFromAdditional(d.additional_line_items ?? []));
-      } else {
-        setError(data.message || "Failed to load invoice");
+  const loadDetail = useCallback(
+    async (invoiceId: string) => {
+      setDetailLoading(true);
+      try {
+        const res = await adminFetch(`/api/admin/invoices/${invoiceId}`);
+        const data = await res.json();
+        if (res.ok && data.success) {
+          setDetail(data.data as InvoiceDetail);
+        } else {
+          setError(data.message || "Failed to load invoice");
+        }
+      } catch {
+        setError("Network error — could not load invoice");
+      } finally {
+        setDetailLoading(false);
       }
-    } catch {
-      setError("Network error — could not load invoice");
-    } finally {
-      setDetailLoading(false);
-    }
-  }, [setError]);
+    },
+    [setError],
+  );
 
   useEffect(() => {
     if (selectedId) {
-      setDetailTab("edit");
       loadDetail(selectedId);
     } else {
       setDetail(null);
     }
   }, [selectedId, loadDetail]);
-
-  useEffect(() => {
-    if (detailTab !== "preview" || !detail) return;
-
-    let cancelled = false;
-    const timer = setTimeout(() => {
-      setLoadingHtml(true);
-      setHtmlError("");
-
-      adminFetch("/api/admin/bookings/invoice-preview", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          bookingId: detail.booking_id,
-          additionalLineItems: additionalItems,
-          dueDate,
-        }),
-      })
-        .then(async (res) => {
-          const data = await res.json();
-          if (cancelled) return;
-          if (res.ok && data.success) {
-            setHtmlPreview(typeof data.data?.html === "string" ? data.data.html : "");
-          } else {
-            setHtmlPreview("");
-            setHtmlError(data.message || "Could not render preview");
-          }
-        })
-        .catch(() => {
-          if (!cancelled) {
-            setHtmlPreview("");
-            setHtmlError("Network error — could not render preview");
-          }
-        })
-        .finally(() => {
-          if (!cancelled) setLoadingHtml(false);
-        });
-    }, 300);
-
-    return () => {
-      cancelled = true;
-      clearTimeout(timer);
-    };
-  }, [detailTab, detail, additionalItems, dueDate]);
 
   const handleBackfill = async () => {
     setBackfilling(true);
@@ -249,105 +114,7 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
     }
   };
 
-  const handleSaveAndResend = async () => {
-    if (!detail || saving) return;
-    const additionalItems = parseDraftLines(drafts);
-    const invalid = drafts.some((d) => {
-      const hasLabel = d.label.trim().length > 0;
-      const hasAmount = d.amount.trim().length > 0;
-      return (hasLabel && !hasAmount) || (!hasLabel && hasAmount);
-    });
-    if (invalid) {
-      setError("Each line needs both description and amount, or leave the row empty.");
-      return;
-    }
-    if (!dueDate) {
-      setError("Please select a due date.");
-      return;
-    }
-
-    setSaving(true);
-    try {
-      const patchRes = await adminFetch(`/api/admin/invoices/${detail.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          additionalLineItems: additionalItems,
-          dueDate,
-        }),
-      });
-      const patchData = await patchRes.json();
-      if (!patchRes.ok || !patchData.success) {
-        setError(patchData.message || "Failed to save invoice");
-        return;
-      }
-
-      const sendRes = await adminFetch(`/api/admin/invoices/${detail.id}/send`, {
-        method: "POST",
-      });
-      const sendData = await sendRes.json();
-      if (sendRes.ok && sendData.success) {
-        setSuccess(sendData.message || "Invoice saved and sent");
-        loadList();
-        loadDetail(detail.id);
-      } else {
-        setError(sendData.message || "Saved but failed to send email");
-      }
-    } catch {
-      setError("Network error");
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!detail || deleting) return;
-    const label = detail.customer_name || detail.booking_id;
-    if (
-      !window.confirm(
-        `Delete invoice for ${label}? This removes the invoice record only — the booking is not changed. You can send a new invoice from the booking later.`,
-      )
-    ) {
-      return;
-    }
-
-    setDeleting(true);
-    try {
-      const res = await adminFetch(`/api/admin/invoices/${detail.id}`, { method: "DELETE" });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        setSuccess(data.message || "Invoice deleted");
-        setSelectedId(null);
-        setDetail(null);
-        const params = new URLSearchParams(searchParams.toString());
-        params.delete("invoice");
-        const query = params.toString();
-        router.replace(query ? `${pathname}?${query}` : pathname);
-        loadList();
-      } else {
-        setError(data.message || "Failed to delete invoice");
-      }
-    } catch {
-      setError("Network error — could not delete invoice");
-    } finally {
-      setDeleting(false);
-    }
-  };
-
   const filtered = useMemo(() => invoices, [invoices]);
-
-  const addLine = () => {
-    if (drafts.length >= MAX_ADDITIONAL_INVOICE_LINES) return;
-    setDrafts((prev) => [...prev, emptyDraft()]);
-  };
-
-  const removeLine = (id: string) => {
-    setDrafts((prev) => (prev.length <= 1 ? [emptyDraft()] : prev.filter((d) => d.id !== id)));
-  };
-
-  const updateLine = (id: string, patch: Partial<DraftLine>) => {
-    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, ...patch } : d)));
-  };
 
   return (
     <PageContainer>
@@ -465,187 +232,20 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
         </div>
 
         {selectedId && (
-          <div className="w-full lg:w-[420px] shrink-0">
-            <Card className="sticky top-4">
-              <CardContent className="p-4 space-y-4">
-                <div className="flex items-center justify-between">
-                  <h2 className="font-semibold text-gray-900">Invoice detail</h2>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedId(null)}
-                    className="p-1 rounded hover:bg-gray-100"
-                    aria-label="Close detail"
-                  >
-                    <X className="h-5 w-5 text-gray-500" />
-                  </button>
-                </div>
-
-                {detailLoading || !detail ? (
-                  <p className="text-sm text-gray-500 py-6 text-center">Loading…</p>
-                ) : (
-                  <>
-                    <div className="text-sm space-y-1">
-                      <p>
-                        <span className="text-gray-500">Booking:</span>{" "}
-                        <Link
-                          href={`${bookingsHref}?highlight=${detail.booking_id}`}
-                          className="text-purple-600 hover:underline font-mono text-xs"
-                        >
-                          {detail.booking_id}
-                        </Link>
-                      </p>
-                      <p>
-                        <span className="text-gray-500">Sends:</span> {detail.send_count}
-                      </p>
-                      <Badge className={INVOICE_STATUS_COLORS[detail.paymentStatus]}>
-                        {INVOICE_STATUS_LABELS[detail.paymentStatus]} — balance {fmt(detail.liveBalance)}
-                      </Badge>
-                    </div>
-
-                    <div className="flex gap-1 p-1 bg-gray-100 rounded-lg">
-                      <button
-                        type="button"
-                        onClick={() => setDetailTab("edit")}
-                        className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md ${
-                          detailTab === "edit"
-                            ? "bg-purple-600 text-white"
-                            : "text-gray-600 hover:bg-purple-50"
-                        }`}
-                      >
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setDetailTab("preview")}
-                        className={`flex-1 px-3 py-1.5 text-sm font-medium rounded-md ${
-                          detailTab === "preview"
-                            ? "bg-purple-600 text-white"
-                            : "text-gray-600 hover:bg-purple-50"
-                        }`}
-                      >
-                        Preview
-                      </button>
-                    </div>
-
-                    {detailTab === "preview" ? (
-                      <div className="border rounded-lg overflow-hidden max-h-80 overflow-y-auto bg-white">
-                        {loadingHtml && (
-                          <p className="p-4 text-sm text-gray-500 text-center">Rendering preview…</p>
-                        )}
-                        {htmlError && (
-                          <p className="p-4 text-sm text-red-600">{htmlError}</p>
-                        )}
-                        {!loadingHtml && !htmlError && htmlPreview && (
-                          <div
-                            className="p-2 text-sm"
-                            dangerouslySetInnerHTML={{ __html: htmlPreview }}
-                          />
-                        )}
-                      </div>
-                    ) : (
-                      <>
-                    <div>
-                      <label className="text-xs font-medium text-gray-700">Due date</label>
-                      <DatePicker value={dueDate} onChange={setDueDate} className="mt-1" />
-                    </div>
-
-                    <div>
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-xs font-semibold text-gray-700">Additional line items</span>
-                        <Button type="button" variant="outline" size="sm" onClick={addLine}>
-                          <Plus className="h-3 w-3 mr-1" />
-                          Add
-                        </Button>
-                      </div>
-                      <div className="space-y-2 max-h-48 overflow-y-auto">
-                        {drafts.map((d) => (
-                          <div key={d.id} className="flex gap-2 items-start">
-                            <Input
-                              placeholder="Description"
-                              value={d.label}
-                              onChange={(e) => updateLine(d.id, { label: e.target.value })}
-                              className="flex-1 text-sm"
-                            />
-                            <Input
-                              placeholder="0.00"
-                              type="number"
-                              min={0}
-                              step="0.01"
-                              value={d.amount}
-                              onChange={(e) => updateLine(d.id, { amount: e.target.value })}
-                              className="w-24 text-sm"
-                            />
-                            <button
-                              type="button"
-                              onClick={() => removeLine(d.id)}
-                              className="p-2 text-gray-400 hover:text-red-600"
-                              aria-label="Remove line"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-
-                    <Button
-                      className="w-full"
-                      onClick={handleSaveAndResend}
-                      disabled={saving || deleting}
-                    >
-                      {saving ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Mail className="h-4 w-4 mr-2" />
-                      )}
-                      Save &amp; re-send
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="danger"
-                      className="w-full"
-                      onClick={handleDelete}
-                      disabled={saving || deleting}
-                    >
-                      {deleting ? (
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                      ) : (
-                        <Trash2 className="h-4 w-4 mr-2" />
-                      )}
-                      Delete invoice
-                    </Button>
-                      </>
-                    )}
-
-                    <Link
-                      href={`${bookingsHref}?highlight=${detail.booking_id}`}
-                      className="flex items-center justify-center gap-1 text-sm text-purple-600 hover:underline"
-                    >
-                      Open booking
-                      <ExternalLink className="h-3 w-3" />
-                    </Link>
-
-                    {detail.sendHistory.length > 0 && (
-                      <div className="pt-3 border-t">
-                        <p className="text-xs font-semibold text-gray-700 mb-2">Send history</p>
-                        <ul className="space-y-2 max-h-32 overflow-y-auto text-xs text-gray-600">
-                          {detail.sendHistory.map((h) => (
-                            <li key={h.id}>
-                              {formatDate(h.created_at)} — {h.performed_by || "Staff"}
-                              {typeof h.details?.balance_due === "number" && (
-                                <span> ({fmt(h.details.balance_due as number)} due)</span>
-                              )}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            </Card>
-          </div>
+          <InvoicePreviewPanel
+            detailLoading={detailLoading}
+            detail={detail}
+            bookingsHref={bookingsHref}
+            onClose={() => setSelectedId(null)}
+            onSuccess={setSuccess}
+            onError={setError}
+            onRefreshList={loadList}
+            onReloadDetail={loadDetail}
+            onDeleted={() => {
+              setSelectedId(null);
+              setDetail(null);
+            }}
+          />
         )}
       </div>
     </PageContainer>

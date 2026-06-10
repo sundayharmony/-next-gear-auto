@@ -13,26 +13,16 @@ import {
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
-import { useOwnerApi } from "@/lib/owner/use-owner-api";
+import { useOwnerData } from "@/lib/owner/owner-data-context";
+import { computeOwnerFinanceSummary } from "@/lib/owner/owner-metrics";
 import { PayoutStatusBadge, OwnerBookingDetailModal } from "@/components/owner/owner-shared";
 import { formatCurrency, formatDate } from "@/lib/utils/date-helpers";
 import { exportToCSV } from "@/lib/utils/csv-export";
-import type { OwnerBooking, OwnerVehicle, OwnerBookingStatus } from "@/lib/types";
-
-interface FinanceData {
-  summary: {
-    currentMonthRevenue: number;
-    currentMonthPayout: number;
-    lifetimeRevenue: number;
-    lifetimePayouts: number;
-    pendingPayouts: number;
-  };
-  vehicles: OwnerVehicle[];
-  bookings: OwnerBooking[];
-}
+import type { OwnerBooking, OwnerBookingStatus } from "@/lib/types";
 
 export default function OwnerFinancePage() {
-  const { data, loading } = useOwnerApi<FinanceData>("/api/owner/finance");
+  const { bookings, vehicles, loading } = useOwnerData();
+  const summary = useMemo(() => computeOwnerFinanceSummary(bookings), [bookings]);
   const [vehicleId, setVehicleId] = useState("");
   const [status, setStatus] = useState("");
   const [from, setFrom] = useState("");
@@ -40,15 +30,14 @@ export default function OwnerFinancePage() {
   const [selected, setSelected] = useState<OwnerBooking | null>(null);
 
   const filtered = useMemo(() => {
-    const list = data?.bookings ?? [];
-    return list.filter((b) => {
+    return bookings.filter((b) => {
       if (vehicleId && b.vehicleId !== vehicleId) return false;
       if (status && b.status !== status) return false;
       if (from && b.returnDate < from) return false;
       if (to && b.pickupDate > to) return false;
       return true;
     });
-  }, [data, vehicleId, status, from, to]);
+  }, [bookings, vehicleId, status, from, to]);
 
   const filteredTotals = useMemo(() => {
     return filtered.reduce(
@@ -92,16 +81,16 @@ export default function OwnerFinancePage() {
     <>
       <AdminPageHeader title="Finance & Earnings" subtitle="Revenue and payout history across your vehicles" />
       <AdminPageBody>
-        {loading && !data ? (
+        {loading && bookings.length === 0 ? (
           <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading finance" /></div>
         ) : (
           <>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-              <AdminStatCard label="This Month Revenue" value={formatCurrency(data?.summary.currentMonthRevenue ?? 0)} icon={DollarSign} />
-              <AdminStatCard label="This Month Payout" value={formatCurrency(data?.summary.currentMonthPayout ?? 0)} icon={Wallet} iconClassName="text-blue-600" iconBgClassName="bg-blue-50" />
-              <AdminStatCard label="Lifetime Revenue" value={formatCurrency(data?.summary.lifetimeRevenue ?? 0)} icon={TrendingUp} iconClassName="text-emerald-600" iconBgClassName="bg-emerald-50" />
-              <AdminStatCard label="Lifetime Payouts" value={formatCurrency(data?.summary.lifetimePayouts ?? 0)} icon={Banknote} iconClassName="text-indigo-600" iconBgClassName="bg-indigo-50" />
-              <AdminStatCard label="Pending Payouts" value={formatCurrency(data?.summary.pendingPayouts ?? 0)} icon={Clock} iconClassName="text-amber-600" iconBgClassName="bg-amber-50" />
+              <AdminStatCard label="This Month Revenue" value={formatCurrency(summary.currentMonthRevenue)} icon={DollarSign} />
+              <AdminStatCard label="This Month Payout" value={formatCurrency(summary.currentMonthPayout)} icon={Wallet} iconClassName="text-blue-600" iconBgClassName="bg-blue-50" />
+              <AdminStatCard label="Lifetime Revenue" value={formatCurrency(summary.lifetimeRevenue)} icon={TrendingUp} iconClassName="text-emerald-600" iconBgClassName="bg-emerald-50" />
+              <AdminStatCard label="Lifetime Payouts" value={formatCurrency(summary.lifetimePayouts)} icon={Banknote} iconClassName="text-indigo-600" iconBgClassName="bg-indigo-50" />
+              <AdminStatCard label="Pending Payouts" value={formatCurrency(summary.pendingPayouts)} icon={Clock} iconClassName="text-amber-600" iconBgClassName="bg-amber-50" />
             </div>
 
             <AdminSection
@@ -117,7 +106,7 @@ export default function OwnerFinancePage() {
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <Select label="Vehicle" value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
                     <option value="">All vehicles</option>
-                    {(data?.vehicles ?? []).map((v) => (
+                    {vehicles.map((v) => (
                       <option key={v.id} value={v.id}>{v.year} {v.make} {v.model}</option>
                     ))}
                   </Select>

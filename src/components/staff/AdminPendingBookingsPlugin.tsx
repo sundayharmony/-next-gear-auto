@@ -12,6 +12,14 @@ interface AdminPendingBookingsPluginProps {
   variant: "mobile" | "sidebar";
 }
 
+function getFocusableElements(container: HTMLElement): HTMLElement[] {
+  return Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
+    )
+  ).filter((el) => !el.hasAttribute("disabled") && el.getAttribute("aria-hidden") !== "true");
+}
+
 export function AdminPendingBookingsPlugin({
   enabled,
   isDark,
@@ -22,19 +30,51 @@ export function AdminPendingBookingsPlugin({
   const [notificationPosition, setNotificationPosition] = useState({ top: 80, left: 16 });
   const bellButtonRef = useRef<HTMLButtonElement>(null);
   const notificationsCloseRef = useRef<HTMLButtonElement>(null);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+  const wasOpenRef = useRef(false);
+
+  const closeNotifications = () => setShowNotifications(false);
 
   useEffect(() => {
     const handleEscapeKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && showNotifications) setShowNotifications(false);
+      if (e.key === "Escape" && showNotifications) closeNotifications();
     };
     window.addEventListener("keydown", handleEscapeKey);
     return () => window.removeEventListener("keydown", handleEscapeKey);
   }, [showNotifications]);
 
   useEffect(() => {
-    if (!showNotifications) return;
-    const t = window.setTimeout(() => notificationsCloseRef.current?.focus(), 0);
-    return () => clearTimeout(t);
+    if (showNotifications) {
+      wasOpenRef.current = true;
+      const t = window.setTimeout(() => notificationsCloseRef.current?.focus(), 0);
+      return () => clearTimeout(t);
+    }
+    if (wasOpenRef.current) {
+      wasOpenRef.current = false;
+      bellButtonRef.current?.focus();
+    }
+  }, [showNotifications]);
+
+  useEffect(() => {
+    if (!showNotifications || !dropdownRef.current) return;
+
+    const handleTabTrap = (e: KeyboardEvent) => {
+      if (e.key !== "Tab" || !dropdownRef.current) return;
+      const focusable = getFocusableElements(dropdownRef.current);
+      if (focusable.length === 0) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+
+    document.addEventListener("keydown", handleTabTrap);
+    return () => document.removeEventListener("keydown", handleTabTrap);
   }, [showNotifications]);
 
   useEffect(() => {
@@ -65,6 +105,7 @@ export function AdminPendingBookingsPlugin({
       }}
       aria-label={`Notifications${pendingCount > 0 ? ` — ${pendingCount} pending` : ""}`}
       aria-expanded={showNotifications}
+      aria-haspopup="dialog"
       className={cn(
         variant === "mobile"
           ? cn(
@@ -111,8 +152,9 @@ export function AdminPendingBookingsPlugin({
 
   const dropdown = showNotifications ? (
     <>
-      <div className="fixed inset-0 z-[55]" onClick={() => setShowNotifications(false)} />
+      <div className="fixed inset-0 z-[55]" onClick={closeNotifications} aria-hidden="true" />
       <div
+        ref={dropdownRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-notifications-title"
@@ -131,7 +173,7 @@ export function AdminPendingBookingsPlugin({
           <button
             ref={notificationsCloseRef}
             type="button"
-            onClick={() => setShowNotifications(false)}
+            onClick={closeNotifications}
             className="p-1.5 rounded-full hover:bg-gray-200 active:bg-gray-300 text-gray-400 hover:text-gray-600 transition-colors"
             aria-label="Close notifications"
           >
@@ -149,7 +191,7 @@ export function AdminPendingBookingsPlugin({
               <Link
                 key={b.id}
                 href={`/admin/bookings?booking=${b.id}`}
-                onClick={() => setShowNotifications(false)}
+                onClick={closeNotifications}
                 className="flex items-center justify-between px-4 py-3 hover:bg-purple-50 active:bg-purple-100 transition-colors group"
               >
                 <div className="min-w-0 flex-1">
@@ -176,7 +218,7 @@ export function AdminPendingBookingsPlugin({
         )}
         <Link
           href="/admin/bookings?status=pending"
-          onClick={() => setShowNotifications(false)}
+          onClick={closeNotifications}
           className="block px-4 py-3 text-center text-xs font-semibold text-purple-600 hover:bg-purple-50 active:bg-purple-100 border-t transition-colors"
         >
           View all pending bookings →

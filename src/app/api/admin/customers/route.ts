@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
+import { verifyAdmin, verifyAdminOrManager, verifyManagerWithPanelAccess } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 
 // GET: Return all customers with optional search
 export async function GET(req: NextRequest) {
-  const auth = await verifyAdminOrManager(req);
+  const auth = await verifyManagerWithPanelAccess(req);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
   const { searchParams } = new URL(req.url);
@@ -70,7 +70,7 @@ export async function GET(req: NextRequest) {
 
 // POST: Create a new customer
 export async function POST(req: NextRequest) {
-  const auth = await verifyAdminOrManager(req);
+  const auth = await verifyManagerWithPanelAccess(req);
   if (!auth.authorized) return auth.response;
   const supabase = getServiceSupabase();
 

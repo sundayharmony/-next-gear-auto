@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyOwner } from "@/lib/owner/owner-check";
+import { verifyOwnerWithPortalAccess } from "@/lib/owner/owner-check";
 import { isOwnerVisibleBooking } from "@/lib/owner/finance";
 import { loadOwnerDataset } from "@/lib/owner/owner-data";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
@@ -18,7 +18,7 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * ranges so the calendar can distinguish booked / available / owner-blocked.
  */
 export async function GET(req: NextRequest) {
-  const auth = await verifyOwner(req);
+  const auth = await verifyOwnerWithPortalAccess(req);
   if (!auth.authorized) return auth.response;
 
   try {
@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
  * existing booking or an existing block.
  */
 export async function POST(req: NextRequest) {
-  const auth = await verifyOwner(req);
+  const auth = await verifyOwnerWithPortalAccess(req);
   if (!auth.authorized) return auth.response;
 
   try {
@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
  * Remove an owner-created block. Admin/Turo blocks are not removable here.
  */
 export async function DELETE(req: NextRequest) {
-  const auth = await verifyOwner(req);
+  const auth = await verifyOwnerWithPortalAccess(req);
   if (!auth.authorized) return auth.response;
 
   try {

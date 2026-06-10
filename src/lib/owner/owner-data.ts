@@ -1,6 +1,7 @@
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getVehicleDisplayName } from "@/lib/types";
 import type {
+  OwnerBlockedDate,
   OwnerBooking,
   OwnerVehicle,
   PayoutStatus,
@@ -34,6 +35,7 @@ export interface OwnerDataset {
   vehicles: OwnerVehicle[];
   vehicleMap: Map<string, VehicleRow>;
   bookings: OwnerBooking[];
+  blockedDates: OwnerBlockedDate[];
 }
 
 export interface LoadOwnerDatasetOptions {
@@ -77,10 +79,10 @@ export async function loadOwnerDataset(
   }));
 
   if (vehicleIds.length === 0) {
-    return { vehicles, vehicleMap, bookings: [] };
+    return { vehicles, vehicleMap, bookings: [], blockedDates: [] };
   }
 
-  const [{ data: bookingRows }, { data: payoutRows }] = await Promise.all([
+  const [{ data: bookingRows }, { data: payoutRows }, { data: blockedRows }] = await Promise.all([
     supabase
       .from("bookings")
       .select(
@@ -93,7 +95,22 @@ export async function loadOwnerDataset(
       .from("owner_payouts")
       .select("booking_id, status, payout_date, other_expenses")
       .eq("owner_id", ownerId),
+    supabase
+      .from("blocked_dates")
+      .select("id, vehicle_id, start_date, end_date, reason, source, owner_id")
+      .in("vehicle_id", vehicleIds)
+      .order("start_date", { ascending: true }),
   ]);
+
+  const blockedDates: OwnerBlockedDate[] = (blockedRows || []).map((b) => ({
+    id: b.id as string,
+    vehicleId: b.vehicle_id as string,
+    startDate: b.start_date as string,
+    endDate: b.end_date as string,
+    reason: (b.reason as string | null) ?? null,
+    source: (b.source as string) || "manual",
+    removable: b.source === "owner" && b.owner_id === ownerId,
+  }));
 
   const payoutMap = new Map<
     string,
@@ -206,7 +223,7 @@ export async function loadOwnerDataset(
     return (b.createdAt || "").localeCompare(a.createdAt || "");
   });
 
-  return { vehicles, vehicleMap, bookings: visibleBookings };
+  return { vehicles, vehicleMap, bookings: visibleBookings, blockedDates };
 }
 
 async function fetchOwnerTuroBlocks(

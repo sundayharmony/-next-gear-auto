@@ -3,7 +3,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import dynamic from "next/dynamic";
 import type { BookingDbRow, VehicleListItem } from "@/lib/types";
-import { RefreshCw, LayoutList, Calendar } from "lucide-react";
+import { RefreshCw, LayoutList, Calendar, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
 import { AdminPageHeader } from "@/components/admin/admin-shell";
@@ -27,6 +27,8 @@ import {
   adminPanelConfig,
   type StaffPanelConfig,
 } from "@/lib/admin/staff-panel-config";
+import { staffKeys, useStaffQuery } from "@/lib/hooks/use-staff-query";
+import type { CustomerOption } from "@/app/admin/bookings/types";
 import { useCalendarData } from "./use-calendar-data";
 import { TimelineShell } from "./timeline-shell";
 import { MonthGrid } from "./month-grid";
@@ -37,6 +39,11 @@ const BookingDetailPanel = dynamic(
     import("@/app/admin/bookings/components/BookingDetailPanel").then(
       (m) => m.BookingDetailPanel
     ),
+  { ssr: false }
+);
+
+const CreateBookingForm = dynamic(
+  () => import("@/app/admin/bookings/components/CreateBookingForm"),
   { ssr: false }
 );
 
@@ -83,6 +90,7 @@ export default function AdminCalendarPage({
   const detailDirtyRef = React.useRef(false);
 
   const [selectedBlocked, setSelectedBlocked] = useState<BlockedDateEntry | null>(null);
+  const [showCreateForm, setShowCreateForm] = useState(false);
 
   const {
     bookings,
@@ -98,6 +106,21 @@ export default function AdminCalendarPage({
     timelineStart,
     calendarMonthStart,
   });
+
+  const customersQuery = useStaffQuery<
+    { id: string; name: string; email: string; phone?: string | null }[]
+  >(staffKeys.customers(), calendarConfig.customersEndpoint, { staleTime: 60_000 });
+
+  const allCustomers = useMemo<CustomerOption[]>(
+    () =>
+      (customersQuery.data ?? []).map((c) => ({
+        id: c.id,
+        name: c.name,
+        email: c.email,
+        phone: c.phone || "",
+      })),
+    [customersQuery.data]
+  );
 
   const openBookingDetail = (booking: AdminBookingRow) => {
     setSelectedBooking(booking);
@@ -269,17 +292,29 @@ export default function AdminCalendarPage({
         title="Booking Calendar"
         subtitle="Manage all vehicle reservations"
         actions={
-          <Button
-            onClick={handleRefresh}
-            disabled={loading}
-            variant="outline"
-            size="sm"
-            aria-label="Refresh calendar"
-            className="gap-2 page-hero-btn-outline hidden sm:inline-flex"
-          >
-            <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
+          <div className="flex items-center gap-2">
+            {calendarConfig.capabilities.canCreateBookings ? (
+              <Button
+                onClick={() => setShowCreateForm(true)}
+                size="sm"
+                className="gap-2 hidden sm:inline-flex"
+              >
+                <Plus className="w-4 h-4" />
+                New Booking
+              </Button>
+            ) : null}
+            <Button
+              onClick={handleRefresh}
+              disabled={loading}
+              variant="outline"
+              size="sm"
+              aria-label="Refresh calendar"
+              className="gap-2 page-hero-btn-outline hidden sm:inline-flex"
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+          </div>
         }
       />
 
@@ -494,6 +529,24 @@ export default function AdminCalendarPage({
           vehicle={selectedBlockedVehicle}
           onClose={() => setSelectedBlocked(null)}
         />
+      )}
+
+      {showCreateForm && calendarConfig.capabilities.canCreateBookings && (
+        <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[calc(1rem+env(safe-area-inset-top,0px))]">
+          <div className="w-full max-w-3xl">
+            <CreateBookingForm
+              vehicles={vehicles}
+              allCustomers={allCustomers}
+              onClose={() => setShowCreateForm(false)}
+              onCreated={() => {
+                setShowCreateForm(false);
+                void loadBookings({ forceReplace: true });
+              }}
+              onError={setError}
+              onSuccess={setSuccess}
+            />
+          </div>
+        </div>
       )}
     </>
   );

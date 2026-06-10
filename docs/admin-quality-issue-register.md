@@ -6,7 +6,8 @@ Living document from the senior cleanup audit. Severity: P0 (blocker) → P3 (ni
 
 | Area | Metric | How to measure |
 |------|--------|----------------|
-| Staff routes | Time to interactive (TTI) on cold load | Lighthouse / Web Vitals |
+| Staff routes | Time to interactive (TTI) on cold load | Lighthouse / Web Vitals — see [perf-baselines.md](perf-baselines.md) |
+| Staff routes | First Load JS vs documented kB caps | `ANALYZE=true npm run analyze` + [perf-baselines.md](perf-baselines.md) |
 | Messages | `/api/admin/messages/threads` requests per minute with dashboard open | Network tab / server logs |
 | Messages | Duplicate polling when on `/admin/messages` or `/manager/messages` | Should be 1× after layout pause |
 | Auth | 401 after failed refresh redirects to correct panel (`/admin` vs `/manager`) | Manual |
@@ -34,9 +35,27 @@ Living document from the senior cleanup audit. Severity: P0 (blocker) → P3 (ni
 | ID | Issue | Status |
 |----|--------|--------|
 | P2-1 | Layout unread badge + messages page both poll threads every 15s | **Done** — layout hook disabled on `/admin/messages` and `/manager/messages`; tab-hidden skips ticks |
-| P2-2 | Oversized `admin/calendar/page.tsx`, `customers/page.tsx`, etc. | Ongoing: extract modules incrementally; `shared-messages-page` split in Phase 7 |
-| P2-3 | Admin vs manager shell duplication | **Improved** — `StaffPanelShell` + universal `managerPanelConfig` wrappers (Phase 8) |
+| P2-2 | Oversized `admin/calendar/page.tsx`, `customers/page.tsx`, etc. | **Partial (v3)** — calendar split (501 lines); customers/finances/vehicles/tickets/maintenance/blocked-dates still grandfathered with shrink caps; see `check-staff-file-size.mjs` |
+| P2-3 | Admin vs manager shell duplication | **Done** — `StaffPanelShell` + universal `managerPanelConfig` wrappers (Phase 8) |
 | P2-4 | Owner layout triple-fetch (summary + bookings + vehicles) | **Done** — `GET /api/owner/dataset` + single Query in `OwnerDataProvider` |
+| P2-5 | Build skipped TypeScript errors | **Done (v3 P10)** — `typescript.ignoreBuildErrors: false`; CI runs `npm run typecheck` |
+| P2-6 | No documented bundle baselines | **Done (v3 P10)** — [perf-baselines.md](perf-baselines.md) + optional Lighthouse workflow |
+
+## Platform v3 — closed items
+
+| Phase | Item | Status |
+|-------|------|--------|
+| P1 | Owner API routes use `verifyOwnerWithPortalAccess()` | **Done** — enforced via `check-api-auth-matrix.mjs` |
+| P1 | Manager JWT enforced on `/manager/*` proxy | **Done** |
+| P2 | React hook import guard (`useMemo` / `useCallback` runtime crashes) | **Done** — `check-react-hook-imports.mjs` in CI |
+| P3 | TanStack Query migration for bookings/calendar/finances hooks | **Done** — `staffKeys`, `useStaffMutation` |
+| P4 | Calendar `page.tsx` under 600 lines + lazy timeline/detail | **Done** — 501 lines; `timeline-view` shrink-capped |
+| P4–6 | Mega-page module extraction (customers, finances, vehicles, ops) | **Partial** — modules extracted; pages still >600 (grandfather caps) |
+| P7 | Messaging split (`thread-list`, `message-composer`, etc.) | **Done** |
+| P8 | Manager `panelConfig` wrappers + panel-sync CI | **Done** |
+| P9 | Owner dataset API + create-booking form | **Done** |
+| P10 | Perf baselines doc, Lighthouse workflow (informational), shrink caps on heavy components | **Done** |
+| P10 | Hard 600-line cap on all staff files | **Not yet** — 6 grandfathered pages + 4 shrink-capped components remain |
 
 ## Route ownership (admin-first)
 
@@ -49,6 +68,7 @@ Living document from the senior cleanup audit. Severity: P0 (blocker) → P3 (ni
 
 1. Full JWT migration; remove `x-admin-id`.
 2. Focus trap + focus restore for notifications dropdown.
-3. Decompose remaining grandfathered admin pages (finances, customers, calendar).
-4. Record bundle analyzer baselines for bookings/finances/calendar (`ANALYZE=true npm run analyze`).
-5. Optional Playwright smoke for auth redirect + nav.
+3. Decompose remaining grandfathered admin pages to ≤600 lines; remove `GRANDFATHERED_MAX`.
+4. Split `BookingDetailPanel`, `CreateBookingForm`, `InvoicesPageClient`, `timeline-view` below shrink milestones.
+5. Run `ANALYZE=true npm run analyze` and replace placeholder values in [perf-baselines.md](perf-baselines.md).
+6. Optional Playwright smoke for auth redirect + nav.

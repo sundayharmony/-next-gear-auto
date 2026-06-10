@@ -6,8 +6,7 @@ import { Star, Trash2, CheckCircle, XCircle, RefreshCw, Filter, Loader2, Message
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AdminPageBody } from "@/components/admin/admin-shell";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
@@ -122,18 +121,10 @@ export default function AdminReviewsPage({
 
   return (
     <>
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Reviews</h1>
-              <p className="mt-1 page-hero-subtitle">
-                {reviews.length} reviews{pendingCount > 0 ? ` · ${pendingCount} pending` : ""}
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <AdminPageHeader
+        title="Reviews"
+        subtitle={`${reviews.length} reviews${pendingCount > 0 ? ` · ${pendingCount} pending` : ""}`}
+      />
 
       <AdminPageBody>
         {/* Error Banner */}

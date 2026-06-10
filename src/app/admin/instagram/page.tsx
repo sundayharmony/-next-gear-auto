@@ -1,17 +1,16 @@
 "use client";
 
 import React, { useEffect, useState, useRef } from "react";
-import Link from "next/link";
 import {
   adminPanelConfig,
   type StaffPanelConfig,
 } from "@/lib/admin/staff-panel-config";
-import { ArrowLeft, Plus, Trash2, RefreshCw, ExternalLink, X, Loader2 } from "lucide-react";
+import { Plus, Trash2, RefreshCw, ExternalLink, X, Loader2 } from "lucide-react";
 import { Instagram } from "@/components/icons/instagram";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -131,24 +130,13 @@ export default function AdminInstagramPage({
 
   return (
     <>
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <Link href={homePath} className="text-purple-300 hover:text-white transition-colors">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-            <div>
-              <div className="flex items-center gap-2">
-                <Instagram className="h-6 w-6 text-pink-400" />
-                <h1 className="text-2xl sm:text-3xl font-bold">Instagram Feed</h1>
-              </div>
-              <p className="mt-1 page-hero-subtitle">Manage the Instagram posts shown on your blog page.</p>
-            </div>
-          </div>
-        </div>
-      </section>
+      <AdminPageHeader
+        backHref={homePath}
+        title="Instagram Feed"
+        subtitle="Manage the Instagram posts shown on your blog page."
+      />
 
-      <PageContainer className="py-8">
+      <AdminPageBody>
         {error && (
           <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
             <span>{error}</span>
@@ -292,7 +280,7 @@ export default function AdminInstagramPage({
             ))}
           </div>
         )}
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

@@ -1,9 +1,9 @@
 {
-  "id": "/staff",
+  "id": "/",
   "name": "NextGearAuto Staff",
   "short_name": "NGA Staff",
-  "description": "NextGearAuto staff app — admin and manager panel (bookings, fleet, customers).",
-  "start_url": "/staff",
+  "description": "NextGearAuto staff app — admin, manager, and owner panels.",
+  "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "orientation": "any",
@@ -43,6 +43,24 @@
       "name": "Manager home",
       "short_name": "Manager",
       "url": "/manager",
+      "icons": [{ "src": "/images/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Owner home",
+      "short_name": "Owner",
+      "url": "/owner",
+      "icons": [{ "src": "/images/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Create owner booking",
+      "short_name": "New booking",
+      "url": "/owner/bookings/create",
+      "icons": [{ "src": "/images/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
+    },
+    {
+      "name": "Owner calendar",
+      "short_name": "Owner cal",
+      "url": "/owner/calendar",
       "icons": [{ "src": "/images/icons/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     },
     {

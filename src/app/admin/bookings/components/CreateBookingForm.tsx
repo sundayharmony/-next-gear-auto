@@ -1,21 +1,18 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { X, Check, AlertTriangle, Calculator, MapPin, Upload, User, Car, CalendarDays, Package, CreditCard, DollarSign, Clock, Shield, FileText } from "lucide-react";
+import React, { useState, useRef, useEffect } from "react";
+import { X, Check, AlertTriangle, Calculator, MapPin, Upload, User, Car, CalendarDays, Package, CreditCard, Clock, Shield, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { adminFetch } from "@/lib/utils/admin-fetch";
-import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { logger } from "@/lib/utils/logger";
-import { calculatePricing, calculateRentalHours } from "@/lib/utils/price-calculator";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import {
   Vehicle,
   CustomerOption,
-  ExtraItem,
   AVAILABLE_EXTRAS,
   PAYMENT_METHODS,
   TIME_SLOTS,
@@ -27,6 +24,9 @@ import {
   WEEKLY_DUE_DAY_OPTIONS,
   type WeeklyDueDay,
 } from "@/lib/utils/recurring-booking";
+import { calculatePricing } from "@/lib/utils/price-calculator";
+import { useCreateBookingPricing } from "../hooks/use-create-booking-pricing";
+import { useCreateBookingOverlap } from "../hooks/use-create-booking-overlap";
 
 /* ── Section header component ── */
 function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle?: string }) {
@@ -94,9 +94,7 @@ export default function CreateBookingForm({
   const [filteredCustomers, setFilteredCustomers] = useState<CustomerOption[]>([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [searchValue, setSearchValue] = useState("");
-  const [hasOverlappingBookings, setHasOverlappingBookings] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [manualPriceOverride, setManualPriceOverride] = useState(false);
   const [locations, setLocationsState] = useState<Location[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(true);
   const [locationsError, setLocationsError] = useState<string | null>(null);
@@ -108,6 +106,10 @@ export default function CreateBookingForm({
   const [idDocument, setIdDocument] = useState<File | null>(null);
   const [idDocumentPreview, setIdDocumentPreview] = useState<string | null>(null);
   const idInputRef = useRef<HTMLInputElement>(null);
+
+  const { manualPriceOverride, setManualPriceOverride, calculateHours, restoreAutoPrice } =
+    useCreateBookingPricing({ form, setForm, vehicles, onError });
+  const { hasOverlappingBookings } = useCreateBookingOverlap(form);
 
   // Prefill data if provided
   useEffect(() => {
@@ -239,127 +241,6 @@ export default function CreateBookingForm({
       setIdDocumentPreview(null);
     }
   };
-
-  // Calculate billable hours from selected pickup/return date+time
-  const calculateHours = () => {
-    if (!form.pickupDate || !form.returnDate) return 0;
-    try {
-      return calculateRentalHours(form.pickupDate, form.returnDate, form.pickupTime, form.returnTime);
-    } catch {
-      return 0;
-    }
-  };
-
-  const restoreAutoPrice = () => {
-    setManualPriceOverride(false);
-    const selectedVehicle = vehicles.find((v) => v.id === form.vehicleId);
-    if (!selectedVehicle || !form.pickupDate || !form.returnDate) {
-      setForm((prev) => ({ ...prev, totalPrice: 0 }));
-      onError("Select vehicle, pickup, and return date to recalculate price.");
-      return;
-    }
-    const hours = calculateHours();
-    if (!hours) {
-      setForm((prev) => ({ ...prev, totalPrice: 0 }));
-      onError("Set return date/time after pickup date/time to recalculate price.");
-      return;
-    }
-    const mappedExtras = AVAILABLE_EXTRAS.map((extra) => ({
-      ...extra,
-      selected: form.selectedExtras.includes(extra.id),
-    }));
-    const total = calculatePricing(hours, selectedVehicle.dailyRate ?? 0, mappedExtras).total;
-    setForm((prev) => ({ ...prev, totalPrice: total }));
-  };
-
-  // Check for overlapping bookings
-  const overlapAbortControllerRef = useRef<AbortController | null>(null);
-
-  const hasValidOverlapInput = () => {
-    if (!form.vehicleId || !form.pickupDate || !form.returnDate) return false;
-    if (!isYyyyMmDd(form.pickupDate) || !isYyyyMmDd(form.returnDate)) return false;
-    if (!isoDateOrderingOk(form.pickupDate, form.returnDate)) return false;
-    // For same-day ranges, ensure return time is after pickup time before querying overlap API.
-    if (form.pickupDate === form.returnDate && form.returnTime <= form.pickupTime) return false;
-    return true;
-  };
-
-  useEffect(() => {
-    const checkOverlap = async () => {
-      if (!hasValidOverlapInput()) {
-        setHasOverlappingBookings(false);
-        return;
-      }
-
-      // Abort previous request if it's still pending
-      if (overlapAbortControllerRef.current) {
-        overlapAbortControllerRef.current.abort();
-      }
-
-      // Create new abort controller for this fetch
-      overlapAbortControllerRef.current = new AbortController();
-
-      try {
-        const pt = encodeURIComponent(form.pickupTime || "00:00");
-        const rt = encodeURIComponent(form.returnTime || "23:59");
-        const res = await adminFetch(
-          `/api/bookings/check-overlap?vehicleId=${encodeURIComponent(form.vehicleId)}&pickupDate=${encodeURIComponent(form.pickupDate)}&returnDate=${encodeURIComponent(form.returnDate)}&pickupTime=${pt}&returnTime=${rt}`,
-          { method: "GET", signal: overlapAbortControllerRef.current.signal }
-        );
-        if (!res.ok) {
-          // Invalid/incomplete ranges can still happen while typing; avoid noisy console errors.
-          if (res.status === 400) {
-            setHasOverlappingBookings(false);
-            return;
-          }
-          throw new Error(`HTTP ${res.status}`);
-        }
-        const data = await res.json();
-        setHasOverlappingBookings(data.hasOverlap || false);
-      } catch (err) {
-        // Ignore abort errors
-        if (err instanceof Error && err.name === "AbortError") return;
-        logger.error("Failed to check booking overlap:", err);
-        setHasOverlappingBookings(false);
-      }
-    };
-
-    const timer = setTimeout(() => {
-      checkOverlap();
-    }, 400);
-
-    return () => {
-      clearTimeout(timer);
-      // Abort fetch on unmount
-      if (overlapAbortControllerRef.current) {
-        overlapAbortControllerRef.current.abort();
-      }
-    };
-  }, [form.vehicleId, form.pickupDate, form.returnDate, form.pickupTime, form.returnTime]);
-
-  // Auto-calculate price (skipped when admin has manually set a custom price)
-  useEffect(() => {
-    if (manualPriceOverride) return;
-
-    const selectedVehicle = vehicles.find((v) => v.id === form.vehicleId);
-    if (!selectedVehicle || !form.pickupDate || !form.returnDate) {
-      setForm((prev) => ({ ...prev, totalPrice: 0 }));
-      return;
-    }
-
-    const hours = calculateHours();
-    if (!hours) {
-      setForm((prev) => ({ ...prev, totalPrice: 0 }));
-      return;
-    }
-    const mappedExtras = AVAILABLE_EXTRAS.map((extra) => ({
-      ...extra,
-      selected: form.selectedExtras.includes(extra.id),
-    }));
-    const total = calculatePricing(hours, selectedVehicle.dailyRate ?? 0, mappedExtras).total;
-
-    setForm((prev) => ({ ...prev, totalPrice: total }));
-  }, [form.vehicleId, form.pickupDate, form.returnDate, form.pickupTime, form.returnTime, form.selectedExtras, vehicles, manualPriceOverride]);
 
   // Toggle extra
   const toggleExtra = (extraId: string) => {

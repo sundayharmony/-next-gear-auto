@@ -7,12 +7,22 @@ How Turo trip data flows into Next Gear Auto and stays consistent across webhook
 - Active Turo trips are stored in `blocked_dates` with `source = 'turo-email'` (`TURO_BLOCKED_SOURCE`).
 - Cancelled trips use `cancelled_at` or a `[CANCELLED]` reason prefix.
 - Staff blocked-dates UI and owner availability treat active Turo rows as **booked** (not owner-removable blocks).
+- **Webhook and batch sync only write `blocked_dates`.** They do not create or update linked `bookings` records; that remains a future feature if Turo trips need to appear in the bookings list.
 
 ## Ingestion paths
 
 ### 1. Email webhook (real-time)
 
-Turo notification emails hit the Gmail forwarder / webhook pipeline, which upserts `blocked_dates` rows and may create linked booking records.
+Turo notification emails are forwarded from Gmail (Google Apps Script) to the production webhook, which parses the email and upserts `blocked_dates` rows (create, extend, refresh, or cancel).
+
+| Item | Value |
+|------|-------|
+| Production URL | `https://www.rentnextgearauto.com/api/webhooks/turo-email` |
+| Auth | `Authorization: Bearer <TURO_WEBHOOK_SECRET>` (must match Vercel env) |
+| Gmail forwarder | `scripts/gmail-turo-forwarder.gs` |
+| Forwarder cadence | **Every 15 minutes** (`setup()` installs a time-based trigger on `processNewTuroEmails`) |
+
+Local testing: `npm run turo:post-webhook -- --url http://localhost:3000/api/webhooks/turo-email --file emails.txt`
 
 ### 2. Batch cancellation sync (CLI / admin)
 
@@ -22,13 +32,24 @@ Turo notification emails hit the Gmail forwarder / webhook pipeline, which upser
 
 **Rule:** Webhook handlers and batch sync must call the same matcher so a cancellation email and a manual sync pick the same row. See `tests/turo-sync-parity.test.ts`.
 
+CLI:
+
+```bash
+npm run turo:audit                              # row counts, duplicates, cancel-in-reason
+npm run turo:sync-cancellations                 # dry-run audit + instructions
+npm run turo:sync-cancellations -- --apply      # mark cancellations
+npm run turo:sync-cancellations -- --apply --delete --emails-file emails.txt
+```
+
+Admin UI: paste a cancellation email on `/admin/blocked-dates`, or `POST /api/admin/blocked-dates/sync-cancellations`.
+
 ### 3. Admin blocked-dates page
 
-Admins view Turo vs manual blocks at `/admin/blocked-dates`. Managers do not have this route (`sharedWithManager: false` in `panel-registry.ts`).
+Admins view Turo vs manual blocks at `/admin/blocked-dates`. The page shows Turo sync status (active/cancelled counts, last ingest time). Managers do not have this route (`sharedWithManager: false` in `panel-registry.ts`).
 
 ## Matcher behavior (summary)
 
-1. Filter rows overlapping the trip date range for the vehicle.
+1. Filter rows overlapping the trip date range for the vehicle (batch sync also skips already-cancelled rows).
 2. Prefer exact date alignment and guest name match in the `reason` field (`Turo: GuestName`).
 3. Refuse to cancel a different guest’s overlapping trip (returns no match).
 
@@ -43,10 +64,12 @@ into `bookedRanges` so the availability calendar shows Turo days as red/booked.
 
 ## Operational checklist
 
-1. Run DB migrations for `blocked_dates.cancelled_at` if missing.
-2. Confirm webhook env vars and Gmail forwarding.
-3. After matcher changes, run `npm test` (includes `turo-sync-parity.test.ts`).
-4. Spot-check one vehicle: Turo block visible in admin calendar, manager bookings list, and owner availability.
+1. Run DB migrations for `blocked_dates.cancelled_at` if missing (`supabase-turo-cancellations.sql`).
+2. Confirm `TURO_WEBHOOK_SECRET` in Vercel Production matches `WEBHOOK_SECRET` in the Gmail Apps Script project.
+3. Run `setup()` once in Apps Script so the 15-minute forwarder trigger is active.
+4. After matcher changes, run `npm test` (includes `turo-sync-parity.test.ts`).
+5. Spot-check one vehicle: Turo block visible in admin calendar, manager bookings list, and owner availability.
+6. Periodic audit: `npm run turo:audit` — watch for duplicate active trips or cancel text still in `reason` on active rows.
 
 ## Related files
 
@@ -56,4 +79,6 @@ into `bookedRanges` so the availability calendar shows Turo days as red/booked.
 | Batch sync | `src/lib/admin/turo-cancellation-sync.ts` |
 | Block helpers | `src/lib/utils/blocked-dates.ts` |
 | Owner availability API | `src/app/api/owner/availability/route.ts` |
+| Webhook | `src/app/api/webhooks/turo-email/route.ts` |
+| Gmail forwarder | `scripts/gmail-turo-forwarder.gs` |
 | Parity tests | `tests/turo-sync-parity.test.ts` |

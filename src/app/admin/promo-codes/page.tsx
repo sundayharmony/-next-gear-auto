@@ -9,8 +9,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { AdminPageBody } from "@/components/admin/admin-shell";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { logger } from "@/lib/utils/logger";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { AdminStatusBanner } from "@/components/admin/ui-feedback";
@@ -177,19 +176,15 @@ export default function AdminPromoCodesPage({
 
   return (
     <>
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl sm:text-3xl font-bold">Promo Codes</h1>
-              <p className="mt-1 page-hero-subtitle">{codes.length} promo codes</p>
-            </div>
-            <Button onClick={() => setShowAddForm(!showAddForm)} className="bg-white text-purple-900 hover:bg-gray-100">
-              <Plus className="h-4 w-4 mr-1" /> New Code
-            </Button>
-          </div>
-        </div>
-      </section>
+      <AdminPageHeader
+        title="Promo Codes"
+        subtitle={`${codes.length} promo codes`}
+        actions={
+          <Button onClick={() => setShowAddForm(!showAddForm)} className="bg-white text-purple-900 hover:bg-gray-100">
+            <Plus className="h-4 w-4 mr-1" /> New Code
+          </Button>
+        }
+      />
 
       <AdminPageBody>
         {/* Error Banner */}

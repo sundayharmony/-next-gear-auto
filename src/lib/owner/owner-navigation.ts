@@ -21,19 +21,19 @@ export interface OwnerNavItem {
 export const OWNER_NAV_ITEMS: OwnerNavItem[] = [
   { key: "dashboard", href: "/owner", label: "Dashboard", icon: LayoutDashboard, primary: true },
   { key: "calendar", href: "/owner/calendar", label: "Calendar", icon: CalendarDays, primary: true },
+  { key: "createBooking", href: "/owner/bookings/create", label: "Create booking", icon: CalendarPlus, primary: true },
   { key: "finance", href: "/owner/finance", label: "Finance", icon: DollarSign, primary: true },
-  { key: "availability", href: "/owner/availability", label: "Availability", icon: ShieldBan, primary: true },
+  { key: "availability", href: "/owner/availability", label: "Availability", icon: ShieldBan, primary: false },
   { key: "notifications", href: "/owner/notifications", label: "Notifications", icon: Bell, primary: false },
-  { key: "createBooking", href: "/owner/bookings/create", label: "Create booking", icon: CalendarPlus, primary: false },
 ];
 
 const OWNER_ICON_KEYS: Record<string, PanelIconKey> = {
   dashboard: "dashboard",
   calendar: "calendarDays",
+  createBooking: "calendar",
   finance: "dollarSign",
   availability: "shieldBan",
   notifications: "bell",
-  createBooking: "calendar",
 };
 
 export function getOwnerNavItems(): PanelNavItem[] {
