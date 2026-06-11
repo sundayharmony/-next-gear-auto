@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { formatDate } from "@/lib/utils/date-helpers";
+import { prorateBookingRevenueInRange } from "@/lib/finance/booking-proration";
 import {
   StatCard,
   SectionHeader,
@@ -27,10 +28,11 @@ type VehicleDetailData = NonNullable<ReturnType<typeof getVehicleDetail>>;
 
 interface FinancesVehicleDetailProps {
   detail: VehicleDetailData;
+  dateRange: { from: string; to: string };
   onBack: () => void;
 }
 
-export function FinancesVehicleDetail({ detail, onBack }: FinancesVehicleDetailProps) {
+export function FinancesVehicleDetail({ detail, dateRange, onBack }: FinancesVehicleDetailProps) {
   const {
     vehicle,
     bookings: vBookings,
@@ -131,17 +133,28 @@ export function FinancesVehicleDetail({ detail, onBack }: FinancesVehicleDetailP
                   <tbody className="divide-y">
                     {vBookings
                       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                      .map((b) => (
-                        <tr key={b.id} className="text-gray-700">
-                          <td className="py-2.5 font-mono text-xs">{b.id.slice(0, 16)}...</td>
-                          <td className="py-2.5">{formatDate(b.pickup_date)}</td>
-                          <td className="py-2.5">{formatDate(b.return_date)}</td>
-                          <td className="py-2.5 text-right font-semibold">${(b.total_price ?? 0).toLocaleString()}</td>
-                          <td className="py-2.5 text-right">
-                            <Badge variant="secondary" className="text-xs capitalize">{b.status}</Badge>
-                          </td>
-                        </tr>
-                      ))}
+                      .map((b) => {
+                        const rangeRevenue = prorateBookingRevenueInRange(
+                          b.total_price ?? 0,
+                          b.pickup_date,
+                          b.return_date,
+                          dateRange.from,
+                          dateRange.to
+                        );
+                        return (
+                          <tr key={b.id} className="text-gray-700">
+                            <td className="py-2.5 font-mono text-xs">{b.id.slice(0, 16)}...</td>
+                            <td className="py-2.5">{formatDate(b.pickup_date)}</td>
+                            <td className="py-2.5">{formatDate(b.return_date)}</td>
+                            <td className="py-2.5 text-right font-semibold">
+                              ${rangeRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </td>
+                            <td className="py-2.5 text-right">
+                              <Badge variant="secondary" className="text-xs capitalize">{b.status}</Badge>
+                            </td>
+                          </tr>
+                        );
+                      })}
                   </tbody>
                 </table>
               </div>

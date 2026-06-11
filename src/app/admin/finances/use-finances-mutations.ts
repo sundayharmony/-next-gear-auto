@@ -4,6 +4,11 @@ import { useCallback, useState } from "react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { calculateFinancing } from "@/lib/utils/financing";
 import { formatDate, getLocalYmd } from "@/lib/utils/date-helpers";
+import {
+  countBookedDaysInRange,
+  prorateBookingRevenueInRange,
+} from "@/lib/finance/booking-proration";
+import { countInclusiveTripDays } from "@/lib/utils/turo-blocked-date";
 import { exportToCSV } from "@/lib/utils/csv-export";
 import { logger } from "@/lib/utils/logger";
 import { staffKeys, useStaffMutation } from "@/lib/hooks/use-staff-query";
@@ -195,28 +200,32 @@ export function getVehicleDetail(
   if (!vehicle) return null;
   const vBookings = revenueBookings.filter((b) => b.vehicle_id === vehicleId);
   const vExpenses = allExpenses.filter((e) => e.vehicle_id === vehicleId);
-  const revenue = vBookings.reduce((s, b) => s + (b.total_price ?? 0), 0);
+  const revenue = vBookings.reduce(
+    (s, b) =>
+      s +
+      prorateBookingRevenueInRange(
+        b.total_price ?? 0,
+        b.pickup_date,
+        b.return_date,
+        dateRange.from,
+        dateRange.to
+      ),
+    0
+  );
   const expenseTotal = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
   const effectiveCost = vehicle.isFinanced ? 0 : (vehicle.purchasePrice ?? 0);
   const financingInfo = vehicle.isFinanced ? calculateFinancing(vehicle) : null;
   const profit = revenue - expenseTotal - effectiveCost;
   const totalCost = expenseTotal + effectiveCost;
   const roi = totalCost > 0 ? ((profit / totalCost) * 100).toFixed(1) : "0.0";
-  const totalDays = Math.max(
-    1,
-    Math.ceil(
-      (new Date(dateRange.to + "T00:00:00").getTime() - new Date(dateRange.from + "T00:00:00").getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
-  );
+  const totalDays = Math.max(1, countInclusiveTripDays(dateRange.from, dateRange.to));
   let bookedDays = 0;
   vBookings.forEach((b) => {
-    bookedDays += Math.max(
-      1,
-      Math.ceil(
-        (new Date(b.return_date + "T00:00:00").getTime() - new Date(b.pickup_date + "T00:00:00").getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
+    bookedDays += countBookedDaysInRange(
+      b.pickup_date,
+      b.return_date,
+      dateRange.from,
+      dateRange.to
     );
   });
   const occupancy = Math.min(100, (bookedDays / totalDays) * 100);

@@ -4,10 +4,18 @@ import { useMemo } from "react";
 import { calculateFinancing } from "@/lib/utils/financing";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
 import {
+  countInclusiveTripDays,
   resolveTuroTripRevenue,
   addProratedTuroRevenueByDay,
   forEachProratedTuroDay,
 } from "@/lib/utils/turo-blocked-date";
+import {
+  addProratedBookingRevenueByDay,
+  countBookedDaysInRange,
+  forEachProratedBookingDayInRange,
+  prorateBookingRevenueInRange,
+  prorateTripRevenueInRange,
+} from "@/lib/finance/booking-proration";
 import { getVehicleDisplayName } from "@/lib/types";
 import type { UnifiedExpense, Vehicle } from "./finances-shared";
 import type {
@@ -66,15 +74,26 @@ export function useFinancesComputed({
       .filter((block) => block.source === "turo-email")
       .filter((block) => !block.cancelled_at)
       .filter((block) => block.start_date <= dateRange.to && block.end_date >= dateRange.from)
-      .map((block) => ({
-        id: block.id,
-        vehicle_id: block.vehicle_id,
-        revenue: resolveTuroTripRevenue(block),
-        date: block.start_date,
-        start_date: block.start_date,
-        end_date: block.end_date,
-        reason: block.reason ?? null,
-      }));
+      .map((block) => {
+        const fullRevenue = resolveTuroTripRevenue(block);
+        const revenue = prorateTripRevenueInRange(
+          block.start_date,
+          block.end_date,
+          fullRevenue,
+          dateRange.from,
+          dateRange.to
+        );
+        return {
+          id: block.id,
+          vehicle_id: block.vehicle_id,
+          revenue,
+          fullRevenue,
+          date: block.start_date,
+          start_date: block.start_date,
+          end_date: block.end_date,
+          reason: block.reason ?? null,
+        };
+      });
   }, [blockedDates, dateRange]);
 
   const tripExpenseTotalsByBlockedId = useMemo(() => {
@@ -180,26 +199,34 @@ export function useFinancesComputed({
   }, [filteredExpenses, maintenanceCosts, financingCosts, ticketCosts]);
 
   const summaryData = useMemo(() => {
-    const bookingRevenue = revenueBookings.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
+    const bookingRevenue = revenueBookings.reduce(
+      (sum, b) =>
+        sum +
+        prorateBookingRevenueInRange(
+          b.total_price ?? 0,
+          b.pickup_date,
+          b.return_date,
+          dateRange.from,
+          dateRange.to
+        ),
+      0
+    );
     const turoRevenue = turoRevenueEntries.reduce((sum, entry) => sum + entry.revenue, 0);
     const totalRevenue = bookingRevenue + turoRevenue;
     const totalExpenses = allExpenses.reduce((sum, e) => sum + (e.amount ?? 0), 0);
     const netProfit = totalRevenue - totalExpenses;
     const profitMargin = totalRevenue > 0 ? (netProfit / totalRevenue) * 100 : 0;
 
-    const totalDaysInRange = Math.max(
-      1,
-      Math.ceil(
-        (new Date(dateRange.to).getTime() - new Date(dateRange.from).getTime()) /
-          (1000 * 60 * 60 * 24)
-      )
-    );
+    const totalDaysInRange = Math.max(1, countInclusiveTripDays(dateRange.from, dateRange.to));
 
     let totalBookedDays = 0;
     revenueBookings.forEach((booking) => {
-      const pickup = new Date(booking.pickup_date + "T00:00:00").getTime();
-      const returnDate = new Date(booking.return_date + "T00:00:00").getTime();
-      totalBookedDays += Math.max(1, Math.ceil((returnDate - pickup) / (1000 * 60 * 60 * 24)));
+      totalBookedDays += countBookedDaysInRange(
+        booking.pickup_date,
+        booking.return_date,
+        dateRange.from,
+        dateRange.to
+      );
     });
 
     const occupancyRate =
@@ -233,8 +260,16 @@ export function useFinancesComputed({
     });
 
     revenueBookings.forEach((b) => {
-      const key = b.pickup_date.substring(0, 7);
-      if (months[key]) months[key].income += b.total_price ?? 0;
+      forEachProratedBookingDayInRange(
+        b.pickup_date,
+        b.return_date,
+        b.total_price ?? 0,
+        dateRange.from,
+        dateRange.to,
+        (_dayStr, monthKey, amt) => {
+          if (months[monthKey]) months[monthKey].income += amt;
+        }
+      );
     });
     blockedDates
       .filter(
@@ -286,8 +321,15 @@ export function useFinancesComputed({
     days.forEach((d, idx) => dayMap.set(d.date, idx));
 
     revenueBookings.forEach((b) => {
-      const idx = dayMap.get(b.pickup_date);
-      if (idx !== undefined) days[idx].revenue += b.total_price ?? 0;
+      addProratedBookingRevenueByDay(
+        b.pickup_date,
+        b.return_date,
+        b.total_price ?? 0,
+        dateRange.from,
+        dateRange.to,
+        dayMap,
+        days
+      );
     });
     blockedDates
       .filter(
@@ -355,27 +397,31 @@ export function useFinancesComputed({
       .map((vehicle) => {
         const vBookings = bookingsByVehicle.get(vehicle.id) ?? [];
         const vExpenses = expensesByVehicle.get(vehicle.id) ?? [];
-        const bookingRevenue = vBookings.reduce((s, b) => s + (b.total_price ?? 0), 0);
+        const bookingRevenue = vBookings.reduce(
+          (s, b) =>
+            s +
+            prorateBookingRevenueInRange(
+              b.total_price ?? 0,
+              b.pickup_date,
+              b.return_date,
+              dateRange.from,
+              dateRange.to
+            ),
+          0
+        );
         const turoRevenue = turoRevenueByVehicle.get(vehicle.id) || 0;
         const revenue = bookingRevenue + turoRevenue;
         const expenseTotal = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
         const vehicleCost = vehicle.isFinanced ? 0 : (vehicle.purchasePrice ?? 0);
 
-        const totalDaysInRange = Math.max(
-          1,
-          Math.ceil(
-            (new Date(dateRange.to + "T00:00:00").getTime() - new Date(dateRange.from + "T00:00:00").getTime()) /
-              (1000 * 60 * 60 * 24)
-          )
-        );
+        const totalDaysInRange = Math.max(1, countInclusiveTripDays(dateRange.from, dateRange.to));
         let bookedDays = 0;
         vBookings.forEach((b) => {
-          bookedDays += Math.max(
-            1,
-            Math.ceil(
-              (new Date(b.return_date + "T00:00:00").getTime() - new Date(b.pickup_date + "T00:00:00").getTime()) /
-                (1000 * 60 * 60 * 24)
-            )
+          bookedDays += countBookedDaysInRange(
+            b.pickup_date,
+            b.return_date,
+            dateRange.from,
+            dateRange.to
           );
         });
 
@@ -401,12 +447,25 @@ export function useFinancesComputed({
       months[key] = { month: label, date: key, revenue: 0, bookings: 0 };
     });
 
+    const bookingsCountedByMonth = new Set<string>();
     revenueBookings.forEach((b) => {
-      const key = b.pickup_date.substring(0, 7);
-      if (months[key]) {
-        months[key].revenue += b.total_price ?? 0;
-        months[key].bookings += 1;
-      }
+      forEachProratedBookingDayInRange(
+        b.pickup_date,
+        b.return_date,
+        b.total_price ?? 0,
+        dateRange.from,
+        dateRange.to,
+        (_dayStr, monthKey, amt) => {
+          if (months[monthKey]) {
+            months[monthKey].revenue += amt;
+            const countKey = `${b.id}:${monthKey}`;
+            if (!bookingsCountedByMonth.has(countKey)) {
+              bookingsCountedByMonth.add(countKey);
+              months[monthKey].bookings += 1;
+            }
+          }
+        }
+      );
     });
     blockedDates
       .filter(
@@ -438,8 +497,16 @@ export function useFinancesComputed({
     });
 
     revenueBookings.forEach((b) => {
-      const key = b.pickup_date.substring(0, 7);
-      if (months[key]) months[key].revenue += b.total_price ?? 0;
+      forEachProratedBookingDayInRange(
+        b.pickup_date,
+        b.return_date,
+        b.total_price ?? 0,
+        dateRange.from,
+        dateRange.to,
+        (_dayStr, monthKey, amt) => {
+          if (months[monthKey]) months[monthKey].revenue += amt;
+        }
+      );
     });
     blockedDates
       .filter(
@@ -482,17 +549,27 @@ export function useFinancesComputed({
     > = {};
 
     revenueBookings.forEach((b) => {
-      const dateStr = b.pickup_date;
-      if (!dayMap[dateStr]) {
-        dayMap[dateStr] = { date: dateStr, revenue: 0, bookingCount: 0, bookings: [] };
-      }
-      dayMap[dateStr].revenue += b.total_price ?? 0;
-      dayMap[dateStr].bookingCount += 1;
-      dayMap[dateStr].bookings.push(b);
+      forEachProratedBookingDayInRange(
+        b.pickup_date,
+        b.return_date,
+        b.total_price ?? 0,
+        dateRange.from,
+        dateRange.to,
+        (dayStr, _monthKey, amt) => {
+          if (!dayMap[dayStr]) {
+            dayMap[dayStr] = { date: dayStr, revenue: 0, bookingCount: 0, bookings: [] };
+          }
+          dayMap[dayStr].revenue += amt;
+          if (!dayMap[dayStr].bookings.some((existing) => existing.id === b.id)) {
+            dayMap[dayStr].bookingCount += 1;
+            dayMap[dayStr].bookings.push(b);
+          }
+        }
+      );
     });
 
     return Object.values(dayMap).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [revenueBookings]);
+  }, [revenueBookings, dateRange]);
 
   return {
     revenueBookings,

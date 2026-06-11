@@ -104,6 +104,7 @@ export default function AdminFinancesPage() {
   }, [selectedVehicleId, vehicles, computed.revenueBookings, computed.allExpenses, dateRange]);
 
   const tabProps: FinancesTabProps = {
+    dateRange,
     vehicles,
     expenses,
     ...computed,
@@ -127,6 +128,7 @@ export default function AdminFinancesPage() {
     return (
       <FinancesVehicleDetail
         detail={selectedVehicleDetail}
+        dateRange={dateRange}
         onBack={() => setSelectedVehicleId(null)}
       />
     );

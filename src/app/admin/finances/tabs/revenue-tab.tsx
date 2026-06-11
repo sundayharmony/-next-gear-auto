@@ -21,12 +21,14 @@ import {
   CartesianGrid,
 } from "recharts";
 import { formatDate } from "@/lib/utils/date-helpers";
+import { prorateBookingRevenueInRange } from "@/lib/finance/booking-proration";
 import { getVehicleDisplayName } from "@/lib/types";
 import { StatCard, SectionHeader, fmtCurrency } from "../finances-shared";
 import type { FinancesTabProps } from "../finances-tab-types";
 
 export function RevenueTab(props: FinancesTabProps) {
   const {
+    dateRange,
     summaryData,
     revenueByMonth,
     turoRevenueEntries,
@@ -115,6 +117,9 @@ export function RevenueTab(props: FinancesTabProps) {
                       const vehicle = vehicleMap.get(trip.vehicle_id);
                       const tripCosts = tripExpenseTotalsByBlockedId.get(trip.id) || 0;
                       const net = trip.revenue - tripCosts;
+                      const isPartialRange =
+                        trip.fullRevenue > 0 &&
+                        Math.abs(trip.revenue - trip.fullRevenue) > 0.01;
                       return (
                         <div
                           key={trip.id}
@@ -135,6 +140,11 @@ export function RevenueTab(props: FinancesTabProps) {
                             <div className="text-right text-xs sm:text-sm">
                               <span className="text-gray-500">Revenue </span>
                               <span className="font-semibold text-green-700">${trip.revenue.toFixed(2)}</span>
+                              {isPartialRange && (
+                                <span className="text-gray-400 text-[11px] ml-1">
+                                  (of ${trip.fullRevenue.toFixed(2)} trip)
+                                </span>
+                              )}
                               <span className="text-gray-400 mx-1">·</span>
                               <span className="text-gray-500">Costs </span>
                               <span className="font-semibold text-red-600">${tripCosts.toFixed(2)}</span>
@@ -187,6 +197,16 @@ export function RevenueTab(props: FinancesTabProps) {
                       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
                       .map((booking) => {
                         const vehicle = vehicleMap.get(booking.vehicle_id);
+                        const rangeRevenue = prorateBookingRevenueInRange(
+                          booking.total_price ?? 0,
+                          booking.pickup_date,
+                          booking.return_date,
+                          dateRange.from,
+                          dateRange.to
+                        );
+                        const isPartialRange =
+                          (booking.total_price ?? 0) > 0 &&
+                          Math.abs(rangeRevenue - (booking.total_price ?? 0)) > 0.01;
                         return (
                           <div
                             key={booking.id}
@@ -202,7 +222,9 @@ export function RevenueTab(props: FinancesTabProps) {
                                   <p className="text-sm font-medium">
                                     {vehicle ? getVehicleDisplayName(vehicle) : "Unknown Vehicle"}
                                   </p>
-                                  <p className="text-xs text-gray-500">{formatDate(booking.created_at)}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {formatDate(booking.pickup_date)} – {formatDate(booking.return_date)}
+                                  </p>
                                 </div>
                               </div>
                             </div>
@@ -221,9 +243,16 @@ export function RevenueTab(props: FinancesTabProps) {
                                   {booking.status}
                                 </Badge>
                               </div>
-                              <p className="text-sm font-semibold text-green-600 whitespace-nowrap">
-                                ${booking.total_price.toLocaleString()}
-                              </p>
+                              <div className="text-right">
+                                <p className="text-sm font-semibold text-green-600 whitespace-nowrap">
+                                  ${rangeRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </p>
+                                {isPartialRange && (
+                                  <p className="text-[11px] text-gray-400 whitespace-nowrap">
+                                    of ${(booking.total_price ?? 0).toLocaleString()} trip
+                                  </p>
+                                )}
+                              </div>
                             </div>
                           </div>
                         );

@@ -40,7 +40,10 @@ export interface VehicleAnalyticsRow {
 export interface TuroRevenueEntry {
   id: string;
   vehicle_id: string;
+  /** Revenue attributed to the selected date range (prorated when trip spans outside range). */
   revenue: number;
+  /** Full trip payout before range proration. */
+  fullRevenue: number;
   date: string;
   start_date: string;
   end_date: string;
@@ -48,6 +51,7 @@ export interface TuroRevenueEntry {
 }
 
 export interface FinancesTabProps {
+  dateRange: { from: string; to: string };
   vehicles: Vehicle[];
   expenses: FinanceExpense[];
   summaryData: FinancesSummaryData;
