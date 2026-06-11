@@ -2,17 +2,12 @@
 
 import React, { useCallback, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
-import {
-  Calendar,
-  RefreshCw,
-  AlertCircle,
-  X,
-  CheckCircle2,
-} from "lucide-react";
+import { Calendar, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
-import { AdminPageHeader } from "@/components/admin/admin-shell";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
+import { AdminStatusBanner } from "@/components/admin/ui-feedback";
+import { DashboardSkeleton } from "@/components/admin/skeleton";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { useFinancesData } from "./use-finances-data";
 import { useFinancesComputed } from "./use-finances-computed";
@@ -136,12 +131,12 @@ export default function AdminFinancesPage() {
 
   if (loading) {
     return (
-      <PageContainer>
-        <div className="flex flex-col items-center justify-center py-20 gap-4">
-          <RefreshCw className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading financial data" />
-          <p className="text-gray-600 font-medium">Loading finances...</p>
-        </div>
-      </PageContainer>
+      <>
+        <AdminPageHeader title="Finances" subtitle="Track revenue, expenses, and profitability" />
+        <AdminPageBody>
+          <DashboardSkeleton />
+        </AdminPageBody>
+      </>
     );
   }
 
@@ -213,8 +208,8 @@ export default function AdminFinancesPage() {
               </button>
             </div>
           </div>
-          <div className="w-full sm:w-auto overflow-x-auto scrollbar-hide -mx-1 px-1">
-            <div className="flex gap-1 bg-gray-100 rounded-lg p-1 w-max sm:w-auto" role="tablist">
+          <div className="w-full lg:overflow-visible overflow-x-auto scrollbar-hide -mx-1 px-1">
+            <div className="flex flex-wrap gap-1 bg-gray-100 rounded-lg p-1 w-full lg:w-auto" role="tablist">
               {FINANCE_TABS.map((tab, idx) => (
                 <button
                   key={tab}
@@ -248,44 +243,16 @@ export default function AdminFinancesPage() {
         </div>
       </div>
 
-      <PageContainer>
-        {success && (
-          <div role="alert" className="mb-6 flex items-center gap-2 justify-between bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              {success}
-            </div>
-            <button
-              onClick={() => setSuccess("")}
-              className="text-green-700 hover:text-green-900 focus:outline-none focus:ring-1 focus:ring-green-500 rounded"
-              aria-label="Dismiss success message"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
-        {error && (
-          <div role="alert" className="mb-6 flex items-center gap-2 justify-between bg-red-50 border border-red-200 rounded-lg px-4 py-3 text-sm text-red-700">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              {error}
-            </div>
-            <button
-              onClick={() => setError("")}
-              className="text-red-700 hover:text-red-900 focus:outline-none focus:ring-1 focus:ring-red-500 rounded"
-              aria-label="Dismiss error message"
-            >
-              <X className="h-4 w-4" />
-            </button>
-          </div>
-        )}
+      <AdminPageBody>
+        {success && <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess("")} />}
+        {error && <AdminStatusBanner type="error" message={error} onDismiss={() => setError("")} />}
 
         {activeTab === "overview" && <OverviewTab {...tabProps} />}
         {activeTab === "expenses" && <ExpensesTab {...tabProps} />}
         {activeTab === "revenue" && <RevenueTab {...tabProps} />}
         {activeTab === "profit" && <ProfitTab {...tabProps} />}
         {activeTab === "vehicles" && <VehiclesTab {...tabProps} />}
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

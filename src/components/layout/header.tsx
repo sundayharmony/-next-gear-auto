@@ -102,7 +102,10 @@ export function Header() {
             ))}
           </nav>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <Link href="/booking" className="sm:hidden">
+              <Button size="sm" className="h-9 px-3 text-xs">Book</Button>
+            </Link>
             <Link href="/booking" className="hidden sm:block">
               <Button size="sm">Book Now</Button>
             </Link>

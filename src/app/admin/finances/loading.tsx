@@ -1,5 +1,5 @@
-import { StaffPanelLoading } from "@/components/staff/staff-panel-feedback";
+import { DashboardSkeleton } from "@/components/admin/skeleton";
 
-export default function AdminFinancesLoading() {
-  return <StaffPanelLoading label="Loading finances..." />;
+export default function FinancesLoading() {
+  return <DashboardSkeleton />;
 }

@@ -51,7 +51,7 @@ export default function OwnerDashboardPage() {
         subtitle="Performance across your vehicles"
         actions={
           <Link href="/owner/bookings/create">
-            <Button size="sm" className="gap-1 bg-white text-purple-700 hover:bg-purple-50">
+            <Button size="sm" variant="outline" className="page-hero-btn-outline gap-1">
               <Plus className="h-4 w-4" />
               New booking
             </Button>

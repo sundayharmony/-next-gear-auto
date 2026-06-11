@@ -69,6 +69,7 @@ export function BookingPageInner({
       <WizardProgress currentStep={w.currentStep} onStepClick={w.handleStepClick} />
 
       {showPriceSummary && w.booking.selectedVehicle && (
+        <div className="hidden sm:block">
         <PriceSummaryBar
           selectedVehicle={w.booking.selectedVehicle}
           pickupDate={w.booking.pickupDate}
@@ -79,6 +80,7 @@ export function BookingPageInner({
           checkoutTotal={w.checkoutTotal}
           hasPricing={!!w.booking.pricing}
         />
+        </div>
       )}
 
       <PageContainer className="py-8">

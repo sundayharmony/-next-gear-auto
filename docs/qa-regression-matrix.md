@@ -37,4 +37,16 @@ Run **full** matrix before major releases; **smoke** (bold rows) weekly on stagi
 
 Documented in `src/app/(public)/fleet/page.tsx`: server wrapper prefetches published vehicles; interactive filters/compare stay in the client island. Avoids client-only loading skeleton when the database has vehicles.
 
+## Platform v5 — mobile + desktop
+
+| Area | Mobile (< `lg` staff / `< md` public) | Desktop (`lg+` staff / `lg+` public) |
+|------|----------------------------------------|--------------------------------------|
+| Staff chrome | `AdminPageHeader` + bottom tabs; More sheet dialog + Escape | Sidebar + header actions; no bottom tabs |
+| Create booking | `CreateBookingShell` sheet from bookings + calendar | Right panel `md:max-w-2xl` |
+| Customers | Full-screen detail overlay; back closes | `xl` master-detail: list + detail |
+| Finances | Wrapped tabs; prorated range totals | Tab bar wraps; charts readable |
+| Booking wizard | Step labels in `sr-only`; price in `WizardNav` only | Full step labels + price bar |
+| Fleet | Filter bottom sheet + Escape | `lg` left filter column |
+| Fleet compare | Horizontal scroll | Sticky attribute column |
+
 Record pass/fail and build ID in your external QA tracker.

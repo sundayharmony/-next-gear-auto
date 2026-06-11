@@ -99,12 +99,12 @@ function ComparisonContent() {
       </section>
 
       <PageContainer className="py-8">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto rounded-xl border border-gray-200">
           <table className="w-full min-w-[640px]">
             {/* Vehicle Headers */}
             <thead>
               <tr>
-                <th className="w-40 p-3 text-left text-sm font-medium text-gray-500">
+                <th className="sticky left-0 z-10 w-40 bg-white p-3 text-left text-sm font-medium text-gray-500 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]">
                   Vehicle
                 </th>
                 {selectedVehicles.map((v) => (
@@ -150,7 +150,7 @@ function ComparisonContent() {
                 );
                 return (
                   <tr key={row.label} className="border-b border-gray-100">
-                    <td className="p-3 text-sm text-gray-500">{row.label}</td>
+                    <td className="sticky left-0 z-10 bg-white p-3 text-sm text-gray-500 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]">{row.label}</td>
                     {selectedVehicles.map((v) => {
                       const value = row.getValue(v) || "";
                       const numValue = parseDisplayPrice(value);
@@ -184,7 +184,7 @@ function ComparisonContent() {
               </tr>
               {specRows.map((row) => (
                 <tr key={row.label} className="border-b border-gray-100">
-                  <td className="p-3 text-sm text-gray-500 flex items-center gap-2">
+                  <td className="sticky left-0 z-10 bg-white p-3 text-sm text-gray-500 flex items-center gap-2 shadow-[2px_0_6px_-2px_rgba(0,0,0,0.08)]">
                     <row.icon className="h-4 w-4 text-gray-500" />
                     {row.label}
                   </td>

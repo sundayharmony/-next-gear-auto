@@ -11,7 +11,8 @@ import { calculateRentalDays } from "@/lib/utils/price-calculator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { adminCardClass } from "@/components/admin/admin-shell";
+import { AdminTableWrap } from "@/components/admin/admin-shell";
+import { AdminEmptyState } from "@/components/admin/ui-feedback";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import {
   getBookingDisplayTotal,
@@ -136,13 +137,10 @@ export default function BookingTable({
   // Empty state
   if (bookings.length === 0) {
     return (
-      <Card>
-        <div className="px-4 py-12 text-center">
-          <Calendar className="h-12 w-12 text-gray-300 mx-auto mb-3" />
-          <p className="text-gray-500 font-medium">No bookings found</p>
-          <p className="text-sm text-gray-400 mt-1">Try adjusting your filters</p>
-        </div>
-      </Card>
+      <AdminEmptyState
+        title="No bookings found"
+        description="Try adjusting your filters"
+      />
     );
   }
 
@@ -318,7 +316,7 @@ export default function BookingTable({
       </div>
 
       {/* ─── DESKTOP TABLE VIEW (>= md) ─── */}
-      <Card className={`${adminCardClass} hidden md:block overflow-hidden admin-table-wrap`}>
+      <AdminTableWrap className="hidden md:block">
         <table className="w-full text-sm border-collapse">
           <thead>
             <tr className="sticky top-0 z-10 bg-gray-50 border-b border-gray-200">
@@ -342,7 +340,7 @@ export default function BookingTable({
               <th className="px-4 py-3 text-left" scope="col">
                 <SortableHeader label="Total" field="total_price" />
               </th>
-              <th className="px-4 py-3 text-left font-semibold" scope="col">Balance</th>
+              <th className="px-4 py-3 text-left font-semibold hidden lg:table-cell" scope="col">Balance</th>
               <th className="px-4 py-3 text-left" scope="col">
                 <SortableHeader label="Status" field="status" />
               </th>
@@ -452,7 +450,7 @@ export default function BookingTable({
                   </td>
 
                   {/* Balance */}
-                  <td className="px-4 py-3">
+                  <td className="px-4 py-3 hidden lg:table-cell">
                     {turoRow ? (
                       <div className="text-xs text-gray-400">—</div>
                     ) : canViewPricing ? (
@@ -531,7 +529,7 @@ export default function BookingTable({
             })}
           </tbody>
         </table>
-      </Card>
+      </AdminTableWrap>
     </>
   );
 }

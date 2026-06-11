@@ -25,10 +25,11 @@ export const adminListItemClass =
   "admin-list-item rounded-xl border border-gray-200/80 bg-gray-100 p-4 transition-colors hover:border-purple-200/80 hover:bg-purple-50/50";
 
 interface AdminPageHeaderProps {
-  title: string;
-  subtitle?: string;
+  title: React.ReactNode;
+  subtitle?: React.ReactNode;
   backHref?: string;
   backLabel?: string;
+  onBack?: () => void;
   actions?: React.ReactNode;
   children?: React.ReactNode;
   className?: string;
@@ -39,6 +40,7 @@ export function AdminPageHeader({
   subtitle,
   backHref,
   backLabel = "Back",
+  onBack,
   actions,
   children,
   className,
@@ -54,6 +56,15 @@ export function AdminPageHeader({
             <ArrowLeft className="h-4 w-4" aria-hidden />
             {backLabel}
           </Link>
+        ) : onBack ? (
+          <button
+            type="button"
+            onClick={onBack}
+            className="mb-2 inline-flex items-center gap-1 text-sm text-purple-300 transition-colors hover:text-white"
+          >
+            <ArrowLeft className="h-4 w-4" aria-hidden />
+            {backLabel}
+          </button>
         ) : null}
         <div className="flex items-center justify-between gap-4">
           <div>

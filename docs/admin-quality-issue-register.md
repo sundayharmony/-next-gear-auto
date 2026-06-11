@@ -27,7 +27,7 @@ Living document from the senior cleanup audit. Severity: P0 (blocker) → P3 (ni
 |----|--------|--------|
 | P1-1 | Bottom tab bars used `role="tablist"` for route navigation | **Done** — `aria-current="page"` on primary links |
 | P1-2 | Calendar status filter buttons missing `aria-pressed` | **Done** — `role="group"` + `aria-pressed` |
-| P1-3 | Notifications panel missing dialog semantics | **Partial** — `role="dialog"`, `aria-modal`, labelled title, focus close on open |
+| P1-3 | Notifications panel missing dialog semantics | **Done (v5)** — `role="dialog"`, `aria-modal`, Tab trap, Escape, focus restore in `AdminPendingBookingsPlugin.tsx` |
 | P1-4 | Manager route errors lacked dedicated boundary | **Done** — [`src/app/manager/error.tsx`](../src/app/manager/error.tsx) |
 
 ## P2 — Performance / maintainability
@@ -64,11 +64,23 @@ Living document from the senior cleanup audit. Severity: P0 (blocker) → P3 (ni
 | `/admin/*` | Staff admin panel |
 | `/manager/*` | Manager panel (shared pages re-export admin where noted) |
 
+## Platform v5 — closed items
+
+| Phase | Item | Status |
+|-------|------|--------|
+| P1 | Staff chrome: manager/owner/finances/calendar/tickets use `AdminPageHeader` + `AdminPageBody` | **Done** |
+| P2 | Unified `StaffBottomTabBar`; More sheet a11y; calendar New Booking on mobile | **Done** |
+| P3 | `Sheet` + `CreateBookingShell` for create booking | **Done** |
+| P4 | Customer `xl` master-detail; `AdminPageHeader` on detail | **Done** |
+| P5 | `AdminTableWrap`, `AdminEmptyState`, customer sort, finances tab wrap | **Done** |
+| P6 | Route skeletons; `StaffPanelError` polish | **Done** |
+| P7–P8 | Public mobile/desktop fleet + booking polish | **Done** |
+| P9 | `FormField`, `a11y-dialog.test.ts`, quality gates for dialogs | **Done** |
+| P10 | `staff-ui-guide.md`, QA matrix v5 rows, Playwright specs | **Done** |
+
 ## Next passes
 
-1. Full JWT migration; remove `x-admin-id`.
-2. Focus trap + focus restore for notifications dropdown.
-3. Decompose remaining grandfathered admin pages to ≤600 lines; remove `GRANDFATHERED_MAX`.
+1. Decompose remaining grandfathered admin pages to ≤600 lines; remove `GRANDFATHERED_MAX`.
 4. Split `BookingDetailPanel`, `CreateBookingForm`, `InvoicesPageClient`, `timeline-view` below shrink milestones.
 5. Run `ANALYZE=true npm run analyze` and replace placeholder values in [perf-baselines.md](perf-baselines.md).
 6. Optional Playwright smoke for auth redirect + nav.

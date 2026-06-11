@@ -1,5 +1,5 @@
-import { StaffPanelLoading } from "@/components/staff/staff-panel-feedback";
+import { DashboardSkeleton } from "@/components/admin/skeleton";
 
-export default function AdminCalendarLoading() {
-  return <StaffPanelLoading label="Loading calendar..." />;
+export default function CalendarLoading() {
+  return <DashboardSkeleton />;
 }

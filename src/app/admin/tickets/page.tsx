@@ -18,8 +18,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { AdminPageHeader } from "@/components/admin/admin-shell";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { Pagination, usePagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
@@ -317,11 +316,11 @@ export default function AdminTicketsPage({
 
   if (loading) {
     return (
-      <PageContainer>
+      <AdminPageBody>
         <div className="flex items-center justify-center py-20">
           <RefreshCw className="h-8 w-8 animate-spin text-purple-600" />
         </div>
-      </PageContainer>
+      </AdminPageBody>
     );
   }
 
@@ -372,7 +371,7 @@ export default function AdminTicketsPage({
         </div>
       </AdminPageHeader>
 
-      <PageContainer>
+      <AdminPageBody>
         {success && (
           <div className="mb-6 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
             <Check className="h-4 w-4 shrink-0" />
@@ -535,7 +534,7 @@ export default function AdminTicketsPage({
           />
           </>
         )}
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

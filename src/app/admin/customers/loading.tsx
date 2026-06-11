@@ -1,5 +1,5 @@
-import { StaffPanelLoading } from "@/components/staff/staff-panel-feedback";
+import { ListSkeleton } from "@/components/admin/skeleton";
 
-export default function AdminCustomersLoading() {
-  return <StaffPanelLoading label="Loading customers..." />;
+export default function CustomersLoading() {
+  return <ListSkeleton rows={8} />;
 }

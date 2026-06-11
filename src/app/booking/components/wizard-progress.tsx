@@ -14,7 +14,7 @@ export function WizardProgress({
   onStepClick: (step: WizardStep) => void;
 }) {
   return (
-    <div className="border-b border-gray-200 bg-white sticky top-[92px] z-30">
+    <div className="border-b border-gray-200 bg-white sticky top-0 z-30">
       <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
         <div className="flex items-center gap-1 overflow-x-auto py-3">
           {WIZARD_STEPS.map((step, i) => (
@@ -38,7 +38,8 @@ export function WizardProgress({
                 ) : (
                   <step.icon className="h-3.5 w-3.5" />
                 )}
-                <span className="hidden sm:inline">{step.label}</span>
+                <span className="sr-only sm:not-sr-only sm:inline">{step.label}</span>
+                <span className="sm:hidden" aria-hidden>{step.num}</span>
               </button>
             </React.Fragment>
           ))}

@@ -122,6 +122,15 @@ export function FleetClient({ initialVehicles }: { initialVehicles: PublicVehicl
     return result;
   }, [vehicles, activeCategory, sortBy, searchQuery]);
 
+  useEffect(() => {
+    if (!showFilters) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setShowFilters(false);
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, [showFilters]);
+
   return (
     <>
       <section className="page-hero page-hero--lg text-white">
@@ -150,7 +159,30 @@ export function FleetClient({ initialVehicles }: { initialVehicles: PublicVehicl
         )}
 
         {!showLoading && (
-          <>
+          <div className="lg:grid lg:grid-cols-[240px_1fr] lg:gap-8">
+            <aside className="hidden lg:block space-y-4 sticky top-24 self-start">
+              <div>
+                <h2 className="mb-3 text-sm font-semibold text-gray-700">Category</h2>
+                <div className="flex flex-col gap-2" role="group" aria-label="Filter by vehicle category">
+                  {categoryPills}
+                </div>
+              </div>
+              <div>
+                <label htmlFor="sort-select-desktop" className="mb-2 block text-sm font-semibold text-gray-700">Sort by</label>
+                <select
+                  id="sort-select-desktop"
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as SortOption)}
+                  className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 focus:border-purple-500 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                >
+                  {SORT_OPTIONS.map((opt) => (
+                    <option key={opt.value} value={opt.value}>{opt.label}</option>
+                  ))}
+                </select>
+              </div>
+            </aside>
+
+            <div>
             <div className="mb-8 space-y-4">
               <div className="flex items-center gap-2">
                 <div className="relative flex-1 sm:max-w-md">
@@ -190,7 +222,7 @@ export function FleetClient({ initialVehicles }: { initialVehicles: PublicVehicl
                 </button>
               </div>
 
-              <div className="hidden flex-wrap items-center justify-between gap-4 sm:flex">
+              <div className="hidden flex-wrap items-center justify-between gap-4 sm:flex lg:hidden">
                 <div className="flex flex-wrap gap-2" role="group" aria-label="Filter by vehicle category">
                   {categoryPills}
                 </div>
@@ -294,7 +326,8 @@ export function FleetClient({ initialVehicles }: { initialVehicles: PublicVehicl
                 ))}
               </div>
             )}
-          </>
+            </div>
+          </div>
         )}
       </PageContainer>
 

@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useEffect, useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight, Calendar } from "lucide-react";
@@ -239,7 +239,7 @@ export function MobileAgendaView({
                       )}
                       {isPickupDay && isReturnDay && booking.return_time && (
                         <>
-                          <span className="text-gray-400 mx-0.5">â†’</span>
+                          <span className="text-gray-400 mx-0.5" aria-hidden>→</span>
                           <span className="font-semibold text-blue-700">
                             {formatTime(booking.return_time)}
                           </span>
@@ -250,7 +250,7 @@ export function MobileAgendaView({
                       )}
                     </div>
 
-                    <span className="text-gray-300">Â·</span>
+                    <span className="text-gray-300">·</span>
                     <span className="text-gray-500">{totalDays}d</span>
 
                     {/* Status badge */}
@@ -285,7 +285,7 @@ export function MobileAgendaView({
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-gray-500">
                     {bd.source === "turo-email" ? "Turo Trip" : "Manual block"}
-                    {bd.reason ? ` â€” ${bd.reason}` : ""}
+                    {bd.reason ? ` — ${bd.reason}` : ""}
                   </p>
                   <p className="text-xs text-gray-400 truncate">
                     {vehicle ? `${vehicle.year} ${vehicle.make} ${vehicle.model}` : "Unknown vehicle"}

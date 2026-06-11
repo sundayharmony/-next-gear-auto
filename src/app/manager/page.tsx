@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Calendar, BarChart3, Car, Clock, RefreshCw, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { useManagerAnalytics } from "@/lib/hooks/use-manager-analytics";
 
 export default function ManagerDashboardPage() {
@@ -13,19 +13,17 @@ export default function ManagerDashboardPage() {
 
   return (
     <>
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Manager Dashboard</h1>
-            <p className="mt-1 text-sm sm:text-base page-hero-subtitle">Operational metrics scoped to manager-created bookings.</p>
-          </div>
+      <AdminPageHeader
+        title="Manager Dashboard"
+        subtitle="Operational metrics scoped to manager-created bookings."
+        actions={
           <Button variant="outline" size="sm" className="page-hero-btn-outline hidden sm:inline-flex" onClick={reload}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
           </Button>
-        </div>
-      </section>
+        }
+      />
 
-      <PageContainer className="py-6 sm:py-8">
+      <AdminPageBody>
         <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex gap-2">
           <Info className="h-5 w-5 shrink-0 text-blue-600" />
           <p>
@@ -68,7 +66,7 @@ export default function ManagerDashboardPage() {
             </div>
           </>
         )}
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

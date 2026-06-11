@@ -6,8 +6,8 @@ import type { BookingDbRow, VehicleListItem } from "@/lib/types";
 import { RefreshCw, LayoutList, Calendar, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Select } from "@/components/ui/select";
-import { AdminPageHeader } from "@/components/admin/admin-shell";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
+import { CreateBookingShell } from "@/app/admin/bookings/components/create-booking-shell";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
@@ -297,7 +297,7 @@ export default function AdminCalendarPage({
               <Button
                 onClick={() => setShowCreateForm(true)}
                 size="sm"
-                className="gap-2 hidden sm:inline-flex"
+                className="gap-2 inline-flex"
               >
                 <Plus className="w-4 h-4" />
                 New Booking
@@ -318,7 +318,7 @@ export default function AdminCalendarPage({
         }
       />
 
-      <PageContainer className="py-4 sm:py-8">
+      <AdminPageBody className="py-4 sm:py-8">
         {success ? (
           <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} className="mb-4" />
         ) : null}
@@ -472,7 +472,7 @@ export default function AdminCalendarPage({
             />
           )}
         </div>
-      </PageContainer>
+      </AdminPageBody>
 
       {showBookingDetail && selectedBooking && (
         (selectedBooking as AdminBookingRow).occupancy_kind === "turo" ||
@@ -531,22 +531,20 @@ export default function AdminCalendarPage({
         />
       )}
 
-      {showCreateForm && calendarConfig.capabilities.canCreateBookings && (
-        <div className="fixed inset-0 z-[110] flex items-start justify-center overflow-y-auto bg-black/40 p-4 pt-[calc(1rem+env(safe-area-inset-top,0px))]">
-          <div className="w-full max-w-3xl">
-            <CreateBookingForm
-              vehicles={vehicles}
-              allCustomers={allCustomers}
-              onClose={() => setShowCreateForm(false)}
-              onCreated={() => {
-                setShowCreateForm(false);
-                void loadBookings({ forceReplace: true });
-              }}
-              onError={setError}
-              onSuccess={setSuccess}
-            />
-          </div>
-        </div>
+      {calendarConfig.capabilities.canCreateBookings && (
+        <CreateBookingShell open={showCreateForm} onClose={() => setShowCreateForm(false)}>
+          <CreateBookingForm
+            vehicles={vehicles}
+            allCustomers={allCustomers}
+            onClose={() => setShowCreateForm(false)}
+            onCreated={() => {
+              setShowCreateForm(false);
+              void loadBookings({ forceReplace: true });
+            }}
+            onError={setError}
+            onSuccess={setSuccess}
+          />
+        </CreateBookingShell>
       )}
     </>
   );

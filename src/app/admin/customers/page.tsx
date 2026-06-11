@@ -75,66 +75,69 @@ export default function AdminCustomersPage({
     }
   };
 
-  if (selectedCustomer) {
-    return (
-      <>
-        {toastSuccess && (
-          <div className="fixed top-4 right-4 z-[60] rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 shadow-lg">
-            {toastSuccess}
-          </div>
-        )}
-        {toastError && (
-          <div className="fixed top-4 right-4 z-[60] rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 shadow-lg">
-            {toastError}
-          </div>
-        )}
-        <CustomerDetailDrawer
-          customer={selectedCustomer}
-          panelBase={panelBase}
-          canMutateCustomers={canMutateCustomers}
-          setCustomers={setCustomers}
-          onClose={() => setSelectedCustomer(null)}
-          onSuccess={setToastSuccess}
-          onError={setToastError}
-          onRefreshList={() => fetchCustomers()}
-        />
-      </>
-    );
-  }
-
-  return (
+  const toastNode = (
     <>
       {toastSuccess && (
-        <div className="fixed top-4 right-4 z-[60] rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 shadow-lg">
+        <div className="fixed top-4 right-4 lg:left-64 lg:right-4 z-[60] rounded-lg bg-green-50 border border-green-200 px-4 py-3 text-sm text-green-700 shadow-lg">
           {toastSuccess}
         </div>
       )}
       {toastError && (
-        <div className="fixed top-4 right-4 z-[60] rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 shadow-lg">
+        <div className="fixed top-4 right-4 lg:left-64 lg:right-4 z-[60] rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 shadow-lg">
           {toastError}
         </div>
       )}
+    </>
+  );
+
+  return (
+    <>
+      {toastNode}
       <AdminPageHeader title="Customers" subtitle={`${customers.length} total customers`} />
 
-      <CustomerListPanel
-        customers={customers}
-        paginatedCustomers={paginateArray(customers)}
-        loading={loading}
-        searchInput={searchInput}
-        onSearchInputChange={setSearchInput}
-        onSearch={handleSearch}
-        onRefresh={() => {
-          setSearchInput("");
-          fetchCustomers();
-        }}
-        onOpenCustomer={setSelectedCustomer}
-        onDeleteCustomer={handleDeleteFromList}
-        onAddCustomer={() => setShowAddCustomerModal(true)}
-        currentPage={currentPage}
-        pageSize={pageSize}
-        onPageChange={handlePageChange}
-        onPageSizeChange={handlePageSizeChange}
-      />
+      <div className="xl:grid xl:grid-cols-[minmax(280px,360px)_1fr] xl:min-h-0">
+        <div className={selectedCustomer ? "max-xl:hidden" : "block"}>
+          <CustomerListPanel
+            customers={customers}
+            paginatedCustomers={paginateArray(customers)}
+            loading={loading}
+            searchInput={searchInput}
+            onSearchInputChange={setSearchInput}
+            onSearch={handleSearch}
+            onRefresh={() => {
+              setSearchInput("");
+              fetchCustomers();
+            }}
+            onOpenCustomer={setSelectedCustomer}
+            onDeleteCustomer={handleDeleteFromList}
+            onAddCustomer={() => setShowAddCustomerModal(true)}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+            selectedCustomerId={selectedCustomer?.id}
+          />
+        </div>
+
+        {selectedCustomer ? (
+          <div className="max-xl:fixed max-xl:inset-0 max-xl:z-50 max-xl:overflow-y-auto max-xl:bg-white xl:min-w-0">
+            <CustomerDetailDrawer
+              customer={selectedCustomer}
+              panelBase={panelBase}
+              canMutateCustomers={canMutateCustomers}
+              setCustomers={setCustomers}
+              onClose={() => setSelectedCustomer(null)}
+              onSuccess={setToastSuccess}
+              onError={setToastError}
+              onRefreshList={() => fetchCustomers()}
+            />
+          </div>
+        ) : (
+          <div className="hidden xl:flex items-center justify-center p-12 text-gray-500 border-l border-gray-200 bg-gray-50/50">
+            <p className="text-sm">Select a customer from the list to view details</p>
+          </div>
+        )}
+      </div>
 
       {showAddCustomerModal && (
         <AddCustomerModal

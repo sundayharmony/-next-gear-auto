@@ -20,6 +20,7 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useBookings } from "./hooks/useBookings";
 import { TodaySummary } from "./components/TodaySummary";
 import BookingFilters from "./components/BookingFilters";
+import { CreateBookingShell } from "./components/create-booking-shell";
 import BookingTable from "./components/BookingTable";
 const BookingDetailPanel = dynamic(
   () => import("./components/BookingDetailPanel").then((m) => m.BookingDetailPanel),
@@ -368,16 +369,21 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
           }}
         />
 
-        {showCreateForm && config.capabilities.canCreateBookings && (
-          <CreateBookingForm
-            vehicles={vehicles}
-            allCustomers={allCustomers}
+        {config.capabilities.canCreateBookings && (
+          <CreateBookingShell
+            open={showCreateForm}
             onClose={() => { setShowCreateForm(false); setPrefillData(undefined); }}
-            onCreated={() => { setShowCreateForm(false); setPrefillData(undefined); fetchBookings(); }}
-            onError={setError}
-            onSuccess={setSuccess}
-            prefillData={prefillData}
-          />
+          >
+            <CreateBookingForm
+              vehicles={vehicles}
+              allCustomers={allCustomers}
+              onClose={() => { setShowCreateForm(false); setPrefillData(undefined); }}
+              onCreated={() => { setShowCreateForm(false); setPrefillData(undefined); fetchBookings(); }}
+              onError={setError}
+              onSuccess={setSuccess}
+              prefillData={prefillData}
+            />
+          </CreateBookingShell>
         )}
 
         <BookingTable

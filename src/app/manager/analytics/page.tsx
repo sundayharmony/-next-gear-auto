@@ -4,7 +4,7 @@ import React, { useMemo } from "react";
 import { BarChart3, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { useManagerAnalytics } from "@/lib/hooks/use-manager-analytics";
 
 export default function ManagerAnalyticsPage() {
@@ -13,19 +13,17 @@ export default function ManagerAnalyticsPage() {
 
   return (
     <>
-      <section className="page-hero page-hero--compact text-white">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl sm:text-3xl font-bold">Manager Analytics</h1>
-            <p className="mt-1 text-sm sm:text-base page-hero-subtitle">Non-financial analytics scoped to manager panel bookings only.</p>
-          </div>
+      <AdminPageHeader
+        title="Manager Analytics"
+        subtitle="Non-financial analytics scoped to manager panel bookings only."
+        actions={
           <Button variant="outline" size="sm" className="page-hero-btn-outline hidden sm:inline-flex" onClick={reload}>
             <RefreshCw className="h-3.5 w-3.5 mr-1.5" /> Refresh
           </Button>
-        </div>
-      </section>
+        }
+      />
 
-      <PageContainer className="py-6 sm:py-8 space-y-6">
+      <AdminPageBody>
         {loading ? (
           <div className="text-center py-12">
             <RefreshCw className="h-8 w-8 animate-spin text-purple-600 mx-auto" />
@@ -75,7 +73,7 @@ export default function ManagerAnalyticsPage() {
             </Card>
           </>
         )}
-      </PageContainer>
+      </AdminPageBody>
     </>
   );
 }

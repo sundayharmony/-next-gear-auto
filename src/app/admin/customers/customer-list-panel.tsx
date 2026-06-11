@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo, useState } from "react";
 import {
   Search,
   RefreshCw,
@@ -15,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AdminPageBody } from "@/components/admin/admin-shell";
 import { AdminEmptyState } from "@/components/admin/ui-feedback";
+import { ListSkeleton } from "@/components/admin/skeleton";
 import { Pagination } from "@/components/ui/pagination";
 import { formatDate } from "@/lib/utils/date-helpers";
 import type { CustomerRow } from "./use-customers-data";
@@ -34,7 +36,10 @@ interface CustomerListPanelProps {
   pageSize: number;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  selectedCustomerId?: string;
 }
+
+type CustomerSort = "name" | "recent";
 
 export function CustomerListPanel({
   customers,
@@ -51,7 +56,20 @@ export function CustomerListPanel({
   pageSize,
   onPageChange,
   onPageSizeChange,
+  selectedCustomerId,
 }: CustomerListPanelProps) {
+  const [sortBy, setSortBy] = useState<CustomerSort>("name");
+
+  const sortedCustomers = useMemo(() => {
+    const list = [...paginatedCustomers];
+    if (sortBy === "name") {
+      list.sort((a, b) => (a.name || "").localeCompare(b.name || ""));
+    } else {
+      list.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+    }
+    return list;
+  }, [paginatedCustomers, sortBy]);
+
   return (
     <AdminPageBody>
       <div className="flex gap-2 mb-4">
@@ -89,11 +107,26 @@ export function CustomerListPanel({
         </Button>
       </div>
 
+      <div className="hidden lg:flex items-center gap-2 mb-4 text-xs text-gray-500">
+        <span className="font-medium">Sort:</span>
+        <button
+          type="button"
+          onClick={() => setSortBy("name")}
+          className={`px-2 py-1 rounded-full ${sortBy === "name" ? "bg-purple-100 text-purple-700 font-medium" : "bg-gray-100"}`}
+        >
+          Name
+        </button>
+        <button
+          type="button"
+          onClick={() => setSortBy("recent")}
+          className={`px-2 py-1 rounded-full ${sortBy === "recent" ? "bg-purple-100 text-purple-700 font-medium" : "bg-gray-100"}`}
+        >
+          Recent booking
+        </button>
+      </div>
+
       {loading ? (
-        <div className="text-center py-12">
-          <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
-          <p className="mt-4 text-gray-500">Loading customers...</p>
-        </div>
+        <ListSkeleton rows={6} />
       ) : customers.length === 0 ? (
         <AdminEmptyState
           title={searchInput ? "No customers match your search" : "No customers yet"}
@@ -101,11 +134,13 @@ export function CustomerListPanel({
         />
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-            {paginatedCustomers.map((c) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 xl:grid-cols-1 gap-3">
+            {sortedCustomers.map((c) => (
               <Card
                 key={c.id}
-                className="rounded-xl border border-gray-200/80 shadow-sm hover:border-purple-300 hover:shadow-md transition-all"
+                className={`rounded-xl border shadow-sm hover:border-purple-300 hover:shadow-md transition-all ${
+                  selectedCustomerId === c.id ? "border-purple-400 ring-1 ring-purple-200 bg-purple-50/40" : "border-gray-200/80"
+                }`}
               >
                 <CardContent className="p-4">
                   <div className="flex items-start justify-between gap-2 mb-2">

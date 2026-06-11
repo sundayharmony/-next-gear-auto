@@ -44,7 +44,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
@@ -937,138 +937,114 @@ export function CustomerDetailDrawer({
 
   return (
     <>
-        <section className="page-hero page-hero--compact text-white">
-          <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-            <button onClick={closeCustomer} className="flex items-center gap-1 text-sm text-purple-300 hover:text-white mb-2 transition-colors">
-              <ArrowLeft className="h-4 w-4" /> Back to all customers
-            </button>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <div className="relative group">
-                  {profilePictureUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={profilePictureUrl}
-                      alt={customer.name}
-                      className="h-14 w-14 rounded-full object-cover border-2 border-purple-400"
-                    />
-                  ) : (
-                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-purple-600 text-xl font-bold">
-                      {customer.name?.charAt(0)?.toUpperCase() || "?"}
-                    </div>
-                  )}
+        <AdminPageHeader
+          onBack={closeCustomer}
+          backLabel="Back to all customers"
+          title={
+            <span className="flex items-center gap-2">
+              {customer.name || "Unknown"}
+              {(customer.role === "admin" || customer.role === "manager") && (
+                <Badge className="bg-purple-500 text-white text-xs">
+                  <Shield className="h-3 w-3 mr-0.5" /> {customer.role === "admin" ? "Admin" : "Manager"}
+                </Badge>
+              )}
+            </span>
+          }
+          subtitle={
+            <span className="flex flex-wrap items-center gap-4">
+              <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {customer.email || "No email"}</span>
+              {customer.phone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> {customer.phone}</span>}
+            </span>
+          }
+          actions={
+            <>
+              <Button
+                onClick={() => {
+                  const params = new URLSearchParams({
+                    customerId: customer.id,
+                    customerName: customer.name,
+                    customerEmail: customer.email,
+                    ...(customer.phone ? { customerPhone: customer.phone } : {}),
+                  });
+                  router.push(staffBookingsHref(panelBase, params.toString()));
+                }}
+                variant="outline"
+                className="border-green-300 text-green-600 hover:bg-green-50 page-hero-btn-outline"
+                size="sm"
+              >
+                <Plus className="h-3.5 w-3.5 mr-1" /> Create Booking
+              </Button>
+              {canMutateCustomers ? (
+                <>
+                  <Button
+                    onClick={sendPasswordLink}
+                    disabled={sendingPasswordLink}
+                    variant="outline"
+                    className="border-blue-300 text-blue-600 hover:bg-blue-50 page-hero-btn-outline"
+                    size="sm"
+                  >
+                    <KeyRound className="h-3.5 w-3.5 mr-1" /> {sendingPasswordLink ? "Sending..." : "Send Password Link"}
+                  </Button>
+                  <Button
+                    onClick={deleteCustomer}
+                    disabled={deletingCustomer}
+                    variant="outline"
+                    className="border-red-300 text-red-600 hover:bg-red-50 page-hero-btn-outline"
+                    size="sm"
+                  >
+                    <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
+                  </Button>
+                </>
+              ) : null}
+              <button
+                onClick={closeCustomer}
+                aria-label="Close customer details"
+                className="rounded-full p-2 hover:bg-white/10 transition-colors xl:hidden"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </>
+          }
+        >
+          <div className="mt-3 flex flex-wrap items-center gap-4">
+            <div className="relative group">
+              {profilePictureUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={profilePictureUrl}
+                  alt={customer.name}
+                  className="h-14 w-14 rounded-full object-cover border-2 border-purple-400"
+                />
+              ) : (
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-purple-600 text-xl font-bold">
+                  {customer.name?.charAt(0)?.toUpperCase() || "?"}
                 </div>
-                <div>
-                  <h1 className="text-2xl font-bold flex items-center gap-2">
-                    {customer.name || "Unknown"}
-                    {(customer.role === "admin" || customer.role === "manager") && (
-                      <Badge className="bg-purple-500 text-white text-xs">
-                        <Shield className="h-3 w-3 mr-0.5" /> {customer.role === "admin" ? "Admin" : "Manager"}
-                      </Badge>
-                    )}
-                  </h1>
-                  <div className="flex items-center gap-4 text-sm text-gray-500 mt-0.5">
-                    <span className="flex items-center gap-1"><Mail className="h-3.5 w-3.5" /> {customer.email || "No email"}</span>
-                    {customer.phone && <span className="flex items-center gap-1"><Phone className="h-3.5 w-3.5" /> {customer.phone}</span>}
-                  </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    {latestIdUrl && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 text-xs"
-                        onClick={() => openCropModal(latestIdUrl, "Driver License")}
-                      >
-                        <Crop className="h-3 w-3 mr-1" />
-                        From License
-                      </Button>
-                    )}
-                    {latestInsuranceUrl && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-7 text-xs"
-                        onClick={() => openCropModal(latestInsuranceUrl, "Insurance Proof")}
-                      >
-                        <ImageUp className="h-3 w-3 mr-1" />
-                        From Insurance
-                      </Button>
-                    )}
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="h-7 text-xs"
-                      onClick={() => profileImageFileInputRef.current?.click()}
-                    >
-                      <Camera className="h-3 w-3 mr-1" />
-                      Upload Photo
-                    </Button>
-                    {profilePictureUrl && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="h-7 text-xs"
-                        onClick={removeProfilePicture}
-                        disabled={savingProfilePic}
-                      >
-                        {savingProfilePic ? "Removing..." : "Remove Photo"}
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => {
-                    const params = new URLSearchParams({
-                      customerId: customer.id,
-                      customerName: customer.name,
-                      customerEmail: customer.email,
-                      ...(customer.phone ? { customerPhone: customer.phone } : {}),
-                    });
-                    router.push(staffBookingsHref(panelBase, params.toString()));
-                  }}
-                  variant="outline"
-                  className="border-green-300 text-green-600 hover:bg-green-50"
-                  size="sm"
-                >
-                  <Plus className="h-3.5 w-3.5 mr-1" /> Create Booking
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {latestIdUrl && (
+                <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => openCropModal(latestIdUrl, "Driver License")}>
+                  <Crop className="h-3 w-3 mr-1" /> From License
                 </Button>
-                {canMutateCustomers ? (
-                  <>
-                    <Button
-                      onClick={sendPasswordLink}
-                      disabled={sendingPasswordLink}
-                      variant="outline"
-                      className="border-blue-300 text-blue-600 hover:bg-blue-50"
-                      size="sm"
-                    >
-                      <KeyRound className="h-3.5 w-3.5 mr-1" /> {sendingPasswordLink ? "Sending..." : "Send Password Link"}
-                    </Button>
-                    <Button
-                      onClick={deleteCustomer}
-                      disabled={deletingCustomer}
-                      variant="outline"
-                      className="border-red-300 text-red-600 hover:bg-red-50"
-                      size="sm"
-                    >
-                      <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete
-                    </Button>
-                  </>
-                ) : null}
-                <button
-                  onClick={closeCustomer}
-                  aria-label="Close customer details"
-                  className="rounded-full p-2 hover:bg-white/10 transition-colors"
-                >
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
+              )}
+              {latestInsuranceUrl && (
+                <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => openCropModal(latestInsuranceUrl, "Insurance Proof")}>
+                  <ImageUp className="h-3 w-3 mr-1" /> From Insurance
+                </Button>
+              )}
+              <Button size="sm" variant="secondary" className="h-8 text-xs" onClick={() => profileImageFileInputRef.current?.click()}>
+                <Camera className="h-3 w-3 mr-1" /> Upload Photo
+              </Button>
+              {profilePictureUrl && (
+                <Button size="sm" variant="outline" className="h-8 text-xs" onClick={removeProfilePicture} disabled={savingProfilePic}>
+                  {savingProfilePic ? "Removing..." : "Remove Photo"}
+                </Button>
+              )}
             </div>
           </div>
-        </section>
+        </AdminPageHeader>
 
-        <PageContainer className="py-6">
+        <AdminPageBody>
           {loadingBookings ? (
             <div className="text-center py-12">
               <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
@@ -1625,7 +1601,7 @@ export function CustomerDetailDrawer({
               </div>
             </>
           )}
-        </PageContainer>
+        </AdminPageBody>
 
         {cropModal}
         {profilePhotoInput}

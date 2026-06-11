@@ -1,5 +1,5 @@
-import { StaffPanelLoading } from "@/components/staff/staff-panel-feedback";
+import { ListSkeleton } from "@/components/admin/skeleton";
 
-export default function AdminBookingsLoading() {
-  return <StaffPanelLoading label="Loading bookings..." />;
+export default function BookingsLoading() {
+  return <ListSkeleton rows={8} />;
 }
