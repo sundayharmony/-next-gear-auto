@@ -1,6 +1,6 @@
 import { getVehicleDisplayName } from "@/lib/types";
 import { resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
-import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
+import { TURO_BLOCKED_SOURCE, isBlockedDateCancelled } from "@/lib/utils/blocked-dates";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import type { StaffRole } from "@/lib/admin/vehicle-details-queries";
 import {
@@ -66,9 +66,9 @@ export function deriveTuroOccupancyStatus(
   startDate: string,
   endDate: string,
   today: string = todayYmdUtc(),
-  cancelledAt?: string | null
+  cancelMeta?: { cancelled_at?: string | null; reason?: string | null }
 ): OccupancyStatus {
-  if (cancelledAt) return "cancelled";
+  if (cancelMeta && isBlockedDateCancelled(cancelMeta)) return "cancelled";
   if (endDate < today) return "completed";
   if (startDate <= today && endDate >= today) return "active";
   return "confirmed";
@@ -156,7 +156,10 @@ function mapTuroBlock(
   const n = normalizeBlockedRow(row);
   const revenue = resolveTuroTripRevenue({ earnings: n.earnings, reason: n.reason });
   const canViewPricing = role === "admin";
-  const status = deriveTuroOccupancyStatus(n.start_date, n.end_date, todayYmdUtc(), n.cancelled_at);
+  const status = deriveTuroOccupancyStatus(n.start_date, n.end_date, todayYmdUtc(), {
+    cancelled_at: n.cancelled_at,
+    reason: n.reason,
+  });
   const turoTripName = `${vehicleName || "Unknown Vehicle"} on TURO`;
   return {
     id: `turo:${n.id}`,
@@ -323,6 +326,7 @@ export async function fetchVehicleOccupancy(
 
   for (const row of turoRows) {
     const n = normalizeBlockedRow(row);
+    if (isBlockedDateCancelled(n)) continue;
     if (!overlapsRange(n.start_date, n.end_date, query.from, query.to)) continue;
     const entry = mapTuroBlock(row, turoVehicleName, role, userId);
     if (!statusMatchesFilter(entry, status)) continue;
@@ -423,6 +427,7 @@ export async function fetchGlobalOccupancy(
       const vid = String(row.vehicle_id);
       const vname = vehicleNameById.get(vid) || "Unknown Vehicle";
       const n = normalizeBlockedRow(row);
+      if (isBlockedDateCancelled(n)) continue;
       if (!overlapsRange(n.start_date, n.end_date, opts.from, opts.to)) continue;
       const entry = mapTuroBlock(row, vname, role, userId);
       if (!statusMatchesFilter(entry, status)) continue;

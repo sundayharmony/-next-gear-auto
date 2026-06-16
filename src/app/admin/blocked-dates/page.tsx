@@ -10,6 +10,7 @@ import { AdminStatusBanner } from "@/components/admin/ui-feedback";
 import { Button } from "@/components/ui/button";
 import { Vehicle, getVehicleDisplayName } from "@/lib/types";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
+import { isBlockedDateCancelled } from "@/lib/utils/blocked-dates";
 import {
   type BlockedDate,
   type OverlapConflict,
@@ -413,6 +414,8 @@ export default function BlockedDatesPage() {
     } else if (listTab === "turo") {
       rows = rows.filter((b) => b.source === "turo-email");
     }
+    // Cancelled Turo trips stay in the DB for audit until purged; hide from calendar lists.
+    rows = rows.filter((b) => !(b.source === "turo-email" && isBlockedDateCancelled(b)));
     return rows;
   }, [blockedDates, filterVehicleId, listTab]);
 

@@ -8,7 +8,18 @@ import {
 
 test("deriveTuroOccupancyStatus: cancelled trip returns cancelled", () => {
   assert.equal(
-    deriveTuroOccupancyStatus("2026-12-01", "2026-12-10", "2026-06-01", "2026-06-02T00:00:00Z"),
+    deriveTuroOccupancyStatus("2026-12-01", "2026-12-10", "2026-06-01", {
+      cancelled_at: "2026-06-02T00:00:00Z",
+    }),
+    "cancelled"
+  );
+});
+
+test("deriveTuroOccupancyStatus: [CANCELLED] reason prefix returns cancelled", () => {
+  assert.equal(
+    deriveTuroOccupancyStatus("2026-12-01", "2026-12-10", "2026-06-01", {
+      reason: "[CANCELLED] 2026-06-02 — Turo: Guest",
+    }),
     "cancelled"
   );
 });
