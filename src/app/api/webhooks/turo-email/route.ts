@@ -68,7 +68,7 @@ function asTuroRow(row: Record<string, unknown> | null | undefined): TuroBlocked
  *
  * Auth: Bearer token must match TURO_WEBHOOK_SECRET env var.
  *
- * Body: { emailText: string }
+ * Body: { emailText: string, eventType?: "booking"|"extension"|"cancellation"|"reconcile_refresh" }
  *
  * Responses:
  *   201 — blocked date created
@@ -130,6 +130,8 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const emailText: string = String(body.emailText || body.email_text || "").slice(0, 65536);
+    const explicitEventType =
+      typeof body.eventType === "string" ? String(body.eventType).toLowerCase() : "";
 
     if (!emailText || emailText.length < 20) {
       return NextResponse.json(
@@ -140,6 +142,9 @@ export async function POST(req: NextRequest) {
 
     // ── Parse the Turo email ──
     const parsed = parseTuroEmail(emailText);
+    const isReconcileRefresh = explicitEventType === "reconcile_refresh";
+    const isCancellationEvent =
+      explicitEventType === "cancellation" || (explicitEventType !== "booking" && parsed.isCancellation);
 
     if (!parsed.startDate || !parsed.endDate) {
       logger.warn("Turo webhook: could not extract dates", {
@@ -328,7 +333,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Handle cancellation emails ──
-    if (parsed.isCancellation) {
+    if (isCancellationEvent) {
       const { data: candidates, error: findErr } = await findActiveTuroTrips({
         overlapStart: parsed.startDate!,
         overlapEnd: parsed.endDate!,
@@ -437,7 +442,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Handle extension emails ──
-    if (parsed.isExtension) {
+    if (explicitEventType === "extension" || parsed.isExtension) {
       const { data: existingBlocks } = await findActiveTuroTrips({ startDate: parsed.startDate! });
 
       // Also try finding by overlapping date range if exact start match fails
@@ -544,12 +549,14 @@ export async function POST(req: NextRequest) {
       const reason = parsed.guestName
         ? `Turo: ${parsed.guestName}${parsed.earnings ? ` — $${parsed.earnings}` : ""}`
         : `Turo booking${parsed.earnings ? ` — $${parsed.earnings}` : ""}`;
+      const shouldUpdateReason =
+        Boolean(parsed.guestName) || typeof parsed.earnings === "number" || !row.reason;
 
       const updateFields: Record<string, string | number | boolean | null> = {
         start_date: mergedStart,
         end_date: mergedEnd,
-        reason,
       };
+      if (shouldUpdateReason) updateFields.reason = reason;
       if (parsed.pickupTime != null) updateFields.pickup_time = parsed.pickupTime;
       if (parsed.returnTime != null) updateFields.return_time = parsed.returnTime;
       if (parsed.location != null) updateFields.location = parsed.location;
@@ -568,7 +575,7 @@ export async function POST(req: NextRequest) {
         const fallbackFields = {
           start_date: mergedStart,
           end_date: mergedEnd,
-          reason,
+          reason: shouldUpdateReason ? reason : row.reason,
         };
         const fallback = await supabase
           .from("blocked_dates")
@@ -600,6 +607,26 @@ export async function POST(req: NextRequest) {
           ? `Updated block for ${vehicleLabel} to ${mergedStart} → ${mergedEnd}`
           : `Refreshed Turo block for ${vehicleLabel} (${mergedStart} → ${mergedEnd})`,
         data: updated,
+        parsed: {
+          confidence: parsed.confidence,
+          guestName: parsed.guestName,
+          vehicleDescription: parsed.vehicleDescription,
+          vehicleMatched: vehicleLabel,
+          vehicleMatchScore: matchScore,
+        },
+      });
+    }
+
+    if (isReconcileRefresh) {
+      logger.info("Turo webhook: reconcile refresh had no matching active trip", {
+        vehicle: vehicleLabel,
+        startDate: parsed.startDate,
+        endDate: parsed.endDate,
+      });
+      return NextResponse.json({
+        success: true,
+        action: "reconcile_skipped",
+        message: "No matching active Turo row found to refresh",
         parsed: {
           confidence: parsed.confidence,
           guestName: parsed.guestName,

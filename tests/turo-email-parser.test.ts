@@ -57,3 +57,16 @@ test("parseTuroEmail prefers cancellation over extension wording", () => {
   assert.equal(parsed.isCancellation, true);
   assert.equal(parsed.isExtension, false);
 });
+
+test("parseTuroEmail captures pickup and dropoff locations", () => {
+  const text = `
+    Pickup location: Newark Liberty International Airport
+    Drop-off location: Hoboken, NJ
+    Trip start: 7/6/26 10:00 AM
+    Trip end: 7/8/26 10:00 AM
+  `;
+  const parsed = parseTuroEmail(text);
+  assert.equal(parsed.pickupLocation, "Newark Liberty International Airport");
+  assert.equal(parsed.dropoffLocation, "Hoboken, NJ");
+  assert.equal(parsed.location, "Newark Liberty International Airport -> Hoboken, NJ");
+});

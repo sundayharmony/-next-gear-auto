@@ -22,6 +22,8 @@ export interface TuroEmailParseResult {
   pickupTime: string | null; // HH:MM 24-hour format, e.g. "08:00"
   returnTime: string | null; // HH:MM 24-hour format, e.g. "22:00"
   location: string | null;   // e.g. "Newark, NJ Newark Liberty International Airport"
+  pickupLocation: string | null;
+  dropoffLocation: string | null;
   earnings: number | null;
   isExtension: boolean;           // true if this is a trip extension/modification email
   isCancellation: boolean;        // true if guest/host cancelled the trip
@@ -146,36 +148,61 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
 
   // ── Extract location ──
   let location: string | null = null;
+  let pickupLocation: string | null = null;
+  let dropoffLocation: string | null = null;
 
   // "... trip with your Volkswagen Jetta at Newark Liberty International Airport is booked from ..."
   const atPickupMatch = text.match(
     /trip\s+with\s+your\s+.+?\s+at\s+(.+?)\s+is\s+booked\s+from/i,
   );
   if (atPickupMatch) {
-    location = atPickupMatch[1].trim();
-    if (location) rawMatches.push(`Location (at pickup): "${location}"`);
-    else location = null;
+    pickupLocation = atPickupMatch[1].trim();
+    if (pickupLocation) rawMatches.push(`Pickup location (at pickup): "${pickupLocation}"`);
+    else pickupLocation = null;
   }
 
   // "Delivery Newark, NJ Newark Liberty International Airport"
   const deliveryMatch = text.match(/delivery\s+(.+?)(?:\n|Guests|Special|To help|Review|Use the|$)/i);
   if (deliveryMatch) {
     // Clean up: strip trailing "method, and contact..." text
-    location = deliveryMatch[1].trim()
+    pickupLocation = deliveryMatch[1].trim()
       .replace(/\s*method,?\s+and\s+contact\s+.*/i, "")
       .replace(/\s*,?\s+and\s+contact\s+.*/i, "")
       .trim();
-    if (location) rawMatches.push(`Location: "${location}"`);
-    else location = null;
+    if (pickupLocation) rawMatches.push(`Pickup location (delivery): "${pickupLocation}"`);
+    else pickupLocation = null;
   }
 
-  // Fallback: "Pickup location: ..." or "Location: ..."
-  if (!location) {
-    const locMatch = text.match(/(?:pickup\s+location|drop[\s-]?off\s+location|location)\s*[:–—-]\s*(.+?)(?:\n|$)/i);
-    if (locMatch) {
-      location = locMatch[1].trim();
-      rawMatches.push(`Location: "${location}"`);
+  const pickupMatch = text.match(
+    /pickup\s+location\s*[:–—-]\s*(.+?)(?=\s+drop[\s-]?off\s+location|\s+trip\s+start|\s+trip\s+end|\n|$)/i
+  );
+  if (pickupMatch && !pickupLocation) {
+    pickupLocation = pickupMatch[1].trim();
+    rawMatches.push(`Pickup location: "${pickupLocation}"`);
+  }
+
+  const dropoffMatch = text.match(
+    /drop[\s-]?off\s+location\s*[:–—-]\s*(.+?)(?=\s+trip\s+start|\s+trip\s+end|\n|$)/i
+  );
+  if (dropoffMatch) {
+    dropoffLocation = dropoffMatch[1].trim();
+    rawMatches.push(`Dropoff location: "${dropoffLocation}"`);
+  }
+
+  if (!pickupLocation) {
+    const genericLocMatch = text.match(
+      /location\s*[:–—-]\s*(.+?)(?=\s+trip\s+start|\s+trip\s+end|\n|$)/i
+    );
+    if (genericLocMatch) {
+      pickupLocation = genericLocMatch[1].trim();
+      rawMatches.push(`Location: "${pickupLocation}"`);
     }
+  }
+
+  if (pickupLocation && dropoffLocation && pickupLocation.toLowerCase() !== dropoffLocation.toLowerCase()) {
+    location = `${pickupLocation} -> ${dropoffLocation}`;
+  } else {
+    location = pickupLocation || dropoffLocation || null;
   }
 
   // ── Extract dates ──
@@ -414,6 +441,8 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
     pickupTime,
     returnTime,
     location,
+    pickupLocation,
+    dropoffLocation,
     earnings,
     isExtension,
     isCancellation,

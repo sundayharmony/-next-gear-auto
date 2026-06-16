@@ -20,7 +20,19 @@ Turo notification emails are forwarded from Gmail (Google Apps Script) to the pr
 | Production URL | `https://www.rentnextgearauto.com/api/webhooks/turo-email` |
 | Auth | `Authorization: Bearer <TURO_WEBHOOK_SECRET>` (must match Vercel env) |
 | Gmail forwarder | `scripts/gmail-turo-forwarder.gs` |
-| Forwarder cadence | **Every 15 minutes** (`setup()` installs a time-based trigger on `processNewTuroEmails`) |
+| Forwarder cadence | **Every 15 minutes** (`setup()` installs a time-based trigger on `runTuroSync`) |
+
+#### Single-runner behavior (`runTuroSync`)
+
+`runTuroSync` is the only automatic runner and does all of the following in one quota-safe pass:
+
+1. Incremental Gmail fetch (cursor-based) instead of full historical scans
+2. Event classification (`booking`, `extension`, `cancellation`)
+3. Webhook forwarding with idempotency headers
+4. Bounded accuracy reconciliation refresh (location/time/date completeness checks)
+5. Metrics + checkpoint persistence
+
+This prevents the previous quota issue (`Service invoked too many times for one day: gmail`) caused by large `GmailApp.search` loops in normal operation.
 
 Local testing: `npm run turo:post-webhook -- --url http://localhost:3000/api/webhooks/turo-email --file emails.txt`
 
@@ -66,10 +78,21 @@ into `bookedRanges` so the availability calendar shows Turo days as red/booked.
 
 1. Run DB migrations for `blocked_dates.cancelled_at` if missing (`supabase-turo-cancellations.sql`).
 2. Confirm `TURO_WEBHOOK_SECRET` in Vercel Production matches `WEBHOOK_SECRET` in the Gmail Apps Script project.
-3. Run `setup()` once in Apps Script so the 15-minute forwarder trigger is active.
+3. Run `setup()` once in Apps Script so the 15-minute `runTuroSync` trigger is active.
 4. After matcher changes, run `npm test` (includes `turo-sync-parity.test.ts`).
 5. Spot-check one vehicle: Turo block visible in admin calendar, manager bookings list, and owner availability.
 6. Periodic audit: `npm run turo:audit` — watch for duplicate active trips or cancel text still in `reason` on active rows.
+
+## Backfill guidance (manual, chunked)
+
+Do **not** use broad historical backfill in automatic triggers.
+
+Use manual chunked backfill helpers in Apps Script:
+
+- `runBookingBackfill30()`
+- `runCancellationBackfill30()`
+
+Run them manually in small windows only when needed (e.g., recovery or initial migration), then return to automatic `runTuroSync`.
 
 ## Related files
 

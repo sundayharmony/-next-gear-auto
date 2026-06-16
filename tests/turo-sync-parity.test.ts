@@ -86,6 +86,8 @@ test("turo webhook uses constant-time secret compare and replay guard", () => {
   assert.ok(source.includes("isWebhookReplay"));
   assert.ok(source.includes("isWebhookTimestampFresh"));
   assert.ok(source.includes("turoWebhookLimiter"));
+  assert.ok(source.includes("explicitEventType"));
+  assert.ok(source.includes("reconcile_refresh"));
 });
 
 test("webhook replay helper rejects stale timestamps", async () => {
