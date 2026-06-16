@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { AdminStatusBanner } from "@/components/admin/ui-feedback";
-import { DashboardSkeleton } from "@/components/admin/skeleton";
+import { DashboardSkeleton, ListSkeleton } from "@/components/admin/skeleton";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { useFinancesData } from "./use-finances-data";
 import { useFinancesComputed } from "./use-finances-computed";
@@ -21,30 +21,25 @@ import { FinancesVehicleDetail } from "./finances-vehicle-detail";
 import type { FinancesTabId, FinancesTabProps } from "./finances-tab-types";
 
 const OverviewTab = dynamic(() => import("./tabs/overview-tab"), {
-  loading: () => <TabLoading label="overview" />,
+  loading: () => <TabLoading />,
 });
 const ExpensesTab = dynamic(() => import("./tabs/expenses-tab"), {
-  loading: () => <TabLoading label="expenses" />,
+  loading: () => <TabLoading />,
 });
 const RevenueTab = dynamic(() => import("./tabs/revenue-tab"), {
-  loading: () => <TabLoading label="revenue" />,
+  loading: () => <TabLoading />,
 });
 const ProfitTab = dynamic(() => import("./tabs/profit-tab"), {
-  loading: () => <TabLoading label="profit" />,
+  loading: () => <TabLoading />,
 });
 const VehiclesTab = dynamic(() => import("./tabs/vehicles-tab"), {
-  loading: () => <TabLoading label="vehicles" />,
+  loading: () => <TabLoading />,
 });
 
 const FINANCE_TABS: FinancesTabId[] = ["overview", "expenses", "revenue", "profit", "vehicles"];
 
-function TabLoading({ label }: { label: string }) {
-  return (
-    <div className="flex items-center justify-center py-16 text-gray-500">
-      <RefreshCw className="h-6 w-6 animate-spin text-purple-600 mr-2" />
-      Loading {label}…
-    </div>
-  );
+function TabLoading() {
+  return <ListSkeleton rows={5} />;
 }
 
 export default function AdminFinancesPage() {

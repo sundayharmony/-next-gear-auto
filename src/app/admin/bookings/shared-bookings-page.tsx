@@ -377,6 +377,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
             <CreateBookingForm
               vehicles={vehicles}
               allCustomers={allCustomers}
+              embeddedInSheet
               onClose={() => { setShowCreateForm(false); setPrefillData(undefined); }}
               onCreated={() => { setShowCreateForm(false); setPrefillData(undefined); fetchBookings(); }}
               onError={setError}

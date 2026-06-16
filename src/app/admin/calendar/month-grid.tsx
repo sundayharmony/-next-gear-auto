@@ -284,7 +284,7 @@ export function MonthGrid({
                   <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
                     <span>{formatDate(getCalendarPickupDateKey(booking))}</span>
                     <span className="font-bold text-purple-600">{formatTime(booking.pickup_time)}</span>
-                    <span className="text-gray-400">â†’</span>
+                    <span className="text-gray-400">→</span>
                     <span>{formatDate(getCalendarReturnDateKey(booking))}</span>
                     <span className="font-bold text-purple-600">{formatTime(booking.return_time)}</span>
                   </div>
@@ -311,7 +311,7 @@ export function MonthGrid({
                   </div>
                   <div className="flex items-center gap-2 text-xs text-gray-600 mt-2">
                     <span>{formatDate(block.start_date)}</span>
-                    <span className="text-gray-400">â†’</span>
+                    <span className="text-gray-400">→</span>
                     <span>{formatDate(block.end_date)}</span>
                   </div>
                 </button>

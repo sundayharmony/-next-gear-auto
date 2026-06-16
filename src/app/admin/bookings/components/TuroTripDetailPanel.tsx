@@ -10,6 +10,7 @@ import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { getTuroDriverFromReason, resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
 import type { BookingRow } from "../types";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
+import { StaffSidePanel } from "@/components/staff/staff-overlay";
 
 function isTuroRow(b: BookingRow): boolean {
   return b.occupancy_kind === "turo" || (typeof b.id === "string" && b.id.startsWith("turo:"));
@@ -32,14 +33,7 @@ export function TuroTripDetailPanel({ booking, onClose }: TuroTripDetailPanelPro
   const showMoney = booking.canViewPricing !== false && revenue > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-black/50" onClick={onClose} aria-hidden />
-      <div
-        className="w-full max-w-[calc(100vw-1rem)] sm:max-w-lg bg-white shadow-xl overflow-y-auto"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Turo trip details"
-      >
+    <StaffSidePanel onClose={onClose} ariaLabel="Turo trip details">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Badge className="bg-teal-100 text-teal-800">Turo trip</Badge>
@@ -136,7 +130,6 @@ export function TuroTripDetailPanel({ booking, onClose }: TuroTripDetailPanelPro
             </Link>
           </div>
         </div>
-      </div>
-    </div>
+    </StaffSidePanel>
   );
 }

@@ -213,7 +213,7 @@ export function VehicleList({
                       <div className="text-xs text-gray-600">
                         {vehicle.isFinanced ? (
                           <span className="text-purple-600 font-medium">
-                            Financed Â· ${(vehicle.monthlyPayment ?? 0).toLocaleString()}/mo
+                            Financed · ${(vehicle.monthlyPayment ?? 0).toLocaleString()}/mo
                           </span>
                         ) : (
                           "Purchase Price"
@@ -233,20 +233,20 @@ export function VehicleList({
                     <div className="flex justify-between">
                       <span>Passengers:</span>
                       <span className="font-medium">
-                        {vehicle.specs?.passengers ?? "â€”"}
+                        {vehicle.specs?.passengers ?? "—"}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Transmission:</span>
                       <span className="font-medium">
-                        {vehicle.specs?.transmission ?? "â€”"}
+                        {vehicle.specs?.transmission ?? "—"}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span>Fuel:</span>
                       <span className="font-medium flex items-center gap-1">
                         <Fuel className="h-3 w-3" aria-hidden="true" />
-                        {vehicle.specs?.fuelType ?? "â€”"}
+                        {vehicle.specs?.fuelType ?? "—"}
                       </span>
                     </div>
                   </div>
@@ -299,11 +299,11 @@ export function VehicleList({
                   <div className="mb-4 text-xs text-gray-500 space-y-1">
                     <div>
                       <span className="font-medium">License Plate:</span>{" "}
-                      {vehicle.licensePlate || "â€”"}
+                      {vehicle.licensePlate || "—"}
                     </div>
                     <div title={vehicle.vin || undefined} className="break-all">
                       <span className="font-medium">VIN:</span>{" "}
-                      {vehicle.vin || "â€”"}
+                      {vehicle.vin || "—"}
                     </div>
                   </div>
 

@@ -6,6 +6,7 @@ import { Calendar, BarChart3, Car, Clock, RefreshCw, Info } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
+import { Skeleton } from "@/components/admin/skeleton";
 import { useManagerAnalytics } from "@/lib/hooks/use-manager-analytics";
 
 export default function ManagerDashboardPage() {
@@ -33,9 +34,14 @@ export default function ManagerDashboardPage() {
         </div>
 
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" />
-            <p className="mt-4 text-gray-500">Loading manager dashboard...</p>
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 mb-8">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Card key={i}>
+                <CardContent className="p-4">
+                  <Skeleton className="h-14 w-full rounded-lg" />
+                </CardContent>
+              </Card>
+            ))}
           </div>
         ) : (
           <>

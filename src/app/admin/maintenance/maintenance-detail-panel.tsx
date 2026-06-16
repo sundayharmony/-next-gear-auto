@@ -25,6 +25,7 @@ import {
   getStatusBadgeColor,
   getStatusIcon,
 } from "./maintenance-status-utils";
+import { StaffSidePanel } from "@/components/staff/staff-overlay";
 
 export interface MaintenanceDetailPanelProps {
   selectedRecord: MaintenanceRecord;
@@ -64,17 +65,11 @@ export function MaintenanceDetailPanel({
   onRemovePhoto,
 }: MaintenanceDetailPanelProps) {
   return (
-    <div
-      className="fixed inset-0 z-50 flex"
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Maintenance record: ${selectedRecord.title}`}
+    <StaffSidePanel
+      onClose={onClose}
+      ariaLabel={`Maintenance record: ${selectedRecord.title}`}
+      maxWidthClassName="sm:max-w-2xl"
     >
-      <div className="flex-1 bg-black/50 transition-opacity duration-200" onClick={onClose} />
-      <div
-        className="w-full max-w-[calc(100vw-1rem)] sm:max-w-2xl bg-white shadow-xl overflow-y-auto transition-transform duration-300 ease-in-out"
-        tabIndex={-1}
-      >
         <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
           <div className="min-w-0">
             <h2 className="text-lg font-semibold truncate">
@@ -437,7 +432,6 @@ export function MaintenanceDetailPanel({
             </>
           )}
         </div>
-      </div>
-    </div>
+    </StaffSidePanel>
   );
 }

@@ -262,7 +262,7 @@ export function FleetClient({ initialVehicles }: { initialVehicles: PublicVehicl
                 {filteredVehicles.map((vehicle) => (
                   <div key={vehicle.id} className="relative">
                     <label
-                      className="absolute top-3 right-2 sm:right-14 z-10 flex items-center gap-1.5 rounded-full bg-white/90 backdrop-blur-sm px-2.5 py-1 text-xs font-medium cursor-pointer shadow-sm border border-gray-200 hover:border-purple-300 transition-all duration-200"
+                      className="absolute top-3 right-2 sm:right-14 z-10 flex min-h-[44px] min-w-[44px] items-center gap-2 rounded-full bg-white/90 backdrop-blur-sm px-3 py-2 text-xs font-medium cursor-pointer shadow-sm border border-gray-200 hover:border-purple-300 transition-all duration-200"
                       onClick={(e) => e.stopPropagation()}
                     >
                       <input
@@ -270,7 +270,7 @@ export function FleetClient({ initialVehicles }: { initialVehicles: PublicVehicl
                         checked={comparison.isComparing(vehicle.id)}
                         onChange={() => comparison.toggleCompare(vehicle.id)}
                         disabled={!comparison.isComparing(vehicle.id) && !comparison.canAddMore}
-                        className="h-3.5 w-3.5 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                        className="h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
                         aria-label={`Compare ${vehicle.year} ${vehicle.make} ${vehicle.model}`}
                       />
                       Compare

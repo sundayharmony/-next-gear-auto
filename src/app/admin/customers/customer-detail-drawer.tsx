@@ -50,6 +50,7 @@ import { statusColors } from "@/lib/utils/status-colors";
 import { logger } from "@/lib/utils/logger";
 import { staffBookingsHref, type StaffPanelBase } from "@/lib/admin/staff-panel-base";
 import type { CustomerRow } from "./use-customers-data";
+import { StaffCenterModal } from "@/components/staff/staff-overlay";
 
 type BookingRow = BookingDbRow;
 
@@ -769,8 +770,8 @@ export function CustomerDetailDrawer({
   const cropDisplaySrc = safeDataImageSrc(cropDataUrl);
 
   const cropModal = showCropModal && (
-    <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-      <Card className="w-full max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+    <StaffCenterModal onClose={closeCropModal} ariaLabel="Crop profile picture" elevated className="max-w-[calc(100vw-2rem)] sm:max-w-2xl max-h-[90vh] overflow-y-auto p-0 border-0 bg-transparent shadow-none">
+      <Card className="w-full">
         <CardContent className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-lg font-bold flex items-center gap-2">
@@ -924,7 +925,7 @@ export function CustomerDetailDrawer({
           )}
         </CardContent>
       </Card>
-    </div>
+    </StaffCenterModal>
   );
 
   useEffect(() => {

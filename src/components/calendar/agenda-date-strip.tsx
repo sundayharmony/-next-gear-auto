@@ -9,6 +9,8 @@ export interface AgendaDateStripDay {
   label: string;
   dayNum: number;
   isToday: boolean;
+  /** Optional booking/event count indicator dot */
+  count?: number;
 }
 
 interface AgendaDateStripProps {
@@ -51,16 +53,33 @@ export function AgendaDateStrip({ days, selectedDate, onSelectDate, className }:
             onClick={() => onSelectDate(day.date)}
             aria-pressed={selected}
             className={cn(
-              "flex min-w-[52px] flex-col items-center rounded-xl border px-2 py-2 transition-colors",
+              "flex min-w-[46px] flex-1 flex-col items-center rounded-xl border-0 px-1 py-2 transition-all active:scale-95",
               selected
-                ? "border-purple-600 bg-purple-600 text-white"
+                ? "bg-purple-600 text-white shadow-md shadow-purple-200"
                 : day.isToday
-                  ? "border-purple-300 bg-purple-50 text-purple-700"
-                  : "border-gray-200 bg-white text-gray-700 hover:border-purple-200"
+                  ? "bg-purple-50 text-purple-700"
+                  : "text-gray-600 hover:bg-gray-50 bg-transparent"
             )}
           >
-            <span className="text-[10px] font-medium uppercase">{day.label}</span>
-            <span className="text-lg font-bold leading-tight">{day.dayNum}</span>
+            <span
+              className={cn(
+                "text-[10px] font-medium uppercase leading-none",
+                selected ? "text-purple-200" : day.isToday ? "text-purple-500" : "text-gray-400"
+              )}
+            >
+              {day.label}
+            </span>
+            <span className={cn("mt-0.5 text-lg font-bold leading-tight", selected && "text-white")}>
+              {day.dayNum}
+            </span>
+            {(day.count ?? 0) > 0 ? (
+              <div
+                className={cn(
+                  "mt-0.5 h-1.5 w-1.5 rounded-full",
+                  selected ? "bg-white" : "bg-purple-400"
+                )}
+              />
+            ) : null}
           </button>
         );
       })}

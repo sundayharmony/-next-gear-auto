@@ -13,4 +13,19 @@ test.describe("staff create booking shell", () => {
     await page.goto("/admin/calendar");
     await expect(page.getByRole("button", { name: /new booking/i })).toBeVisible();
   });
+
+  test("create booking sheet has single close control", async ({ page }) => {
+    await page.goto("/login");
+    await page.getByLabel(/email/i).fill(process.env.PLAYWRIGHT_STAFF_EMAIL!);
+    await page.getByLabel(/password/i).fill(process.env.PLAYWRIGHT_STAFF_PASSWORD || "");
+    await page.getByRole("button", { name: /sign in/i }).click();
+    await page.goto("/admin/bookings");
+    await page.getByRole("button", { name: /new booking/i }).click();
+    await expect(page.getByRole("heading", { name: /new booking/i })).toBeVisible();
+    const closeButtons = page.getByRole("button", { name: /^close$/i });
+    await expect(closeButtons).toHaveCount(1);
+    await expect(page).toHaveScreenshot("create-booking-sheet-mobile.png", {
+      maxDiffPixelRatio: 0.08,
+    });
+  });
 });

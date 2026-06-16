@@ -12,6 +12,7 @@ import {
   getCalendarReturnDateKey,
 } from "./calendar-booking-display";
 import type { BookingRow as AdminBookingRow } from "@/app/admin/bookings/types";
+import { AgendaDateStrip } from "@/components/calendar/agenda-date-strip";
 
 type CalendarBookingRow = AdminBookingRow;
 type Vehicle = VehicleListItem;
@@ -98,6 +99,21 @@ export function MobileAgendaView({
     }
   }, [dateRange, selectedDateKey, todayKey]);
 
+  const stripDays = useMemo(
+    () =>
+      dateRange.map((date) => {
+        const key = toKey(date);
+        return {
+          date: key,
+          label: date.toLocaleDateString("en-US", { weekday: "short" }),
+          dayNum: date.getDate(),
+          isToday: key === todayKey,
+          count: bookingCountByDate[key] || 0,
+        };
+      }),
+    [dateRange, todayKey, bookingCountByDate]
+  );
+
   const selectedDate = new Date(selectedDateKey + "T00:00:00");
 
   return (
@@ -129,38 +145,12 @@ export function MobileAgendaView({
         </div>
 
         {/* Scrollable date strip */}
-        <div className="flex items-stretch px-1.5 py-2 gap-1 overflow-x-auto scrollbar-hide">
-          {dateRange.map((date) => {
-            const key = toKey(date);
-            const isToday = key === todayKey;
-            const isSelected = key === selectedDateKey;
-            const count = bookingCountByDate[key] || 0;
-
-            return (
-              <button
-                key={key}
-                onClick={() => setSelectedDateKey(key)}
-                className={`flex flex-col items-center min-w-[46px] flex-1 py-2 px-1 rounded-xl transition-all active:scale-95 ${
-                  isSelected
-                    ? "bg-purple-600 text-white shadow-md shadow-purple-200"
-                    : isToday
-                    ? "bg-purple-50 text-purple-700"
-                    : "text-gray-600 hover:bg-gray-50"
-                }`}
-              >
-                <span className={`text-[10px] font-medium uppercase leading-none ${isSelected ? "text-purple-200" : isToday ? "text-purple-500" : "text-gray-400"}`}>
-                  {date.toLocaleDateString("en-US", { weekday: "short" })}
-                </span>
-                <span className={`text-lg font-bold leading-tight mt-0.5 ${isSelected ? "text-white" : ""}`}>
-                  {date.getDate()}
-                </span>
-                {count > 0 && (
-                  <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${isSelected ? "bg-white" : "bg-purple-400"}`} />
-                )}
-              </button>
-            );
-          })}
-        </div>
+        <AgendaDateStrip
+          days={stripDays}
+          selectedDate={selectedDateKey}
+          onSelectDate={setSelectedDateKey}
+          className="items-stretch px-1.5 py-2 gap-1"
+        />
       </div>
 
       {/* Selected date label */}

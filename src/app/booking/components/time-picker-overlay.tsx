@@ -3,6 +3,7 @@
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils/cn";
 import { TIME_OPTIONS } from "@/app/booking/booking-constants";
+import { BookingPickerOverlay } from "./booking-picker-overlay";
 
 export function TimePickerOverlay({
   isOpen,
@@ -29,8 +30,7 @@ export function TimePickerOverlay({
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-xl" onClick={onClose}>
-      <div className="bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl max-w-sm w-full mx-4 shadow-2xl animate-in" onClick={(e) => e.stopPropagation()}>
+    <BookingPickerOverlay isOpen={isOpen} onClose={onClose} ariaLabel="Select time">
         <div className="p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Select Time</h3>
         </div>
@@ -54,7 +54,6 @@ export function TimePickerOverlay({
             </button>
           ))}
         </div>
-      </div>
-    </div>
+    </BookingPickerOverlay>
   );
 }

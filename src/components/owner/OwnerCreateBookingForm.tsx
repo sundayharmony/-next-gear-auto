@@ -14,22 +14,10 @@ import { calculatePricing, calculateRentalHours } from "@/lib/utils/price-calcul
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import type { Location } from "@/lib/types";
 import type { OwnerVehicle } from "@/lib/types";
+import { BookingFormSectionHeader } from "@/components/forms/booking-form-section-header";
+import { FormField } from "@/components/ui/form-field";
 
 const TIME_SLOTS = ["08:00", "09:00", "10:00", "11:00", "12:00", "13:00", "14:00", "15:00", "16:00", "17:00", "18:00"];
-
-function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle?: string }) {
-  return (
-    <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-purple-100 text-purple-600">
-        <Icon className="h-4 w-4" />
-      </div>
-      <div>
-        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-        {subtitle && <p className="mt-0.5 text-xs text-gray-500">{subtitle}</p>}
-      </div>
-    </div>
-  );
-}
 
 export interface OwnerCreateBookingFormProps {
   vehicles: OwnerVehicle[];
@@ -194,7 +182,7 @@ export function OwnerCreateBookingForm({
 
       <form onSubmit={handleSubmit} className="space-y-6 p-4 sm:p-6">
         <section className="space-y-4">
-          <SectionHeader icon={Car} title="Vehicle" subtitle="Only vehicles assigned to your account" />
+          <BookingFormSectionHeader icon={Car} title="Vehicle" subtitle="Only vehicles assigned to your account" />
           <Select
             label="Vehicle"
             value={vehicleId}
@@ -211,7 +199,7 @@ export function OwnerCreateBookingForm({
         </section>
 
         <section className="space-y-4">
-          <SectionHeader icon={CalendarDays} title="Dates & times" />
+          <BookingFormSectionHeader icon={CalendarDays} title="Dates & times" />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <DatePicker label="Pickup date" value={pickupDate} onChange={setPickupDate} min={todayKey} />
             <DatePicker label="Return date" value={returnDate} onChange={setReturnDate} min={pickupDate || todayKey} />
@@ -234,7 +222,7 @@ export function OwnerCreateBookingForm({
         </section>
 
         <section className="space-y-4">
-          <SectionHeader icon={User} title="Guest contact" subtitle="Required for the rental agreement" />
+          <BookingFormSectionHeader icon={User} title="Guest contact" subtitle="Required for the rental agreement" />
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <Input label="Guest name" value={customerName} onChange={(e) => setCustomerName(e.target.value)} required />
             <Input label="Email" type="email" value={customerEmail} onChange={(e) => setCustomerEmail(e.target.value)} required />
@@ -243,7 +231,7 @@ export function OwnerCreateBookingForm({
         </section>
 
         <section className="space-y-4">
-          <SectionHeader icon={MapPin} title="Pickup location" />
+          <BookingFormSectionHeader icon={MapPin} title="Pickup location" />
           {locationsLoading ? (
             <p className="text-sm text-gray-500">Loading locations…</p>
           ) : locations.length === 0 ? (

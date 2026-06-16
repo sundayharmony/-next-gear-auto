@@ -13,6 +13,7 @@ import {
   sumInvoiceLineItems,
   type AdditionalInvoiceLineItemInput,
 } from "@/lib/invoices/invoice-line-items";
+import { StaffCenterModal } from "@/components/staff/staff-overlay";
 
 type TabId = "edit" | "preview";
 
@@ -239,18 +240,15 @@ export function SendInvoiceModal({
   );
 
   return (
-    <div
-      className="fixed inset-0 z-[120] flex items-center justify-center bg-black/50 p-4"
-      onClick={(e) => {
-        if (e.target === e.currentTarget && !sending) onClose();
+    <StaffCenterModal
+      ariaLabel="Send invoice"
+      elevated
+      onClose={onClose}
+      onBackdropClick={() => {
+        if (!sending) onClose();
       }}
+      className="max-w-lg max-h-[90vh] flex flex-col"
     >
-      <div
-        className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[90vh] flex flex-col"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="send-invoice-title"
-      >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200 shrink-0">
           <h2 id="send-invoice-title" className="font-semibold text-gray-900 flex items-center gap-2">
             <Mail className="w-5 h-5 text-purple-600" />
@@ -449,7 +447,6 @@ export function SendInvoiceModal({
             {sending ? "Sending…" : "Send invoice"}
           </Button>
         </div>
-      </div>
-    </div>
+    </StaffCenterModal>
   );
 }

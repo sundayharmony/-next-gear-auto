@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowRight } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { formatYyyyMmDdLocal, localMidnightFromYyyyMmDd } from "@/lib/utils/booking-dates";
 import type { SearchDatesState } from "@/lib/booking/wizard-validation";
+import { BookingPickerOverlay } from "./booking-picker-overlay";
 
 function getDaysInMonth(date: Date) {
   return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -61,8 +62,12 @@ export function CalendarOverlay({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-xl" onClick={onClose}>
-      <div className="bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl max-w-sm w-full mx-4 shadow-2xl p-6 animate-in" onClick={(e) => e.stopPropagation()}>
+    <BookingPickerOverlay
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel={isPickup ? "Select pickup date" : "Select return date"}
+      panelClassName="bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl max-w-sm w-full mx-4 shadow-2xl p-6 animate-in outline-none"
+    >
         <div className="flex items-center justify-between mb-6">
           <button onClick={() => setCalendarViewDate(new Date(calendarViewDate.getFullYear(), calendarViewDate.getMonth() - 1))} aria-label="Previous month" className="p-2 hover:bg-gray-100 rounded-lg transition">
             <ArrowLeft className="h-5 w-5" />
@@ -102,8 +107,7 @@ export function CalendarOverlay({
             );
           })}
         </div>
-      </div>
-    </div>
+    </BookingPickerOverlay>
   );
 }
 
@@ -146,8 +150,12 @@ export function BirthdayCalendarOverlay({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/30 backdrop-blur-xl" onClick={onClose}>
-      <div className="bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl max-w-sm w-full mx-4 shadow-2xl p-6 animate-in" onClick={(e) => e.stopPropagation()}>
+    <BookingPickerOverlay
+      isOpen={isOpen}
+      onClose={onClose}
+      ariaLabel="Select date of birth"
+      panelClassName="bg-white/95 backdrop-blur-2xl rounded-t-3xl sm:rounded-3xl max-w-sm w-full mx-4 shadow-2xl p-6 animate-in outline-none"
+    >
         <div className="flex items-center justify-center gap-3 mb-2">
           <button onClick={() => setDobViewDate(new Date(dobViewDate.getFullYear() - 1, dobViewDate.getMonth()))} className="px-2 py-1 text-xs font-medium text-purple-600 hover:bg-purple-50 rounded-lg transition">
             ‹‹ Year
@@ -214,8 +222,7 @@ export function BirthdayCalendarOverlay({
         </div>
 
         <p className="text-xs text-gray-400 text-center mt-4">Must be 18 years or older</p>
-      </div>
-    </div>
+    </BookingPickerOverlay>
   );
 }
 

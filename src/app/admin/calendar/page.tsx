@@ -51,6 +51,8 @@ type CalendarBookingRow = AdminBookingRow;
 type Vehicle = VehicleListItem;
 const TIMELINE_WINDOW_DAYS = 180;
 
+const CALENDAR_VIEW_STORAGE_KEY = "nga-calendar-view";
+
 export default function AdminCalendarPage({
   panelConfig = adminPanelConfig,
 }: {
@@ -60,7 +62,27 @@ export default function AdminCalendarPage({
     panelConfig.panelMode === "manager" ? managerBookingsConfig : adminBookingsConfig;
   const { error, setError, success, setSuccess } = useAutoToast();
   const bookingsEndpoint = calendarConfig.bookingsEndpoint;
-  const [view, setView] = useState<"timeline" | "calendar">("timeline");
+  const [view, setViewState] = useState<"timeline" | "calendar">("timeline");
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(CALENDAR_VIEW_STORAGE_KEY);
+      if (saved === "timeline" || saved === "calendar") {
+        setViewState(saved);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const setView = useCallback((next: "timeline" | "calendar") => {
+    setViewState(next);
+    try {
+      localStorage.setItem(CALENDAR_VIEW_STORAGE_KEY, next);
+    } catch {
+      /* ignore */
+    }
+  }, []);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [vehicleFilter, setVehicleFilter] = useState<string>("all");
 
@@ -536,6 +558,7 @@ export default function AdminCalendarPage({
           <CreateBookingForm
             vehicles={vehicles}
             allCustomers={allCustomers}
+            embeddedInSheet
             onClose={() => setShowCreateForm(false)}
             onCreated={() => {
               setShowCreateForm(false);

@@ -16,8 +16,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { AdminPageHeader } from "@/components/admin/admin-shell";
-import { PageContainer } from "@/components/layout/page-container";
+import { AdminPageHeader, AdminPageBody } from "@/components/admin/admin-shell";
 import { Vehicle } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { AdminStatusBanner } from "@/components/admin/ui-feedback";
@@ -378,7 +377,7 @@ export default function AdminMaintenancePage({
         }
       />
 
-      <PageContainer className="py-8">
+      <AdminPageBody className="py-8">
         <div aria-live="assertive">
           {error ? <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} /> : null}
         </div>
@@ -510,7 +509,7 @@ export default function AdminMaintenancePage({
           panelBase={panelBase}
           onOpenDetail={openDetail}
         />
-      </PageContainer>
+      </AdminPageBody>
 
       {showDetail && selectedRecord && (
         <MaintenanceDetailPanel

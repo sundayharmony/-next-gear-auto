@@ -28,6 +28,7 @@ import {
   formatBlockedDateShort,
   formatBlockedTime,
 } from "./blocked-dates-types";
+import { StaffSidePanel } from "@/components/staff/staff-overlay";
 
 // ── Manual block form ──
 
@@ -398,14 +399,7 @@ export function BlockedDatesEditDrawer({
   if (!block) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-black/50" onClick={onCancel} />
-      <div
-        className="w-full max-w-[calc(100vw-1rem)] sm:max-w-xl bg-white shadow-xl overflow-y-auto"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Edit blocked date"
-      >
+    <StaffSidePanel onClose={onCancel} ariaLabel="Edit blocked date" maxWidthClassName="sm:max-w-xl">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Edit Blocked Date</h2>
           <button
@@ -587,8 +581,7 @@ export function BlockedDatesEditDrawer({
             </Button>
           </div>
         </div>
-      </div>
-    </div>
+    </StaffSidePanel>
   );
 }
 
@@ -610,14 +603,7 @@ export function BlockedDatesDetailDrawer({
   if (!block) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex">
-      <div className="flex-1 bg-black/50" onClick={onClose} />
-      <div
-        className="w-full max-w-[calc(100vw-1rem)] sm:max-w-lg bg-white shadow-xl overflow-y-auto"
-        role="dialog"
-        aria-modal="true"
-        aria-label="Blocked trip details"
-      >
+    <StaffSidePanel onClose={onClose} ariaLabel="Blocked trip details">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Blocked Trip Details</h2>
           <button
@@ -704,7 +690,6 @@ export function BlockedDatesDetailDrawer({
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </StaffSidePanel>
   );
 }

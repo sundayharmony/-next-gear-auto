@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select } from "@/components/ui/select";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { PAYMENT_METHODS } from "@/lib/types";
+import { StaffCenterModal } from "@/components/staff/staff-overlay";
 
 export interface VehicleSaleSummary {
   id: string;
@@ -100,14 +101,7 @@ export function SellVehicleDialog({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40">
-      <div className="absolute inset-0" onClick={onClose} aria-hidden="true" />
-      <div
-        className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-white rounded-xl shadow-xl p-6"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="sell-vehicle-title"
-      >
+    <StaffCenterModal onClose={onClose} ariaLabel="Sell vehicle" className="max-w-lg max-h-[90vh] overflow-y-auto p-6">
         <div className="flex items-start justify-between gap-4 mb-4">
           <h2 id="sell-vehicle-title" className="text-lg font-semibold text-gray-900">
             Sell vehicle
@@ -241,7 +235,6 @@ export function SellVehicleDialog({
             </Button>
           </div>
         </form>
-      </div>
-    </div>
+    </StaffCenterModal>
   );
 }

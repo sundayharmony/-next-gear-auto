@@ -25,8 +25,11 @@ Conventions for admin, manager, and owner panels (Platform v5).
 
 ## Overlays
 
-- Prefer `Sheet` (`src/components/ui/sheet.tsx`) for create/edit flows on mobile; right panel at `md+`.
-- `CreateBookingShell` wraps `CreateBookingForm` from bookings list and calendar.
+- Prefer `Sheet` (`src/components/ui/sheet.tsx`) with `tier="staff"` for staff modals — sits at `z-[100]`, above the bottom tab bar (`z-[91]`).
+- Shared constant: `STAFF_OVERLAY_Z` in `src/components/staff/staff-overlay-z.ts`.
+- Side panels: `StaffSidePanel`; centered modals: `StaffCenterModal` (`src/components/staff/staff-overlay.tsx`).
+- `CreateBookingShell`: `showClose={false}` — single close control lives in `CreateBookingForm` sticky header.
+- Public booking pickers: `BookingPickerOverlay` with `role="dialog"` and focus trap.
 - `Modal` for centered confirmations; must keep `role="dialog"` and `aria-modal`.
 
 ## Tables and lists
@@ -38,6 +41,8 @@ Conventions for admin, manager, and owner panels (Platform v5).
 ## Forms
 
 - `FormField` + `formLabelClass` from `@/components/ui/form-field` for consistent labels.
+- `BookingFormSectionHeader` from `@/components/forms/booking-form-section-header` for booking form sections.
+- `AgendaDateStrip` from `@/components/calendar/agenda-date-strip` for mobile calendar date strips.
 
 ## Toasts
 

@@ -12,6 +12,16 @@ function read(rel) {
   return fs.readFileSync(path.join(root, rel), "utf8");
 }
 
+function walkTsx(dir, out = []) {
+  if (!fs.existsSync(dir)) return out;
+  for (const name of fs.readdirSync(dir, { withFileTypes: true })) {
+    const full = path.join(dir, name.name);
+    if (name.isDirectory() && name.name !== "node_modules") walkTsx(full, out);
+    else if (name.isFile() && /\.(tsx|ts)$/.test(name.name)) out.push(full);
+  }
+  return out;
+}
+
 // 1) Unified bottom tab bar must include dialog semantics on More sheet
 const staffTabBar = read("src/components/staff/staff-bottom-tab-bar.tsx");
 if (!staffTabBar.includes('role="dialog"')) {
@@ -42,16 +52,48 @@ if (!adminFetch.includes("getStaffLoginRedirectPath")) {
   failures.push("admin-fetch.ts: missing getStaffLoginRedirectPath for 401 redirect");
 }
 
-// 4) Staff overlays using fixed inset-0 should declare dialog semantics or use Sheet/Modal
-const overlayCandidates = [
-  "src/app/admin/bookings/components/create-booking-shell.tsx",
+// 4) Staff overlay z-index tier must exist
+const staffOverlayZ = read("src/components/staff/staff-overlay-z.ts");
+if (!staffOverlayZ.includes("z-[100]")) {
+  failures.push("staff-overlay-z.ts: must export STAFF_OVERLAY_Z at z-[100]");
+}
+
+// 5) Staff overlay primitives must declare dialog semantics
+for (const rel of [
+  "src/components/staff/staff-overlay.tsx",
   "src/components/ui/sheet.tsx",
   "src/components/ui/modal.tsx",
-];
-for (const rel of overlayCandidates) {
+]) {
   const s = read(rel);
-  if (s.includes("fixed inset-0") && !s.includes('role="dialog"') && !s.includes("DialogPrimitive")) {
-    failures.push(`${rel}: fixed inset-0 overlay should include dialog semantics or use Dialog primitive`);
+  if (!s.includes('role="dialog"') && !s.includes("DialogPrimitive")) {
+    failures.push(`${rel}: staff overlay primitive must include dialog semantics`);
+  }
+}
+
+// 6) Admin staff routes: avoid fixed inset-0 z-50 (below tab bar z-91)
+const adminDir = path.join(root, "src/app/admin");
+for (const file of walkTsx(adminDir)) {
+  const rel = path.relative(root, file).replace(/\\/g, "/");
+  const s = fs.readFileSync(file, "utf8");
+  if (
+    s.includes("fixed inset-0 z-50") &&
+    !rel.includes("loading.tsx") &&
+    !rel.includes(".test.")
+  ) {
+    failures.push(
+      `${rel}: fixed inset-0 z-50 sits below bottom tab bar — use STAFF_OVERLAY_Z, Sheet tier="staff", or StaffSidePanel`
+    );
+  }
+}
+
+// 7) Public booking overlays should use BookingPickerOverlay
+for (const rel of [
+  "src/app/booking/components/calendar-overlays.tsx",
+  "src/app/booking/components/time-picker-overlay.tsx",
+]) {
+  const s = read(rel);
+  if (!s.includes("BookingPickerOverlay")) {
+    failures.push(`${rel}: must use BookingPickerOverlay for dialog a11y`);
   }
 }
 

@@ -27,21 +27,8 @@ import {
 import { calculatePricing } from "@/lib/utils/price-calculator";
 import { useCreateBookingPricing } from "../hooks/use-create-booking-pricing";
 import { useCreateBookingOverlap } from "../hooks/use-create-booking-overlap";
-
-/* ── Section header component ── */
-function SectionHeader({ icon: Icon, title, subtitle }: { icon: React.ElementType; title: string; subtitle?: string }) {
-  return (
-    <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-      <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-purple-100 text-purple-600 shrink-0">
-        <Icon className="w-4.5 h-4.5" />
-      </div>
-      <div>
-        <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
-        {subtitle && <p className="text-xs text-gray-500 mt-0.5">{subtitle}</p>}
-      </div>
-    </div>
-  );
-}
+import { BookingFormSectionHeader } from "@/components/forms/booking-form-section-header";
+import { FormField } from "@/components/ui/form-field";
 
 interface CreateBookingFormProps {
   vehicles: Vehicle[];
@@ -53,6 +40,8 @@ interface CreateBookingFormProps {
   /** Admin/staff vs owner portal — affects API endpoint and customer search UI. */
   variant?: "admin" | "owner";
   createEndpoint?: string;
+  /** When true, omits Card chrome and uses sticky header/footer for sheet layout. */
+  embeddedInSheet?: boolean;
   prefillData?: {
     customerName?: string;
     customerEmail?: string;
@@ -87,6 +76,7 @@ export default function CreateBookingForm({
   onSuccess,
   variant = "admin",
   createEndpoint = "/api/bookings",
+  embeddedInSheet = false,
   prefillData,
 }: CreateBookingFormProps) {
   const isOwnerVariant = variant === "owner";
@@ -417,30 +407,69 @@ export default function CreateBookingForm({
   ].filter(Boolean).length;
   const progressPercent = Math.round((completedSteps / 4) * 100);
 
-  return (
-    <Card className="border-purple-200">
-      {/* ═══ Header with progress ═══ */}
-      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 px-4 sm:px-6 py-4 rounded-t-xl">
-        <div className="flex items-center justify-between mb-3">
-          <h2 className="text-white font-semibold text-lg">New Booking</h2>
-          <button type="button" onClick={onClose} className="text-white/70 hover:text-white transition-colors">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-        {/* Progress bar */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
-            <div className="h-full bg-white rounded-full transition-all duration-500 ease-out" style={{ width: `${progressPercent}%` }} />
-          </div>
-          <span className="text-white/80 text-xs font-medium">{progressPercent}%</span>
-        </div>
+  const header = (
+    <div
+      className={
+        embeddedInSheet
+          ? "sticky top-0 z-10 shrink-0 bg-gradient-to-r from-purple-600 to-indigo-600 px-4 sm:px-6 py-4"
+          : "bg-gradient-to-r from-purple-600 to-indigo-600 px-4 sm:px-6 py-4 rounded-t-xl"
+      }
+    >
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-white font-semibold text-lg">New Booking</h2>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label="Close"
+          className="flex h-10 w-10 items-center justify-center rounded-lg text-white/70 hover:text-white hover:bg-white/10 transition-colors"
+        >
+          <X className="w-5 h-5" />
+        </button>
       </div>
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-1.5 bg-white/20 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-white rounded-full transition-all duration-500 ease-out"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        <span className="text-white/80 text-xs font-medium">{progressPercent}%</span>
+      </div>
+    </div>
+  );
 
-      <form onSubmit={handleSubmit} className="p-4 sm:p-6 space-y-6 sm:space-y-8">
+  const actionButtons = (
+    <div className="flex gap-3 justify-end">
+      <Button type="button" onClick={onClose} variant="outline" disabled={loading} className="px-5 min-h-[44px]">
+        Cancel
+      </Button>
+      <Button
+        type="submit"
+        form={embeddedInSheet ? "create-booking-form" : undefined}
+        disabled={loading}
+        className="bg-purple-600 hover:bg-purple-700 text-white px-6 shadow-sm shadow-purple-200 min-h-[44px]"
+      >
+        {loading ? (
+          <span className="flex items-center gap-2">
+            <span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> Creating...
+          </span>
+        ) : (
+          "Create Booking"
+        )}
+      </Button>
+    </div>
+  );
+
+  const formBody = (
+      <form
+        id={embeddedInSheet ? "create-booking-form" : undefined}
+        onSubmit={handleSubmit}
+        className={embeddedInSheet ? "flex-1 min-h-0 overflow-y-auto p-4 sm:p-6 space-y-6 sm:space-y-8" : "p-4 sm:p-6 space-y-6 sm:space-y-8"}
+      >
 
         {/* ═══ SECTION 1: Customer ═══ */}
         <section className="space-y-4">
-          <SectionHeader
+          <BookingFormSectionHeader
             icon={User}
             title="Customer Information"
             subtitle={isOwnerVariant ? "Enter guest details for this reservation" : "Search existing or add new customer"}
@@ -498,8 +527,7 @@ export default function CreateBookingForm({
           )}
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Full Name <span className="text-red-500">*</span></label>
+            <FormField label="Full Name" required>
               <Input
                 type="text"
                 value={form.customerName}
@@ -507,9 +535,8 @@ export default function CreateBookingForm({
                 placeholder="John Doe"
                 className="focus-visible:outline-2 focus-visible:outline-purple-600"
               />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Email Address <span className="text-red-500">*</span></label>
+            </FormField>
+            <FormField label="Email Address" required>
               <Input
                 type="email"
                 value={form.customerEmail}
@@ -517,12 +544,11 @@ export default function CreateBookingForm({
                 placeholder="john@example.com"
                 className="focus-visible:outline-2 focus-visible:outline-purple-600"
               />
-            </div>
+            </FormField>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">Phone Number <span className="text-red-500">*</span></label>
+            <FormField label="Phone Number" required>
               <Input
                 type="tel"
                 value={form.customerPhone}
@@ -530,7 +556,7 @@ export default function CreateBookingForm({
                 placeholder="+1 (555) 123-4567"
                 className="focus-visible:outline-2 focus-visible:outline-purple-600"
               />
-            </div>
+            </FormField>
             {!isOwnerVariant ? (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">ID Document <span className="text-gray-400 font-normal">(optional)</span></label>
@@ -573,7 +599,7 @@ export default function CreateBookingForm({
 
         {/* ═══ SECTION 2: Vehicle ═══ */}
         <section className="space-y-4">
-          <SectionHeader icon={Car} title="Vehicle Selection" subtitle="Choose from available fleet" />
+          <BookingFormSectionHeader icon={Car} title="Vehicle Selection" subtitle="Choose from available fleet" />
 
           <Select
             value={form.vehicleId}
@@ -614,7 +640,7 @@ export default function CreateBookingForm({
 
         {/* ═══ SECTION 3: Dates & Location ═══ */}
         <section className="space-y-4">
-          <SectionHeader icon={CalendarDays} title="Rental Period" subtitle="Set pickup and return schedule" />
+          <BookingFormSectionHeader icon={CalendarDays} title="Rental Period" subtitle="Set pickup and return schedule" />
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div>
@@ -715,7 +741,7 @@ export default function CreateBookingForm({
 
         {/* ═══ SECTION 4: Extras ═══ */}
         <section className="space-y-4">
-          <SectionHeader icon={Package} title="Extras & Insurance" subtitle="Optional add-ons for this booking" />
+          <BookingFormSectionHeader icon={Package} title="Extras & Insurance" subtitle="Optional add-ons for this booking" />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {AVAILABLE_EXTRAS.map((extra) => {
@@ -763,7 +789,7 @@ export default function CreateBookingForm({
 
         {/* ═══ SECTION 5: Payment & Pricing ═══ */}
         <section className="space-y-4">
-          <SectionHeader icon={CreditCard} title="Payment & Pricing" subtitle="Review total and payment method" />
+          <BookingFormSectionHeader icon={CreditCard} title="Payment & Pricing" subtitle="Review total and payment method" />
 
           {/* Price breakdown summary */}
           {selectedVehicle && previewPricing && !manualPriceOverride && (
@@ -868,7 +894,7 @@ export default function CreateBookingForm({
         {/* ═══ SECTION 6: Recurring Long-Term (staff only) ═══ */}
         {!isOwnerVariant ? (
         <section className="space-y-4">
-          <SectionHeader icon={CalendarDays} title="Recurring Long-Term (Optional)" subtitle="Enable for week-to-week long-term renters" />
+          <BookingFormSectionHeader icon={CalendarDays} title="Recurring Long-Term (Optional)" subtitle="Enable for week-to-week long-term renters" />
 
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input
@@ -906,24 +932,26 @@ export default function CreateBookingForm({
         </section>
         ) : null}
 
-        {/* ═══ ACTION BUTTONS ═══ */}
-        <div className="flex gap-3 justify-end pt-2 border-t border-gray-100">
-          <Button type="button" onClick={onClose} variant="outline" disabled={loading} className="px-5">
-            Cancel
-          </Button>
-          <Button
-            type="submit"
-            disabled={loading}
-            className="bg-purple-600 hover:bg-purple-700 text-white px-6 shadow-sm shadow-purple-200"
-          >
-            {loading ? (
-              <span className="flex items-center gap-2"><span className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full" /> Creating...</span>
-            ) : (
-              "Create Booking"
-            )}
-          </Button>
-        </div>
+        {!embeddedInSheet ? actionButtons : null}
       </form>
+  );
+
+  if (embeddedInSheet) {
+    return (
+      <div className="flex flex-col h-full min-h-0 max-h-[92dvh] md:max-h-none md:h-full">
+        {header}
+        {formBody}
+        <div className="sticky bottom-0 shrink-0 border-t border-gray-200 bg-white px-4 py-3 sm:px-6 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+          {actionButtons}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <Card className="border-purple-200">
+      {header}
+      {formBody}
     </Card>
   );
 }

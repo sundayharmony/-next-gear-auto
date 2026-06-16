@@ -4,6 +4,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { STAFF_OVERLAY_Z } from "@/components/staff/staff-overlay-z";
 
 const Sheet = DialogPrimitive.Root;
 const SheetTrigger = DialogPrimitive.Trigger;
@@ -30,18 +31,21 @@ type SheetSide = "bottom" | "right";
 interface SheetContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
   side?: SheetSide;
   showClose?: boolean;
+  /** Staff tier sits above bottom tab bar (z-91). */
+  tier?: "default" | "staff";
 }
 
 const SheetContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   SheetContentProps
->(({ className, children, side = "bottom", showClose = true, ...props }, ref) => (
+>(({ className, children, side = "bottom", showClose = true, tier = "default", ...props }, ref) => (
   <SheetPortal>
-    <SheetOverlay />
+    <SheetOverlay className={tier === "staff" ? STAFF_OVERLAY_Z : undefined} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 flex flex-col bg-white shadow-xl outline-none",
+        "fixed flex flex-col bg-white shadow-xl outline-none",
+        tier === "staff" ? STAFF_OVERLAY_Z : "z-50",
         side === "bottom" &&
           "inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl border border-gray-200 pb-[max(1rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom",
         side === "right" &&

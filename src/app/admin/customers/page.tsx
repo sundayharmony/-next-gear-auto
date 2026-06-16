@@ -16,9 +16,12 @@ import { userHasRole } from "@/lib/auth/user-roles";
 import { useCustomersData, type CustomerRow } from "./use-customers-data";
 import { CustomerListPanel } from "./customer-list-panel";
 import { CustomerDetailDrawer } from "./customer-detail-drawer";
+import { CustomerDetailSheet } from "./customer-detail-sheet";
+import { STAFF_OVERLAY_Z } from "@/components/staff/staff-overlay-z";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils/cn";
 
 export default function AdminCustomersPage({
   panelConfig = adminPanelConfig,
@@ -120,18 +123,31 @@ export default function AdminCustomersPage({
         </div>
 
         {selectedCustomer ? (
-          <div className="max-xl:fixed max-xl:inset-0 max-xl:z-50 max-xl:overflow-y-auto max-xl:bg-white xl:min-w-0">
-            <CustomerDetailDrawer
+          <>
+            <div className="hidden xl:block xl:min-w-0">
+              <CustomerDetailDrawer
+                customer={selectedCustomer}
+                panelBase={panelBase}
+                canMutateCustomers={canMutateCustomers}
+                setCustomers={setCustomers}
+                onClose={() => setSelectedCustomer(null)}
+                onSuccess={setToastSuccess}
+                onError={setToastError}
+                onRefreshList={() => fetchCustomers()}
+              />
+            </div>
+            <CustomerDetailSheet
               customer={selectedCustomer}
+              open={!!selectedCustomer}
+              onClose={() => setSelectedCustomer(null)}
               panelBase={panelBase}
               canMutateCustomers={canMutateCustomers}
               setCustomers={setCustomers}
-              onClose={() => setSelectedCustomer(null)}
               onSuccess={setToastSuccess}
               onError={setToastError}
               onRefreshList={() => fetchCustomers()}
             />
-          </div>
+          </>
         ) : (
           <div className="hidden xl:flex items-center justify-center p-12 text-gray-500 border-l border-gray-200 bg-gray-50/50">
             <p className="text-sm">Select a customer from the list to view details</p>
@@ -200,7 +216,7 @@ function AddCustomerModal({
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+    <div className={cn("fixed inset-0 bg-black/50 flex items-center justify-center p-4", STAFF_OVERLAY_Z)}>
       <Card className="w-full max-w-md">
         <CardContent className="p-6">
           <h2 className="text-lg font-bold mb-4">Add New Customer</h2>
