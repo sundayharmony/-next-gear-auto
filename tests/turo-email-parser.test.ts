@@ -70,3 +70,59 @@ test("parseTuroEmail captures pickup and dropoff locations", () => {
   assert.equal(parsed.dropoffLocation, "Hoboken, NJ");
   assert.equal(parsed.location, "Newark Liberty International Airport -> Hoboken, NJ");
 });
+
+test("parseTuroEmail parses Tej Tesla booking confirmation email", () => {
+  const subject = "Tej's trip with your Tesla Model 3 is booked!";
+  const body = `
+    ${subject}
+    Tej's trip with your Tesla Model 3 at Newark Liberty International Airport is booked from Wednesday, June 17, 2026, 11:00 AM to Friday, June 19, 2026, 5:30 PM.
+    You'll earn $145.56.
+  `;
+  const parsed = parseTuroEmail(body);
+  assert.equal(parsed.isCancellation, false);
+  assert.equal(parsed.isExtension, false);
+  assert.equal(parsed.guestName, "Tej");
+  assert.equal(parsed.vehicleDescription, "Tesla Model 3");
+  assert.equal(parsed.pickupLocation, "Newark Liberty International Airport");
+  assert.equal(parsed.location, "Newark Liberty International Airport");
+  assert.equal(parsed.startDate, "2026-06-17");
+  assert.equal(parsed.endDate, "2026-06-19");
+  assert.equal(parsed.pickupTime, "11:00");
+  assert.equal(parsed.returnTime, "17:30");
+  assert.equal(parsed.earnings, 145.56);
+  assert.equal(parsed.confidence, "high");
+});
+
+test("parseTuroEmail parses booking with location before from (no is booked)", () => {
+  const text =
+    "Tej's trip with your Tesla Model 3 at Newark Liberty International Airport from Wednesday, June 17, 2026, 11:00 AM to Friday, June 19, 2026, 5:30 PM. You'll earn $145.56.";
+  const parsed = parseTuroEmail(text);
+  assert.equal(parsed.guestName, "Tej");
+  assert.equal(parsed.pickupLocation, "Newark Liberty International Airport");
+  assert.equal(parsed.startDate, "2026-06-17");
+  assert.equal(parsed.endDate, "2026-06-19");
+  assert.equal(parsed.pickupTime, "11:00");
+  assert.equal(parsed.returnTime, "17:30");
+  assert.equal(parsed.earnings, 145.56);
+});
+
+test("parseTuroEmail parses booking with location after date range", () => {
+  const text =
+    "Tej's trip with your Tesla Model 3 is booked from Wednesday, June 17, 2026, 11:00 AM to Friday, June 19, 2026, 5:30 PM at Newark Liberty International Airport. You'll earn $145.56.";
+  const parsed = parseTuroEmail(text);
+  assert.equal(parsed.pickupLocation, "Newark Liberty International Airport");
+  assert.equal(parsed.pickupTime, "11:00");
+  assert.equal(parsed.returnTime, "17:30");
+});
+
+test("parseTuroEmail parses Tej booking from HTML email body", () => {
+  const html = `<p>Tej's trip with your <strong>Tesla Model 3</strong> at Newark Liberty International Airport is booked from Wednesday, June 17, 2026, 11:00 AM to Friday, June 19, 2026, 5:30 PM.</p><p>You'll earn $145.56.</p>`;
+  const parsed = parseTuroEmail(html);
+  assert.equal(parsed.guestName, "Tej");
+  assert.equal(parsed.pickupLocation, "Newark Liberty International Airport");
+  assert.equal(parsed.startDate, "2026-06-17");
+  assert.equal(parsed.endDate, "2026-06-19");
+  assert.equal(parsed.pickupTime, "11:00");
+  assert.equal(parsed.returnTime, "17:30");
+  assert.equal(parsed.earnings, 145.56);
+});

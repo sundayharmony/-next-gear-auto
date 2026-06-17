@@ -110,20 +110,13 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   let pickupTime: string | null = null;
   let returnTime: string | null = null;
 
-  // Extract times from "booked from <day>, <date>, <time> to <day>, <date>, <time>"
-  const timeFromBooked = text.match(
-    /booked\s+from\s+.+?,\s+\d{1,2}:\d{2}\s*(AM|PM)\s+to\s+.+?,\s+(\d{1,2}:\d{2}\s*(?:AM|PM))/i
+  const fullFromToTimes = text.match(
+    /(?:booked\s+from|\bat\s+.+?\s+from)\s+(?:\w+day,\s+)?\w+\s+\d{1,2},\s+\d{4},?\s+(\d{1,2}:\d{2}\s*(?:AM|PM))\s+to\s+(?:\w+day,\s+)?\w+\s+\d{1,2},\s+\d{4},?\s+(\d{1,2}:\d{2}\s*(?:AM|PM))/i
   );
-  if (timeFromBooked) {
-    // Extract both times from the full booked string
-    const fullBooked = text.match(
-      /booked\s+from\s+\w+day,\s+\w+\s+\d{1,2},\s+\d{4},?\s+(\d{1,2}:\d{2}\s*(?:AM|PM))\s+to\s+\w+day,\s+\w+\s+\d{1,2},\s+\d{4},?\s+(\d{1,2}:\d{2}\s*(?:AM|PM))/i
-    );
-    if (fullBooked) {
-      pickupTime = to24Hour(fullBooked[1].trim());
-      returnTime = to24Hour(fullBooked[2].trim());
-      rawMatches.push(`Pickup time: "${pickupTime}"`, `Return time: "${returnTime}"`);
-    }
+  if (fullFromToTimes) {
+    pickupTime = to24Hour(fullFromToTimes[1].trim());
+    returnTime = to24Hour(fullFromToTimes[2].trim());
+    rawMatches.push(`Pickup time: "${pickupTime}"`, `Return time: "${returnTime}"`);
   }
 
   // Also try "Trip start 4/9/26 8:00 am" / "Trip end 4/10/26 10:00 am"
@@ -153,12 +146,36 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
 
   // "... trip with your Volkswagen Jetta at Newark Liberty International Airport is booked from ..."
   const atPickupMatch = text.match(
-    /trip\s+with\s+your\s+.+?\s+at\s+(.+?)\s+is\s+booked\s+from/i,
+    /trip\s+with\s+your\s+.+?\s+at\s+(.+?)\s+(?:is\s+)?booked\s+from/i,
   );
   if (atPickupMatch) {
     pickupLocation = atPickupMatch[1].trim();
     if (pickupLocation) rawMatches.push(`Pickup location (at pickup): "${pickupLocation}"`);
     else pickupLocation = null;
+  }
+
+  // "... at Newark Liberty International Airport from Wednesday, June 17, 2026 ..."
+  if (!pickupLocation) {
+    const atBeforeFromMatch = text.match(
+      /trip\s+with\s+your\s+.+?\s+at\s+(.+?)\s+from\s+(?:\w+day,\s+)?\w+\s+\d{1,2},\s+\d{4}/i,
+    );
+    if (atBeforeFromMatch) {
+      pickupLocation = atBeforeFromMatch[1].trim();
+      if (pickupLocation) rawMatches.push(`Pickup location (at from): "${pickupLocation}"`);
+      else pickupLocation = null;
+    }
+  }
+
+  // "... is booked from ... to ... at Newark Liberty International Airport"
+  if (!pickupLocation) {
+    const atAfterBookedMatch = text.match(
+      /(?:is\s+)?booked\s+from\s+.+?\s+to\s+.+?\s+at\s+(.+?)(?:\.|\s+You|\s+Trip|\n|$)/i,
+    );
+    if (atAfterBookedMatch) {
+      pickupLocation = atAfterBookedMatch[1].trim();
+      if (pickupLocation) rawMatches.push(`Pickup location (at after booked): "${pickupLocation}"`);
+      else pickupLocation = null;
+    }
   }
 
   // "Delivery Newark, NJ Newark Liberty International Airport"
@@ -290,11 +307,11 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
     }
   }
 
-  // Pattern 4: Turo "booked from <date> to <date>" format
+  // Pattern 4: Turo "booked from <date> to <date>" or "at <location> from <date> to <date>"
   // e.g. "is booked from Thursday, April 9, 2026, 8:00 AM to Friday, April 10, 2026, 10:00 AM"
   if (!startDate || !endDate) {
     const bookedFromTo = text.match(
-      /booked\s+from\s+(.+?)\s+to\s+(.+?)(?:\.|You|$)/i
+      /(?:(?:is\s+)?booked\s+from|\bat\s+.+?\s+from)\s+(.+?)\s+to\s+(.+?)(?:\.|\s+You|\s+Trip|\n|$)/i
     );
     if (bookedFromTo) {
       const s = parseFlexibleDate(bookedFromTo[1]);
@@ -345,6 +362,8 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   // ── Extract guest name ──
   let guestName: string | null = null;
   const guestPatterns = [
+    // "Tej's trip with your Tesla Model 3" — most common booking confirmation
+    /([A-Z][a-z]{1,24})'s\s+trip\s+with\s+your/i,
     // "You've cancelled Mario's trip"
     /you['\u2019]ve\s+cancel(?:led|ed)\s+([A-Za-z]+(?:\s+[A-Za-z]+)?)['\u2019]s\s+trip/i,
     // "Zhao has cancelled their trip" / "Marcus has cancelled"
@@ -411,6 +430,7 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   // ── Extract earnings/price ──
   let earnings: number | null = null;
   const earningsPatterns = [
+    /you(?:'|['\u2019])ll\s+earn\s+\$?([\d,]+(?:\.\d{2})?)/i,
     /(?:you(?:'ll)?\s+earn|earnings?|trip\s+earnings?|host\s+earnings?|payout|total)\s*[:–—-]?\s*\$?([\d,]+(?:\.\d{2})?)/i,
     /\$([\d,]+(?:\.\d{2})?)\s+(?:earned|earnings|payout|total)/i,
   ];
