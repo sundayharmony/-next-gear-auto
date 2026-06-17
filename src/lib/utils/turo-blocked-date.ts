@@ -1,3 +1,13 @@
+/** Admin calendar/bookings list label — guest first so search and timeline bars match Turo. */
+export function formatTuroOccupancyCustomerName(
+  reason: string | null | undefined,
+  vehicleName: string
+): string {
+  const guest = getTuroDriverFromReason(reason);
+  if (guest) return `${guest} (Turo)`;
+  return `${vehicleName || "Unknown Vehicle"} on TURO`;
+}
+
 export function getTuroDriverFromReason(reason: string | null | undefined): string | null {
   if (!reason) return null;
   const text = reason.trim();

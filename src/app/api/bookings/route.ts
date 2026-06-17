@@ -201,10 +201,14 @@ export async function GET(request: NextRequest) {
             const idHay = `${e.id} ${e.blocked_date_id || ""}`.toLowerCase();
             const nameHay = e.customer_name.toLowerCase();
             const emailHay = (e.customer_email || "").toLowerCase();
+            const reasonHay = (e.reason || "").toLowerCase();
+            const vehicleHay = e.vehicleName.toLowerCase();
             return (
               idHay.includes(low) ||
               nameHay.includes(low) ||
-              emailHay.includes(low)
+              emailHay.includes(low) ||
+              reasonHay.includes(low) ||
+              vehicleHay.includes(low)
             );
           });
         }

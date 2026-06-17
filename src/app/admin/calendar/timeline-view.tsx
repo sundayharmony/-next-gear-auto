@@ -17,6 +17,7 @@ import {
   getCalendarPickupDateKey,
   getCalendarReturnDateKey,
 } from "./calendar-booking-display";
+import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
 
 type BookingRow = BookingDbRow;
 type Vehicle = VehicleListItem;
@@ -74,9 +75,17 @@ function isTuroBooking(booking: BookingRow): boolean {
 }
 
 function bookingDisplayName(booking: BookingRow): string {
+  if (isTuroBooking(booking)) {
+    const turoReason = (booking as BookingRow & { turo_reason?: string | null }).turo_reason;
+    const guest =
+      getTuroDriverFromReason(turoReason ?? null) ||
+      booking.customer_name?.replace(/\s*\(Turo\)\s*$/i, "").trim();
+    if (guest) return guest.split(" ")[0];
+    return "Turo";
+  }
   const name = booking.customer_name?.trim();
   if (name) return name.split(" ")[0];
-  return isTuroBooking(booking) ? "Turo" : "Guest";
+  return "Guest";
 }
 
 function bookingBarTitle(booking: BookingRow, pickupDate: string, returnDate: string, daysTotal: number): string {

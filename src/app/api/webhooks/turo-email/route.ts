@@ -569,8 +569,20 @@ export async function POST(req: NextRequest) {
           );
         }
       } else {
-        const mergedStart = parsed.startDate! < row.start_date ? parsed.startDate! : row.start_date;
-        const mergedEnd = parsed.endDate! > row.end_date ? parsed.endDate! : row.end_date;
+        const sameGuest =
+          Boolean(newGuest) &&
+          (!existingGuest || reasonMatchesTuroGuest(row.reason, newGuest!));
+        const useParsedDates = isReconcileRefresh && sameGuest;
+        const mergedStart = useParsedDates
+          ? parsed.startDate!
+          : parsed.startDate! < row.start_date
+            ? parsed.startDate!
+            : row.start_date;
+        const mergedEnd = useParsedDates
+          ? parsed.endDate!
+          : parsed.endDate! > row.end_date
+            ? parsed.endDate!
+            : row.end_date;
         const rangeWidened = mergedStart !== row.start_date || mergedEnd !== row.end_date;
         const reason = parsed.guestName
           ? `Turo: ${parsed.guestName}${parsed.earnings ? ` — $${parsed.earnings}` : ""}`

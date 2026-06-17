@@ -1,5 +1,8 @@
 import { getVehicleDisplayName } from "@/lib/types";
-import { resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
+import {
+  formatTuroOccupancyCustomerName,
+  resolveTuroTripRevenue,
+} from "@/lib/utils/turo-blocked-date";
 import { TURO_BLOCKED_SOURCE, isBlockedDateCancelled } from "@/lib/utils/blocked-dates";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import type { StaffRole } from "@/lib/admin/vehicle-details-queries";
@@ -197,13 +200,12 @@ function mapTuroBlock(
       return_time: n.return_time,
     }
   );
-  const turoTripName = `${vehicleName || "Unknown Vehicle"} on TURO`;
   return {
     id: `turo:${n.id}`,
     kind: "turo",
     vehicle_id: n.vehicle_id,
     vehicleName,
-    customer_name: turoTripName,
+    customer_name: formatTuroOccupancyCustomerName(n.reason, vehicleName),
     customer_email: undefined,
     pickup_date: n.start_date,
     return_date: n.end_date,
