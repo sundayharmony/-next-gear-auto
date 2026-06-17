@@ -2,7 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { parseTuroEmail } from "@/lib/utils/turo-email-parser";
 import { TURO_BLOCKED_SOURCE, CANCELLED_REASON_PREFIX } from "@/lib/utils/blocked-dates";
-import { pickTuroCancellationMatch } from "@/lib/utils/turo-cancellation-match";
+import { pickTuroCancellationMatch, reasonMatchesTuroGuest } from "@/lib/utils/turo-cancellation-match";
+import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
+import { markTuroBlockedDateCancelled } from "@/lib/admin/turo-cancellation-sync";
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import { safeCompareSecret } from "@/lib/security/constant-time";
@@ -543,78 +545,102 @@ export async function POST(req: NextRequest) {
 
     if (overlapping && overlapping.length > 0) {
       const row = overlapping[0];
-      const mergedStart = parsed.startDate < row.start_date ? parsed.startDate : row.start_date;
-      const mergedEnd = parsed.endDate > row.end_date ? parsed.endDate : row.end_date;
-      const rangeWidened = mergedStart !== row.start_date || mergedEnd !== row.end_date;
-      const reason = parsed.guestName
-        ? `Turo: ${parsed.guestName}${parsed.earnings ? ` — $${parsed.earnings}` : ""}`
-        : `Turo booking${parsed.earnings ? ` — $${parsed.earnings}` : ""}`;
-      const shouldUpdateReason =
-        Boolean(parsed.guestName) || typeof parsed.earnings === "number" || !row.reason;
+      const existingGuest = getTuroDriverFromReason(row.reason);
+      const newGuest = parsed.guestName?.trim() || null;
+      const isDifferentGuest =
+        Boolean(newGuest && existingGuest && !reasonMatchesTuroGuest(row.reason, newGuest));
 
-      const updateFields: Record<string, string | number | boolean | null> = {
-        start_date: mergedStart,
-        end_date: mergedEnd,
-      };
-      if (shouldUpdateReason) updateFields.reason = reason;
-      if (parsed.pickupTime != null) updateFields.pickup_time = parsed.pickupTime;
-      if (parsed.returnTime != null) updateFields.return_time = parsed.returnTime;
-      if (parsed.location != null) updateFields.location = parsed.location;
-      if (parsed.earnings != null) updateFields.earnings = parsed.earnings;
+      if (isDifferentGuest) {
+        try {
+          await markTuroBlockedDateCancelled(supabase, row);
+          logger.info("Turo webhook: superseded prior guest with new booking (prior trip marked cancelled)", {
+            id: row.id,
+            vehicle: vehicleLabel,
+            previousGuest: existingGuest,
+            newGuest,
+            dates: `${row.start_date} → ${row.end_date}`,
+          });
+        } catch (supersedeErr) {
+          logger.error("Turo webhook: failed to supersede prior guest trip", supersedeErr);
+          return NextResponse.json(
+            { success: false, message: "Could not supersede prior Turo trip for new guest" },
+            { status: 500 }
+          );
+        }
+      } else {
+        const mergedStart = parsed.startDate! < row.start_date ? parsed.startDate! : row.start_date;
+        const mergedEnd = parsed.endDate! > row.end_date ? parsed.endDate! : row.end_date;
+        const rangeWidened = mergedStart !== row.start_date || mergedEnd !== row.end_date;
+        const reason = parsed.guestName
+          ? `Turo: ${parsed.guestName}${parsed.earnings ? ` — $${parsed.earnings}` : ""}`
+          : `Turo booking${parsed.earnings ? ` — $${parsed.earnings}` : ""}`;
+        const shouldUpdateReason =
+          Boolean(parsed.guestName) || typeof parsed.earnings === "number" || !row.reason;
 
-      const mergeRes = await supabase
-        .from("blocked_dates")
-        .update(updateFields)
-        .eq("id", row.id)
-        .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason")
-        .maybeSingle();
-      let updated: TuroBlockedRow | null = asTuroRow(mergeRes.data as Record<string, unknown>);
-      let mergeErr = mergeRes.error;
-
-      if (mergeErr && isMissingColumnError(mergeErr)) {
-        const fallbackFields = {
+        const updateFields: Record<string, string | number | boolean | null> = {
           start_date: mergedStart,
           end_date: mergedEnd,
-          reason: shouldUpdateReason ? reason : row.reason,
         };
-        const fallback = await supabase
+        if (shouldUpdateReason) updateFields.reason = reason;
+        if (parsed.pickupTime != null) updateFields.pickup_time = parsed.pickupTime;
+        if (parsed.returnTime != null) updateFields.return_time = parsed.returnTime;
+        if (parsed.location != null) updateFields.location = parsed.location;
+        if (parsed.earnings != null) updateFields.earnings = parsed.earnings;
+
+        const mergeRes = await supabase
           .from("blocked_dates")
-          .update(fallbackFields)
+          .update(updateFields)
           .eq("id", row.id)
-          .select(TURO_SELECT_MINIMAL)
+          .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason")
           .maybeSingle();
-        updated = asTuroRow(fallback.data as Record<string, unknown>);
-        mergeErr = fallback.error;
+        let updated: TuroBlockedRow | null = asTuroRow(mergeRes.data as Record<string, unknown>);
+        let mergeErr = mergeRes.error;
+
+        if (mergeErr && isMissingColumnError(mergeErr)) {
+          const fallbackFields = {
+            start_date: mergedStart,
+            end_date: mergedEnd,
+            reason: shouldUpdateReason ? reason : row.reason,
+          };
+          const fallback = await supabase
+            .from("blocked_dates")
+            .update(fallbackFields)
+            .eq("id", row.id)
+            .select(TURO_SELECT_MINIMAL)
+            .maybeSingle();
+          updated = asTuroRow(fallback.data as Record<string, unknown>);
+          mergeErr = fallback.error;
+        }
+
+        if (mergeErr) {
+          logger.error("Turo webhook: merge update error", mergeErr);
+          return NextResponse.json({ success: false, message: mergeErr.message }, { status: 500 });
+        }
+
+        logger.info("Turo webhook: merged blocked_dates row", {
+          id: row.id,
+          vehicle: vehicleLabel,
+          previous: `${row.start_date} → ${row.end_date}`,
+          merged: `${mergedStart} → ${mergedEnd}`,
+          rangeWidened,
+        });
+
+        return NextResponse.json({
+          success: true,
+          action: rangeWidened ? "merged_widened" : "merged_refresh",
+          message: rangeWidened
+            ? `Updated block for ${vehicleLabel} to ${mergedStart} → ${mergedEnd}`
+            : `Refreshed Turo block for ${vehicleLabel} (${mergedStart} → ${mergedEnd})`,
+          data: updated,
+          parsed: {
+            confidence: parsed.confidence,
+            guestName: parsed.guestName,
+            vehicleDescription: parsed.vehicleDescription,
+            vehicleMatched: vehicleLabel,
+            vehicleMatchScore: matchScore,
+          },
+        });
       }
-
-      if (mergeErr) {
-        logger.error("Turo webhook: merge update error", mergeErr);
-        return NextResponse.json({ success: false, message: mergeErr.message }, { status: 500 });
-      }
-
-      logger.info("Turo webhook: merged blocked_dates row", {
-        id: row.id,
-        vehicle: vehicleLabel,
-        previous: `${row.start_date} → ${row.end_date}`,
-        merged: `${mergedStart} → ${mergedEnd}`,
-        rangeWidened,
-      });
-
-      return NextResponse.json({
-        success: true,
-        action: rangeWidened ? "merged_widened" : "merged_refresh",
-        message: rangeWidened
-          ? `Updated block for ${vehicleLabel} to ${mergedStart} → ${mergedEnd}`
-          : `Refreshed Turo block for ${vehicleLabel} (${mergedStart} → ${mergedEnd})`,
-        data: updated,
-        parsed: {
-          confidence: parsed.confidence,
-          guestName: parsed.guestName,
-          vehicleDescription: parsed.vehicleDescription,
-          vehicleMatched: vehicleLabel,
-          vehicleMatchScore: matchScore,
-        },
-      });
     }
 
     if (isReconcileRefresh) {

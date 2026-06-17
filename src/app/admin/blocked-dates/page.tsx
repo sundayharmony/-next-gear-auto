@@ -10,7 +10,6 @@ import { AdminStatusBanner } from "@/components/admin/ui-feedback";
 import { Button } from "@/components/ui/button";
 import { Vehicle, getVehicleDisplayName } from "@/lib/types";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
-import { isBlockedDateCancelled } from "@/lib/utils/blocked-dates";
 import {
   type BlockedDate,
   type OverlapConflict,
@@ -27,6 +26,8 @@ import {
   BlockedDatesEditDrawer,
   BlockedDatesDetailDrawer,
 } from "./blocked-dates-drawer";
+import { useTuroSyncActions } from "./use-turo-sync-actions";
+import { useFilteredBlockedDates } from "./use-filtered-blocked-dates";
 
 export default function BlockedDatesPage() {
   const pathname = usePathname();
@@ -101,6 +102,9 @@ export default function BlockedDatesPage() {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  const { cancellingId, syncingStatus, refreshSyncStatus, handleMarkCancelled } =
+    useTuroSyncActions(fetchData, setTuroSyncStatus, setSuccess, setError);
 
   const getVehicleName = useCallback(
     (vehicleId: string) => {
@@ -405,19 +409,7 @@ export default function BlockedDatesPage() {
     }
   };
 
-  const filteredBlocks = useMemo(() => {
-    let rows = filterVehicleId
-      ? blockedDates.filter((b) => b.vehicle_id === filterVehicleId)
-      : blockedDates;
-    if (listTab === "manual") {
-      rows = rows.filter((b) => b.source !== "turo-email");
-    } else if (listTab === "turo") {
-      rows = rows.filter((b) => b.source === "turo-email");
-    }
-    // Cancelled Turo trips stay in the DB for audit until purged; hide from calendar lists.
-    rows = rows.filter((b) => !(b.source === "turo-email" && isBlockedDateCancelled(b)));
-    return rows;
-  }, [blockedDates, filterVehicleId, listTab]);
+  const filteredBlocks = useFilteredBlockedDates(blockedDates, filterVehicleId, listTab);
 
   const today = useMemo(() => getLocalYmd(new Date()), []);
 
@@ -534,6 +526,8 @@ export default function BlockedDatesPage() {
           filteredCount={filteredBlocks.length}
           turoSyncStatus={turoSyncStatus}
           lastTuroIngest={lastTuroIngest}
+          syncingStatus={syncingStatus}
+          onRefreshSyncStatus={refreshSyncStatus}
         />
 
         <BlockedDatesGrid
@@ -543,10 +537,12 @@ export default function BlockedDatesPage() {
           pathname={pathname}
           editingId={editingId}
           deletingId={deletingId}
+          cancellingId={cancellingId}
           getVehicleName={getVehicleName}
           onSelectDetail={setSelectedBlockDetail}
           onStartEdit={startEditing}
           onDelete={handleDelete}
+          onMarkCancelled={handleMarkCancelled}
         />
 
         <BlockedDatesEditDrawer

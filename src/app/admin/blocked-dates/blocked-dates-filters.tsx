@@ -1,6 +1,8 @@
 "use client";
 
+import { RefreshCw } from "lucide-react";
 import { Select } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { Vehicle, getVehicleDisplayName } from "@/lib/types";
 import {
   type BlockedDatesListTab,
@@ -17,6 +19,8 @@ interface BlockedDatesFiltersProps {
   filteredCount: number;
   turoSyncStatus: TuroSyncStatus | null;
   lastTuroIngest: string | null;
+  syncingStatus?: boolean;
+  onRefreshSyncStatus?: () => void;
 }
 
 export function BlockedDatesFilters({
@@ -28,6 +32,8 @@ export function BlockedDatesFilters({
   filteredCount,
   turoSyncStatus,
   lastTuroIngest,
+  syncingStatus,
+  onRefreshSyncStatus,
 }: BlockedDatesFiltersProps) {
   return (
     <>
@@ -42,6 +48,19 @@ export function BlockedDatesFilters({
           {lastTuroIngest && (
             <span>Last ingest: {new Date(lastTuroIngest).toLocaleString()}</span>
           )}
+          {onRefreshSyncStatus && (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs"
+              disabled={syncingStatus}
+              onClick={onRefreshSyncStatus}
+            >
+              <RefreshCw className={`h-3 w-3 mr-1 ${syncingStatus ? "animate-spin" : ""}`} />
+              Refresh status
+            </Button>
+          )}
           <a
             href={TURO_RUNBOOK_URL}
             target="_blank"
@@ -55,7 +74,7 @@ export function BlockedDatesFilters({
 
       <div className="flex flex-wrap items-center gap-3 mb-4">
       <div className="flex rounded-lg border border-gray-200 overflow-hidden">
-        {(["all", "manual", "turo"] as const).map((tab) => (
+        {(["all", "manual", "turo", "cancelled"] as const).map((tab) => (
           <button
             key={tab}
             type="button"
@@ -66,7 +85,13 @@ export function BlockedDatesFilters({
                 : "bg-white text-gray-600 hover:bg-gray-50"
             }`}
           >
-            {tab === "all" ? "All" : tab === "manual" ? "Manual blocks" : "Turo trips"}
+            {tab === "all"
+              ? "All"
+              : tab === "manual"
+                ? "Manual blocks"
+                : tab === "turo"
+                  ? "Turo trips"
+                  : "Cancelled"}
           </button>
         ))}
       </div>

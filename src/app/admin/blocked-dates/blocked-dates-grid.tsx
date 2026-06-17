@@ -7,6 +7,7 @@ import {
   Loader2,
   Car,
   Pencil,
+  Ban,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
@@ -28,6 +29,8 @@ export interface BlockedDatesGridProps {
   onSelectDetail: (block: BlockedDate) => void;
   onStartEdit: (block: BlockedDate) => void;
   onDelete: (id: string) => void;
+  onMarkCancelled?: (id: string) => void;
+  cancellingId?: string | null;
 }
 
 export function BlockedDatesGrid({
@@ -41,6 +44,8 @@ export function BlockedDatesGrid({
   onSelectDetail,
   onStartEdit,
   onDelete,
+  onMarkCancelled,
+  cancellingId,
 }: BlockedDatesGridProps) {
   if (loading) {
     return (
@@ -183,6 +188,24 @@ export function BlockedDatesGrid({
               >
                 <Pencil className="h-4 w-4" />
               </button>
+              {block.source === "turo-email" && !block.cancelled_at && onMarkCancelled && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onMarkCancelled(block.id);
+                  }}
+                  disabled={cancellingId === block.id}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-amber-600 hover:bg-amber-50 transition-colors disabled:opacity-50"
+                  aria-label="Mark Turo trip cancelled"
+                  title="Mark as cancelled (hides from calendar)"
+                >
+                  {cancellingId === block.id ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Ban className="h-4 w-4" />
+                  )}
+                </button>
+              )}
               <button
                 onClick={(e) => {
                   e.stopPropagation();

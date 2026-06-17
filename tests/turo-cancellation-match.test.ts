@@ -10,6 +10,24 @@ test("reasonMatchesTuroGuest matches standard Turo reason lines", () => {
   assert.equal(reasonMatchesTuroGuest("Turo: Brent — $94.50", "Brent"), true);
   assert.equal(reasonMatchesTuroGuest("Turo: Mario", "Brent"), false);
   assert.equal(reasonMatchesTuroGuest("Turo: your Ram — $93.8", "your Ram"), true);
+  assert.equal(reasonMatchesTuroGuest("Turo: Dominik", "Dominik"), true);
+});
+
+test("pickTuroCancellationMatch matches $0 guest-only reason on exact dates", () => {
+  const picked = pickTuroCancellationMatch(
+    [
+      {
+        id: "jeep-dominik",
+        start_date: "2026-06-18",
+        end_date: "2026-06-21",
+        reason: "Turo: Dominik",
+      },
+    ],
+    "2026-06-18",
+    "2026-06-21",
+    "Dominik"
+  );
+  assert.equal(picked?.id, "jeep-dominik");
 });
 
 test("pickTuroCancellationMatch prefers exact date match", () => {

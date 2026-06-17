@@ -48,7 +48,7 @@ export interface ParseResult {
   rawMatches: string[];
 }
 
-export type BlockedDatesListTab = "all" | "manual" | "turo";
+export type BlockedDatesListTab = "all" | "manual" | "turo" | "cancelled";
 
 /** Format YYYY-MM-DD to human-readable "Apr 6, 2026" */
 export function formatBlockedDate(d: string): string {

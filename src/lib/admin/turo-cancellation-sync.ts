@@ -114,6 +114,21 @@ async function matchVehicle(
   return matchScore >= 4 ? matched : null;
 }
 
+export async function markTuroBlockedDateCancelled(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  row: Pick<TuroTripRow, "id" | "reason">,
+  opts?: { when?: string; deleteRow?: boolean; hasCancelledAt?: boolean }
+): Promise<"marked" | "deleted"> {
+  const when = opts?.when ?? new Date().toISOString();
+  const deleteRow = opts?.deleteRow ?? false;
+  let hasCancelledAt = opts?.hasCancelledAt;
+  if (hasCancelledAt === undefined) {
+    const probe = await supabase.from("blocked_dates").select("cancelled_at").limit(1);
+    hasCancelledAt = !probe.error;
+  }
+  return markTripCancelled(supabase, row as TuroTripRow, hasCancelledAt, when, deleteRow);
+}
+
 async function markTripCancelled(
   supabase: ReturnType<typeof getServiceSupabase>,
   row: TuroTripRow,
