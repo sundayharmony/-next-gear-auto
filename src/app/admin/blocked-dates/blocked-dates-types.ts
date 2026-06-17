@@ -1,3 +1,5 @@
+import { sanitizeLocation } from "@/lib/utils/turo-email-parser";
+
 export interface BlockedDate {
   id: string;
   vehicle_id: string;
@@ -49,6 +51,11 @@ export interface ParseResult {
 }
 
 export type BlockedDatesListTab = "all" | "manual" | "turo" | "cancelled";
+
+/** Safe pickup/dropoff label for display (strips bad values already stored in DB). */
+export function displayBlockedDateLocation(location: string | null | undefined): string | null {
+  return sanitizeLocation(location);
+}
 
 /** Format YYYY-MM-DD to human-readable "Apr 6, 2026" */
 export function formatBlockedDate(d: string): string {

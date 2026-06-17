@@ -16,6 +16,7 @@ import {
   formatBlockedDate,
   formatBlockedDateShort,
   formatBlockedTime,
+  displayBlockedDateLocation,
 } from "./blocked-dates-types";
 
 export interface BlockedDatesGridProps {
@@ -122,17 +123,21 @@ export function BlockedDatesGrid({
                     Originally ended {formatBlockedDate(block.original_end_date)}
                   </p>
                 )}
-                {(block.location || block.earnings != null) && (
-                  <p className="text-xs text-gray-400 mt-0.5">
-                    {block.location && <span>{block.location}</span>}
-                    {block.location && block.earnings != null && <span className="mx-1">·</span>}
-                    {block.earnings != null && (
-                      <span className="text-green-600 font-medium">
-                        ${Number(block.earnings).toFixed(2)}
-                      </span>
-                    )}
-                  </p>
-                )}
+                {(() => {
+                  const locationLabel = displayBlockedDateLocation(block.location);
+                  if (!locationLabel && block.earnings == null) return null;
+                  return (
+                    <p className="text-xs text-gray-400 mt-0.5">
+                      {locationLabel && <span>{locationLabel}</span>}
+                      {locationLabel && block.earnings != null && <span className="mx-1">·</span>}
+                      {block.earnings != null && (
+                        <span className="text-green-600 font-medium">
+                          ${Number(block.earnings).toFixed(2)}
+                        </span>
+                      )}
+                    </p>
+                  );
+                })()}
               </div>
             </div>
 

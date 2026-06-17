@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { parseTuroEmail } from "@/lib/utils/turo-email-parser";
+import { parseTuroEmail, sanitizeLocation } from "@/lib/utils/turo-email-parser";
 import { TURO_BLOCKED_SOURCE, CANCELLED_REASON_PREFIX } from "@/lib/utils/blocked-dates";
 import { pickTuroCancellationMatch, reasonMatchesTuroGuest } from "@/lib/utils/turo-cancellation-match";
 import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
@@ -144,6 +144,7 @@ export async function POST(req: NextRequest) {
 
     // ── Parse the Turo email ──
     const parsed = parseTuroEmail(emailText);
+    const tripLocation = sanitizeLocation(parsed.location);
     const isReconcileRefresh = explicitEventType === "reconcile_refresh";
     const isCancellationEvent =
       explicitEventType === "cancellation" || (explicitEventType !== "booking" && parsed.isCancellation);
@@ -466,7 +467,7 @@ export async function POST(req: NextRequest) {
         };
         if (parsed.earnings != null) updateFields.earnings = parsed.earnings;
         if (parsed.returnTime) updateFields.return_time = parsed.returnTime;
-        if (parsed.location) updateFields.location = parsed.location;
+        if (tripLocation) updateFields.location = tripLocation;
 
         // Update reason to reflect extension
         const guestNote = parsed.guestName ? `: ${parsed.guestName}` : "";
@@ -584,7 +585,7 @@ export async function POST(req: NextRequest) {
         if (shouldUpdateReason) updateFields.reason = reason;
         if (parsed.pickupTime != null) updateFields.pickup_time = parsed.pickupTime;
         if (parsed.returnTime != null) updateFields.return_time = parsed.returnTime;
-        if (parsed.location != null) updateFields.location = parsed.location;
+        if (tripLocation != null) updateFields.location = tripLocation;
         if (parsed.earnings != null) updateFields.earnings = parsed.earnings;
 
         const mergeRes = await supabase
@@ -676,7 +677,7 @@ export async function POST(req: NextRequest) {
         end_date: parsed.endDate,
         pickup_time: parsed.pickupTime ?? null,
         return_time: parsed.returnTime ?? null,
-        location: parsed.location ?? null,
+        location: tripLocation ?? null,
         earnings: parsed.earnings ?? null,
         source: TURO_BLOCKED_SOURCE,
         reason,

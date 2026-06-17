@@ -14,6 +14,54 @@ import { stripRichHtmlToText } from "@/lib/utils/validation";
  * may change their email templates over time.
  */
 
+/** Reject Turo email boilerplate mistakenly captured as a pickup/dropoff location. */
+export function sanitizeLocation(value: string | null | undefined): string | null {
+  if (value == null) return null;
+  const trimmed = value.trim().replace(/\s+/g, " ");
+  if (!trimmed) return null;
+  if (trimmed.length > 150) return null;
+
+  const boilerplatePatterns = [
+    /trip\s+start\s*:/i,
+    /trip\s+end\s*:/i,
+    /you\s+earn\s*:/i,
+    /you(?:'|['\u2019])ll\s+earn/i,
+    /mileage\s+included/i,
+    /reservation\s+id/i,
+    /\bbooked\s+by\b/i,
+    /https?:\/\//i,
+    /\bturo\.com\b/i,
+    /\breply\b/i,
+    /service\s+by\s+chance/i,
+    /\(\d{3}\)\s*\d{3}[-.]?\d{4}/,
+    /\b\d{3}[-.]?\d{3}[-.]?\d{4}\b/,
+    /\bvehicle\s*:/i,
+    /\$\d/,
+  ];
+  if (boilerplatePatterns.some((p) => p.test(trimmed))) return null;
+
+  const locationSignals = [
+    /\bairport\b/i,
+    /\binternational\b/i,
+    /,\s*[A-Z]{2}\b/,
+    /\b\d{1,6}\s+[A-Za-z]/,
+    /\b(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|ln|lane|way|hwy|highway|pkwy|parkway|pl|place|ct|court)\b/i,
+  ];
+  if (locationSignals.some((p) => p.test(trimmed))) return trimmed;
+
+  // Short place names without boilerplate (e.g. "Hoboken, NJ")
+  if (
+    trimmed.length <= 80 &&
+    /^[A-Za-z][A-Za-z\s,.'-]+$/.test(trimmed) &&
+    !/[?!]/.test(trimmed) &&
+    !/\b(?:earn|booked|trip|mileage|reservation|vehicle|jeep|tesla|toyota)\b/i.test(trimmed)
+  ) {
+    return trimmed;
+  }
+
+  return null;
+}
+
 export interface TuroEmailParseResult {
   guestName: string | null;
   vehicleDescription: string | null;
@@ -149,9 +197,8 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
     /trip\s+with\s+your\s+.+?\s+at\s+(.+?)\s+(?:is\s+)?booked\s+from/i,
   );
   if (atPickupMatch) {
-    pickupLocation = atPickupMatch[1].trim();
+    pickupLocation = sanitizeLocation(atPickupMatch[1].trim());
     if (pickupLocation) rawMatches.push(`Pickup location (at pickup): "${pickupLocation}"`);
-    else pickupLocation = null;
   }
 
   // "... at Newark Liberty International Airport from Wednesday, June 17, 2026 ..."
@@ -160,9 +207,8 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
       /trip\s+with\s+your\s+.+?\s+at\s+(.+?)\s+from\s+(?:\w+day,\s+)?\w+\s+\d{1,2},\s+\d{4}/i,
     );
     if (atBeforeFromMatch) {
-      pickupLocation = atBeforeFromMatch[1].trim();
+      pickupLocation = sanitizeLocation(atBeforeFromMatch[1].trim());
       if (pickupLocation) rawMatches.push(`Pickup location (at from): "${pickupLocation}"`);
-      else pickupLocation = null;
     }
   }
 
@@ -172,38 +218,41 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
       /(?:is\s+)?booked\s+from\s+.+?\s+to\s+.+?\s+at\s+(.+?)(?:\.|\s+You|\s+Trip|\n|$)/i,
     );
     if (atAfterBookedMatch) {
-      pickupLocation = atAfterBookedMatch[1].trim();
+      pickupLocation = sanitizeLocation(atAfterBookedMatch[1].trim());
       if (pickupLocation) rawMatches.push(`Pickup location (at after booked): "${pickupLocation}"`);
-      else pickupLocation = null;
     }
   }
 
-  // "Delivery Newark, NJ Newark Liberty International Airport"
-  const deliveryMatch = text.match(/delivery\s+(.+?)(?:\n|Guests|Special|To help|Review|Use the|$)/i);
-  if (deliveryMatch) {
-    // Clean up: strip trailing "method, and contact..." text
-    pickupLocation = deliveryMatch[1].trim()
-      .replace(/\s*method,?\s+and\s+contact\s+.*/i, "")
-      .replace(/\s*,?\s+and\s+contact\s+.*/i, "")
-      .trim();
-    if (pickupLocation) rawMatches.push(`Pickup location (delivery): "${pickupLocation}"`);
-    else pickupLocation = null;
+  // "Delivery Newark, NJ Newark Liberty International Airport" (Turo delivery header — not "delivery service by chance?")
+  if (!pickupLocation) {
+    const deliveryMatch = text.match(
+      /delivery\s+([A-Z][^\n!?]{2,120}?)(?:\s+method|\n|Guests|Special|To help|Review|Use the|$)/i,
+    );
+    if (deliveryMatch) {
+      const candidate = deliveryMatch[1]
+        .trim()
+        .replace(/\s*method,?\s+and\s+contact\s+.*/i, "")
+        .replace(/\s*,?\s+and\s+contact\s+.*/i, "")
+        .trim();
+      pickupLocation = sanitizeLocation(candidate);
+      if (pickupLocation) rawMatches.push(`Pickup location (delivery): "${pickupLocation}"`);
+    }
   }
 
   const pickupMatch = text.match(
     /pickup\s+location\s*[:–—-]\s*(.+?)(?=\s+drop[\s-]?off\s+location|\s+trip\s+start|\s+trip\s+end|\n|$)/i
   );
   if (pickupMatch && !pickupLocation) {
-    pickupLocation = pickupMatch[1].trim();
-    rawMatches.push(`Pickup location: "${pickupLocation}"`);
+    pickupLocation = sanitizeLocation(pickupMatch[1].trim());
+    if (pickupLocation) rawMatches.push(`Pickup location: "${pickupLocation}"`);
   }
 
   const dropoffMatch = text.match(
     /drop[\s-]?off\s+location\s*[:–—-]\s*(.+?)(?=\s+trip\s+start|\s+trip\s+end|\n|$)/i
   );
   if (dropoffMatch) {
-    dropoffLocation = dropoffMatch[1].trim();
-    rawMatches.push(`Dropoff location: "${dropoffLocation}"`);
+    dropoffLocation = sanitizeLocation(dropoffMatch[1].trim());
+    if (dropoffLocation) rawMatches.push(`Dropoff location: "${dropoffLocation}"`);
   }
 
   if (!pickupLocation) {
@@ -211,10 +260,13 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
       /location\s*[:–—-]\s*(.+?)(?=\s+trip\s+start|\s+trip\s+end|\n|$)/i
     );
     if (genericLocMatch) {
-      pickupLocation = genericLocMatch[1].trim();
-      rawMatches.push(`Location: "${pickupLocation}"`);
+      pickupLocation = sanitizeLocation(genericLocMatch[1].trim());
+      if (pickupLocation) rawMatches.push(`Location: "${pickupLocation}"`);
     }
   }
+
+  pickupLocation = sanitizeLocation(pickupLocation);
+  dropoffLocation = sanitizeLocation(dropoffLocation);
 
   if (pickupLocation && dropoffLocation && pickupLocation.toLowerCase() !== dropoffLocation.toLowerCase()) {
     location = `${pickupLocation} -> ${dropoffLocation}`;
@@ -374,6 +426,7 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
     /trip\s+end\s*:?.+?\s+([A-Z][a-z]+)\s+(?:\(\d{3}\)|\+\d|Reservation\s+ID)/i,
     // "Bob's trip is booked" / "Kati's trip with your..."
     /([A-Z][a-z]+(?:\s+[A-Z][a-z.]+)?)'s\s+trip/i,
+    /booked\s+by\s+([A-Z][a-z]+(?:\s+(?!Trip|Vehicle|Reservation)[A-Z][a-z.]+)?)\b/i,
     /(?:guest|booked by|renter|driver)\s*[:–—-]\s*([A-Z][a-z]+(?:\s+[A-Z][a-z.]+)?)/i,
     /([A-Z][a-z]+(?:\s+[A-Z]\.?))\s+(?:booked|has booked|reserved|wants to book)/i,
     /new\s+(?:booking|reservation|trip)\s+(?:from|by)\s+([A-Z][a-z]+(?:\s+[A-Z][a-z.]+)?)/i,

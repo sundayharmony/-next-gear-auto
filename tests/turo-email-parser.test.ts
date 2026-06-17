@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseTuroEmail } from "../src/lib/utils/turo-email-parser";
+import { parseTuroEmail, sanitizeLocation } from "../src/lib/utils/turo-email-parser";
 
 test("parseTuroEmail detects cancellation emails", () => {
   const text = `
@@ -125,4 +125,44 @@ test("parseTuroEmail parses Tej booking from HTML email body", () => {
   assert.equal(parsed.pickupTime, "11:00");
   assert.equal(parsed.returnTime, "17:30");
   assert.equal(parsed.earnings, 145.56);
+});
+
+test("parseTuroEmail parses Runzhuo booked-by Gmail plain-text without garbage location", () => {
+  const text =
+    "Need delivery service by chance? Reply https://turo.com/trip/abc123 Jeep Grand Cherokee 2024 booked by Runzhuo Trip start: 6/26/26 5:00 PM Trip end: 6/28/26 5:00 PM You earn: $118.30 Mileage included: 600 miles";
+  const parsed = parseTuroEmail(text);
+  assert.equal(parsed.isCancellation, false);
+  assert.equal(parsed.guestName, "Runzhuo");
+  assert.equal(parsed.vehicleDescription, "Jeep Grand Cherokee 2024");
+  assert.equal(parsed.startDate, "2026-06-26");
+  assert.equal(parsed.endDate, "2026-06-28");
+  assert.equal(parsed.pickupTime, "17:00");
+  assert.equal(parsed.returnTime, "17:00");
+  assert.equal(parsed.earnings, 118.3);
+  assert.equal(parsed.pickupLocation, null);
+  assert.equal(parsed.location, null);
+});
+
+test("parseTuroEmail extracts delivery header location when present", () => {
+  const text = `
+    Delivery Newark, NJ Newark Liberty International Airport
+    Guests Special requests
+    Trip start: 6/26/26 5:00 PM Trip end: 6/28/26 5:00 PM
+    Jeep Grand Cherokee 2024 booked by Runzhuo
+  `;
+  const parsed = parseTuroEmail(text);
+  assert.equal(parsed.pickupLocation, "Newark, NJ Newark Liberty International Airport");
+  assert.equal(parsed.location, "Newark, NJ Newark Liberty International Airport");
+});
+
+test("sanitizeLocation rejects email boilerplate and keeps real addresses", () => {
+  assert.equal(
+    sanitizeLocation(
+      "service by chance? Reply https://turo.com/trip Jeep Grand Cherokee booked by Runzhuo Trip start: 6/26/26"
+    ),
+    null
+  );
+  assert.equal(sanitizeLocation("Newark Liberty International Airport"), "Newark Liberty International Airport");
+  assert.equal(sanitizeLocation("123 Main St, Hoboken, NJ"), "123 Main St, Hoboken, NJ");
+  assert.equal(sanitizeLocation("Hoboken, NJ"), "Hoboken, NJ");
 });

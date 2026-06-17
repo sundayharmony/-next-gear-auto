@@ -27,6 +27,7 @@ import {
   formatBlockedDate,
   formatBlockedDateShort,
   formatBlockedTime,
+  displayBlockedDateLocation,
 } from "./blocked-dates-types";
 import { StaffSidePanel } from "@/components/staff/staff-overlay";
 
@@ -254,7 +255,7 @@ export function BlockedDatesEmailForm({
               </div>
               <div className="col-span-2">
                 <label className="text-xs font-medium text-gray-500">Pickup Location</label>
-                <p className="font-semibold">{parseResult.location || "—"}</p>
+                <p className="font-semibold">{displayBlockedDateLocation(parseResult.location) || "—"}</p>
               </div>
             </div>
 
@@ -654,7 +655,7 @@ export function BlockedDatesDetailDrawer({
           </div>
           <div>
             <p className="text-xs text-gray-500">Pickup Location</p>
-            <p className="font-medium">{block.location || "Not available"}</p>
+            <p className="font-medium">{displayBlockedDateLocation(block.location) || "Not available"}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Earnings</p>
