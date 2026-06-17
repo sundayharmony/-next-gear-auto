@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   pickTuroCancellationMatch,
+  pickTuroTripForMetadataRefresh,
   reasonMatchesTuroGuest,
 } from "../src/lib/utils/turo-cancellation-match";
 
@@ -61,4 +62,14 @@ test("pickTuroCancellationMatch matches guest when only overlapping row exists",
     "Mario"
   );
   assert.equal(picked?.reason, "Turo: Mario");
+});
+
+test("pickTuroTripForMetadataRefresh matches guest when DB start date differs by one day", () => {
+  const picked = pickTuroTripForMetadataRefresh(
+    [{ id: "chevon", start_date: "2026-06-18", end_date: "2026-06-21", reason: "Turo: Chevon — $127.4" }],
+    "2026-06-19",
+    "2026-06-21",
+    "Chevon"
+  );
+  assert.equal(picked?.id, "chevon");
 });

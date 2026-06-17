@@ -146,6 +146,14 @@ function runLocationBackfill30() {
   runChunkedBackfill(30, "location");
 }
 
+function runLocationBackfill90() {
+  runChunkedBackfill(90, "location");
+}
+
+function runLocationBackfill180() {
+  runChunkedBackfill(180, "location");
+}
+
 function runChunkedBackfill(days, mode) {
   var safeDays = Math.max(1, Math.min(Number(days) || 30, 365));
   var safeMode = mode === "cancellation" ? "cancellation" : mode === "location" ? "location" : "booking";
@@ -300,6 +308,9 @@ function buildIncrementalQuery(lastSyncIso) {
 function buildBackfillQuery(days, mode) {
   if (mode === "cancellation") {
     return 'from:turo.com (cancel OR cancelled OR canceled OR "you\'ve cancelled" OR "you\'ve canceled") newer_than:' + days + "d";
+  }
+  if (mode === "location") {
+    return 'from:turo.com ("is booked" OR booked) newer_than:' + days + "d";
   }
   return "from:turo.com newer_than:" + days + "d";
 }

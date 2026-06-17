@@ -92,6 +92,7 @@ Use manual chunked backfill helpers in Apps Script:
 - `runBookingBackfill30()`
 - `runCancellationBackfill30()`
 - `runLocationBackfill30()` — re-sends booking emails as `reconcile_refresh` to fill missing pickup locations (Tej-style `at … is booked from` emails)
+- `runLocationBackfill90()` / `runLocationBackfill180()` — wider windows for older trips; run repeatedly until locations are filled (80 emails per run cap)
 
 Run them manually in small windows only when needed (e.g., recovery or initial migration), then return to automatic `runTuroSync`.
 

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { parseTuroEmail, sanitizeLocation } from "@/lib/utils/turo-email-parser";
 import { TURO_BLOCKED_SOURCE, CANCELLED_REASON_PREFIX } from "@/lib/utils/blocked-dates";
-import { pickTuroCancellationMatch, reasonMatchesTuroGuest } from "@/lib/utils/turo-cancellation-match";
+import { pickTuroCancellationMatch, pickTuroTripForMetadataRefresh, reasonMatchesTuroGuest } from "@/lib/utils/turo-cancellation-match";
 import { getTuroDriverFromReason, mergeTuroLocationField } from "@/lib/utils/turo-blocked-date";
 import { markTuroBlockedDateCancelled } from "@/lib/admin/turo-cancellation-sync";
 import { logger } from "@/lib/utils/logger";
@@ -134,6 +134,7 @@ export async function POST(req: NextRequest) {
     const emailText: string = String(body.emailText || body.email_text || "").slice(0, 65536);
     const explicitEventType =
       typeof body.eventType === "string" ? String(body.eventType).toLowerCase() : "";
+    const sourceMode = typeof body.sourceMode === "string" ? String(body.sourceMode) : "";
 
     if (!emailText || emailText.length < 20) {
       return NextResponse.json(
@@ -288,7 +289,7 @@ export async function POST(req: NextRequest) {
         q = q.lte("start_date", filters.overlapEnd).gte("end_date", filters.overlapStart);
       }
 
-      let { data, error } = await q.is("cancelled_at", null).order("created_at", { ascending: false }).limit(10);
+      let { data, error } = await q.is("cancelled_at", null).order("created_at", { ascending: false }).limit(100);
 
       if (error && isMissingColumnError(error)) {
         let fb = supabase
@@ -297,7 +298,7 @@ export async function POST(req: NextRequest) {
           .eq("vehicle_id", matchedVehicle!.id)
           .eq("source", TURO_BLOCKED_SOURCE)
           .order("created_at", { ascending: false })
-          .limit(10);
+          .limit(100);
         if (filters.startDate) fb = fb.eq("start_date", filters.startDate);
         if (filters.overlapStart && filters.overlapEnd) {
           fb = fb.lte("start_date", filters.overlapEnd).gte("end_date", filters.overlapStart);
@@ -333,6 +334,78 @@ export async function POST(req: NextRequest) {
         );
       }
       return { data: rows, error: null };
+    }
+
+    // ── Location/time reconcile (guest match even when DB dates differ) ──
+    if (isReconcileRefresh && !isCancellationEvent) {
+      const { data: vehicleTrips } = await findActiveTuroTrips({});
+      const refreshRow = pickTuroTripForMetadataRefresh(
+        vehicleTrips || [],
+        parsed.startDate!,
+        parsed.endDate!,
+        parsed.guestName
+      );
+
+      if (refreshRow) {
+        const existing = (vehicleTrips || []).find((r) => r.id === refreshRow.id)!;
+        const locMerge = mergeTuroLocationField(existing.location, tripLocation, {
+          forceRefresh: true,
+        });
+        const metaUpdates: Record<string, string | null> = {};
+        if (locMerge !== undefined) metaUpdates.location = locMerge;
+        if (parsed.pickupTime != null) metaUpdates.pickup_time = parsed.pickupTime;
+        if (parsed.returnTime != null) metaUpdates.return_time = parsed.returnTime;
+
+        if (Object.keys(metaUpdates).length > 0) {
+          const metaRes = await supabase
+            .from("blocked_dates")
+            .update(metaUpdates)
+            .eq("id", refreshRow.id)
+            .select(TURO_SELECT_FULL)
+            .maybeSingle();
+
+          if (metaRes.error) {
+            logger.error("Turo webhook: reconcile metadata update error", metaRes.error);
+            return NextResponse.json({ success: false, message: metaRes.error.message }, { status: 500 });
+          }
+
+          return NextResponse.json({
+            success: true,
+            action: "reconcile_metadata",
+            message: `Refreshed metadata for ${vehicleLabel} (${refreshRow.start_date} → ${refreshRow.end_date})`,
+            data: asTuroRow(metaRes.data as Record<string, unknown>),
+            parsed: {
+              confidence: parsed.confidence,
+              guestName: parsed.guestName,
+              vehicleMatched: vehicleLabel,
+              vehicleMatchScore: matchScore,
+            },
+          });
+        }
+
+        return NextResponse.json({
+          success: true,
+          action: "reconcile_noop",
+          message: `No metadata changes for ${vehicleLabel}`,
+        });
+      }
+
+      if (sourceMode === "location_backfill") {
+        logger.warn("Turo webhook: location backfill could not match trip", {
+          vehicle: vehicleLabel,
+          guest: parsed.guestName,
+          startDate: parsed.startDate,
+          endDate: parsed.endDate,
+        });
+        return NextResponse.json(
+          {
+            success: false,
+            message: "No matching active Turo trip found for location refresh",
+            parsed: { guestName: parsed.guestName, vehicleMatched: vehicleLabel },
+          },
+          { status: 404 }
+        );
+      }
     }
 
     // ── Handle cancellation emails ──
@@ -682,7 +755,16 @@ export async function POST(req: NextRequest) {
     }
 
     if (isReconcileRefresh) {
-      // Prior trip may already be cancelled (e.g. guest swap) — create if missing.
+      if (sourceMode === "location_backfill") {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "No matching active Turo trip found for location refresh",
+            parsed: { guestName: parsed.guestName, vehicleMatched: vehicleLabel },
+          },
+          { status: 404 }
+        );
+      }
       logger.info("Turo webhook: reconcile refresh had no active trip; creating", {
         vehicle: vehicleLabel,
         startDate: parsed.startDate,

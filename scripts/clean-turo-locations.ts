@@ -25,7 +25,7 @@ async function main() {
   if (error) throw new Error(error.message);
 
   const junk = (data || []).filter((r) => r.location && !storedTuroLocation(r.location));
-  const missing = (data || []).filter((r) => !r.location?.trim());
+  const missing = (data || []).filter((r) => !storedTuroLocation(r.location));
 
   console.log(`Active Turo trips: ${data?.length ?? 0}`);
   console.log(`Invalid location values: ${junk.length}`);
@@ -35,9 +35,17 @@ async function main() {
     console.log(`  CLEAR ${row.start_date} ${row.reason?.slice(0, 40)} | was: ${String(row.location).slice(0, 60)}...`);
   }
 
+  if (missing.length) {
+    console.log("\nMissing location:");
+    for (const row of missing) {
+      console.log(`  ${row.start_date}  ${row.reason ?? ""}`);
+    }
+  }
+
   if (!apply) {
     console.log("\nDry run. Re-run with --apply to null invalid locations.");
-    console.log("Then run runLocationBackfill30() in Google Apps Script to fill from booking emails.");
+    console.log("Then run runLocationBackfill90() or runLocationBackfill180() in Apps Script.");
+    console.log("Re-run until Missing location is 0 (80 emails per run max).");
     return;
   }
 
