@@ -189,15 +189,16 @@ export function TimelineView({
   }, [bookingsByVehicle, vehicles, dateKeys, days]);
 
   const scrollToTodayColumn = useCallback(
-    (behavior: ScrollBehavior = "smooth") => {
+    (behavior: ScrollBehavior = "smooth"): boolean => {
       const el = timelineScrollEl;
-      if (!el) return;
+      if (!el) return false;
       const todayIdx = dateKeys.indexOf(today);
-      if (todayIdx < 0) return;
+      if (todayIdx < 0) return false;
       const header = el.querySelector<HTMLElement>(`th[data-day-index="${todayIdx}"]`);
-      if (!header) return;
-      const target = header.offsetLeft - Math.min(el.clientWidth * 0.12, 80);
+      if (!header) return false;
+      const target = header.offsetLeft - VEHICLE_COL_PX - 4;
       el.scrollTo({ left: Math.max(0, target), behavior });
+      return true;
     },
     [timelineScrollEl, dateKeys, today]
   );
@@ -232,8 +233,9 @@ export function TimelineView({
 
   useLayoutEffect(() => {
     if (!timelineScrollEl || initialScrollDone.current) return;
-    scrollToTodayColumn("auto");
-    initialScrollDone.current = true;
+    if (scrollToTodayColumn("auto")) {
+      initialScrollDone.current = true;
+    }
   }, [timelineScrollEl, scrollToTodayColumn]);
 
   useEffect(() => {
@@ -251,8 +253,8 @@ export function TimelineView({
       const dayHeaders = el.querySelectorAll<HTMLElement>("th[data-day-index]");
       if (!dayHeaders.length) return;
 
-      const viewportLeft = el.scrollLeft;
-      const viewportRight = viewportLeft + el.clientWidth;
+      const viewportLeft = el.scrollLeft + VEHICLE_COL_PX;
+      const viewportRight = el.scrollLeft + el.clientWidth;
       let firstVisible = -1;
       let lastVisible = -1;
 
