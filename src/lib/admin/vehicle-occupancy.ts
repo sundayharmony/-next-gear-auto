@@ -57,19 +57,47 @@ export interface VehicleOccupancyQuery {
   limit?: number;
 }
 
-export function todayYmdUtc(): string {
-  return new Date().toISOString().slice(0, 10);
+function localTimeToMinutes(time: string | null | undefined): number | null {
+  if (!time) return null;
+  const parts = time.split(":");
+  if (parts.length < 2) return null;
+  const h = Number(parts[0]);
+  const m = Number(parts[1]);
+  if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+  return h * 60 + m;
 }
 
-/** Deterministic Turo pseudo-status from calendar dates (UTC YYYY-MM-DD). */
+export type TuroOccupancyTimeContext = {
+  pickup_time?: string | null;
+  return_time?: string | null;
+  now?: Date;
+};
+
+/** Deterministic Turo pseudo-status from local calendar dates (YYYY-MM-DD). */
 export function deriveTuroOccupancyStatus(
   startDate: string,
   endDate: string,
-  today: string = todayYmdUtc(),
-  cancelMeta?: { cancelled_at?: string | null; reason?: string | null }
+  today: string = formatYyyyMmDdLocal(new Date()),
+  cancelMeta?: { cancelled_at?: string | null; reason?: string | null },
+  times?: TuroOccupancyTimeContext
 ): OccupancyStatus {
   if (cancelMeta && isBlockedDateCancelled(cancelMeta)) return "cancelled";
+
+  const now = times?.now ?? new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const pickupMinutes = localTimeToMinutes(times?.pickup_time);
+  const returnMinutes = localTimeToMinutes(times?.return_time);
+
   if (endDate < today) return "completed";
+  if (endDate === today && returnMinutes != null && nowMinutes > returnMinutes) {
+    return "completed";
+  }
+
+  if (startDate > today) return "confirmed";
+  if (startDate === today && pickupMinutes != null && nowMinutes < pickupMinutes) {
+    return "confirmed";
+  }
+
   if (startDate <= today && endDate >= today) return "active";
   return "confirmed";
 }
@@ -156,10 +184,19 @@ function mapTuroBlock(
   const n = normalizeBlockedRow(row);
   const revenue = resolveTuroTripRevenue({ earnings: n.earnings, reason: n.reason });
   const canViewPricing = role === "admin";
-  const status = deriveTuroOccupancyStatus(n.start_date, n.end_date, todayYmdUtc(), {
-    cancelled_at: n.cancelled_at,
-    reason: n.reason,
-  });
+  const status = deriveTuroOccupancyStatus(
+    n.start_date,
+    n.end_date,
+    formatYyyyMmDdLocal(new Date()),
+    {
+      cancelled_at: n.cancelled_at,
+      reason: n.reason,
+    },
+    {
+      pickup_time: n.pickup_time,
+      return_time: n.return_time,
+    }
+  );
   const turoTripName = `${vehicleName || "Unknown Vehicle"} on TURO`;
   return {
     id: `turo:${n.id}`,
@@ -201,7 +238,7 @@ async function fetchTuroBlocksForVehicle(
   let dbQuery = supabase.from("blocked_dates").select(fullSelect).eq("vehicle_id", vehicleId).eq("source", TURO_BLOCKED_SOURCE);
 
   if (role === "manager") {
-    dbQuery = dbQuery.gte("end_date", todayYmdUtc());
+    dbQuery = dbQuery.gte("end_date", formatYyyyMmDdLocal(new Date()));
   }
   if (query.from) {
     dbQuery = dbQuery.gte("end_date", query.from);
@@ -387,7 +424,7 @@ export async function fetchGlobalOccupancy(
     .limit(2000);
 
   if (role === "manager") {
-    turoQuery = turoQuery.gte("end_date", todayYmdUtc());
+    turoQuery = turoQuery.gte("end_date", formatYyyyMmDdLocal(new Date()));
   }
   if (opts.from) turoQuery = turoQuery.gte("end_date", opts.from);
   if (opts.to) turoQuery = turoQuery.lte("start_date", opts.to);
