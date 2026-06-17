@@ -188,19 +188,43 @@ export function TimelineView({
     return counts;
   }, [bookingsByVehicle, vehicles, dateKeys, days]);
 
+  const computeTodayScrollLeft = useCallback(
+    (el: HTMLDivElement): number | null => {
+      const todayIdx = dateKeys.indexOf(today);
+      if (todayIdx < 0) return null;
+      if (todayIdx === 0) return 0;
+
+      const table = el.querySelector<HTMLTableElement>("table");
+      if (!table || table.scrollWidth <= VEHICLE_COL_PX) return null;
+
+      const dayCount = dateKeys.length;
+      const dayAreaWidth = table.scrollWidth - VEHICLE_COL_PX;
+      const colWidth = dayCount > 0 ? dayAreaWidth / dayCount : DAY_COL_MIN_PX;
+      let target = Math.max(0, todayIdx * colWidth - 4);
+
+      const header = el.querySelector<HTMLElement>(`th[data-day-index="${todayIdx}"]`);
+      if (header) {
+        const containerRect = el.getBoundingClientRect();
+        const headerRect = header.getBoundingClientRect();
+        const headerContentLeft = el.scrollLeft + (headerRect.left - containerRect.left);
+        target = Math.max(0, headerContentLeft - VEHICLE_COL_PX - 4);
+      }
+
+      return target;
+    },
+    [dateKeys, today]
+  );
+
   const scrollToTodayColumn = useCallback(
     (behavior: ScrollBehavior = "smooth"): boolean => {
       const el = timelineScrollEl;
       if (!el) return false;
-      const todayIdx = dateKeys.indexOf(today);
-      if (todayIdx < 0) return false;
-      const header = el.querySelector<HTMLElement>(`th[data-day-index="${todayIdx}"]`);
-      if (!header) return false;
-      const target = header.offsetLeft - VEHICLE_COL_PX - 4;
-      el.scrollTo({ left: Math.max(0, target), behavior });
+      const target = computeTodayScrollLeft(el);
+      if (target === null) return false;
+      el.scrollTo({ left: target, behavior });
       return true;
     },
-    [timelineScrollEl, dateKeys, today]
+    [timelineScrollEl, computeTodayScrollLeft]
   );
 
   useLayoutEffect(() => {
@@ -232,10 +256,50 @@ export function TimelineView({
   }, [timelineScrollEl]);
 
   useLayoutEffect(() => {
-    if (!timelineScrollEl || initialScrollDone.current) return;
-    if (scrollToTodayColumn("auto")) {
-      initialScrollDone.current = true;
+    const el = timelineScrollEl;
+    if (!el || initialScrollDone.current) return undefined;
+
+    let cancelled = false;
+    let attempts = 0;
+    const maxAttempts = 12;
+
+    const tryInitialScroll = () => {
+      if (cancelled || initialScrollDone.current) return;
+      attempts += 1;
+
+      const table = el.querySelector<HTMLTableElement>("table");
+      const tableReady =
+        !!table && table.scrollWidth >= VEHICLE_COL_PX + DAY_COL_MIN_PX;
+
+      if (tableReady && scrollToTodayColumn("auto")) {
+        initialScrollDone.current = true;
+        return;
+      }
+
+      if (attempts < maxAttempts) {
+        requestAnimationFrame(tryInitialScroll);
+      }
+    };
+
+    tryInitialScroll();
+
+    const table = el.querySelector<HTMLTableElement>("table");
+    let resizeObserver: ResizeObserver | undefined;
+    if (table && typeof ResizeObserver !== "undefined") {
+      resizeObserver = new ResizeObserver(() => {
+        if (!initialScrollDone.current) {
+          tryInitialScroll();
+        } else {
+          resizeObserver?.disconnect();
+        }
+      });
+      resizeObserver.observe(table);
     }
+
+    return () => {
+      cancelled = true;
+      resizeObserver?.disconnect();
+    };
   }, [timelineScrollEl, scrollToTodayColumn]);
 
   useEffect(() => {
