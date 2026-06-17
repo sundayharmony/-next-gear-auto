@@ -657,22 +657,12 @@ export async function POST(req: NextRequest) {
     }
 
     if (isReconcileRefresh) {
-      logger.info("Turo webhook: reconcile refresh had no matching active trip", {
+      // Prior trip may already be cancelled (e.g. guest swap) — create if missing.
+      logger.info("Turo webhook: reconcile refresh had no active trip; creating", {
         vehicle: vehicleLabel,
         startDate: parsed.startDate,
         endDate: parsed.endDate,
-      });
-      return NextResponse.json({
-        success: true,
-        action: "reconcile_skipped",
-        message: "No matching active Turo row found to refresh",
-        parsed: {
-          confidence: parsed.confidence,
-          guestName: parsed.guestName,
-          vehicleDescription: parsed.vehicleDescription,
-          vehicleMatched: vehicleLabel,
-          vehicleMatchScore: matchScore,
-        },
+        guest: parsed.guestName,
       });
     }
 
