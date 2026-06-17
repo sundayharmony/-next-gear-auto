@@ -3,7 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { parseTuroEmail, sanitizeLocation } from "@/lib/utils/turo-email-parser";
 import { TURO_BLOCKED_SOURCE, CANCELLED_REASON_PREFIX } from "@/lib/utils/blocked-dates";
 import { pickTuroCancellationMatch, reasonMatchesTuroGuest } from "@/lib/utils/turo-cancellation-match";
-import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
+import { getTuroDriverFromReason, mergeTuroLocationField } from "@/lib/utils/turo-blocked-date";
 import { markTuroBlockedDateCancelled } from "@/lib/admin/turo-cancellation-sync";
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
@@ -467,7 +467,10 @@ export async function POST(req: NextRequest) {
         };
         if (parsed.earnings != null) updateFields.earnings = parsed.earnings;
         if (parsed.returnTime) updateFields.return_time = parsed.returnTime;
-        if (tripLocation) updateFields.location = tripLocation;
+        const extLoc = mergeTuroLocationField(matchedBlock.location, tripLocation, {
+          forceRefresh: isReconcileRefresh,
+        });
+        if (extLoc !== undefined) updateFields.location = extLoc;
 
         // Update reason to reflect extension
         const guestNote = parsed.guestName ? `: ${parsed.guestName}` : "";
@@ -545,7 +548,25 @@ export async function POST(req: NextRequest) {
     });
 
     if (overlapping && overlapping.length > 0) {
-      const row = overlapping[0];
+      const picked = pickTuroCancellationMatch(
+        overlapping,
+        parsed.startDate!,
+        parsed.endDate!,
+        parsed.guestName
+      );
+      let row: TuroBlockedRow | null = picked
+        ? overlapping.find((r) => r.id === picked.id) ?? null
+        : overlapping.length === 1
+          ? overlapping[0]
+          : null;
+      if (!row && parsed.guestName) {
+        const byGuest = overlapping.filter((r) =>
+          reasonMatchesTuroGuest(r.reason, parsed.guestName)
+        );
+        if (byGuest.length === 1) row = byGuest[0];
+      }
+
+      if (row) {
       const existingGuest = getTuroDriverFromReason(row.reason);
       const newGuest = parsed.guestName?.trim() || null;
       const isDifferentGuest =
@@ -597,7 +618,10 @@ export async function POST(req: NextRequest) {
         if (shouldUpdateReason) updateFields.reason = reason;
         if (parsed.pickupTime != null) updateFields.pickup_time = parsed.pickupTime;
         if (parsed.returnTime != null) updateFields.return_time = parsed.returnTime;
-        if (tripLocation != null) updateFields.location = tripLocation;
+        const locMerge = mergeTuroLocationField(row.location, tripLocation, {
+          forceRefresh: isReconcileRefresh,
+        });
+        if (locMerge !== undefined) updateFields.location = locMerge;
         if (parsed.earnings != null) updateFields.earnings = parsed.earnings;
 
         const mergeRes = await supabase
@@ -653,6 +677,7 @@ export async function POST(req: NextRequest) {
             vehicleMatchScore: matchScore,
           },
         });
+      }
       }
     }
 

@@ -141,9 +141,14 @@ function runCancellationBackfill30() {
   runChunkedBackfill(30, "cancellation");
 }
 
+/** Re-send booking emails as reconcile_refresh to fill missing pickup locations. */
+function runLocationBackfill30() {
+  runChunkedBackfill(30, "location");
+}
+
 function runChunkedBackfill(days, mode) {
   var safeDays = Math.max(1, Math.min(Number(days) || 30, 365));
-  var safeMode = mode === "cancellation" ? "cancellation" : "booking";
+  var safeMode = mode === "cancellation" ? "cancellation" : mode === "location" ? "location" : "booking";
   var query = buildBackfillQuery(safeDays, safeMode);
   var threads = searchThreadsCapped(query, MAX_THREADS_PER_RUN);
   var sent = 0;
@@ -166,7 +171,12 @@ function runChunkedBackfill(days, mode) {
         skipped++;
         continue;
       }
-      var res = sendToWebhook(msg, eventType, "backfill");
+      var sendType = safeMode === "location" ? "reconcile_refresh" : eventType;
+      if (safeMode === "location" && eventType === "cancellation") {
+        skipped++;
+        continue;
+      }
+      var res = sendToWebhook(msg, sendType, safeMode === "location" ? "location_backfill" : "backfill");
       if (res.ok) sent++;
       else skipped++;
     }

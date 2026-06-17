@@ -15,6 +15,7 @@ import {
   bookingIsCurrentlyOccupying,
 } from "@/lib/utils/recurring-booking";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
+import { storedTuroLocation } from "@/lib/utils/turo-email-parser";
 
 /** Service-role Supabase client — typed loosely so real Postgrest builders are accepted. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -222,7 +223,7 @@ function mapTuroBlock(
     reason: n.reason,
     is_extension: n.is_extension,
     created_at: n.created_at,
-    location: n.location,
+    location: storedTuroLocation(n.location),
     blocked_date_id: n.id,
   };
 }

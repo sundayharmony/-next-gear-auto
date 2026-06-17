@@ -22,6 +22,7 @@
     "check:api-auth-matrix": "node ./scripts/check-api-auth-matrix.mjs",
     "turo:sync-cancellations": "tsx --env-file=.env.local scripts/sync-turo-cancellations.ts",
     "turo:audit": "tsx --env-file=.env.local scripts/audit-turo-cancellations.ts",
+    "turo:clean-locations": "tsx --env-file=.env.local scripts/clean-turo-locations.ts",
     "turo:post-webhook": "tsx --env-file=.env.local scripts/post-turo-webhook.ts"
   },
   "keywords": [],

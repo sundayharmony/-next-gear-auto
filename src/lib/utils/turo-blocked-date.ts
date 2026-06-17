@@ -1,3 +1,5 @@
+import { storedTuroLocation } from "@/lib/utils/turo-email-parser";
+
 /** Admin calendar/bookings list label — guest first so search and timeline bars match Turo. */
 export function formatTuroOccupancyCustomerName(
   reason: string | null | undefined,
@@ -19,6 +21,25 @@ export function getTuroDriverFromReason(reason: string | null | undefined): stri
   if (!match) return null;
   const name = match[1].trim();
   return name || null;
+}
+
+/**
+ * Decide whether to write `location` on merge/update.
+ * Fills missing/invalid stored values; replaces junk; optional force on reconcile.
+ */
+export function mergeTuroLocationField(
+  existing: string | null | undefined,
+  parsed: string | null | undefined,
+  opts?: { forceRefresh?: boolean }
+): string | null | undefined {
+  const parsedClean = storedTuroLocation(parsed);
+  const existingClean = storedTuroLocation(existing);
+  if (parsedClean) {
+    if (!existingClean || opts?.forceRefresh) return parsedClean;
+    return undefined;
+  }
+  if (existing && !existingClean) return null;
+  return undefined;
 }
 
 /** Use DB `earnings` when set; otherwise parse the last `$…` amount from `reason` (Turo webhook stores totals there). */

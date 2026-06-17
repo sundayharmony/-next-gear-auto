@@ -630,3 +630,8 @@ function parseFlexibleDate(dateStr: string): string | null {
 
   return null;
 }
+
+/** Location safe to show or store — null if missing or email boilerplate junk. */
+export function storedTuroLocation(value: string | null | undefined): string | null {
+  return sanitizeLocation(value);
+}
