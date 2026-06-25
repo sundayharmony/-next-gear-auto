@@ -8,6 +8,7 @@ export function logBookingEvent(
     | "checkout_failed"
     | "checkout_overlap"
     | "checkout_price_mismatch"
+    | "checkout_matched_existing_customer"
     | "availability_batch_failed"
     | "abandoned_step",
   meta?: Record<string, unknown>
