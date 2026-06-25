@@ -41,6 +41,7 @@ const PUBLIC_ROUTES = new Set([
   "src/app/api/vehicles/availability/route.ts",
   "src/app/api/locations/route.ts",
   "src/app/api/promo-codes/validate/route.ts",
+  "src/app/api/upload-temp/route.ts",
   "src/app/api/rental-agreement/sign/route.ts",
   "src/app/api/auth/route.ts",
   "src/app/api/auth/logout/route.ts",
@@ -62,7 +63,6 @@ const MIXED_AUTH_ROUTES = new Set([
 ]);
 
 const STAFF_AUTH_ROUTES = new Set([
-  "src/app/api/upload-temp/route.ts",
   "src/app/api/bookings/upload/route.ts",
   "src/app/api/bookings/extend/route.ts",
 ]);

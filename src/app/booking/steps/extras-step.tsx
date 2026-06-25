@@ -4,7 +4,7 @@ import React, { useRef } from "react";
 import { Check, CheckCircle, Upload } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
-import { csrfFetch } from "@/lib/utils/csrf-fetch";
+import { uploadBookingDocumentTemp } from "@/lib/bookings/upload-booking-document";
 import { logger } from "@/lib/utils/logger";
 import type { BookingExtra } from "@/lib/types";
 
@@ -119,37 +119,23 @@ export function ExtrasStep({
                         const file = e.target.files?.[0];
                         if (!file) return;
 
-                        const validTypes = ["image/jpeg", "image/png", "image/webp", "application/pdf"];
-                        if (!validTypes.includes(file.type)) {
-                          setInsuranceUploadError("Please upload a JPG, PNG, WebP, or PDF file.");
-                          return;
-                        }
-                        if (file.size > 10 * 1024 * 1024) {
-                          setInsuranceUploadError("File must be under 10MB.");
-                          return;
-                        }
                         setInsuranceUploadError("");
                         setInsuranceProofFile(file);
                         setUploadingInsuranceProof(true);
 
                         try {
-                          const formData = new FormData();
-                          formData.append("file", file);
-                          const uploadRes = await csrfFetch("/api/upload-temp", { method: "POST", body: formData });
-                          if (!uploadRes.ok) throw new Error(`HTTP ${uploadRes.status}`);
-                          const uploadData = await uploadRes.json();
-                          if (uploadData.success) {
-                            setInsuranceProofUrl(uploadData.url);
-                          } else {
-                            setInsuranceUploadError(
-                              "Failed to upload insurance proof: " + (uploadData.error || "Unknown error")
-                            );
+                          const result = await uploadBookingDocumentTemp(file);
+                          if (!result.ok) {
+                            setInsuranceUploadError(result.error);
+                            setInsuranceProofFile(null);
                             setUploadingInsuranceProof(false);
                             return;
                           }
+                          setInsuranceProofUrl(result.url);
                         } catch (err) {
                           logger.error("Insurance upload error:", err);
                           setInsuranceUploadError("Failed to upload insurance proof. Please try again.");
+                          setInsuranceProofFile(null);
                           setUploadingInsuranceProof(false);
                           return;
                         }

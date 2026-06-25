@@ -4,7 +4,7 @@ import { useRef } from "react";
 import { Check, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { csrfFetch } from "@/lib/utils/csrf-fetch";
+import { uploadBookingDocumentTemp } from "@/lib/bookings/upload-booking-document";
 import { logger } from "@/lib/utils/logger";
 
 export interface VerifyStepProps {
@@ -39,42 +39,21 @@ export function VerifyStep({
   const handleFileUpload = async (file: File) => {
     setUploadError("");
     setIdRequiredError("");
-    if (!file || !file.name) {
-      setUploadError("No file selected.");
-      return;
-    }
-    if (file.size <= 0) {
-      setUploadError("File appears to be empty.");
-      return;
-    }
-    const validTypes = ["image/jpeg", "image/png", "application/pdf"];
-    if (!validTypes.includes(file.type)) {
-      setUploadError("Please upload a JPG, PNG, or PDF file.");
-      return;
-    }
-    if (file.size > 5 * 1024 * 1024) {
-      setUploadError("File must be under 5MB.");
-      return;
-    }
     setUploadedFile(file);
     setUploadingId(true);
 
     try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await csrfFetch("/api/upload-temp", { method: "POST", body: formData });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success) {
-        setIdDocumentUrl(data.url);
+      const result = await uploadBookingDocumentTemp(file);
+      if (result.ok) {
+        setIdDocumentUrl(result.url);
         setIdRequiredError("");
       } else {
-        setUploadError("Upload failed: " + (data.error || "Unknown error"));
+        setUploadError(result.error);
         setUploadedFile(null);
       }
     } catch (err) {
       logger.error("ID upload error:", err);
-      setUploadError("Failed to upload ID document");
+      setUploadError("Failed to upload ID document. Please try again.");
       setUploadedFile(null);
     }
     setUploadingId(false);
@@ -89,7 +68,7 @@ export function VerifyStep({
         <input
           ref={fileInputRef}
           type="file"
-          accept=".jpg,.jpeg,.png,.pdf"
+          accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
           className="hidden"
           onChange={(e) => {
             const file = e.target.files?.[0];
@@ -146,7 +125,9 @@ export function VerifyStep({
           >
             <Upload className="mx-auto h-12 w-12 text-gray-300 mb-3" />
             <p className="text-sm font-medium text-gray-700">Upload Driver&apos;s License</p>
-            <p className="mt-1 text-xs text-gray-400">Drag & drop or click to browse — JPG, PNG, or PDF up to 5MB</p>
+            <p className="mt-1 text-xs text-gray-400">
+              Drag & drop or click to browse — JPG, PNG, WebP, or PDF (large photos are compressed automatically)
+            </p>
             <Button
               variant="outline"
               size="sm"

@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { getAuthFromRequest } from "@/lib/auth/jwt";
 import { logger } from "@/lib/utils/logger";
 import { uploadTempLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { validateImageOrPdfMagicBytes } from "@/lib/security/magic-bytes";
+import { BOOKING_UPLOAD_MAX_BYTES } from "@/lib/bookings/upload-limits";
 
+/**
+ * Temporary document upload for the public booking wizard (ID + insurance proof).
+ * Secured by CSRF double-submit + IP rate limiting — no login required.
+ */
 export async function POST(request: NextRequest) {
   const ip = getClientIp(request);
   const rateCheck = await uploadTempLimiter.check(ip);
@@ -13,20 +17,6 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    // Require authentication — prevent anonymous uploads
-    let auth;
-    try {
-      auth = await getAuthFromRequest(request);
-    } catch {
-      auth = null;
-    }
-    if (!auth) {
-      return NextResponse.json(
-        { success: false, error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
     const supabase = getServiceSupabase();
     let formData;
     try {
@@ -56,12 +46,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ success: false, error: "File extension does not match content type" }, { status: 400 });
     }
 
-    if (file.size > 5 * 1024 * 1024) {
+    if (file.size > BOOKING_UPLOAD_MAX_BYTES) {
       return NextResponse.json({ success: false, error: "File too large (max 5MB)" }, { status: 400 });
     }
 
     const fileExt = ext || "jpg";
-    const fileName = `temp/insurance_${crypto.randomUUID()}.${fileExt}`;
+    const fileName = `temp/${crypto.randomUUID()}.${fileExt}`;
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 

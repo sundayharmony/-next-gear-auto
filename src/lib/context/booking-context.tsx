@@ -205,6 +205,9 @@ function mapCheckoutError(status: number, message?: string): string {
   if (status === 400 && message?.toLowerCase().includes("price")) {
     return "Your quote has changed. Please review the updated total and try again.";
   }
+  if (status === 502 || status === 503) {
+    return message || "Payment could not be started. Please try again or contact support.";
+  }
   if (status >= 500) {
     return "Our booking service is temporarily unavailable. Please try again in a moment.";
   }

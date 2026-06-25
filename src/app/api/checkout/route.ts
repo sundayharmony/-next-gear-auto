@@ -539,6 +539,14 @@ export async function POST(request: NextRequest) {
     }
 
     // 4. Create Stripe Checkout Session for paid bookings
+    if (!process.env.STRIPE_SECRET_KEY?.trim()) {
+      await supabase.from("bookings").delete().eq("id", bookingId);
+      return NextResponse.json(
+        { success: false, message: "Payment processing is temporarily unavailable. Please try again shortly." },
+        { status: 503 }
+      );
+    }
+
     let session: Stripe.Checkout.Session;
     try {
       session = await getStripe().checkout.sessions.create({
@@ -571,9 +579,24 @@ export async function POST(request: NextRequest) {
       });
     } catch (stripeError) {
       logger.error("Stripe session creation failed, deleting orphaned booking:", stripeError);
-      // Delete the orphaned booking
       await supabase.from("bookings").delete().eq("id", bookingId);
-      throw stripeError;
+      const message =
+        stripeError instanceof Stripe.errors.StripeError
+          ? "Unable to start payment. Please try again or contact support."
+          : "Payment processing failed. Please try again.";
+      return NextResponse.json({ success: false, message }, { status: 502 });
+    }
+
+    if (!session.url) {
+      logger.error("Stripe checkout session missing redirect URL", {
+        sessionId: session.id,
+        bookingId,
+      });
+      await supabase.from("bookings").delete().eq("id", bookingId);
+      return NextResponse.json(
+        { success: false, message: "Unable to start payment. Please try again." },
+        { status: 502 }
+      );
     }
 
     // 5. Update booking with Stripe session ID
