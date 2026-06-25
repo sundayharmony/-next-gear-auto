@@ -13,6 +13,8 @@ import {
 import { logBookingEvent } from "@/lib/booking/booking-events";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
+import { resolveCheckoutCustomer } from "@/lib/bookings/resolve-guest-checkout-customer";
+import { getAuthFromRequest } from "@/lib/auth/jwt";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
@@ -394,52 +396,46 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 1. Find or create customer in Supabase (with race condition handling)
-    let customerId: string | null = null;
-    const { data: existingCustomer } = await supabase
-      .from("customers")
-      .select("id")
-      .eq("email", customerDetails.email.toLowerCase().trim())
-      .maybeSingle();
+    // 1. Resolve customer — guests with a matching email reuse saved profile data
+    let auth: Awaited<ReturnType<typeof getAuthFromRequest>> | null = null;
+    try {
+      auth = await getAuthFromRequest(request);
+    } catch {
+      auth = null;
+    }
 
-    if (existingCustomer) {
-      customerId = existingCustomer.id;
-    } else {
-      const newId = "c_" + crypto.randomUUID();
-      try {
-        const { data: newCustomer } = await supabase
-          .from("customers")
-          .insert({
-            id: newId,
-            name: safeName,
-            email: customerDetails.email.toLowerCase().trim(),
-            phone: (customerDetails.phone || "").slice(0, 20),
-            dob: customerDetails.dob || "",
-            role: "customer",
-          })
-          .select("id")
-          .maybeSingle();
-        customerId = newCustomer?.id || newId;
-      } catch {
-        // Fix 5: Race condition: customer created between our SELECT and INSERT
-        // Retry the SELECT to verify the existing customer exists
-        const { data: retryCustomer } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("email", customerDetails.email.toLowerCase().trim())
-          .maybeSingle();
+    const customerResolution = await resolveCheckoutCustomer(
+      supabase,
+      {
+        name: safeName,
+        email: customerDetails.email,
+        phone: customerDetails.phone || "",
+        dob: customerDetails.dob || "",
+      },
+      auth
+    );
 
-        if (retryCustomer?.id) {
-          customerId = retryCustomer.id;
-        } else {
-          // Customer still doesn't exist - this is unexpected
-          logger.error("Failed to resolve customer after race condition for email:", customerDetails.email.toLowerCase().trim());
-          return NextResponse.json(
-            { success: false, message: "Failed to create or retrieve customer record" },
-            { status: 500 }
-          );
-        }
-      }
+    if (!customerResolution.ok) {
+      return NextResponse.json(
+        { success: false, message: customerResolution.message },
+        { status: customerResolution.status }
+      );
+    }
+
+    const {
+      customerId,
+      name: bookingCustomerName,
+      email: bookingCustomerEmail,
+      phone: bookingCustomerPhone,
+      needsPassword,
+      matchedExisting,
+    } = customerResolution.customer;
+
+    if (matchedExisting && !auth) {
+      logBookingEvent("checkout_matched_existing_customer", {
+        customerId,
+        email: bookingCustomerEmail,
+      });
     }
 
     // Re-check vehicle availability immediately before insert to prevent race condition
@@ -456,9 +452,9 @@ export async function POST(request: NextRequest) {
       id: bookingId,
       customer_id: customerId,
       vehicle_id: vehicleId,
-      customer_name: safeName,
-      customer_email: customerDetails.email.toLowerCase().trim(),
-      customer_phone: (customerDetails.phone || "").slice(0, 20),
+      customer_name: bookingCustomerName,
+      customer_email: bookingCustomerEmail,
+      customer_phone: bookingCustomerPhone,
       pickup_date: pickupDate,
       return_date: returnDate,
       pickup_time: pickupTime || null,
@@ -496,22 +492,11 @@ export async function POST(request: NextRequest) {
         .update({ status: "confirmed", deposit: 0 })
         .eq("id", bookingId);
 
-      // Check if customer has a password set
-      let needsPassword = false;
-      if (customerId) {
-        const { data: cust } = await supabase
-          .from("customers")
-          .select("password_hash")
-          .eq("id", customerId)
-          .maybeSingle();
-        needsPassword = !cust?.password_hash;
-      }
-
-      // Send confirmation emails
+      // Send confirmation emails (includes set-password link when needed)
       const emailData = {
         bookingId,
-        customerName: safeName || "Customer",
-        customerEmail: customerDetails.email.toLowerCase().trim(),
+        customerName: bookingCustomerName || "Customer",
+        customerEmail: bookingCustomerEmail,
         vehicleName: vehicleName || "Vehicle",
         pickupDate,
         returnDate,
@@ -552,7 +537,7 @@ export async function POST(request: NextRequest) {
       session = await getStripe().checkout.sessions.create({
         payment_method_types: ["card", "cashapp", "link"],
         mode: "payment",
-        customer_email: customerDetails.email,
+        customer_email: bookingCustomerEmail,
         line_items: [
           {
             price_data: {
@@ -605,22 +590,10 @@ export async function POST(request: NextRequest) {
       .update({ stripe_session_id: session.id })
       .eq("id", bookingId);
 
-    // 6. Send pending payment email to customer and admin
-    // Check if customer needs a password for the pending email too
-    let needsPasswordForPending = false;
-    if (customerId) {
-      const { data: custCheck } = await supabase
-        .from("customers")
-        .select("password_hash")
-        .eq("id", customerId)
-        .maybeSingle();
-      needsPasswordForPending = !custCheck?.password_hash;
-    }
-
     const emailData = {
       bookingId,
-      customerName: safeName || "Customer",
-      customerEmail: customerDetails.email.toLowerCase().trim(),
+      customerName: bookingCustomerName || "Customer",
+      customerEmail: bookingCustomerEmail,
       vehicleName: vehicleName || "Vehicle",
       pickupDate,
       returnDate,
@@ -628,7 +601,6 @@ export async function POST(request: NextRequest) {
       returnTime: returnTime || undefined,
       totalPrice: serverTotal,
       deposit: chargeAmount,
-      needsPassword: needsPasswordForPending,
       pickupLocationName: pickupLocationName || undefined,
       returnLocationName: returnLocationName || undefined,
     };

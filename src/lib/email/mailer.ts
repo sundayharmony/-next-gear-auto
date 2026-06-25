@@ -387,6 +387,15 @@ export async function sendBookingConfirmationWithAgreement(data: BookingEmailDat
   if (confirmationResult.status === "rejected" && agreementResult.status === "rejected") {
     throw new Error("Both booking confirmation and sign-agreement email sends failed");
   }
+
+  if (data.needsPassword && data.customerEmail) {
+    sendPasswordResetLink({
+      customerName: data.customerName,
+      customerEmail: data.customerEmail,
+    }).catch((error) => {
+      logger.error("Failed to send set-password email after booking confirmation:", error);
+    });
+  }
 }
 
 /** Send set-password email for accounts without a password yet (links to /set-password). */
