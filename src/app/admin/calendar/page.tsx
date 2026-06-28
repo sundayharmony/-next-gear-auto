@@ -12,9 +12,8 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
 import type { BlockedDateEntry } from "./calendar-model";
-import {
-  getDefaultTimelineStart,
-} from "./calendar-timeline-range";
+import { filterTimelineVehicles } from "./calendar-booking-display";
+import { getDefaultTimelineStart } from "./calendar-timeline-range";
 import { TuroTripDetailPanel } from "@/app/admin/bookings/components/TuroTripDetailPanel";
 import { InPersonAgreementSign } from "@/app/admin/bookings/components/InPersonAgreementSign";
 import {
@@ -153,10 +152,10 @@ export default function AdminCalendarPage({
     });
   }, [bookings, statusFilter, vehicleFilter]);
 
-  const timelineVehicles = useMemo(() => {
-    const bookedVehicleIds = new Set(filteredBookings.map((b) => b.vehicle_id));
-    return vehicles.filter((v) => v.isAvailable || bookedVehicleIds.has(v.id));
-  }, [vehicles, filteredBookings]);
+  const timelineVehicles = useMemo(
+    () => filterTimelineVehicles(vehicles),
+    [vehicles]
+  );
 
   const closeBookingDetail = useCallback(() => {
     setShowBookingDetail(false);
