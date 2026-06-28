@@ -13,8 +13,8 @@ import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
 import type { BlockedDateEntry } from "./calendar-model";
 import {
-  filterTimelineVehicles,
-} from "./calendar-booking-display";
+  getDefaultTimelineStart,
+} from "./calendar-timeline-range";
 import { TuroTripDetailPanel } from "@/app/admin/bookings/components/TuroTripDetailPanel";
 import { InPersonAgreementSign } from "@/app/admin/bookings/components/InPersonAgreementSign";
 import {
@@ -86,11 +86,7 @@ export default function AdminCalendarPage({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [vehicleFilter, setVehicleFilter] = useState<string>("all");
 
-  const [timelineStart, setTimelineStart] = useState<Date>(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return today;
-  });
+  const [timelineStart, setTimelineStart] = useState<Date>(() => getDefaultTimelineStart());
 
   const [calendarViewDate, setCalendarViewDate] = useState<Date>(() => {
     const today = new Date();
@@ -157,10 +153,10 @@ export default function AdminCalendarPage({
     });
   }, [bookings, statusFilter, vehicleFilter]);
 
-  const timelineVehicles = useMemo(
-    () => filterTimelineVehicles(vehicles),
-    [vehicles]
-  );
+  const timelineVehicles = useMemo(() => {
+    const bookedVehicleIds = new Set(filteredBookings.map((b) => b.vehicle_id));
+    return vehicles.filter((v) => v.isAvailable || bookedVehicleIds.has(v.id));
+  }, [vehicles, filteredBookings]);
 
   const closeBookingDetail = useCallback(() => {
     setShowBookingDetail(false);
@@ -299,9 +295,7 @@ export default function AdminCalendarPage({
   }, [calendarMonthStart, selectedDay]);
 
   const goToToday = useCallback(() => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    setTimelineStart(today);
+    // Keep the lookback window — only scroll the timeline to today's column.
   }, []);
 
   const selectedBlockedVehicle = selectedBlocked

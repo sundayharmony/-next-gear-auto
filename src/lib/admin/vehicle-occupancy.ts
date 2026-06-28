@@ -4,7 +4,6 @@ import {
   resolveTuroTripRevenue,
 } from "@/lib/utils/turo-blocked-date";
 import { TURO_BLOCKED_SOURCE, isBlockedDateCancelled } from "@/lib/utils/blocked-dates";
-import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import type { StaffRole } from "@/lib/admin/vehicle-details-queries";
 import {
   canManageBooking,
@@ -16,6 +15,7 @@ import {
 } from "@/lib/utils/recurring-booking";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { storedTuroLocation } from "@/lib/utils/turo-email-parser";
+import { fetchActiveTuroBlockedRows } from "@/lib/admin/turo-blocked-fetch";
 
 /** Service-role Supabase client — typed loosely so real Postgrest builders are accepted. */
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -234,46 +234,12 @@ async function fetchTuroBlocksForVehicle(
   role: StaffRole,
   query: VehicleOccupancyQuery
 ): Promise<Record<string, unknown>[]> {
-  const fullSelect =
-    "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, cancelled_at, created_at";
-  const minimalSelect = "id, vehicle_id, start_date, end_date, source, reason, created_at";
-
-  let dbQuery = supabase.from("blocked_dates").select(fullSelect).eq("vehicle_id", vehicleId).eq("source", TURO_BLOCKED_SOURCE);
-
-  if (role === "manager") {
-    dbQuery = dbQuery.gte("end_date", formatYyyyMmDdLocal(new Date()));
-  }
-  if (query.from) {
-    dbQuery = dbQuery.gte("end_date", query.from);
-  }
-  if (query.to) {
-    dbQuery = dbQuery.lte("start_date", query.to);
-  }
-
-  let { data, error } = await dbQuery.order("start_date", { ascending: false }).limit(2000);
-
-  if (error && isMissingColumnError(error)) {
-    const fb = await supabase
-      .from("blocked_dates")
-      .select(minimalSelect)
-      .eq("vehicle_id", vehicleId)
-      .eq("source", TURO_BLOCKED_SOURCE)
-      .order("start_date", { ascending: false })
-      .limit(2000);
-    data = (fb.data || []).map((r: Record<string, unknown>) => ({
-      ...r,
-      pickup_time: null,
-      return_time: null,
-      earnings: null,
-      is_extension: false,
-      location: null,
-      cancelled_at: null,
-    }));
-    error = fb.error;
-  }
-
-  if (error) return [];
-  return (data || []) as Record<string, unknown>[];
+  return fetchActiveTuroBlockedRows(supabase, {
+    vehicleId,
+    from: query.from,
+    to: query.to,
+    minEndDate: role === "manager" ? formatYyyyMmDdLocal(new Date()) : null,
+  });
 }
 
 async function fetchBookingsForVehicleMerge(
@@ -417,45 +383,14 @@ export async function fetchGlobalOccupancy(
     merged.push(entry);
   }
 
-  let turoQuery = supabase
-    .from("blocked_dates")
-    .select(
-      "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, cancelled_at, created_at"
-    )
-    .eq("source", TURO_BLOCKED_SOURCE)
-    .order("start_date", { ascending: false })
-    .limit(2000);
+  const turoRows = await fetchActiveTuroBlockedRows(supabase, {
+    from: opts.from,
+    to: opts.to,
+    minEndDate: role === "manager" ? today : null,
+  });
 
-  if (role === "manager") {
-    turoQuery = turoQuery.gte("end_date", formatYyyyMmDdLocal(new Date()));
-  }
-  if (opts.from) turoQuery = turoQuery.gte("end_date", opts.from);
-  if (opts.to) turoQuery = turoQuery.lte("start_date", opts.to);
-
-  let { data: turoData, error: turoErr } = await turoQuery;
-
-  if (turoErr && isMissingColumnError(turoErr)) {
-    const fb = await supabase
-      .from("blocked_dates")
-      .select("id, vehicle_id, start_date, end_date, source, reason, created_at")
-      .eq("source", TURO_BLOCKED_SOURCE)
-      .order("start_date", { ascending: false })
-      .limit(2000);
-    turoData = (fb.data || []).map((r: Record<string, unknown>) => ({
-      ...r,
-      pickup_time: null,
-      return_time: null,
-      earnings: null,
-      is_extension: false,
-      location: null,
-      cancelled_at: null,
-    }));
-    turoErr = fb.error;
-  }
-
-  if (!turoErr && turoData && (turoData as Record<string, unknown>[]).length > 0) {
-    const rows = turoData as Record<string, unknown>[];
-    const ids = [...new Set(rows.map((r) => String(r.vehicle_id)))];
+  if (turoRows.length > 0) {
+    const ids = [...new Set(turoRows.map((r) => String(r.vehicle_id)))];
     const vehicleNameById = new Map<string, string>();
     if (ids.length > 0) {
       const { data: vs } = await supabase.from("vehicles").select("id, year, make, model").in("id", ids);
@@ -463,11 +398,10 @@ export async function fetchGlobalOccupancy(
         vehicleNameById.set(v.id, getVehicleDisplayName(v));
       }
     }
-    for (const row of rows) {
+    for (const row of turoRows) {
       const vid = String(row.vehicle_id);
       const vname = vehicleNameById.get(vid) || "Unknown Vehicle";
       const n = normalizeBlockedRow(row);
-      if (isBlockedDateCancelled(n)) continue;
       if (!overlapsRange(n.start_date, n.end_date, opts.from, opts.to)) continue;
       const entry = mapTuroBlock(row, vname, role, userId);
       if (!statusMatchesFilter(entry, status)) continue;
