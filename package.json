@@ -77,17 +77,17 @@
     "@playwright/test": "^1.60.0",
     "@tailwindcss/postcss": "^4.2.2",
     "@types/bcryptjs": "^3.0.0",
-    "@types/google.maps": "^3.58.1",
+    "@types/google.maps": "^3.65.2",
     "@types/node": "^25.5.0",
     "@types/nodemailer": "^6.4.23",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@types/sanitize-html": "^2.16.1",
     "eslint": "^9.39.4",
-    "eslint-config-next": "^16.2.6",
+    "eslint-config-next": "^16.2.9",
     "postcss": "^8.5.10",
     "tailwindcss": "^4.2.2",
     "tsx": "^4.21.0",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.3"
   }
 }
