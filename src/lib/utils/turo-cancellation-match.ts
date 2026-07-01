@@ -37,7 +37,10 @@ export function pickTuroCancellationMatch(
   const exact = candidates.filter(
     (row) => row.start_date === startDate && row.end_date === endDate
   );
-  if (exact.length === 1) return exact[0];
+  if (exact.length === 1) {
+    if (guestName && !reasonMatchesTuroGuest(exact[0].reason, guestName)) return null;
+    return exact[0];
+  }
   if (exact.length > 1) {
     if (!guestName) return null;
     const byGuest = exact.find((row) => reasonMatchesTuroGuest(row.reason, guestName));

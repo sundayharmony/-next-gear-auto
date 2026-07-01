@@ -393,7 +393,8 @@ function needsAccuracyRefresh(subject, body) {
   var hasRealLocationHint =
     /pick[\s-]?up\s+location|drop[\s-]?off\s+location|return\s+location/i.test(combined) ||
     /trip\s+with\s+your\s+.+?\s+at\s+.+\s+(?:is\s+)?booked/i.test(combined) ||
-    /(?:^|\n)delivery\s+[A-Z]/m.test(combined);
+    /(?:^|\n)delivery\s+[A-Z]/m.test(combined) ||
+    /(?:^|\n)location\s*\n\s*[A-Z0-9]/m.test(combined);
   var hasTimeHint = /\d{1,2}:\d{2}\s*(?:am|pm)/i.test(combined);
   return hasTripDates && (!hasRealLocationHint || !hasTimeHint);
 }

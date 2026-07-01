@@ -64,6 +64,23 @@ test("pickTuroCancellationMatch matches guest when only overlapping row exists",
   assert.equal(picked?.reason, "Turo: Mario");
 });
 
+test("pickTuroCancellationMatch refuses exact dates when guest name does not match reason", () => {
+  const picked = pickTuroCancellationMatch(
+    [
+      {
+        id: "henry",
+        start_date: "2026-06-18",
+        end_date: "2026-06-21",
+        reason: "Turo: Henry — $193.18",
+      },
+    ],
+    "2026-06-18",
+    "2026-06-21",
+    "Dominik"
+  );
+  assert.equal(picked, null);
+});
+
 test("pickTuroTripForMetadataRefresh matches guest when DB start date differs by one day", () => {
   const picked = pickTuroTripForMetadataRefresh(
     [{ id: "chevon", start_date: "2026-06-18", end_date: "2026-06-21", reason: "Turo: Chevon — $127.4" }],

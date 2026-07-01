@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseTuroEmail, sanitizeLocation, buildTuroParseText } from "../src/lib/utils/turo-email-parser";
+import { parseTuroEmail, sanitizeLocation, buildTuroParseText, extractTuroLocationBlock } from "../src/lib/utils/turo-email-parser";
 
 test("parseTuroEmail detects cancellation emails", () => {
   const text = `
@@ -185,6 +185,35 @@ test("parseTuroEmail parses Pick-up location hyphenated label", () => {
   `;
   const parsed = parseTuroEmail(text);
   assert.equal(parsed.pickupLocation, "123 Observer Highway, Hoboken, NJ 07030");
+});
+
+test("parseTuroEmail extracts LOCATION block at bottom of Ram booking email", () => {
+  const subject = "Henry's trip with your Ram 1500 is booked!";
+  const body = `
+Henry's trip is booked
+Cha-ching! Henry's trip with your Ram 1500 is booked from Wednesday, July 1, 2026, 6:30 PM to Sunday, July 5, 2026, 6:00 PM.
+You'll earn $253.95.
+Ram 1500 2019
+Trip start: 7/1/26 6:30 pm
+Trip end: 7/5/26 6:00 pm
+View trip details
+Reservation ID: 362922878
+LOCATION
+31 Nunda Avenue
+Jersey City, NJ
+`;
+  const parsed = parseTuroEmail(body, subject);
+  assert.equal(parsed.guestName, "Henry");
+  assert.equal(parsed.pickupLocation, "31 Nunda Avenue, Jersey City, NJ");
+  assert.equal(parsed.earnings, 253.95);
+  assert.equal(parsed.startDate, "2026-07-01");
+  assert.equal(parsed.endDate, "2026-07-05");
+});
+
+test("extractTuroLocationBlock handles collapsed whitespace from stripped email text", () => {
+  const collapsed =
+    "View trip details Reservation ID: 362922878 LOCATION 31 Nunda Avenue Jersey City, NJ";
+  assert.equal(extractTuroLocationBlock(collapsed), "31 Nunda Avenue Jersey City, NJ");
 });
 
 test("buildTuroParseText prepends subject without duplicating body", () => {

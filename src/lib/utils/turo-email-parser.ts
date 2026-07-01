@@ -80,6 +80,48 @@ export function sanitizeLocation(value: string | null | undefined): string | nul
   return null;
 }
 
+function extractCollapsedLocationBlock(text: string): string | null {
+  const collapsed = text.match(
+    /\blocation\s+(\d{1,6}\s+[A-Za-z0-9][^.!?\n]{4,90}?)(?=\s+(?:reservation|view\s+trip|guests|trip\s+start|trip\s+end|https?:|$)|$)/i
+  );
+  if (!collapsed) return null;
+  return sanitizeLocation(collapsed[1].trim().replace(/\s+/g, " "));
+}
+
+/** Turo booking emails with a standalone LOCATION header and address on following lines. */
+export function extractTuroLocationBlock(text: string): string | null {
+  const blockMatch = text.match(/(?:^|\n)\s*location\s*\n\s*((?:[^\n]+\n?){1,4})/i);
+  if (blockMatch) {
+    const lines = blockMatch[1]
+      .split(/\n/)
+      .map((line) => line.trim())
+      .filter((line) => {
+        if (!line || /^location$/i.test(line)) return false;
+        if (
+          /^(?:reservation\s+id|view\s+trip|guests\s+see|trip\s+start|trip\s+end|total\s+distance)/i.test(
+            line
+          )
+        ) {
+          return false;
+        }
+        return true;
+      })
+      .slice(0, 3);
+
+    if (lines.length) {
+      const joined = sanitizeLocation(lines.join(", "));
+      if (joined) return joined;
+    }
+  }
+
+  const collapsed = extractCollapsedLocationBlock(text);
+  if (collapsed) return collapsed;
+
+  const inline = text.match(/(?:^|\n)\s*location\s*[:–—-]\s*(.+?)(?:\n|$)/i);
+  if (!inline) return null;
+  return sanitizeLocation(inline[1].trim());
+}
+
 export interface TuroEmailParseResult {
   guestName: string | null;
   vehicleDescription: string | null;
@@ -103,7 +145,8 @@ export interface TuroEmailParseResult {
  * Pass `subject` when available — Turo often puts the pickup line only in the subject.
  */
 export function parseTuroEmail(emailText: string, subject?: string | null): TuroEmailParseResult {
-  const text = stripHtml(buildTuroParseText(emailText, subject));
+  const parseText = buildTuroParseText(emailText, subject);
+  const text = stripHtml(parseText);
   const rawMatches: string[] = [];
 
   // ── Detect cancellation emails (before extension — cancel wins) ──
@@ -283,6 +326,15 @@ export function parseTuroEmail(emailText: string, subject?: string | null): Turo
   if (dropoffMatch) {
     dropoffLocation = sanitizeLocation(dropoffMatch[1].trim());
     if (dropoffLocation) rawMatches.push(`Dropoff location: "${dropoffLocation}"`);
+  }
+
+  if (!pickupLocation) {
+    const blockLocation =
+      extractTuroLocationBlock(parseText) || extractTuroLocationBlock(text);
+    if (blockLocation) {
+      pickupLocation = blockLocation;
+      rawMatches.push(`Pickup location (location block): "${pickupLocation}"`);
+    }
   }
 
   if (!pickupLocation) {
