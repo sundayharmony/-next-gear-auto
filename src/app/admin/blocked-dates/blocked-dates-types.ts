@@ -29,6 +29,7 @@ export interface TuroSyncStatus {
   total: number;
   active: number;
   cancelled: number;
+  activeMissingLocation?: number;
 }
 
 export const TURO_RUNBOOK_URL =

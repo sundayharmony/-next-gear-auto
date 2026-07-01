@@ -27,7 +27,8 @@ import {
   BlockedDatesDetailDrawer,
 } from "./blocked-dates-drawer";
 import { useTuroSyncActions } from "./use-turo-sync-actions";
-import { useFilteredBlockedDates } from "./use-filtered-blocked-dates";
+import { useFilteredBlockedDates, useDisplayBlockedDates } from "./use-filtered-blocked-dates";
+import { isBlockedDateCancelled } from "@/lib/utils/blocked-dates";
 
 export default function BlockedDatesPage() {
   const pathname = usePathname();
@@ -52,7 +53,8 @@ export default function BlockedDatesPage() {
   const [savingEmail, setSavingEmail] = useState(false);
 
   const [filterVehicleId, setFilterVehicleId] = useState("");
-  const [listTab, setListTab] = useState<BlockedDatesListTab>("all");
+  const [listTab, setListTab] = useState<BlockedDatesListTab>("turo");
+  const [showPastTuroTrips, setShowPastTuroTrips] = useState(false);
 
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
@@ -410,8 +412,25 @@ export default function BlockedDatesPage() {
   };
 
   const filteredBlocks = useFilteredBlockedDates(blockedDates, filterVehicleId, listTab);
-
   const today = useMemo(() => getLocalYmd(new Date()), []);
+  const displayBlocks = useDisplayBlockedDates(
+    filteredBlocks,
+    listTab,
+    today,
+    showPastTuroTrips
+  );
+
+  const upcomingTuroCount = useMemo(
+    () =>
+      blockedDates.filter(
+        (b) =>
+          b.source === "turo-email" &&
+          !isBlockedDateCancelled(b) &&
+          b.end_date >= today &&
+          (!filterVehicleId || b.vehicle_id === filterVehicleId)
+      ).length,
+    [blockedDates, today, filterVehicleId]
+  );
 
   const lastTuroIngest = useMemo(() => {
     const turoRows = blockedDates.filter((b) => b.source === "turo-email");
@@ -523,7 +542,10 @@ export default function BlockedDatesPage() {
           filterVehicleId={filterVehicleId}
           onFilterVehicleIdChange={setFilterVehicleId}
           vehicles={vehicles}
-          filteredCount={filteredBlocks.length}
+          filteredCount={displayBlocks.length}
+          upcomingTuroCount={upcomingTuroCount}
+          showPastTuroTrips={showPastTuroTrips}
+          onShowPastTuroTripsChange={setShowPastTuroTrips}
           turoSyncStatus={turoSyncStatus}
           lastTuroIngest={lastTuroIngest}
           syncingStatus={syncingStatus}
@@ -531,7 +553,7 @@ export default function BlockedDatesPage() {
         />
 
         <BlockedDatesGrid
-          blocks={filteredBlocks}
+          blocks={displayBlocks}
           loading={loading}
           today={today}
           pathname={pathname}

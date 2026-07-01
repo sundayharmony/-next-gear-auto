@@ -1,6 +1,6 @@
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { getVehicleDisplayName } from "@/lib/types";
-import { parseTuroEmail } from "@/lib/utils/turo-email-parser";
+import { parseTuroEmail, storedTuroLocation } from "@/lib/utils/turo-email-parser";
 import { pickTuroCancellationMatch } from "@/lib/utils/turo-cancellation-match";
 import {
   CANCELLED_REASON_PREFIX,
@@ -15,6 +15,7 @@ export type TuroTripRow = {
   end_date: string;
   reason: string | null;
   cancelled_at?: string | null;
+  location?: string | null;
   created_at: string;
 };
 
@@ -39,7 +40,7 @@ export type SyncCancellationsResult = {
 async function fetchActiveTuroRows(supabase: ReturnType<typeof getServiceSupabase>) {
   const full = await supabase
     .from("blocked_dates")
-    .select("id, vehicle_id, start_date, end_date, reason, cancelled_at, created_at, source")
+    .select("id, vehicle_id, start_date, end_date, reason, location, cancelled_at, created_at, source")
     .eq("source", TURO_BLOCKED_SOURCE)
     .order("start_date", { ascending: false });
 
@@ -318,6 +319,7 @@ export async function listTuroCancellationStatus() {
     total: rows.length,
     active: active.length,
     cancelled: cancelled.length,
+    activeMissingLocation: active.filter((r) => !storedTuroLocation(r.location)).length,
     cancelledRows: cancelled,
     activeRows: active,
   };

@@ -17,6 +17,9 @@ interface BlockedDatesFiltersProps {
   onFilterVehicleIdChange: (vehicleId: string) => void;
   vehicles: Vehicle[];
   filteredCount: number;
+  upcomingTuroCount?: number;
+  showPastTuroTrips: boolean;
+  onShowPastTuroTripsChange: (show: boolean) => void;
   turoSyncStatus: TuroSyncStatus | null;
   lastTuroIngest: string | null;
   syncingStatus?: boolean;
@@ -30,6 +33,9 @@ export function BlockedDatesFilters({
   onFilterVehicleIdChange,
   vehicles,
   filteredCount,
+  upcomingTuroCount = 0,
+  showPastTuroTrips,
+  onShowPastTuroTripsChange,
   turoSyncStatus,
   lastTuroIngest,
   syncingStatus,
@@ -41,6 +47,13 @@ export function BlockedDatesFilters({
         <div className="mb-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-xs text-gray-600">
           <span>
             Turo sync: {turoSyncStatus.active} active, {turoSyncStatus.cancelled} cancelled
+            {typeof turoSyncStatus.activeMissingLocation === "number" &&
+              turoSyncStatus.activeMissingLocation > 0 && (
+                <span className="ml-2 text-amber-700">
+                  ({turoSyncStatus.activeMissingLocation} missing pickup location — run location
+                  backfill in Apps Script)
+                </span>
+              )}
             {!turoSyncStatus.hasCancelledAt && (
               <span className="ml-2 text-amber-700">(cancelled_at column missing)</span>
             )}
@@ -110,7 +123,21 @@ export function BlockedDatesFilters({
       </Select>
       <span className="text-xs text-gray-400">
         {filteredCount} blocked range{filteredCount !== 1 ? "s" : ""}
+        {listTab === "turo" && upcomingTuroCount > 0 && (
+          <span className="text-gray-500"> · {upcomingTuroCount} upcoming</span>
+        )}
       </span>
+      {listTab === "turo" && (
+        <label className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={showPastTuroTrips}
+            onChange={(e) => onShowPastTuroTripsChange(e.target.checked)}
+            className="rounded border-gray-300"
+          />
+          Show past trips
+        </label>
+      )}
     </div>
     </>
   );
