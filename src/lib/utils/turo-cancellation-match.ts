@@ -75,22 +75,31 @@ export function pickTuroTripForMetadataRefresh(
 ): TuroCancellationCandidate | null {
   const strict = pickTuroCancellationMatch(candidates, startDate, endDate, guestName);
   if (strict) return strict;
-  if (!guestName) return null;
 
-  const byGuest = candidates.filter((row) => reasonMatchesTuroGuest(row.reason, guestName));
-  if (!byGuest.length) return null;
-  if (byGuest.length === 1) return byGuest[0];
+  if (guestName) {
+    const byGuest = candidates.filter((row) => reasonMatchesTuroGuest(row.reason, guestName));
+    if (!byGuest.length) return null;
+    if (byGuest.length === 1) return byGuest[0];
 
-  const overlapping = byGuest.filter(
+    const overlapping = byGuest.filter(
+      (row) => row.start_date <= endDate && row.end_date >= startDate
+    );
+    if (overlapping.length === 1) return overlapping[0];
+
+    const pool = overlapping.length > 1 ? overlapping : byGuest;
+    const target = new Date(startDate + "T12:00:00").getTime();
+    return [...pool].sort((a, b) => {
+      const da = Math.abs(new Date(a.start_date + "T12:00:00").getTime() - target);
+      const db = Math.abs(new Date(b.start_date + "T12:00:00").getTime() - target);
+      return da - db;
+    })[0];
+  }
+
+  // No guest in email — only match when exactly one trip overlaps the parsed range.
+  const overlapping = candidates.filter(
     (row) => row.start_date <= endDate && row.end_date >= startDate
   );
   if (overlapping.length === 1) return overlapping[0];
 
-  const pool = overlapping.length > 1 ? overlapping : byGuest;
-  const target = new Date(startDate + "T12:00:00").getTime();
-  return [...pool].sort((a, b) => {
-    const da = Math.abs(new Date(a.start_date + "T12:00:00").getTime() - target);
-    const db = Math.abs(new Date(b.start_date + "T12:00:00").getTime() - target);
-    return da - db;
-  })[0];
+  return null;
 }

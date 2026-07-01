@@ -92,9 +92,17 @@ Use manual chunked backfill helpers in Apps Script:
 - `runBookingBackfill30()`
 - `runCancellationBackfill30()`
 - `runLocationBackfill30()` — re-sends booking emails as `reconcile_refresh` to fill missing pickup locations (Tej-style `at … is booked from` emails)
-- `runLocationBackfill90()` / `runLocationBackfill180()` — wider windows for older trips; run repeatedly until locations are filled (80 emails per run cap)
+- `runLocationBackfill90()` / `runLocationBackfill180()` — wider windows for older trips; run repeatedly until locations are filled (80 emails per run cap; offset advances automatically between runs)
+- `resetLocationBackfillOffset()` — reset pagination before a fresh 180-day location pass
 
 Run them manually in small windows only when needed (e.g., recovery or initial migration), then return to automatic `runTuroSync`.
+
+Recommended location recovery sequence:
+
+1. `npm run turo:clean-locations` — audit invalid/missing locations
+2. `npm run turo:clean-locations -- --apply` — clear junk stored in `blocked_dates.location`
+3. In Apps Script: `resetLocationBackfillOffset()` then `runLocationBackfill180()` repeatedly until logs show `sent=0` or offset resets
+4. Re-run step 1 until missing count is acceptable
 
 ## Related files
 

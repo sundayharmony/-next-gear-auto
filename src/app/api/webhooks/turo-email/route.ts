@@ -132,6 +132,7 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
     const emailText: string = String(body.emailText || body.email_text || "").slice(0, 65536);
+    const emailSubject: string = String(body.subject || "").slice(0, 500);
     const explicitEventType =
       typeof body.eventType === "string" ? String(body.eventType).toLowerCase() : "";
     const sourceMode = typeof body.sourceMode === "string" ? String(body.sourceMode) : "";
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Parse the Turo email ──
-    const parsed = parseTuroEmail(emailText);
+    const parsed = parseTuroEmail(emailText, emailSubject);
     const tripLocation = sanitizeLocation(parsed.location);
     const isReconcileRefresh = explicitEventType === "reconcile_refresh";
     const isCancellationEvent =

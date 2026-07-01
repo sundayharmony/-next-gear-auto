@@ -73,3 +73,16 @@ test("pickTuroTripForMetadataRefresh matches guest when DB start date differs by
   );
   assert.equal(picked?.id, "chevon");
 });
+
+test("pickTuroTripForMetadataRefresh matches sole overlapping trip without guest name", () => {
+  const picked = pickTuroTripForMetadataRefresh(
+    [
+      { id: "a", start_date: "2026-06-01", end_date: "2026-06-03", reason: "Turo: Mario" },
+      { id: "solo", start_date: "2026-07-01", end_date: "2026-07-05", reason: "Turo booking" },
+    ],
+    "2026-07-01",
+    "2026-07-05",
+    null
+  );
+  assert.equal(picked?.id, "solo");
+});

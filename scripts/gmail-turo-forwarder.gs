@@ -21,6 +21,7 @@ var KEY_PREFIX = "turo_sync_";
 var PROCESSED_KEY_PREFIX = KEY_PREFIX + "processed_";
 var LAST_SYNC_ISO_KEY = KEY_PREFIX + "last_sync_iso";
 var RECENT_IDS_KEY = KEY_PREFIX + "recent_message_ids";
+var LOCATION_BACKFILL_OFFSET_KEY = KEY_PREFIX + "location_backfill_offset";
 var LOCK_KEY = KEY_PREFIX + "lock";
 var LOCK_TTL_MS = 10 * 60 * 1000;
 
@@ -154,11 +155,18 @@ function runLocationBackfill180() {
   runChunkedBackfill(180, "location");
 }
 
+/** Reset Gmail search offset for location backfill (run before a fresh 180-day pass). */
+function resetLocationBackfillOffset() {
+  deleteScriptProp(LOCATION_BACKFILL_OFFSET_KEY);
+  Logger.log("Location backfill offset reset.");
+}
+
 function runChunkedBackfill(days, mode) {
   var safeDays = Math.max(1, Math.min(Number(days) || 30, 365));
   var safeMode = mode === "cancellation" ? "cancellation" : mode === "location" ? "location" : "booking";
   var query = buildBackfillQuery(safeDays, safeMode);
-  var threads = searchThreadsCapped(query, MAX_THREADS_PER_RUN);
+  var offset = safeMode === "location" ? Number(getScriptProp(LOCATION_BACKFILL_OFFSET_KEY, "0")) || 0 : 0;
+  var threads = searchThreadsCapped(query, MAX_THREADS_PER_RUN, offset);
   var sent = 0;
   var skipped = 0;
 
@@ -188,8 +196,30 @@ function runChunkedBackfill(days, mode) {
       if (res.ok) sent++;
       else skipped++;
     }
+    if (sent >= MAX_MESSAGES_PER_RUN) break;
   }
-  Logger.log("Backfill complete mode=" + safeMode + " days=" + safeDays + " sent=" + sent + " skipped=" + skipped);
+
+  if (safeMode === "location") {
+    if (threads.length === 0) {
+      deleteScriptProp(LOCATION_BACKFILL_OFFSET_KEY);
+      Logger.log("Location backfill exhausted query; offset reset.");
+    } else {
+      setScriptProp(LOCATION_BACKFILL_OFFSET_KEY, String(offset + threads.length));
+    }
+  }
+
+  Logger.log(
+    "Backfill complete mode=" +
+      safeMode +
+      " days=" +
+      safeDays +
+      " offset=" +
+      offset +
+      " sent=" +
+      sent +
+      " skipped=" +
+      skipped
+  );
 }
 
 // ═══════ CORE PROCESSING ═══════
@@ -233,8 +263,9 @@ function runAccuracyReconciliation() {
     try {
       var msg = GmailApp.getMessageById(messageId);
       if (!msg) continue;
+      var subject = String(msg.getSubject() || "");
       var body = String(msg.getPlainBody() || msg.getBody() || "");
-      if (!needsAccuracyRefresh(body)) continue;
+      if (!needsAccuracyRefresh(subject, body)) continue;
 
       var result = sendToWebhook(msg, "reconcile_refresh", "reconcile");
       if (result.ok) sent++;
@@ -257,6 +288,9 @@ function sendToWebhook(message, eventType, sourceMode) {
   var dateIso = msgDate ? msgDate.toISOString() : new Date().toISOString();
   var ts = Date.now();
   var idempotencyKey = "turo-" + messageId + "-" + eventType;
+  if (sourceMode === "location_backfill") {
+    idempotencyKey += "-loc-" + Math.floor(ts / 86400000);
+  }
 
   try {
     var response = UrlFetchApp.fetch(WEBHOOK_URL, {
@@ -315,10 +349,10 @@ function buildBackfillQuery(days, mode) {
   return "from:turo.com newer_than:" + days + "d";
 }
 
-function searchThreadsCapped(query, maxThreads) {
+function searchThreadsCapped(query, maxThreads, startOffset) {
   var safeMax = Math.max(1, Math.min(Number(maxThreads) || 20, 300));
+  var offset = Math.max(0, Number(startOffset) || 0);
   var allThreads = [];
-  var offset = 0;
 
   while (allThreads.length < safeMax) {
     var remaining = safeMax - allThreads.length;
@@ -340,12 +374,28 @@ function classifyEventType(subject, body) {
   return "booking";
 }
 
-function needsAccuracyRefresh(body) {
-  var text = String(body || "").toLowerCase();
-  var hasTripDates = /trip\s+start/i.test(text) && /trip\s+end/i.test(text);
-  var hasLocationHint = /(pickup\s+location|drop[\s-]?off\s+location|delivery| at )/i.test(String(body || ""));
-  var hasTimeHint = /\d{1,2}:\d{2}\s*(am|pm)/i.test(String(body || ""));
-  return hasTripDates && (!hasLocationHint || !hasTimeHint);
+function needsAccuracyRefresh(subject, body) {
+  var subj = String(subject || "");
+  var bod = String(body || "");
+  var combined = subj + "\n" + bod;
+  var lower = combined.toLowerCase();
+
+  // Subject has "at … is booked" but Gmail plain body is compact booked-by — location may be missing in DB.
+  if (
+    /trip\s+with\s+your\s+.+?\s+at\s+.+\s+(?:is\s+)?booked/i.test(subj) &&
+    /trip\s+start/i.test(bod) &&
+    !/pick[\s-]?up\s+location/i.test(bod)
+  ) {
+    return true;
+  }
+
+  var hasTripDates = /trip\s+start/i.test(lower) || /booked\s+from/i.test(lower);
+  var hasRealLocationHint =
+    /pick[\s-]?up\s+location|drop[\s-]?off\s+location|return\s+location/i.test(combined) ||
+    /trip\s+with\s+your\s+.+?\s+at\s+.+\s+(?:is\s+)?booked/i.test(combined) ||
+    /(?:^|\n)delivery\s+[A-Z]/m.test(combined);
+  var hasTimeHint = /\d{1,2}:\d{2}\s*(?:am|pm)/i.test(combined);
+  return hasTripDates && (!hasRealLocationHint || !hasTimeHint);
 }
 
 function isCancellationEmail(subject, body) {

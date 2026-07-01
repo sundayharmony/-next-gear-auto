@@ -14,6 +14,21 @@ import { stripRichHtmlToText } from "@/lib/utils/validation";
  * may change their email templates over time.
  */
 
+/** Combine subject + body for parsing (subject often has the `at … is booked` line). */
+export function buildTuroParseText(
+  emailText: string,
+  subject?: string | null
+): string {
+  const body = String(emailText || "").trim();
+  const subj = String(subject || "").trim();
+  if (!subj) return body;
+  if (!body) return subj;
+  // Avoid duplicating when Gmail plain body already starts with the subject line.
+  const subjPrefix = subj.slice(0, Math.min(40, subj.length)).toLowerCase();
+  if (subjPrefix.length >= 12 && body.toLowerCase().includes(subjPrefix)) return body;
+  return `${subj}\n\n${body}`;
+}
+
 /** Reject Turo email boilerplate mistakenly captured as a pickup/dropoff location. */
 export function sanitizeLocation(value: string | null | undefined): string | null {
   if (value == null) return null;
@@ -43,7 +58,10 @@ export function sanitizeLocation(value: string | null | undefined): string | nul
   const locationSignals = [
     /\bairport\b/i,
     /\binternational\b/i,
+    /\bterminal\b/i,
+    /\b(?:parking|garage|lot)\b/i,
     /,\s*[A-Z]{2}\b/,
+    /\b[A-Z]{2}\s+\d{5}\b/,
     /\b\d{1,6}\s+[A-Za-z]/,
     /\b(?:st|street|ave|avenue|blvd|boulevard|rd|road|dr|drive|ln|lane|way|hwy|highway|pkwy|parkway|pl|place|ct|court)\b/i,
   ];
@@ -82,9 +100,10 @@ export interface TuroEmailParseResult {
 
 /**
  * Parse raw email text (plain text or stripped HTML) for Turo booking info.
+ * Pass `subject` when available — Turo often puts the pickup line only in the subject.
  */
-export function parseTuroEmail(emailText: string): TuroEmailParseResult {
-  const text = stripHtml(emailText);
+export function parseTuroEmail(emailText: string, subject?: string | null): TuroEmailParseResult {
+  const text = stripHtml(buildTuroParseText(emailText, subject));
   const rawMatches: string[] = [];
 
   // ── Detect cancellation emails (before extension — cancel wins) ──
@@ -192,11 +211,22 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
   let pickupLocation: string | null = null;
   let dropoffLocation: string | null = null;
 
+  // Subject-only: "… at Newark Liberty International Airport is booked!"
+  if (!pickupLocation) {
+    const subjectAtBooked = text.match(
+      /at\s+(.+?)\s+(?:is\s+)?booked(?:\s+from|\s*!|\s*$)/i,
+    );
+    if (subjectAtBooked) {
+      pickupLocation = sanitizeLocation(subjectAtBooked[1].trim());
+      if (pickupLocation) rawMatches.push(`Pickup location (subject at booked): "${pickupLocation}"`);
+    }
+  }
+
   // "... trip with your Volkswagen Jetta at Newark Liberty International Airport is booked from ..."
   const atPickupMatch = text.match(
     /trip\s+with\s+your\s+.+?\s+at\s+(.+?)\s+(?:is\s+)?booked\s+from/i,
   );
-  if (atPickupMatch) {
+  if (atPickupMatch && !pickupLocation) {
     pickupLocation = sanitizeLocation(atPickupMatch[1].trim());
     if (pickupLocation) rawMatches.push(`Pickup location (at pickup): "${pickupLocation}"`);
   }
@@ -239,16 +269,16 @@ export function parseTuroEmail(emailText: string): TuroEmailParseResult {
     }
   }
 
-  const pickupMatch = text.match(
-    /pickup\s+location\s*[:–—-]\s*(.+?)(?=\s+drop[\s-]?off\s+location|\s+trip\s+start|\s+trip\s+end|\n|$)/i
+  const labeledPickupMatch = text.match(
+    /(?:pick[\s-]?up|meeting|meet[\s-]?up|delivery)\s+location\s*[:–—-]\s*(.+?)(?=\s+drop[\s-]?off\s+location|\s+(?:pick[\s-]?up|return)\s+location|\s+trip\s+start|\s+trip\s+end|\n|$)/i
   );
-  if (pickupMatch && !pickupLocation) {
-    pickupLocation = sanitizeLocation(pickupMatch[1].trim());
+  if (labeledPickupMatch && !pickupLocation) {
+    pickupLocation = sanitizeLocation(labeledPickupMatch[1].trim());
     if (pickupLocation) rawMatches.push(`Pickup location: "${pickupLocation}"`);
   }
 
   const dropoffMatch = text.match(
-    /drop[\s-]?off\s+location\s*[:–—-]\s*(.+?)(?=\s+trip\s+start|\s+trip\s+end|\n|$)/i
+    /(?:drop[\s-]?off|return)\s+location\s*[:–—-]\s*(.+?)(?=\s+(?:pick[\s-]?up|drop[\s-]?off|return)\s+location|\s+trip\s+start|\s+trip\s+end|\n|$)/i
   );
   if (dropoffMatch) {
     dropoffLocation = sanitizeLocation(dropoffMatch[1].trim());

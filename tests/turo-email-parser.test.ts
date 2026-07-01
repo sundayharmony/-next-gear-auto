@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseTuroEmail, sanitizeLocation } from "../src/lib/utils/turo-email-parser";
+import { parseTuroEmail, sanitizeLocation, buildTuroParseText } from "../src/lib/utils/turo-email-parser";
 
 test("parseTuroEmail detects cancellation emails", () => {
   const text = `
@@ -165,4 +165,31 @@ test("sanitizeLocation rejects email boilerplate and keeps real addresses", () =
   assert.equal(sanitizeLocation("Newark Liberty International Airport"), "Newark Liberty International Airport");
   assert.equal(sanitizeLocation("123 Main St, Hoboken, NJ"), "123 Main St, Hoboken, NJ");
   assert.equal(sanitizeLocation("Hoboken, NJ"), "Hoboken, NJ");
+  assert.equal(sanitizeLocation("Terminal B Parking Garage, EWR"), "Terminal B Parking Garage, EWR");
+});
+
+test("parseTuroEmail reads pickup location from subject when body is booked-by only", () => {
+  const subject = "Tej's trip with your Tesla Model 3 at Newark Liberty International Airport is booked!";
+  const body =
+    "Jeep Grand Cherokee 2024 booked by Tej Trip start: 6/17/26 11:00 AM Trip end: 6/19/26 5:30 PM You earn: $145.56";
+  const parsed = parseTuroEmail(body, subject);
+  assert.equal(parsed.pickupLocation, "Newark Liberty International Airport");
+  assert.equal(parsed.guestName, "Tej");
+});
+
+test("parseTuroEmail parses Pick-up location hyphenated label", () => {
+  const text = `
+    Pick-up location: 123 Observer Highway, Hoboken, NJ 07030
+    Trip start: 7/6/26 10:00 AM
+    Trip end: 7/8/26 10:00 AM
+  `;
+  const parsed = parseTuroEmail(text);
+  assert.equal(parsed.pickupLocation, "123 Observer Highway, Hoboken, NJ 07030");
+});
+
+test("buildTuroParseText prepends subject without duplicating body", () => {
+  const subject = "Tej's trip with your Tesla Model 3 at Newark Airport is booked!";
+  const body = subject + "\nTrip start: 6/17/26 11:00 AM Trip end: 6/19/26 5:30 PM";
+  assert.equal(buildTuroParseText(body, subject), body);
+  assert.ok(buildTuroParseText("Trip start: 6/17/26", subject).startsWith(subject));
 });

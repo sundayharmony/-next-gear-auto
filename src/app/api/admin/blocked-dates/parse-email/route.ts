@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
-    const { emailText } = body;
+    const { emailText, subject } = body;
 
     if (!emailText || typeof emailText !== "string" || emailText.trim().length < 10) {
       return NextResponse.json(
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const result = parseTuroEmail(emailText);
+    const result = parseTuroEmail(emailText, typeof subject === "string" ? subject : undefined);
 
     return NextResponse.json({
       success: true,
