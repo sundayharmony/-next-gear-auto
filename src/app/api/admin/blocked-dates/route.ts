@@ -24,16 +24,6 @@ export async function GET(req: NextRequest) {
     const selectCols =
       "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date, cancelled_at, created_at";
 
-    async function runQuery(
-      base: ReturnType<ReturnType<typeof getServiceSupabase>["from"]>
-    ) {
-      let query = base.select(selectCols).order("start_date", { ascending: true });
-      if (vehicleId) query = query.eq("vehicle_id", vehicleId);
-      if (from) query = query.gte("end_date", from);
-      if (to) query = query.lte("start_date", to);
-      return query;
-    }
-
     let data: Record<string, unknown>[] | null = null;
     let error: { message: string } | null = null;
 
@@ -52,20 +42,43 @@ export async function GET(req: NextRequest) {
       data = res.data;
       error = res.error;
     } else if (scope === "all") {
-      const res = await runQuery(supabase.from("blocked_dates")).limit(5000);
+      let query = supabase
+        .from("blocked_dates")
+        .select(selectCols)
+        .order("start_date", { ascending: true })
+        .limit(5000);
+      if (vehicleId) query = query.eq("vehicle_id", vehicleId);
+      if (from) query = query.gte("end_date", from);
+      if (to) query = query.lte("start_date", to);
+      const res = await query;
       data = res.data;
       error = res.error;
     } else {
       // Default: manual/owner blocks + active Turo only (avoids Supabase 1000-row cap on cancelled junk).
-      const [manualRes, turoRes] = await Promise.all([
-        runQuery(supabase.from("blocked_dates").neq("source", TURO_BLOCKED_SOURCE)),
-        runQuery(
-          supabase
-            .from("blocked_dates")
-            .eq("source", TURO_BLOCKED_SOURCE)
-            .is("cancelled_at", null)
-        ),
-      ]);
+      let manualQuery = supabase
+        .from("blocked_dates")
+        .select(selectCols)
+        .order("start_date", { ascending: true })
+        .neq("source", TURO_BLOCKED_SOURCE);
+      let turoQuery = supabase
+        .from("blocked_dates")
+        .select(selectCols)
+        .order("start_date", { ascending: true })
+        .eq("source", TURO_BLOCKED_SOURCE)
+        .is("cancelled_at", null);
+      if (vehicleId) {
+        manualQuery = manualQuery.eq("vehicle_id", vehicleId);
+        turoQuery = turoQuery.eq("vehicle_id", vehicleId);
+      }
+      if (from) {
+        manualQuery = manualQuery.gte("end_date", from);
+        turoQuery = turoQuery.gte("end_date", from);
+      }
+      if (to) {
+        manualQuery = manualQuery.lte("start_date", to);
+        turoQuery = turoQuery.lte("start_date", to);
+      }
+      const [manualRes, turoRes] = await Promise.all([manualQuery, turoQuery]);
       if (manualRes.error) {
         error = manualRes.error;
       } else if (turoRes.error) {

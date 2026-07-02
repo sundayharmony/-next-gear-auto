@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
             subject: typeof item.subject === "string" ? item.subject : undefined,
             emailText: String(item.emailText || "").trim(),
           }))
-          .filter((item) => item.emailText.length >= 20)
+          .filter((item: ReplayEmail) => item.emailText.length >= 20)
       : [];
 
     if (!emails.length) {
