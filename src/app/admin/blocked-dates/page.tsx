@@ -76,20 +76,27 @@ export default function BlockedDatesPage() {
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
-      const [vRes, bRes, syncRes] = await Promise.all([
+  const [vehicles, visibleBlocks, cancelledBlocks, syncRes] = await Promise.all([
         adminFetch("/api/admin/vehicles"),
-        adminFetch("/api/admin/blocked-dates"),
+        adminFetch("/api/admin/blocked-dates?scope=visible"),
+        adminFetch("/api/admin/blocked-dates?scope=cancelledTuro"),
         adminFetch("/api/admin/blocked-dates/sync-cancellations"),
       ]);
 
-      if (vRes.ok) {
-        const vData = await vRes.json();
+      if (vehicles.ok) {
+        const vData = await vehicles.json();
         if (vData.success) setVehicles(vData.data);
       }
-      if (bRes.ok) {
-        const bData = await bRes.json();
-        if (bData.success) setBlockedDates(bData.data);
+      const merged: BlockedDate[] = [];
+      if (visibleBlocks.ok) {
+        const bData = await visibleBlocks.json();
+        if (bData.success) merged.push(...bData.data);
       }
+      if (cancelledBlocks.ok) {
+        const cData = await cancelledBlocks.json();
+        if (cData.success) merged.push(...cData.data);
+      }
+      setBlockedDates(merged);
       if (syncRes.ok) {
         const syncData = await syncRes.json();
         if (syncData.success) setTuroSyncStatus(syncData.data);

@@ -389,6 +389,14 @@ function needsAccuracyRefresh(subject, body) {
     return true;
   }
 
+  // Always reconcile when email contains a LOCATION block (DB may still be empty).
+  if (
+    /(?:^|\n)location\s*\n\s*[A-Z0-9]/im.test(combined) ||
+    /\blocation\s+\d{1,6}\s+/i.test(combined)
+  ) {
+    return true;
+  }
+
   var hasTripDates = /trip\s+start/i.test(lower) || /booked\s+from/i.test(lower);
   var hasRealLocationHint =
     /pick[\s-]?up\s+location|drop[\s-]?off\s+location|return\s+location/i.test(combined) ||

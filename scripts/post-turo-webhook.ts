@@ -30,17 +30,29 @@ const emails = readFileSync(file, "utf8")
 
 async function main() {
   console.log(`Posting ${emails.length} email(s) to ${webhookUrl}`);
-  for (const emailText of emails) {
+  for (const block of emails) {
+    const subjectMatch = block.match(/^Subject:\s*(.+)$/im);
+    const subject = subjectMatch?.[1]?.trim();
+    const emailText = subjectMatch
+      ? block.replace(/^Subject:\s*.+$/im, "").trim()
+      : block;
     const res = await fetch(webhookUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${secret}`,
         "Content-Type": "application/json",
+        "x-idempotency-key": `post-turo-${Date.now()}-${Math.random()}`,
+        "x-webhook-timestamp": String(Date.now()),
       },
-      body: JSON.stringify({ emailText }),
+      body: JSON.stringify({
+        emailText,
+        subject,
+        eventType: "reconcile_refresh",
+        sourceMode: "location_backfill",
+      }),
     });
-    const body = await res.text();
-    console.log(`\n${res.status} ${body.slice(0, 500)}`);
+    const responseBody = await res.text();
+    console.log(`\n${res.status} ${responseBody.slice(0, 500)}`);
   }
 }
 

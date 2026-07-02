@@ -19,23 +19,63 @@ export async function GET(req: NextRequest) {
     const vehicleId = searchParams.get("vehicleId");
     const from = searchParams.get("from");
     const to = searchParams.get("to");
+    const scope = searchParams.get("scope") || "visible";
 
-    let query = supabase
-      .from("blocked_dates")
-      .select("id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date, cancelled_at, created_at")
-      .order("start_date", { ascending: true });
+    const selectCols =
+      "id, vehicle_id, start_date, end_date, pickup_time, return_time, location, earnings, source, reason, is_extension, original_end_date, cancelled_at, created_at";
 
-    if (vehicleId) {
-      query = query.eq("vehicle_id", vehicleId);
-    }
-    if (from) {
-      query = query.gte("end_date", from);
-    }
-    if (to) {
-      query = query.lte("start_date", to);
+    async function runQuery(
+      base: ReturnType<ReturnType<typeof getServiceSupabase>["from"]>
+    ) {
+      let query = base.select(selectCols).order("start_date", { ascending: true });
+      if (vehicleId) query = query.eq("vehicle_id", vehicleId);
+      if (from) query = query.gte("end_date", from);
+      if (to) query = query.lte("start_date", to);
+      return query;
     }
 
-    let { data, error } = await query;
+    let data: Record<string, unknown>[] | null = null;
+    let error: { message: string } | null = null;
+
+    if (scope === "cancelledTuro") {
+      let query = supabase
+        .from("blocked_dates")
+        .select(selectCols)
+        .eq("source", TURO_BLOCKED_SOURCE)
+        .not("cancelled_at", "is", null)
+        .order("start_date", { ascending: false })
+        .limit(500);
+      if (vehicleId) query = query.eq("vehicle_id", vehicleId);
+      if (from) query = query.gte("end_date", from);
+      if (to) query = query.lte("start_date", to);
+      const res = await query;
+      data = res.data;
+      error = res.error;
+    } else if (scope === "all") {
+      const res = await runQuery(supabase.from("blocked_dates")).limit(5000);
+      data = res.data;
+      error = res.error;
+    } else {
+      // Default: manual/owner blocks + active Turo only (avoids Supabase 1000-row cap on cancelled junk).
+      const [manualRes, turoRes] = await Promise.all([
+        runQuery(supabase.from("blocked_dates").neq("source", TURO_BLOCKED_SOURCE)),
+        runQuery(
+          supabase
+            .from("blocked_dates")
+            .eq("source", TURO_BLOCKED_SOURCE)
+            .is("cancelled_at", null)
+        ),
+      ]);
+      if (manualRes.error) {
+        error = manualRes.error;
+      } else if (turoRes.error) {
+        error = turoRes.error;
+      } else {
+        data = [...(manualRes.data || []), ...(turoRes.data || [])].sort((a, b) =>
+          String(a.start_date).localeCompare(String(b.start_date))
+        );
+      }
+    }
 
     if (error && isMissingColumnError(error)) {
       let fallbackQuery = supabase

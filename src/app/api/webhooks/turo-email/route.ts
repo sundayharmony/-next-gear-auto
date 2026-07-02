@@ -339,12 +339,16 @@ export async function POST(req: NextRequest) {
 
     // ── Location/time reconcile (guest match even when DB dates differ) ──
     if (isReconcileRefresh && !isCancellationEvent) {
-      const { data: vehicleTrips } = await findActiveTuroTrips({});
+      const { data: vehicleTrips } = await findActiveTuroTrips({
+        overlapStart: parsed.startDate!,
+        overlapEnd: parsed.endDate!,
+      });
       const refreshRow = pickTuroTripForMetadataRefresh(
         vehicleTrips || [],
         parsed.startDate!,
         parsed.endDate!,
-        parsed.guestName
+        parsed.guestName,
+        parsed.earnings
       );
 
       if (refreshRow) {

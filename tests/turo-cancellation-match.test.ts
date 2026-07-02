@@ -103,3 +103,17 @@ test("pickTuroTripForMetadataRefresh matches sole overlapping trip without guest
   );
   assert.equal(picked?.id, "solo");
 });
+
+test("pickTuroTripForMetadataRefresh matches by earnings when guest is absent", () => {
+  const picked = pickTuroTripForMetadataRefresh(
+    [
+      { id: "henry", start_date: "2026-07-01", end_date: "2026-07-05", reason: "Turo: Henry — $253.95" },
+      { id: "other", start_date: "2026-07-01", end_date: "2026-07-07", reason: "Turo: Graham — $339.95" },
+    ],
+    "2026-07-01",
+    "2026-07-05",
+    null,
+    253.95
+  );
+  assert.equal(picked?.id, "henry");
+});

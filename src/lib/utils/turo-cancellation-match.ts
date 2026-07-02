@@ -22,6 +22,18 @@ export function reasonMatchesTuroGuest(
   return new RegExp(`turo:?\\s*${escaped}\\b`, "i").test(reason);
 }
 
+/** Match the dollar amount stored in reason (e.g. "Turo: Henry — $253.95"). */
+export function reasonMatchesTuroEarnings(
+  reason: string | null | undefined,
+  earnings: number | null | undefined
+): boolean {
+  if (!reason || earnings == null || !Number.isFinite(earnings)) return false;
+  const matches = [...reason.matchAll(/\$\s*([\d,]+(?:\.\d{1,2})?)/g)];
+  if (!matches.length) return false;
+  const last = parseFloat(matches[matches.length - 1][1].replace(/,/g, ""));
+  return Number.isFinite(last) && Math.abs(last - earnings) < 0.02;
+}
+
 /**
  * Pick the blocked_dates row to cancel. Prefers exact dates, then guest name in reason.
  * Refuses ambiguous overlap matches (prevents cancelling the wrong trip).
@@ -74,7 +86,8 @@ export function pickTuroTripForMetadataRefresh(
   candidates: TuroCancellationCandidate[],
   startDate: string,
   endDate: string,
-  guestName: string | null
+  guestName: string | null,
+  earnings?: number | null
 ): TuroCancellationCandidate | null {
   const strict = pickTuroCancellationMatch(candidates, startDate, endDate, guestName);
   if (strict) return strict;
@@ -96,6 +109,17 @@ export function pickTuroTripForMetadataRefresh(
       const db = Math.abs(new Date(b.start_date + "T12:00:00").getTime() - target);
       return da - db;
     })[0];
+  }
+
+  if (earnings != null) {
+    const byEarnings = candidates.filter((row) =>
+      reasonMatchesTuroEarnings(row.reason, earnings)
+    );
+    if (byEarnings.length === 1) return byEarnings[0];
+    const overlapping = byEarnings.filter(
+      (row) => row.start_date <= endDate && row.end_date >= startDate
+    );
+    if (overlapping.length === 1) return overlapping[0];
   }
 
   // No guest in email — only match when exactly one trip overlaps the parsed range.

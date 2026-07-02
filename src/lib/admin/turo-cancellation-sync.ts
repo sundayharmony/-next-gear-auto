@@ -311,16 +311,40 @@ export async function syncTuroCancellations(opts: {
 
 export async function listTuroCancellationStatus() {
   const supabase = getServiceSupabase();
-  const { rows, hasCancelledAt } = await fetchActiveTuroRows(supabase);
-  const cancelled = rows.filter(isBlockedDateCancelled);
-  const active = rows.filter((r) => !isBlockedDateCancelled(r));
+
+  const [activeCountRes, cancelledCountRes, activeRowsRes, hasColProbe] = await Promise.all([
+    supabase
+      .from("blocked_dates")
+      .select("id", { count: "exact", head: true })
+      .eq("source", TURO_BLOCKED_SOURCE)
+      .is("cancelled_at", null),
+    supabase
+      .from("blocked_dates")
+      .select("id", { count: "exact", head: true })
+      .eq("source", TURO_BLOCKED_SOURCE)
+      .not("cancelled_at", "is", null),
+    supabase
+      .from("blocked_dates")
+      .select("id, vehicle_id, start_date, end_date, reason, location, cancelled_at, created_at, source")
+      .eq("source", TURO_BLOCKED_SOURCE)
+      .is("cancelled_at", null)
+      .order("start_date", { ascending: false }),
+    supabase.from("blocked_dates").select("cancelled_at").limit(1),
+  ]);
+
+  const hasCancelledAt = !hasColProbe.error;
+  if (activeCountRes.error) throw new Error(activeCountRes.error.message);
+
+  const active = (activeRowsRes.data || []) as TuroTripRow[];
+  const activeCount = activeCountRes.count ?? active.length;
+
   return {
     hasCancelledAt,
-    total: rows.length,
-    active: active.length,
-    cancelled: cancelled.length,
+    total: activeCount + (cancelledCountRes.count ?? 0),
+    active: activeCount,
+    cancelled: cancelledCountRes.count ?? 0,
     activeMissingLocation: active.filter((r) => !storedTuroLocation(r.location)).length,
-    cancelledRows: cancelled,
+    cancelledRows: [] as TuroTripRow[],
     activeRows: active,
   };
 }
