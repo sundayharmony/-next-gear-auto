@@ -5,6 +5,7 @@ import { sendBookingConfirmationWithAgreement, sendAdminNewBooking } from "@/lib
 import { logger } from "@/lib/utils/logger";
 import { sumBookingPaymentAmounts } from "@/lib/bookings/payments";
 import { getVehicleDisplayName } from "@/lib/types";
+import { createCalendarEvent, type CalendarEventData } from "@/lib/google/calendar";
 
 function getStripe(): Stripe {
   const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -172,6 +173,37 @@ export async function POST(request: Request) {
               sendAdminNewBooking(emailData)
                 .then(() => logger.info("Admin confirmation email sent via webhook for booking:", bookingId))
                 .catch((error) => logger.error("Failed to send admin confirmation email via webhook:", error));
+
+              // Add to Google Calendar if customer has connected their account
+              if (booking.customer_id) {
+                const calendarEventData: CalendarEventData = {
+                  summary: `Car Rental: ${emailData.vehicleName}`,
+                  description: `Your vehicle rental from NextGearAuto.\n\nBooking ID: ${bookingId}\nVehicle: ${emailData.vehicleName}\nTotal: $${booking.total_price?.toFixed(2) || "0.00"}\n\nBring a valid driver's license and the payment card used for booking.`,
+                  startDate: booking.pickup_date,
+                  startTime: booking.pickup_time || undefined,
+                  endDate: booking.return_date,
+                  endTime: booking.return_time || undefined,
+                  location: "NextGearAuto, Jersey City, NJ",
+                };
+
+                createCalendarEvent(booking.customer_id, calendarEventData)
+                  .then(async (result) => {
+                    if (result.success && result.eventId) {
+                      logger.info(`Google Calendar event created for booking ${bookingId}: ${result.eventId}`);
+                      try {
+                        await supabase
+                          .from("bookings")
+                          .update({ google_calendar_event_id: result.eventId })
+                          .eq("id", bookingId);
+                      } catch (err) {
+                        logger.error("Failed to save calendar event ID:", err);
+                      }
+                    } else if (result.error && result.error !== "Google Calendar not connected") {
+                      logger.warn(`Google Calendar sync skipped for booking ${bookingId}: ${result.error}`);
+                    }
+                  })
+                  .catch((error) => logger.error("Failed to create Google Calendar event:", error));
+              }
             }
           }
         }

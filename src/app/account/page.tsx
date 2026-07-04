@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { PageContainer } from "@/components/layout/page-container";
 import { ReviewForm } from "@/components/review-form";
+import { GoogleCalendarConnect } from "@/components/google-calendar-connect";
 import { useVehicles } from "@/lib/hooks/useVehicles";
 import { cn } from "@/lib/utils/cn";
 import { useAuth } from "@/lib/context/auth-context";
@@ -555,6 +556,9 @@ export default function AccountPage() {
             {/* Profile */}
             {activeTab === "profile" && (
               <>
+              {/* Google Calendar Integration */}
+              <GoogleCalendarConnect />
+
               <Card>
                 <CardContent className="p-6">
                   <h2 className="text-xl font-semibold text-gray-900 mb-6">Profile Settings</h2>

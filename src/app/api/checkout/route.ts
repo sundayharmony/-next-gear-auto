@@ -15,6 +15,7 @@ import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { resolveCheckoutCustomer } from "@/lib/bookings/resolve-guest-checkout-customer";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
+import { createCalendarEvent, type CalendarEventData } from "@/lib/google/calendar";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
@@ -511,6 +512,35 @@ export async function POST(request: NextRequest) {
 
       sendBookingConfirmationWithAgreement(emailData).catch(logger.error);
       sendAdminNewBooking(emailData).catch(logger.error);
+
+      // Add to Google Calendar for $0 bookings (confirmed immediately)
+      if (customerId) {
+        const calendarEventData: CalendarEventData = {
+          summary: `Car Rental: ${vehicleName || "Vehicle"}`,
+          description: `Your vehicle rental from NextGearAuto.\n\nBooking ID: ${bookingId}\nVehicle: ${vehicleName || "Vehicle"}\nTotal: $${serverTotal.toFixed(2)}\n\nBring a valid driver's license and the payment card used for booking.`,
+          startDate: pickupDate,
+          startTime: pickupTime || undefined,
+          endDate: returnDate,
+          endTime: returnTime || undefined,
+          location: pickupLocationName || "NextGearAuto, Jersey City, NJ",
+        };
+
+        createCalendarEvent(customerId, calendarEventData)
+          .then(async (result) => {
+            if (result.success && result.eventId) {
+              logger.info(`Google Calendar event created for booking ${bookingId}: ${result.eventId}`);
+              try {
+                await supabase
+                  .from("bookings")
+                  .update({ google_calendar_event_id: result.eventId })
+                  .eq("id", bookingId);
+              } catch (err) {
+                logger.error("Failed to save calendar event ID:", err);
+              }
+            }
+          })
+          .catch((error) => logger.error("Failed to create Google Calendar event:", error));
+      }
 
       return NextResponse.json({
         success: true,
