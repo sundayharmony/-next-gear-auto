@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -118,7 +118,7 @@ export default function GoogleCalendarIntegrationPage() {
       }
       const data = json.data as { upserted: number; deleted: number; skipped: number };
       setSuccess(
-        `Sync complete — ${data.upserted} updated, ${data.deleted} removed, ${data.skipped} unchanged`
+        `Sync complete â€” ${data.upserted} updated, ${data.deleted} removed, ${data.skipped} unchanged`
       );
       await loadStatus();
     } catch (err) {
@@ -173,7 +173,7 @@ export default function GoogleCalendarIntegrationPage() {
             {loading ? (
               <div className="flex items-center gap-2 text-gray-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading connection status…
+                Loading connection statusâ€¦
               </div>
             ) : (
               <>
@@ -264,7 +264,7 @@ export default function GoogleCalendarIntegrationPage() {
 
                 <p className="text-xs text-gray-500 pt-2">
                   Events include pickup locations when available. Past-ended Turo trips are not
-                  re-synced to protect finances. A reconcile job also runs every 15 minutes.
+                  re-synced to protect finances. A daily reconcile cron runs as a backup \(use Sync now anytime\)\.
                 </p>
               </>
             )}

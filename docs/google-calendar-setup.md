@@ -1,4 +1,4 @@
-# Google Calendar fleet sync
+﻿# Google Calendar fleet sync
 
 One-way sync from Next Gear Auto to a single Google Calendar for website bookings, Turo trips, and manual blocked dates.
 
@@ -32,7 +32,7 @@ Run [`supabase-google-calendar.sql`](../supabase-google-calendar.sql) in the Sup
 ## Connect in admin
 
 1. Deploy with env vars set.
-2. Admin → **Google Calendar**.
+2. Admin â†’ **Google Calendar**.
 3. Click **Connect Google Calendar** and approve Calendar access.
 4. Pick the fleet calendar if you have more than one writable calendar.
 5. Click **Sync now** for the initial backfill.
@@ -47,10 +47,11 @@ Run [`supabase-google-calendar.sql`](../supabase-google-calendar.sql) in the Sup
 
 Cancelled bookings, cancelled Turo trips, and deleted blocks remove the matching Google event.
 
-Past-ended Turo trips are not pushed (finance-safe). A cron job reconciles every 15 minutes.
+Past-ended Turo trips are not pushed (finance-safe). Real-time hooks sync on booking/block changes. Vercel cron reconciles once daily (`0 10 * * *` on Hobby); on Pro you can use `*/15 * * * *` in `vercel.json` for 15-minute reconcile.
 
 ## Troubleshooting
 
-- **OAuth state mismatch** — connect again while logged in as admin.
-- **No refresh token** — revoke app access in Google Account → Security → Third-party access, then reconnect.
-- **Events missing location** — run Turo location backfill; bookings need `pickup_location_name` or a linked `locations` row.
+- **OAuth state mismatch** â€” connect again while logged in as admin.
+- **No refresh token** â€” revoke app access in Google Account â†’ Security â†’ Third-party access, then reconnect.
+- **Events missing location** â€” run Turo location backfill; bookings need `pickup_location_name` or a linked `locations` row.
+

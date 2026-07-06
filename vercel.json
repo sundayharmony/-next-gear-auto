@@ -1,4 +1,4 @@
-{
+﻿{
   "crons": [
     {
       "path": "/api/cron/reminders",
@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/google-calendar-sync",
-      "schedule": "*/15 * * * *"
+      "schedule": "0 10 * * *"
     }
   ],
   "headers": [
