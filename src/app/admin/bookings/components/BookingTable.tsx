@@ -237,7 +237,7 @@ export default function BookingTable({
               </div>
 
               {/* Times & Location */}
-              {(booking.pickup_time || booking.pickup_location_name) && (
+              {(booking.pickup_time || booking.pickup_location_name || (turoRow && booking.turo_location)) && (
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-500 mb-3">
                   {booking.pickup_time && (
                     <span>{formatTime(booking.pickup_time)}{booking.return_time ? ` – ${formatTime(booking.return_time)}` : ""}</span>
@@ -245,6 +245,11 @@ export default function BookingTable({
                   {booking.pickup_location_name && (
                     <span className="flex items-center gap-0.5 min-w-0 flex-1">
                       <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{booking.pickup_location_name}</span>
+                    </span>
+                  )}
+                  {turoRow && booking.turo_location && (
+                    <span className="flex items-center gap-0.5 min-w-0 flex-1">
+                      <MapPin className="h-3 w-3 shrink-0" /> <span className="truncate">{booking.turo_location}</span>
                     </span>
                   )}
                 </div>
@@ -430,8 +435,11 @@ export default function BookingTable({
                           {booking.pickup_time && booking.return_time && " – "}
                           {booking.return_time && formatTime(booking.return_time)}
                         </div>
-                        {booking.pickup_location_name && (
-                          <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[140px] flex items-center gap-1"><MapPin className="h-3 w-3 flex-shrink-0" /> {booking.pickup_location_name}</p>
+                        {(booking.pickup_location_name || (turoRow && booking.turo_location)) && (
+                          <p className="text-[11px] text-gray-400 mt-0.5 truncate max-w-[140px] flex items-center gap-1">
+                            <MapPin className="h-3 w-3 flex-shrink-0" />
+                            {booking.pickup_location_name || booking.turo_location}
+                          </p>
                         )}
                       </div>
                       <Badge variant="secondary" className="whitespace-nowrap text-xs">

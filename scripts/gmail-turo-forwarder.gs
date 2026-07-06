@@ -261,15 +261,19 @@ function runAccuracyReconciliation() {
   for (var i = 0; i < max; i++) {
     var messageId = ids[i];
     try {
+      if (isProcessedReconcileMessage(messageId)) continue;
       var msg = GmailApp.getMessageById(messageId);
       if (!msg) continue;
       var subject = String(msg.getSubject() || "");
       var body = String(msg.getPlainBody() || msg.getBody() || "");
+      if (isCancellationEmail(subject, body)) continue;
       if (!needsAccuracyRefresh(subject, body)) continue;
 
       var result = sendToWebhook(msg, "reconcile_refresh", "reconcile");
-      if (result.ok) sent++;
-      else failed++;
+      if (result.ok) {
+        sent++;
+        markProcessedReconcileMessage(messageId);
+      } else failed++;
     } catch (err) {
       failed++;
       Logger.log("Reconcile fetch/send failed for message " + messageId + ": " + err.toString());
@@ -375,6 +379,7 @@ function classifyEventType(subject, body) {
 }
 
 function needsAccuracyRefresh(subject, body) {
+  if (isCancellationEmail(subject, body)) return false;
   var subj = String(subject || "");
   var bod = String(body || "");
   var combined = subj + "\n" + bod;
@@ -434,14 +439,28 @@ function processedKey(messageId) {
   return PROCESSED_KEY_PREFIX + String(messageId || "");
 }
 
+function reconcileProcessedKey(messageId) {
+  return PROCESSED_KEY_PREFIX + String(messageId || "") + "-reconcile";
+}
+
 function isProcessedMessage(messageId) {
   if (!messageId) return false;
   return Boolean(getScriptProp(processedKey(messageId), ""));
 }
 
+function isProcessedReconcileMessage(messageId) {
+  if (!messageId) return false;
+  return Boolean(getScriptProp(reconcileProcessedKey(messageId), ""));
+}
+
 function markProcessedMessage(messageId) {
   if (!messageId) return;
   setScriptProp(processedKey(messageId), String(Date.now()));
+}
+
+function markProcessedReconcileMessage(messageId) {
+  if (!messageId) return;
+  setScriptProp(reconcileProcessedKey(messageId), String(Date.now()));
 }
 
 function rememberRecentMessageId(messageId) {

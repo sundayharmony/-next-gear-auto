@@ -89,8 +89,10 @@ function bookingDisplayName(booking: BookingRow): string {
 }
 
 function bookingBarTitle(booking: BookingRow, pickupDate: string, returnDate: string, daysTotal: number): string {
-  const name = booking.customer_name?.trim() || (isTuroBooking(booking) ? "Turo guest" : "Guest");
-  return `${name}\n${pickupDate} → ${returnDate} (${daysTotal} day${daysTotal === 1 ? "" : "s"})\n$${(booking.total_price ?? 0).toFixed(2)} — ${booking.status || "pending"}\nClick for details`;
+  const name = booking.customer_name?.trim() || bookingDisplayName(booking);
+  const turoLocation = (booking as BookingRow & { turo_location?: string | null }).turo_location?.trim();
+  const locationLine = isTuroBooking(booking) && turoLocation ? `\n${turoLocation}` : "";
+  return `${name}\n${pickupDate} → ${returnDate} (${daysTotal} day${daysTotal === 1 ? "" : "s"})${locationLine}\n$${(booking.total_price ?? 0).toFixed(2)} — ${booking.status || "pending"}\nClick for details`;
 }
 
 export function TimelineView({

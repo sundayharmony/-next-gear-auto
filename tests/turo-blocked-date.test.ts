@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { getTuroDriverFromReason, formatTuroOccupancyCustomerName, mergeTuroLocationField } from "../src/lib/utils/turo-blocked-date";
+import { getTuroDriverFromReason, formatTuroOccupancyCustomerName, isTuroTripSyncMutable, mergeTuroLocationField } from "../src/lib/utils/turo-blocked-date";
 
 test("getTuroDriverFromReason parses standard Turo reason", () => {
   assert.equal(getTuroDriverFromReason("Turo: Noah — $158.19"), "Noah");
@@ -50,4 +50,10 @@ test("mergeTuroLocationField does not overwrite valid location unless forceRefre
     }),
     "Hoboken, NJ"
   );
+});
+
+test("isTuroTripSyncMutable allows today and future trips only", () => {
+  assert.equal(isTuroTripSyncMutable("2026-07-06", "2026-07-06"), true);
+  assert.equal(isTuroTripSyncMutable("2026-07-07", "2026-07-06"), true);
+  assert.equal(isTuroTripSyncMutable("2026-07-05", "2026-07-06"), false);
 });

@@ -60,6 +60,17 @@ test("batch sync skips rows already marked cancelled_at", () => {
   assert.equal(picked, null);
 });
 
+test("cancelled twin match detects previously cancelled trip for resurrection guard", () => {
+  const cancelledRows = BATCH_FIXTURE_ROWS.filter((r) => r.cancelled_at);
+  const picked = pickTuroCancellationMatch(
+    cancelledRows,
+    "2026-06-10",
+    "2026-06-12",
+    "Alex"
+  );
+  assert.equal(picked?.id, "d");
+});
+
 test("batch sync scopes match to vehicle_id", () => {
   const picked = syncStyleMatch(BATCH_FIXTURE_ROWS, "v1", "2026-06-02", "2026-06-04", "Brent");
   assert.equal(picked?.id, "b");

@@ -1,4 +1,10 @@
+import { getLocalYmd } from "@/lib/utils/date-helpers";
 import { storedTuroLocation } from "@/lib/utils/turo-email-parser";
+
+/** Trips that ended before today are frozen — webhook sync must not mutate finances. */
+export function isTuroTripSyncMutable(endDate: string, todayYmd = getLocalYmd()): boolean {
+  return endDate >= todayYmd;
+}
 
 /** Admin calendar/bookings list label — guest first so search and timeline bars match Turo. */
 export function formatTuroOccupancyCustomerName(

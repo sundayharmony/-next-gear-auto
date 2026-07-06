@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import type { VehicleListItem } from "@/lib/types";
 import { formatTime, formatDate } from "@/lib/utils/date-helpers";
 import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
+import { displayBlockedDateLocation } from "@/app/admin/blocked-dates/blocked-dates-types";
 import { StaffSidePanel } from "@/components/staff/staff-overlay";
 import type { BlockedDateEntry } from "./calendar-model";
 
@@ -63,7 +64,7 @@ export function BlockedDateDetailPanel({
           </div>
           <div>
             <p className="text-xs text-gray-500">Pickup Location</p>
-            <p className="font-medium">{blocked.location || "Not available"}</p>
+            <p className="font-medium">{displayBlockedDateLocation(blocked.location) || "Not available"}</p>
           </div>
           <div>
             <p className="text-xs text-gray-500">Earnings</p>
