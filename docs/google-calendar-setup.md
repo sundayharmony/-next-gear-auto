@@ -8,8 +8,9 @@ One-way sync from Next Gear Auto to a single Google Calendar for website booking
 2. Enable **Google Calendar API**.
 3. Configure the **OAuth consent screen** (External is fine for a single business account).
 4. Create **OAuth 2.0 Client ID** (Web application).
-5. Add authorized redirect URIs:
+5. Add **both** production redirect URIs (www and non-www — OAuth uses whichever host you open admin on):
    - `https://www.rentnextgearauto.com/api/admin/integrations/google-calendar/callback`
+   - `https://rentnextgearauto.com/api/admin/integrations/google-calendar/callback`
    - `http://localhost:3000/api/admin/integrations/google-calendar/callback`
 6. Copy the client ID and secret into Vercel (**nga** project) and local `.env.local`:
 

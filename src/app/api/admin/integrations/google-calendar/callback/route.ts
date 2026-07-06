@@ -28,7 +28,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const tokens = await exchangeAuthCode(code);
+    const siteOrigin = new URL(req.url).origin;
+    const tokens = await exchangeAuthCode(code, siteOrigin);
     const refreshToken = tokens.refresh_token!;
     const authClient = oauthClientWithRefreshToken(refreshToken);
     const calendarId = (await getPrimaryCalendarId(authClient)) || "primary";

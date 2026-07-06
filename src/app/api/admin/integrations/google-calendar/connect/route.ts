@@ -18,7 +18,8 @@ export async function GET(req: NextRequest) {
   }
 
   const state = randomBytes(24).toString("hex");
-  const url = buildGoogleAuthUrl(state);
+  const siteOrigin = new URL(req.url).origin;
+  const url = buildGoogleAuthUrl(state, siteOrigin);
   const response = NextResponse.redirect(url);
   response.cookies.set(STATE_COOKIE, state, {
     httpOnly: true,

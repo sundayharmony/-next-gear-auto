@@ -1,10 +1,13 @@
 import { google } from "googleapis";
 import { GCAL_SCOPES, type GoogleOAuth2Client } from "./types";
 
-export function getGoogleCalendarOAuthConfig() {
+export function getGoogleCalendarOAuthConfig(siteOrigin?: string) {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID?.trim();
   const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim();
-  const siteUrl = (process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/$/, "");
+  const siteUrl = (siteOrigin || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(
+    /\/$/,
+    ""
+  );
   if (!clientId || !clientSecret) {
     throw new Error("Google Calendar OAuth is not configured");
   }
@@ -15,13 +18,13 @@ export function getGoogleCalendarOAuthConfig() {
   };
 }
 
-export function createOAuthClient(): GoogleOAuth2Client {
-  const { clientId, clientSecret, redirectUri } = getGoogleCalendarOAuthConfig();
+export function createOAuthClient(siteOrigin?: string): GoogleOAuth2Client {
+  const { clientId, clientSecret, redirectUri } = getGoogleCalendarOAuthConfig(siteOrigin);
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
 
-export function buildGoogleAuthUrl(state: string): string {
-  const client = createOAuthClient();
+export function buildGoogleAuthUrl(state: string, siteOrigin?: string): string {
+  const client = createOAuthClient(siteOrigin);
   return client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
@@ -31,8 +34,8 @@ export function buildGoogleAuthUrl(state: string): string {
   });
 }
 
-export async function exchangeAuthCode(code: string) {
-  const client = createOAuthClient();
+export async function exchangeAuthCode(code: string, siteOrigin?: string) {
+  const client = createOAuthClient(siteOrigin);
   const { tokens } = await client.getToken(code);
   if (!tokens.refresh_token) {
     throw new Error("Google did not return a refresh token; revoke app access and reconnect");
