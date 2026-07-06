@@ -45,3 +45,5 @@ email-previews.html
 
 # Android (removed — use staff PWA instead)
 /android/
+
+.vercel

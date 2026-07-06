@@ -4,6 +4,7 @@ import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
+import { queueGoogleCalendarBlockedDateSync } from "@/lib/integrations/google-calendar/hooks";
 
 /**
  * GET /api/admin/blocked-dates?vehicleId=...
@@ -215,6 +216,8 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });
     }
 
+    if (data?.id) queueGoogleCalendarBlockedDateSync(String(data.id));
+
     return NextResponse.json({ success: true, data }, { status: 201 });
   } catch (err) {
     logger.error("Blocked dates POST error:", err);
@@ -383,6 +386,8 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ success: false, message: "Blocked date not found" }, { status: 404 });
     }
 
+    queueGoogleCalendarBlockedDateSync(String(data.id));
+
     return NextResponse.json({ success: true, data });
   } catch (err) {
     logger.error("Blocked dates PUT error:", err);
@@ -427,6 +432,8 @@ export async function DELETE(req: NextRequest) {
     if (!deleted || deleted.length === 0) {
       return NextResponse.json({ success: false, message: "Blocked date not found" }, { status: 404 });
     }
+
+    queueGoogleCalendarBlockedDateSync(id);
 
     return NextResponse.json({ success: true, message: "Blocked date removed" });
   } catch (err) {

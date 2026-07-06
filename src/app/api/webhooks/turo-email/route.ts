@@ -5,6 +5,7 @@ import { TURO_BLOCKED_SOURCE, CANCELLED_REASON_PREFIX } from "@/lib/utils/blocke
 import { pickTuroCancellationMatch, pickTuroTripForMetadataRefresh, reasonMatchesTuroGuest, type TuroCancellationCandidate } from "@/lib/utils/turo-cancellation-match";
 import { getTuroDriverFromReason, isTuroTripSyncMutable, mergeTuroLocationField } from "@/lib/utils/turo-blocked-date";
 import { markTuroBlockedDateCancelled } from "@/lib/admin/turo-cancellation-sync";
+import { queueGoogleCalendarBlockedDateSync } from "@/lib/integrations/google-calendar/hooks";
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import { safeCompareSecret } from "@/lib/security/constant-time";
@@ -59,6 +60,10 @@ function normalizeTuroRow(row: Record<string, unknown>): TuroBlockedRow {
 function asTuroRow(row: Record<string, unknown> | null | undefined): TuroBlockedRow | null {
   if (!row || row.id == null) return null;
   return normalizeTuroRow(row);
+}
+
+function queueTuroGoogleCalendarSync(row: { id?: string } | null | undefined) {
+  if (row?.id) queueGoogleCalendarBlockedDateSync(String(row.id));
 }
 
 /**
@@ -480,11 +485,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, message: metaRes.error.message }, { status: 500 });
           }
 
+          const syncedRow = asTuroRow(metaRes.data as Record<string, unknown>);
+          queueTuroGoogleCalendarSync(syncedRow);
           return NextResponse.json({
             success: true,
             action: "reconcile_metadata",
             message: `Refreshed metadata for ${vehicleLabel} (${refreshRow.start_date} → ${refreshRow.end_date})`,
-            data: asTuroRow(metaRes.data as Record<string, unknown>),
+            data: syncedRow,
             parsed: {
               confidence: parsed.confidence,
               guestName: parsed.guestName,
@@ -617,6 +624,8 @@ export async function POST(req: NextRequest) {
         guest: parsed.guestName,
       });
 
+      queueTuroGoogleCalendarSync(matchedTrip);
+
       return NextResponse.json({
         success: true,
         action: "cancelled",
@@ -703,6 +712,8 @@ export async function POST(req: NextRequest) {
           newEnd: parsed.endDate,
           guest: parsed.guestName,
         });
+
+        queueTuroGoogleCalendarSync(updated);
 
         return NextResponse.json({
           success: true,
@@ -810,11 +821,13 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ success: false, message: metaRes.error.message }, { status: 500 });
           }
 
+          const overlapSyncedRow = asTuroRow(metaRes.data as Record<string, unknown>);
+          queueTuroGoogleCalendarSync(overlapSyncedRow);
           return NextResponse.json({
             success: true,
             action: "reconcile_metadata",
             message: `Refreshed metadata for ${vehicleLabel} (${row.start_date} → ${row.end_date})`,
-            data: asTuroRow(metaRes.data as Record<string, unknown>),
+            data: overlapSyncedRow,
             parsed: {
               confidence: parsed.confidence,
               guestName: parsed.guestName,
@@ -903,6 +916,8 @@ export async function POST(req: NextRequest) {
           merged: `${mergedStart} → ${mergedEnd}`,
           rangeWidened,
         });
+
+        queueTuroGoogleCalendarSync(updated);
 
         return NextResponse.json({
           success: true,
@@ -996,6 +1011,8 @@ export async function POST(req: NextRequest) {
       confidence: parsed.confidence,
       vehicleMatchScore: matchScore,
     });
+
+    queueTuroGoogleCalendarSync(created);
 
     return NextResponse.json(
       {

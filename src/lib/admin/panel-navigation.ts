@@ -47,6 +47,7 @@ const iconMap: Record<string, PanelIconKey> = {
   instagram: "instagram",
   analytics: "clipboard",
   marketing: "megaphone",
+  googleCalendar: "calendar",
   invoices: "fileText",
 };
 

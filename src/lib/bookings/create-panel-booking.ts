@@ -18,6 +18,7 @@ import {
   upsertRecurringBookingMeta,
 } from "@/lib/utils/recurring-booking";
 import { notifyVehicleOwner } from "@/lib/owner/notifications";
+import { queueGoogleCalendarBookingSync } from "@/lib/integrations/google-calendar/hooks";
 import type { BookingOverlapMode } from "@/lib/utils/booking-overlap";
 
 export type PanelOriginChannel = "admin_panel" | "manager_panel" | "owner_panel";
@@ -299,6 +300,8 @@ export async function createPanelBooking(
       bookingId
     ).catch(logger.error);
   }
+
+  queueGoogleCalendarBookingSync(bookingId);
 
   return { ok: true, bookingId, customerId };
 }

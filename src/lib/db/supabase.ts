@@ -50,6 +50,8 @@ type Database = {
       owner_payouts: GenericTable;
       owner_notifications: GenericTable;
       vehicle_sales: GenericTable;
+      google_calendar_connections: GenericTable;
+      google_calendar_event_links: GenericTable;
     };
     Views: Record<string, never>;
     Functions: {

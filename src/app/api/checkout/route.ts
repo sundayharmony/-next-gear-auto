@@ -14,6 +14,7 @@ import { logBookingEvent } from "@/lib/booking/booking-events";
 import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { resolveCheckoutCustomer } from "@/lib/bookings/resolve-guest-checkout-customer";
+import { queueGoogleCalendarBookingSync } from "@/lib/integrations/google-calendar/hooks";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
@@ -482,6 +483,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    queueGoogleCalendarBookingSync(bookingId);
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://rentnextgearauto.com";
 

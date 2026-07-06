@@ -90,6 +90,24 @@ const METHOD_OVERRIDES = {
   "src/app/api/admin/blocked-dates/route.ts": {
     "*": "admin-only",
   },
+  "src/app/api/admin/integrations/google-calendar/route.ts": {
+    "*": "admin-only",
+  },
+  "src/app/api/admin/integrations/google-calendar/connect/route.ts": {
+    "*": "admin-only",
+  },
+  "src/app/api/admin/integrations/google-calendar/callback/route.ts": {
+    "*": "admin-only",
+  },
+  "src/app/api/admin/integrations/google-calendar/disconnect/route.ts": {
+    "*": "admin-only",
+  },
+  "src/app/api/admin/integrations/google-calendar/sync/route.ts": {
+    "*": "admin-only",
+  },
+  "src/app/api/admin/integrations/google-calendar/calendars/route.ts": {
+    "*": "admin-only",
+  },
 };
 
 function normalizePath(rel) {

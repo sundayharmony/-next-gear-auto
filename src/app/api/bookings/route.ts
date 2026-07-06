@@ -27,6 +27,7 @@ import {
   sortOccupancyEntries,
 } from "@/lib/admin/vehicle-occupancy";
 import { validateBookingStatusPatch } from "@/lib/bookings";
+import { queueGoogleCalendarBookingSync } from "@/lib/integrations/google-calendar/hooks";
 import {
   canViewBookingFinancials,
   redactBookingFinancials,
@@ -754,6 +755,8 @@ export async function POST(request: NextRequest) {
       bookingId
     ).catch(logger.error);
 
+    queueGoogleCalendarBookingSync(bookingId);
+
     return NextResponse.json(
       { data: { id: bookingId, customer_id: customerId }, success: true },
       { status: 201 }
@@ -1158,6 +1161,10 @@ export async function PATCH(request: NextRequest) {
             canViewBookingFinancials("manager", updatedBooking)
           )
         : updatedBooking;
+
+    if (updatedBooking?.id) {
+      queueGoogleCalendarBookingSync(String(updatedBooking.id));
+    }
 
     return NextResponse.json({ success: true, message: "Booking updated", data: responseData });
   } catch {
