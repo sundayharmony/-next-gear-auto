@@ -1,13 +1,11 @@
 import { google } from "googleapis";
+import { resolveOAuthSiteOrigin } from "./oauth-site";
 import { GCAL_SCOPES, type GoogleOAuth2Client } from "./types";
 
 export function getGoogleCalendarOAuthConfig(siteOrigin?: string) {
   const clientId = process.env.GOOGLE_CALENDAR_CLIENT_ID?.trim();
   const clientSecret = process.env.GOOGLE_CALENDAR_CLIENT_SECRET?.trim();
-  const siteUrl = (siteOrigin || process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000").replace(
-    /\/$/,
-    ""
-  );
+  const siteUrl = resolveOAuthSiteOrigin(siteOrigin);
   if (!clientId || !clientSecret) {
     throw new Error("Google Calendar OAuth is not configured");
   }

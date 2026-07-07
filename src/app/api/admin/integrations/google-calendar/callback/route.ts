@@ -2,9 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPrimaryCalendarId, listWritableCalendars } from "@/lib/integrations/google-calendar/client";
 import { exchangeAuthCode, oauthClientWithRefreshToken } from "@/lib/integrations/google-calendar/oauth";
 import {
+  GCAL_OAUTH_FLASH_COOKIE,
+  getCanonicalSiteOrigin,
+  getOAuthCookieOptions,
+} from "@/lib/integrations/google-calendar/oauth-site";
+import {
   reconcileFleetCalendar,
   saveGoogleCalendarConnection,
 } from "@/lib/integrations/google-calendar/sync";
+import { logger } from "@/lib/utils/logger";
 
 const STATE_COOKIE = "gcal_oauth_state";
 const ADMIN_COOKIE = "gcal_oauth_admin_id";
@@ -20,19 +26,66 @@ function adminPageUrl(origin: string, params?: Record<string, string>) {
   return url.toString();
 }
 
+function redirectWithFlash(
+  origin: string,
+  flash: { type: "success" | "error"; message: string },
+  params?: Record<string, string>
+) {
+  const response = NextResponse.redirect(adminPageUrl(origin, params));
+  const cookieOpts = getOAuthCookieOptions();
+  response.cookies.set(GCAL_OAUTH_FLASH_COOKIE, JSON.stringify(flash), {
+    ...cookieOpts,
+    maxAge: 120,
+  });
+  response.cookies.delete(STATE_COOKIE);
+  response.cookies.delete(ADMIN_COOKIE);
+  return response;
+}
+
 export async function GET(req: NextRequest) {
-  const siteOrigin = new URL(req.url).origin;
+  const canonicalOrigin = getCanonicalSiteOrigin();
+  const requestOrigin = new URL(req.url).origin;
+  if (process.env.NODE_ENV === "production" && requestOrigin !== canonicalOrigin) {
+    const target = new URL(req.url);
+    const canonical = new URL(canonicalOrigin);
+    target.protocol = canonical.protocol;
+    target.host = canonical.host;
+    return NextResponse.redirect(target);
+  }
+
+  const siteOrigin = canonicalOrigin;
   const { searchParams } = new URL(req.url);
   const code = searchParams.get("code");
   const state = searchParams.get("state");
+  const googleError = searchParams.get("error");
   const cookieState = req.cookies.get(STATE_COOKIE)?.value;
   const adminId = req.cookies.get(ADMIN_COOKIE)?.value;
 
+  if (googleError) {
+    const description = searchParams.get("error_description") || googleError;
+    logger.warn("Google Calendar OAuth denied", { googleError, description });
+    return redirectWithFlash(siteOrigin, {
+      type: "error",
+      message: `Google authorization failed: ${description}`,
+    });
+  }
+
   if (!code || !state || !cookieState || state !== cookieState || !adminId) {
-    return NextResponse.redirect(
-      adminPageUrl(siteOrigin, {
-        error: "OAuth session expired — open admin, then connect again",
-      })
+    logger.warn("Google Calendar OAuth callback missing session", {
+      hasCode: Boolean(code),
+      hasState: Boolean(state),
+      hasCookieState: Boolean(cookieState),
+      stateMatches: Boolean(state && cookieState && state === cookieState),
+      hasAdminId: Boolean(adminId),
+    });
+    return redirectWithFlash(
+      siteOrigin,
+      {
+        type: "error",
+        message:
+          "OAuth session expired — stay on www.rentnextgearauto.com, then connect again from Admin → Google Calendar",
+      },
+      { error: "OAuth session expired — connect again from Admin → Google Calendar" }
     );
   }
 
@@ -53,15 +106,14 @@ export async function GET(req: NextRequest) {
 
     void reconcileFleetCalendar().catch(() => {});
 
-    const response = NextResponse.redirect(adminPageUrl(siteOrigin, { connected: "1" }));
-    response.cookies.delete(STATE_COOKIE);
-    response.cookies.delete(ADMIN_COOKIE);
-    return response;
+    return redirectWithFlash(
+      siteOrigin,
+      { type: "success", message: "Google Calendar connected." },
+      { connected: "1" }
+    );
   } catch (err) {
     const message = err instanceof Error ? err.message : "Google OAuth failed";
-    const response = NextResponse.redirect(adminPageUrl(siteOrigin, { error: message }));
-    response.cookies.delete(STATE_COOKIE);
-    response.cookies.delete(ADMIN_COOKIE);
-    return response;
+    logger.error("Google Calendar OAuth callback failed", err);
+    return redirectWithFlash(siteOrigin, { type: "error", message }, { error: message });
   }
 }

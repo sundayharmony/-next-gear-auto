@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import {
+  GCAL_OAUTH_FLASH_COOKIE,
+  getCanonicalSiteOrigin,
+} from "@/lib/integrations/google-calendar/oauth-site";
+import {
   getGoogleCalendarStatus,
   isGoogleCalendarConfigured,
   reconcileFleetCalendar,
@@ -12,13 +16,29 @@ export async function GET(req: NextRequest) {
   if (!auth.authorized) return auth.response;
 
   const status = await getGoogleCalendarStatus();
-  return NextResponse.json({
+  const flashRaw = req.cookies.get(GCAL_OAUTH_FLASH_COOKIE)?.value;
+  let flash: { type: "success" | "error"; message: string } | undefined;
+  if (flashRaw) {
+    try {
+      flash = JSON.parse(flashRaw) as { type: "success" | "error"; message: string };
+    } catch {
+      flash = undefined;
+    }
+  }
+
+  const response = NextResponse.json({
     success: true,
     data: {
       ...status,
       configured: isGoogleCalendarConfigured(),
+      oauthRedirectUri: `${getCanonicalSiteOrigin()}/api/admin/integrations/google-calendar/callback`,
+      flash,
     },
   });
+  if (flashRaw) {
+    response.cookies.delete(GCAL_OAUTH_FLASH_COOKIE);
+  }
+  return response;
 }
 
 export async function POST(req: NextRequest) {

@@ -194,7 +194,7 @@ export async function proxy(req: NextRequest) {
       const role = payload?.role;
       if (!payload || !isAdminRole(role as Parameters<typeof isAdminRole>[0])) {
         const loginUrl = new URL("/admin", req.url);
-        loginUrl.searchParams.set("redirect", pathname);
+        loginUrl.searchParams.set("redirect", pathname + req.nextUrl.search);
         return NextResponse.redirect(loginUrl);
       }
     }
@@ -202,7 +202,7 @@ export async function proxy(req: NextRequest) {
     if (authenticated && isManagerRoute) {
       if (!payload || !tokenHasStaffAccess(payload as { role?: unknown; roles?: unknown })) {
         const loginUrl = new URL("/admin", req.url);
-        loginUrl.searchParams.set("redirect", pathname);
+        loginUrl.searchParams.set("redirect", pathname + req.nextUrl.search);
         return NextResponse.redirect(loginUrl);
       }
     }
@@ -210,14 +210,14 @@ export async function proxy(req: NextRequest) {
     if (authenticated && isOwnerRoute) {
       if (!payload || !tokenHasOwnerAccess(payload as { role?: unknown; roles?: unknown })) {
         const loginUrl = new URL("/login", req.url);
-        loginUrl.searchParams.set("redirect", pathname);
+        loginUrl.searchParams.set("redirect", pathname + req.nextUrl.search);
         return NextResponse.redirect(loginUrl);
       }
     }
 
     if (!authenticated) {
       const loginUrl = new URL(isOwnerRoute ? "/login" : "/admin", req.url);
-      loginUrl.searchParams.set("redirect", pathname);
+      loginUrl.searchParams.set("redirect", pathname + req.nextUrl.search);
       return NextResponse.redirect(loginUrl);
     }
   }

@@ -19,6 +19,8 @@ type Status = {
   connectedAt: string | null;
   lastSyncAt: string | null;
   lastError: string | null;
+  oauthRedirectUri?: string;
+  flash?: { type: "success" | "error"; message: string };
 };
 
 type CalendarOption = {
@@ -36,12 +38,6 @@ export default function GoogleCalendarIntegrationPage() {
   const [syncing, setSyncing] = useState(false);
   const [selectedCalendarId, setSelectedCalendarId] = useState("");
   const [oauthRedirectUri, setOauthRedirectUri] = useState<string | null>(null);
-
-  useEffect(() => {
-    setOauthRedirectUri(
-      `${window.location.origin}/api/admin/integrations/google-calendar/callback`
-    );
-  }, []);
 
   const queryMessage = useMemo(() => {
     const err = searchParams.get("error");
@@ -61,6 +57,9 @@ export default function GoogleCalendarIntegrationPage() {
       }
       const data = json.data as Status;
       setStatus(data);
+      setOauthRedirectUri(data.oauthRedirectUri || null);
+      if (data.flash?.type === "error") setError(data.flash.message);
+      if (data.flash?.type === "success") setSuccess(data.flash.message);
       setSelectedCalendarId(data.calendarId || "");
       if (data.connected) {
         const calRes = await adminFetch("/api/admin/integrations/google-calendar/calendars");
@@ -77,7 +76,7 @@ export default function GoogleCalendarIntegrationPage() {
     } finally {
       setLoading(false);
     }
-  }, [setError]);
+  }, [setError, setSuccess]);
 
   useEffect(() => {
     void loadStatus();
