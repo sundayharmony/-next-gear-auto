@@ -113,24 +113,45 @@ export default function GoogleCalendarIntegrationPage() {
 
   const handleSync = async () => {
     setSyncing(true);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 5 * 60 * 1000);
     try {
       const res = await adminFetch("/api/admin/integrations/google-calendar/sync", {
         method: "POST",
+        signal: controller.signal,
       });
       const json = await res.json();
       if (!res.ok || !json.success) {
         setError(json.message || "Sync failed");
         return;
       }
-      const data = json.data as { upserted: number; deleted: number; skipped: number };
-      setSuccess(
-        `Sync complete â€” ${data.upserted} updated, ${data.deleted} removed, ${data.skipped} unchanged`
-      );
+      const data = json.data as {
+        upserted: number;
+        deleted: number;
+        skipped: number;
+        errors?: string[];
+      };
+      const message =
+        typeof json.message === "string"
+          ? json.message
+          : `Sync complete — ${data.upserted} updated, ${data.deleted} removed, ${data.skipped} unchanged`;
+      if (json.partial || (data.errors?.length ?? 0) > 0) {
+        setError(message);
+      } else {
+        setSuccess(message);
+      }
       await loadStatus();
     } catch (err) {
       logger.error("Google Calendar sync failed", err);
-      setError("Sync failed");
+      if (err instanceof DOMException && err.name === "AbortError") {
+        setError(
+          "Sync timed out after 5 minutes. Some events may have synced — click Sync now again to continue."
+        );
+      } else {
+        setError("Sync failed");
+      }
     } finally {
+      clearTimeout(timeoutId);
       setSyncing(false);
     }
   };

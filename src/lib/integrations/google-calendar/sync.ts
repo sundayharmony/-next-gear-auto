@@ -15,6 +15,7 @@ import {
   toGoogleEventBody,
 } from "./event-builder";
 import { revokeRefreshToken } from "./oauth";
+import { type ReconcileResult } from "./reconcile-result";
 import {
   type BuiltGoogleCalendarEvent,
   GCAL_BUSINESS_TIMEZONE,
@@ -26,12 +27,33 @@ import {
 
 const ACTIVE_BOOKING_STATUSES = ["pending", "confirmed", "active", "completed"];
 
-type ReconcileResult = {
-  upserted: number;
-  deleted: number;
-  skipped: number;
-  errors: string[];
+export type SyncItemResult = { ok: true } | { ok: false; error: string };
+
+export { formatReconcileSummary, type ReconcileResult } from "./reconcile-result";
+
+type SyncContext = {
+  calendar: ReturnType<typeof calendarClientFromRefreshToken>;
+  calendarId: string;
 };
+
+function itemErrorLabel(
+  sourceKind: GoogleCalendarSourceKind,
+  sourceId: string,
+  message: string
+): string {
+  return `${sourceKind}:${sourceId}: ${message}`;
+}
+
+async function createSyncContext(): Promise<SyncContext | null> {
+  if (!isGoogleCalendarConfigured()) return null;
+  const connection = await getGoogleCalendarConnection();
+  if (!connection) return null;
+  const refreshToken = decryptRefreshToken(connection.refresh_token_enc);
+  return {
+    calendar: calendarClientFromRefreshToken(refreshToken),
+    calendarId: connection.calendar_id,
+  };
+}
 
 function isMissingTableError(error: { message?: string } | null): boolean {
   const msg = error?.message || "";
@@ -205,37 +227,35 @@ async function deleteEventLink(sourceKind: GoogleCalendarSourceKind, sourceId: s
     .eq("source_id", sourceId);
 }
 
-export async function syncBuiltEvent(built: BuiltGoogleCalendarEvent | null): Promise<void> {
-  if (!built) return;
-  if (!isGoogleCalendarConfigured()) return;
-  const connection = await getGoogleCalendarConnection();
-  if (!connection) return;
-
+async function syncBuiltEventWithContext(
+  built: BuiltGoogleCalendarEvent,
+  ctx: SyncContext,
+  opts?: { updateConnectionMeta?: boolean }
+): Promise<SyncItemResult> {
+  const updateMeta = opts?.updateConnectionMeta ?? true;
   try {
-    const refreshToken = decryptRefreshToken(connection.refresh_token_enc);
-    const calendar = calendarClientFromRefreshToken(refreshToken);
     const existing = await getEventLink(built.sourceKind, built.sourceId);
 
     if (built.shouldDelete) {
       if (existing) {
-        await calendar.events.delete({
-          calendarId: connection.calendar_id,
+        await ctx.calendar.events.delete({
+          calendarId: ctx.calendarId,
           eventId: existing.google_event_id,
         });
         await deleteEventLink(built.sourceKind, built.sourceId);
       }
-      await setConnectionSyncMeta({ touched: true, lastError: null });
-      return;
+      if (updateMeta) await setConnectionSyncMeta({ touched: true, lastError: null });
+      return { ok: true };
     }
 
     if (existing?.sync_hash === built.syncHash) {
-      return;
+      return { ok: true };
     }
 
     const body = toGoogleEventBody(built);
     if (existing) {
-      await calendar.events.update({
-        calendarId: connection.calendar_id,
+      await ctx.calendar.events.update({
+        calendarId: ctx.calendarId,
         eventId: existing.google_event_id,
         requestBody: body,
       });
@@ -243,12 +263,12 @@ export async function syncBuiltEvent(built: BuiltGoogleCalendarEvent | null): Pr
         sourceKind: built.sourceKind,
         sourceId: built.sourceId,
         googleEventId: existing.google_event_id,
-        googleCalendarId: connection.calendar_id,
+        googleCalendarId: ctx.calendarId,
         syncHash: built.syncHash,
       });
     } else {
-      const created = await calendar.events.insert({
-        calendarId: connection.calendar_id,
+      const created = await ctx.calendar.events.insert({
+        calendarId: ctx.calendarId,
         requestBody: body,
       });
       const eventId = created.data.id;
@@ -257,11 +277,12 @@ export async function syncBuiltEvent(built: BuiltGoogleCalendarEvent | null): Pr
         sourceKind: built.sourceKind,
         sourceId: built.sourceId,
         googleEventId: eventId,
-        googleCalendarId: connection.calendar_id,
+        googleCalendarId: ctx.calendarId,
         syncHash: built.syncHash,
       });
     }
-    await setConnectionSyncMeta({ touched: true, lastError: null });
+    if (updateMeta) await setConnectionSyncMeta({ touched: true, lastError: null });
+    return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error("Google Calendar sync error", {
@@ -269,8 +290,16 @@ export async function syncBuiltEvent(built: BuiltGoogleCalendarEvent | null): Pr
       sourceKind: built.sourceKind,
       sourceId: built.sourceId,
     });
-    await setConnectionSyncMeta({ lastError: message });
+    if (updateMeta) await setConnectionSyncMeta({ lastError: message });
+    return { ok: false, error: message };
   }
+}
+
+export async function syncBuiltEvent(built: BuiltGoogleCalendarEvent | null): Promise<SyncItemResult> {
+  if (!built) return { ok: true };
+  const ctx = await createSyncContext();
+  if (!ctx) return { ok: true };
+  return syncBuiltEventWithContext(built, ctx);
 }
 
 async function loadLocationsMap(): Promise<Map<string, LocationLookup>> {
@@ -295,29 +324,39 @@ async function loadVehiclesMap(): Promise<Map<string, VehicleLookup>> {
   return map;
 }
 
-export async function deleteCalendarEventBySource(
+async function deleteCalendarEventWithContext(
   sourceKind: GoogleCalendarSourceKind,
-  sourceId: string
-): Promise<void> {
-  if (!isGoogleCalendarConfigured()) return;
-  const connection = await getGoogleCalendarConnection();
-  if (!connection) return;
+  sourceId: string,
+  ctx: SyncContext,
+  opts?: { updateConnectionMeta?: boolean }
+): Promise<SyncItemResult> {
+  const updateMeta = opts?.updateConnectionMeta ?? true;
   const existing = await getEventLink(sourceKind, sourceId);
-  if (!existing) return;
+  if (!existing) return { ok: true };
   try {
-    const refreshToken = decryptRefreshToken(connection.refresh_token_enc);
-    const calendar = calendarClientFromRefreshToken(refreshToken);
-    await calendar.events.delete({
-      calendarId: connection.calendar_id,
+    await ctx.calendar.events.delete({
+      calendarId: ctx.calendarId,
       eventId: existing.google_event_id,
     });
     await deleteEventLink(sourceKind, sourceId);
-    await setConnectionSyncMeta({ touched: true, lastError: null });
+    if (updateMeta) await setConnectionSyncMeta({ touched: true, lastError: null });
+    return { ok: true };
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error("Google Calendar delete error", { message, sourceKind, sourceId });
-    await setConnectionSyncMeta({ lastError: message });
+    if (updateMeta) await setConnectionSyncMeta({ lastError: message });
+    return { ok: false, error: message };
   }
+}
+
+export async function deleteCalendarEventBySource(
+  sourceKind: GoogleCalendarSourceKind,
+  sourceId: string
+): Promise<SyncItemResult> {
+  if (!isGoogleCalendarConfigured()) return { ok: true };
+  const ctx = await createSyncContext();
+  if (!ctx) return { ok: true };
+  return deleteCalendarEventWithContext(sourceKind, sourceId, ctx);
 }
 
 export async function syncBookingById(bookingId: string): Promise<void> {
@@ -364,8 +403,8 @@ export async function reconcileFleetCalendar(opts?: {
 }): Promise<ReconcileResult> {
   const result: ReconcileResult = { upserted: 0, deleted: 0, skipped: 0, errors: [] };
   if (!isGoogleCalendarConfigured()) return result;
-  const connection = await getGoogleCalendarConnection();
-  if (!connection) return result;
+  const ctx = await createSyncContext();
+  if (!ctx) return result;
 
   const pastDays = opts?.pastDays ?? 30;
   const futureDays = opts?.futureDays ?? 180;
@@ -430,42 +469,54 @@ export async function reconcileFleetCalendar(opts?: {
   }
 
   for (const built of desired.values()) {
-    try {
-      const before = await getEventLink(built.sourceKind, built.sourceId);
-      await syncBuiltEvent(built);
-      const after = await getEventLink(built.sourceKind, built.sourceId);
-      if (built.shouldDelete) {
-        if (before) result.deleted++;
-        else result.skipped++;
-      } else if (!before && after) {
-        result.upserted++;
-      } else if (before && before.sync_hash !== built.syncHash) {
-        result.upserted++;
-      } else {
-        result.skipped++;
-      }
-    } catch (err) {
-      result.errors.push(err instanceof Error ? err.message : String(err));
+    const before = await getEventLink(built.sourceKind, built.sourceId);
+    const syncResult = await syncBuiltEventWithContext(built, ctx, {
+      updateConnectionMeta: false,
+    });
+    if (!syncResult.ok) {
+      result.errors.push(
+        itemErrorLabel(built.sourceKind, built.sourceId, syncResult.error)
+      );
+      continue;
+    }
+    const after = await getEventLink(built.sourceKind, built.sourceId);
+    if (built.shouldDelete) {
+      if (before) result.deleted++;
+      else result.skipped++;
+    } else if (!before && after) {
+      result.upserted++;
+    } else if (before && before.sync_hash !== built.syncHash) {
+      result.upserted++;
+    } else {
+      result.skipped++;
     }
   }
 
   const { data: links } = await supabase
     .from("google_calendar_event_links")
     .select("source_kind, source_id")
-    .eq("google_calendar_id", connection.calendar_id);
+    .eq("google_calendar_id", ctx.calendarId);
 
   for (const link of links || []) {
     const key = `${link.source_kind}:${link.source_id}`;
     if (!desired.has(key)) {
-      try {
-        await deleteCalendarEventBySource(
-          link.source_kind as GoogleCalendarSourceKind,
-          link.source_id
+      const deleteResult = await deleteCalendarEventWithContext(
+        link.source_kind as GoogleCalendarSourceKind,
+        link.source_id,
+        ctx,
+        { updateConnectionMeta: false }
+      );
+      if (!deleteResult.ok) {
+        result.errors.push(
+          itemErrorLabel(
+            link.source_kind as GoogleCalendarSourceKind,
+            link.source_id,
+            deleteResult.error
+          )
         );
-        result.deleted++;
-      } catch (err) {
-        result.errors.push(err instanceof Error ? err.message : String(err));
+        continue;
       }
+      result.deleted++;
     }
   }
 

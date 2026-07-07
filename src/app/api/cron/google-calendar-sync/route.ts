@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { reconcileFleetCalendar } from "@/lib/integrations/google-calendar/sync";
+import { formatReconcileSummary, reconcileFleetCalendar } from "@/lib/integrations/google-calendar/sync";
 import { logger } from "@/lib/utils/logger";
+
+export const maxDuration = 300;
 
 export async function GET(request: Request) {
   const cronSecret = process.env.CRON_SECRET;
@@ -14,7 +16,18 @@ export async function GET(request: Request) {
 
   try {
     const result = await reconcileFleetCalendar();
-    return NextResponse.json({ success: true, data: result });
+    if (result.errors.length) {
+      logger.warn("Google Calendar cron sync completed with errors", {
+        errorCount: result.errors.length,
+        errors: result.errors.slice(0, 5),
+      });
+    }
+    return NextResponse.json({
+      success: true,
+      partial: result.errors.length > 0,
+      message: formatReconcileSummary(result),
+      data: result,
+    });
   } catch (err) {
     logger.error("Google Calendar cron sync failed:", err);
     return NextResponse.json(
