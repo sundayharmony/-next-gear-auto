@@ -73,10 +73,20 @@ export function mergeTuroEmailBodies(plain: string, html?: string | null): strin
   return `${p}\n\n${strippedHtml}`;
 }
 
+/** Strip Turo email UI tails accidentally merged into a location string. */
+export function trimTuroLocationTail(value: string): string {
+  return value
+    .replace(
+      /\s*,?\s*(?:about\s+(?:the\s+)?guest|guests(?:\s+see)?|special\s+requests|reservation\s+id|view\s+trip|trip\s+start|trip\s+end|total\s+distance).*/i,
+      ""
+    )
+    .trim();
+}
+
 /** Reject Turo email boilerplate mistakenly captured as a pickup/dropoff location. */
 export function sanitizeLocation(value: string | null | undefined): string | null {
   if (value == null) return null;
-  const trimmed = value.trim().replace(/\s+/g, " ");
+  const trimmed = trimTuroLocationTail(value.trim().replace(/\s+/g, " "));
   if (!trimmed) return null;
   if (trimmed.length > 150) return null;
 
@@ -142,7 +152,7 @@ export function extractTuroLocationBlock(text: string): string | null {
       .filter((line) => {
         if (!line || /^location$/i.test(line)) return false;
         if (
-          /^(?:reservation\s+id|view\s+trip|guests\s+see|trip\s+start|trip\s+end|total\s+distance)/i.test(
+          /^(?:reservation\s+id|view\s+trip|guests\s+see|trip\s+start|trip\s+end|total\s+distance|about\s+(?:the\s+)?guest|guests|special\s+requests)/i.test(
             line
           )
         ) {
@@ -162,7 +172,7 @@ export function extractTuroLocationBlock(text: string): string | null {
   if (collapsed) return collapsed;
 
   const locationHeaderCollapsed = text.match(
-    /\blocation\s+([A-Za-z0-9][^.!?\n]{4,120}?)(?=\s+(?:trip\s+start|trip\s+end|reservation|view\s+trip|you\s+earn|mileage|jeep|tesla|toyota|ford|honda|ram\b|$))/i
+    /\blocation\s+([A-Za-z0-9][^.!?\n]{4,120}?)(?=\s+(?:about\s+(?:the\s+)?guest|trip\s+start|trip\s+end|reservation|view\s+trip|you\s+earn|mileage|jeep|tesla|toyota|ford|honda|ram\b|$))/i
   );
   if (locationHeaderCollapsed) {
     const cleaned = sanitizeLocation(locationHeaderCollapsed[1].trim());

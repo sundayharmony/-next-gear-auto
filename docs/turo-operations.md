@@ -94,9 +94,9 @@ When the forwarder changes in the repo, paste the full file into your Google App
 3. Set at the top (keep your existing secret if already working):
    - `WEBHOOK_URL = "https://www.rentnextgearauto.com/api/webhooks/turo-email"`
    - `WEBHOOK_SECRET` = same value as `TURO_WEBHOOK_SECRET` in Vercel Production
-4. **Save** (Ctrl+S).
-5. For missing pickup locations: run **`resetLocationBackfillOffset()`** once, then **`runLocationBackfill180()`** (repeat until logs show no more sends).
-6. New emails are handled automatically by the existing 15-minute `runTuroSync` trigger.
+4. **Save** (Ctrl+S). The forwarder must send **`emailText` (plain) and `emailHtml` (raw HTML)** — the server merges them; pre-merging only in Apps Script is not enough.
+5. For missing pickup locations: run **`resetLocationBackfillOffset()`** once, then **`runLocationBackfill180()`** repeatedly until logs show `sent=0`.
+6. Check execution logs: `reconcile_metadata` = success; `No pickup location parsed from email` = that email’s HTML still didn’t parse (forward a sample to support).
 
 The location fix merges HTML email content when Gmail’s plain body is compact and omits the `LOCATION` block.
 

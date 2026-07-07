@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 
-type ReplayEmail = { subject?: string; emailText: string };
+type ReplayEmail = { subject?: string; emailText: string; emailHtml?: string };
 
 /**
  * POST /api/admin/blocked-dates/replay-locations
@@ -28,6 +28,12 @@ export async function POST(req: NextRequest) {
           .map((item: Record<string, unknown>) => ({
             subject: typeof item.subject === "string" ? item.subject : undefined,
             emailText: String(item.emailText || "").trim(),
+            emailHtml:
+              typeof item.emailHtml === "string"
+                ? item.emailHtml
+                : typeof item.email_html === "string"
+                  ? item.email_html
+                  : undefined,
           }))
           .filter((item: ReplayEmail) => item.emailText.length >= 20)
       : [];
@@ -50,7 +56,7 @@ export async function POST(req: NextRequest) {
     }> = [];
 
     for (let i = 0; i < emails.length; i++) {
-      const { emailText, subject } = emails[i];
+      const { emailText, subject, emailHtml } = emails[i];
       const ts = Date.now();
       const res = await fetch(webhookUrl, {
         method: "POST",
@@ -62,6 +68,7 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           emailText,
+          emailHtml,
           subject,
           eventType: "reconcile_refresh",
           sourceMode: "location_backfill",

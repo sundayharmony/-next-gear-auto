@@ -510,7 +510,15 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({
           success: true,
           action: "reconcile_noop",
-          message: `No metadata changes for ${vehicleLabel}`,
+          message: tripLocation
+            ? `No metadata changes for ${vehicleLabel}`
+            : `No pickup location parsed from email for ${vehicleLabel} (${parsed.guestName ?? "guest"})`,
+          parsed: {
+            confidence: parsed.confidence,
+            guestName: parsed.guestName,
+            tripLocation,
+            rawLocationMatches: parsed.rawMatches.filter((m) => /location/i.test(m)),
+          },
         });
       }
 

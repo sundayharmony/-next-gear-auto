@@ -308,7 +308,8 @@ function sendToWebhook(message, eventType, sourceMode) {
         "x-webhook-timestamp": String(ts),
       },
       payload: JSON.stringify({
-        emailText: body,
+        emailText: plain,
+        emailHtml: rawBody.indexOf("<") >= 0 ? rawBody : "",
         subject: subject,
         from: from,
         date: dateIso,

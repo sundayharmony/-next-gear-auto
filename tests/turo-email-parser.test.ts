@@ -216,6 +216,13 @@ test("extractTuroLocationBlock handles collapsed whitespace from stripped email 
   assert.equal(extractTuroLocationBlock(collapsed), "31 Nunda Avenue Jersey City, NJ");
 });
 
+test("sanitizeLocation trims About the guest tail from merged HTML locations", () => {
+  assert.equal(
+    sanitizeLocation("350 Duncan Avenue, Jersey City, NJ, About the guest"),
+    "350 Duncan Avenue, Jersey City, NJ"
+  );
+});
+
 test("mergeTuroEmailBodies appends stripped HTML when plain body lacks location", () => {
   const plain =
     "Jeep Grand Cherokee 2024 booked by Kenya Trip start: 7/9/26 7:00 PM Trip end: 7/13/26 5:00 PM You earn: $218.78";
