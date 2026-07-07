@@ -60,22 +60,27 @@ test("owner Turo fetch includes source so filterActiveTuroTrips keeps rows", () 
   assert.ok(source.includes('.is("cancelled_at", null)'));
 });
 
-test("loadOwnerDataset always excludes cancelled bookings", () => {
+test("loadOwnerDataset excludes cancelled bookings except for payout admin", () => {
   const source = fs.readFileSync(path.join(root, "src/lib/owner/owner-data.ts"), "utf8");
   assert.ok(source.includes("isOwnerActiveBooking"));
   assert.ok(source.includes("isActiveCalendarBlock"));
+  assert.ok(source.includes("forPayouts"));
   assert.match(
     source,
-    /visibleBookings\s*=\s*visibleBookings\.filter\(isOwnerActiveBooking\);/
-  );
-  assert.doesNotMatch(
-    source,
-    /if\s*\(options\?\.ownerPortalOnly\)\s*\{\s*visibleBookings\s*=\s*visibleBookings\.filter\(isOwnerActiveBooking\)/
+    /if\s*\(!options\?\.forPayouts\)\s*\{\s*visibleBookings\s*=\s*visibleBookings\.filter\(isOwnerActiveBooking\);/
   );
   assert.equal(isOwnerActiveBooking({ status: "upcoming" }), true);
   assert.equal(isOwnerActiveBooking({ status: "active" }), true);
   assert.equal(isOwnerActiveBooking({ status: "completed" }), true);
   assert.equal(isOwnerActiveBooking({ status: "cancelled" }), false);
+});
+
+test("admin owner-payouts route requests payout dataset with cancelled bookings", () => {
+  const source = fs.readFileSync(
+    path.join(root, "src/app/api/admin/owner-payouts/route.ts"),
+    "utf8"
+  );
+  assert.match(source, /loadOwnerDataset\(ownerId,\s*\{\s*forPayouts:\s*true\s*\}\)/);
 });
 
 test("owner availability API marks Turo trips as booked", () => {
