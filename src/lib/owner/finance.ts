@@ -113,6 +113,11 @@ export function isOwnerTuroBooking(booking: { kind?: string; id?: string }): boo
   return booking.kind === "turo" || (typeof booking.id === "string" && booking.id.startsWith("turo:"));
 }
 
+/** Owner portal list/calendar: hide cancelled website bookings and no-shows. */
+export function isOwnerActiveBooking(booking: { status: OwnerBookingStatus }): boolean {
+  return booking.status !== "cancelled";
+}
+
 /** Staff-created bookings (not public website checkout). */
 const PRIVATE_BOOKING_ORIGINS = new Set([
   "admin_panel",

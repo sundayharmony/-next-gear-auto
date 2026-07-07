@@ -7,7 +7,12 @@ import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { notifyOwner } from "@/lib/owner/notifications";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
-import { filterActiveTuroTrips, filterManualBlockedDates, TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
+import {
+  filterActiveTuroTrips,
+  filterManualBlockedDates,
+  isActiveCalendarBlock,
+  TURO_BLOCKED_SOURCE,
+} from "@/lib/utils/blocked-dates";
 
 const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -32,7 +37,7 @@ export async function GET(req: NextRequest) {
     const [{ data: blocked }, { data: bookings }] = await Promise.all([
       supabase
         .from("blocked_dates")
-        .select("id, vehicle_id, start_date, end_date, reason, source, owner_id")
+        .select("id, vehicle_id, start_date, end_date, reason, source, owner_id, cancelled_at")
         .in("vehicle_id", vehicleIds)
         .order("start_date", { ascending: true }),
       supabase
@@ -75,7 +80,9 @@ export async function GET(req: NextRequest) {
         success: true,
         data: {
           vehicles,
-          blockedDates: filterManualBlockedDates(blocked || []).map((b) => ({
+          blockedDates: filterManualBlockedDates(blocked || [])
+            .filter(isActiveCalendarBlock)
+            .map((b) => ({
             id: b.id,
             vehicleId: b.vehicle_id,
             startDate: b.start_date,

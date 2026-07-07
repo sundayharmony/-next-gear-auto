@@ -11,12 +11,18 @@ import {
   clampPercentage,
   computePayoutBreakdown,
   deriveOwnerStatus,
+  isOwnerActiveBooking,
   isOwnerVisibleBooking,
   rentalDays,
   DEFAULT_OWNER_PERCENTAGE,
 } from "@/lib/owner/finance";
 import { getTuroDriverFromReason, resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
-import { filterActiveTuroTrips, filterManualBlockedDates, TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
+import {
+  filterActiveTuroTrips,
+  filterManualBlockedDates,
+  isActiveCalendarBlock,
+  TURO_BLOCKED_SOURCE,
+} from "@/lib/utils/blocked-dates";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import { logger } from "@/lib/utils/logger";
 
@@ -98,12 +104,14 @@ export async function loadOwnerDataset(
       .eq("owner_id", ownerId),
     supabase
       .from("blocked_dates")
-      .select("id, vehicle_id, start_date, end_date, reason, source, owner_id")
+      .select("id, vehicle_id, start_date, end_date, reason, source, owner_id, cancelled_at")
       .in("vehicle_id", vehicleIds)
       .order("start_date", { ascending: true }),
   ]);
 
-  const blockedDates: OwnerBlockedDate[] = filterManualBlockedDates(blockedRows || []).map((b) => ({
+  const blockedDates: OwnerBlockedDate[] = filterManualBlockedDates(blockedRows || [])
+    .filter(isActiveCalendarBlock)
+    .map((b) => ({
     id: b.id as string,
     vehicleId: b.vehicle_id as string,
     startDate: b.start_date as string,
@@ -217,6 +225,10 @@ export async function loadOwnerDataset(
       createdAt: String(row.created_at || ""),
       ...breakdown,
     });
+  }
+
+  if (options?.ownerPortalOnly) {
+    visibleBookings = visibleBookings.filter(isOwnerActiveBooking);
   }
 
   visibleBookings.sort((a, b) => {

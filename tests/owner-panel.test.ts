@@ -4,6 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { OWNER_NAV_ITEMS } from "../src/lib/owner/owner-navigation";
 import { hasOwnerPortalAccess } from "../src/lib/auth/customer-capabilities";
+import { isOwnerActiveBooking } from "../src/lib/owner/finance";
 
 const root = process.cwd();
 
@@ -55,6 +56,18 @@ test("owner Turo fetch includes source so filterActiveTuroTrips keeps rows", () 
     source,
     /const fullSelect\s*=\s*\n\s*"[^"]*source[^"]*";/
   );
+  assert.ok(source.includes("filterActiveTuroTrips"));
+  assert.ok(source.includes('.is("cancelled_at", null)'));
+});
+
+test("owner portal excludes cancelled bookings from dataset", () => {
+  const source = fs.readFileSync(path.join(root, "src/lib/owner/owner-data.ts"), "utf8");
+  assert.ok(source.includes("isOwnerActiveBooking"));
+  assert.ok(source.includes("isActiveCalendarBlock"));
+  assert.equal(isOwnerActiveBooking({ status: "upcoming" }), true);
+  assert.equal(isOwnerActiveBooking({ status: "active" }), true);
+  assert.equal(isOwnerActiveBooking({ status: "completed" }), true);
+  assert.equal(isOwnerActiveBooking({ status: "cancelled" }), false);
 });
 
 test("owner availability API marks Turo trips as booked", () => {
@@ -62,6 +75,8 @@ test("owner availability API marks Turo trips as booked", () => {
   assert.ok(source.includes("filterActiveTuroTrips"));
   assert.ok(source.includes("turoBookedRanges"));
   assert.ok(source.includes("filterManualBlockedDates"));
+  assert.ok(source.includes("isActiveCalendarBlock"));
+  assert.ok(source.includes("cancelled_at"));
 });
 
 test("owner_portal_enabled revocation blocks owner portal access", () => {
