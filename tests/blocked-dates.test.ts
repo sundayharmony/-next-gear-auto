@@ -26,6 +26,17 @@ test("filterManualBlockedDates excludes Turo trips", () => {
   assert.deepEqual(manual.map((r) => r.id), ["1", "3"]);
 });
 
+test("filterManualBlockedDates with isActiveCalendarBlock excludes cancelled manual blocks", () => {
+  const rows = [
+    { id: "1", source: "manual", cancelled_at: null },
+    { id: "2", source: "owner", cancelled_at: "2026-06-01T12:00:00Z" },
+    { id: "3", source: "manual", reason: "[CANCELLED] maintenance" },
+  ];
+  const active = filterManualBlockedDates(rows).filter(isActiveCalendarBlock);
+  assert.equal(active.length, 1);
+  assert.equal(active[0].id, "1");
+});
+
 test("filterActiveTuroTrips keeps active Turo only", () => {
   const rows = [
     { id: "a", source: TURO_BLOCKED_SOURCE, cancelled_at: null },
