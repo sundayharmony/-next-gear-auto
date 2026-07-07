@@ -83,6 +83,23 @@ into `bookedRanges` so the availability calendar shows Turo days as red/booked.
 5. Spot-check one vehicle: Turo block visible in admin calendar, manager bookings list, and owner availability.
 6. Periodic audit: `npm run turo:audit` — watch for duplicate active trips or cancel text still in `reason` on active rows.
 
+## Gmail Apps Script update
+
+When the forwarder changes in the repo, paste the full file into your Google Apps Script project:
+
+**Source file:** `scripts/gmail-turo-forwarder.gs`
+
+1. Open [script.google.com](https://script.google.com) → your **NGA Turo Email** project.
+2. Select all code, delete, paste the full contents of `scripts/gmail-turo-forwarder.gs`.
+3. Set at the top (keep your existing secret if already working):
+   - `WEBHOOK_URL = "https://www.rentnextgearauto.com/api/webhooks/turo-email"`
+   - `WEBHOOK_SECRET` = same value as `TURO_WEBHOOK_SECRET` in Vercel Production
+4. **Save** (Ctrl+S).
+5. For missing pickup locations: run **`resetLocationBackfillOffset()`** once, then **`runLocationBackfill180()`** (repeat until logs show no more sends).
+6. New emails are handled automatically by the existing 15-minute `runTuroSync` trigger.
+
+The location fix merges HTML email content when Gmail’s plain body is compact and omits the `LOCATION` block.
+
 ## Backfill guidance (manual, chunked)
 
 Do **not** use broad historical backfill in automatic triggers.
