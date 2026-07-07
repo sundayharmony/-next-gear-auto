@@ -35,6 +35,13 @@ export default function GoogleCalendarIntegrationPage() {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [selectedCalendarId, setSelectedCalendarId] = useState("");
+  const [oauthRedirectUri, setOauthRedirectUri] = useState<string | null>(null);
+
+  useEffect(() => {
+    setOauthRedirectUri(
+      `${window.location.origin}/api/admin/integrations/google-calendar/callback`
+    );
+  }, []);
 
   const queryMessage = useMemo(() => {
     const err = searchParams.get("error");
@@ -183,6 +190,41 @@ export default function GoogleCalendarIntegrationPage() {
                     `GOOGLE_CALENDAR_CLIENT_SECRET`, and `GOOGLE_CALENDAR_ENCRYPTION_KEY` in Vercel,
                     then apply `supabase-google-calendar.sql`.
                   </p>
+                )}
+
+                {!status?.connected && status?.configured && (
+                  <div className="text-sm text-blue-900 bg-blue-50 border border-blue-200 rounded-md p-4 space-y-3">
+                    <p className="font-medium">Before you connect</p>
+                    <ol className="list-decimal list-inside space-y-2 text-blue-900/90">
+                      <li>
+                        In{" "}
+                        <a
+                          className="underline font-medium"
+                          href="https://console.cloud.google.com/apis/credentials/consent"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          Google Cloud Console
+                        </a>
+                        , open <strong>OAuth consent screen</strong> and add your Google account
+                        under <strong>Test users</strong> (required while the app is in Testing).
+                      </li>
+                      <li>
+                        Click <strong>Connect Google Calendar</strong> below. If Google shows
+                        &quot;Google hasn&apos;t verified this app&quot;, click <strong>Continue</strong>{" "}
+                        (not Back to safety), then approve Calendar access.
+                      </li>
+                      <li>
+                        Register this redirect URI under <strong>Credentials</strong> → your Web
+                        client → <strong>Authorized redirect URIs</strong>:
+                        {oauthRedirectUri ? (
+                          <code className="mt-1 block text-xs bg-white border border-blue-200 rounded px-2 py-1 break-all">
+                            {oauthRedirectUri}
+                          </code>
+                        ) : null}
+                      </li>
+                    </ol>
+                  </div>
                 )}
 
                 <div className="flex flex-wrap items-center gap-3">

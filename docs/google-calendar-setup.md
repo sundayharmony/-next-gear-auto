@@ -6,7 +6,10 @@ One-way sync from Next Gear Auto to a single Google Calendar for website booking
 
 1. Open [Google Cloud Console](https://console.cloud.google.com) and select your project (or create one).
 2. Enable **Google Calendar API**.
-3. Configure the **OAuth consent screen** (External is fine for a single business account).
+3. Configure the **OAuth consent screen**:
+   - User type: **External** (fine for a single business account).
+   - Publishing status: leave as **Testing** — you do not need Google verification for one fleet calendar.
+   - Under **Test users**, add every Google account that will click **Connect Google Calendar** in admin (exact email match).
 4. Create **OAuth 2.0 Client ID** (Web application).
 5. Add **both** production redirect URIs (www and non-www — OAuth uses whichever host you open admin on):
    - `https://www.rentnextgearauto.com/api/admin/integrations/google-calendar/callback`
@@ -34,9 +37,10 @@ Run [`supabase-google-calendar.sql`](../supabase-google-calendar.sql) in the Sup
 
 1. Deploy with env vars set.
 2. Admin â†’ **Google Calendar**.
-3. Click **Connect Google Calendar** and approve Calendar access.
-4. Pick the fleet calendar if you have more than one writable calendar.
-5. Click **Sync now** for the initial backfill.
+3. Click **Connect Google Calendar**. If Google shows **"Google hasn't verified this app"**, click **Continue** (not Back to safety) — see [Unverified app warning](#unverified-app-warning) below.
+4. Approve Calendar access on the consent screen.
+5. Pick the fleet calendar if you have more than one writable calendar.
+6. Click **Sync now** for the initial backfill.
 
 ## What syncs
 
@@ -50,9 +54,40 @@ Cancelled bookings, cancelled Turo trips, and deleted blocks remove the matching
 
 Past-ended Turo trips are not pushed (finance-safe). Real-time hooks sync on booking/block changes. Vercel cron reconciles once daily (`0 10 * * *` on Hobby); on Pro you can use `*/15 * * * *` in `vercel.json` for 15-minute reconcile.
 
+## Unverified app warning
+
+While the OAuth consent screen is in **Testing** mode, Google shows:
+
+> Google hasn't verified this app.
+
+This is **expected** — not a bug in the website. The app only requests `calendar.events` (fleet sync), not Google Sign-In for customers.
+
+**What to do:**
+
+1. In Cloud Console → **OAuth consent screen** → **Test users**, confirm your Google account is listed.
+2. On the warning screen, click **Continue**.
+3. On the next screen, allow Calendar access.
+
+The warning may appear every time you connect; that is normal in Testing mode. To remove it for all users you would need to publish the app and complete Google's verification (usually unnecessary for a single-business calendar).
+
+## Redirect URI checklist
+
+OAuth uses the **same host** you open admin on. The redirect URI must be registered exactly in **Credentials** → your Web client → **Authorized redirect URIs**.
+
+| Where you open admin | Required redirect URI |
+|----------------------|------------------------|
+| `https://www.rentnextgearauto.com` | `https://www.rentnextgearauto.com/api/admin/integrations/google-calendar/callback` |
+| `https://rentnextgearauto.com` | `https://rentnextgearauto.com/api/admin/integrations/google-calendar/callback` |
+| `http://localhost:3000` | `http://localhost:3000/api/admin/integrations/google-calendar/callback` |
+
+The admin **Google Calendar** page shows the redirect URI for your current host before you connect. A mismatch causes errors **after** you approve access (redirect or `redirect_uri_mismatch`), not on the unverified-app warning.
+
 ## Troubleshooting
 
-- **OAuth state mismatch** â€” connect again while logged in as admin.
-- **No refresh token** â€” revoke app access in Google Account â†’ Security â†’ Third-party access, then reconnect.
-- **Events missing location** â€” run Turo location backfill; bookings need `pickup_location_name` or a linked `locations` row.
+- **"Google hasn't verified this app"** — expected in Testing mode; add yourself as a test user and click **Continue**.
+- **Access blocked: app has not completed verification** — your Google account is not on the test-user list in Cloud Console.
+- **OAuth state mismatch** — connect again while logged in as admin.
+- **redirect_uri_mismatch** — add the exact callback URL for the host you use (see table above).
+- **No refresh token** — revoke app access in Google Account → Security → Third-party access, then reconnect.
+- **Events missing location** — run Turo location backfill; bookings need `pickup_location_name` or a linked `locations` row.
 
