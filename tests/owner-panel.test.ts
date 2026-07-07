@@ -60,10 +60,18 @@ test("owner Turo fetch includes source so filterActiveTuroTrips keeps rows", () 
   assert.ok(source.includes('.is("cancelled_at", null)'));
 });
 
-test("owner portal excludes cancelled bookings from dataset", () => {
+test("loadOwnerDataset always excludes cancelled bookings", () => {
   const source = fs.readFileSync(path.join(root, "src/lib/owner/owner-data.ts"), "utf8");
   assert.ok(source.includes("isOwnerActiveBooking"));
   assert.ok(source.includes("isActiveCalendarBlock"));
+  assert.match(
+    source,
+    /visibleBookings\s*=\s*visibleBookings\.filter\(isOwnerActiveBooking\);/
+  );
+  assert.doesNotMatch(
+    source,
+    /if\s*\(options\?\.ownerPortalOnly\)\s*\{\s*visibleBookings\s*=\s*visibleBookings\.filter\(isOwnerActiveBooking\)/
+  );
   assert.equal(isOwnerActiveBooking({ status: "upcoming" }), true);
   assert.equal(isOwnerActiveBooking({ status: "active" }), true);
   assert.equal(isOwnerActiveBooking({ status: "completed" }), true);

@@ -227,9 +227,7 @@ export async function loadOwnerDataset(
     });
   }
 
-  if (options?.ownerPortalOnly) {
-    visibleBookings = visibleBookings.filter(isOwnerActiveBooking);
-  }
+  visibleBookings = visibleBookings.filter(isOwnerActiveBooking);
 
   visibleBookings.sort((a, b) => {
     if (a.pickupDate !== b.pickupDate) return a.pickupDate < b.pickupDate ? 1 : -1;
