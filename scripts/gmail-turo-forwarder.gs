@@ -341,8 +341,10 @@ function emailTextHasLocationSignals(text) {
   return (
     /pick[\s-]?up\s+location|drop[\s-]?off\s+location|return\s+location/i.test(t) ||
     /(?:^|\n)\s*location\s*\n\s*[a-z0-9]/im.test(t) ||
+    /(?:^|\n)\s*delivery\s*\n\s*[a-z0-9]/im.test(t) ||
     /\blocation\s+\d{1,6}\s+/i.test(t) ||
     /trip\s+with\s+your\s+.+?\s+at\s+.+\s+(?:is\s+)?booked/i.test(t) ||
+    /\bat\s+[A-Za-z0-9][^.!?\n]{4,90}?\s+(?:is\s+)?booked\b/i.test(t) ||
     /(?:^|\n)delivery\s+[A-Z]/m.test(t)
   );
 }

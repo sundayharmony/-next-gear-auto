@@ -223,6 +223,28 @@ test("sanitizeLocation trims About the guest tail from merged HTML locations", (
   );
 });
 
+test("parseTuroEmail extracts Seongyeop delivery block and at-airport booked line", () => {
+  const subject = "Seongyeop's trip is booked.";
+  const fullBody = `Cha-ching! Seongyeop's trip with your Toyota Highlander at Newark Liberty International Airport is booked from Monday, July 6, 2026, 7:30 AM to Thursday, July 9, 2026, 10:00 PM.
+Toyota Highlander 2019
+Trip start: 7/6/26 7:30 am
+Trip end: 7/9/26 10:00 pm
+DELIVERY
+Newark, NJ
+Newark Liberty International Airport
+Guests see: You'll check yourself in with a lockbox.`;
+  const parsed = parseTuroEmail(fullBody, subject);
+  assert.equal(parsed.location, "Newark Liberty International Airport");
+
+  const compact =
+    "Toyota Highlander 2019 booked by Seongyeop Trip start: 7/6/26 7:30 AM Trip end: 7/9/26 10:00 PM You earn: $179.55";
+  const html = `<div>Cha-ching! Seongyeop's trip with your Toyota Highlander at <b>Newark Liberty International Airport</b> is booked from Monday, July 6, 2026, 7:30 AM to Thursday, July 9, 2026, 10:00 PM.</div>
+<div>DELIVERY</div><div>Newark, NJ</div><div>Newark Liberty International Airport</div>`;
+  const merged = mergeTuroEmailBodies(compact, html);
+  const fromHtml = parseTuroEmail(merged, subject);
+  assert.equal(fromHtml.location, "Newark Liberty International Airport");
+});
+
 test("mergeTuroEmailBodies appends stripped HTML when plain body lacks location", () => {
   const plain =
     "Jeep Grand Cherokee 2024 booked by Kenya Trip start: 7/9/26 7:00 PM Trip end: 7/13/26 5:00 PM You earn: $218.78";
