@@ -9,6 +9,7 @@ One-way sync from Next Gear Auto to a single Google Calendar for website booking
 3. Configure the **OAuth consent screen**:
    - User type: **External** (fine for a single business account).
    - Publishing status: leave as **Testing** — you do not need Google verification for one fleet calendar.
+   - Under **Data access** / **Scopes**, add `.../auth/calendar.events` and `.../auth/calendar.readonly` (or the app will request them on connect).
    - Under **Test users**, add every Google account that will click **Connect Google Calendar** in admin (exact email match).
 4. Create **OAuth 2.0 Client ID** (Web application).
 5. Add **both** production redirect URIs (www and non-www — OAuth uses whichever host you open admin on):
@@ -60,7 +61,7 @@ While the OAuth consent screen is in **Testing** mode, Google shows:
 
 > Google hasn't verified this app.
 
-This is **expected** — not a bug in the website. The app only requests `calendar.events` (fleet sync), not Google Sign-In for customers.
+This is **expected** — not a bug in the website. The app requests `calendar.events` (fleet sync) and `calendar.readonly` (pick a fleet calendar), not Google Sign-In for customers.
 
 **What to do:**
 
@@ -89,6 +90,7 @@ The admin **Google Calendar** page shows the redirect URI for your current host 
 - **Access blocked: app has not completed verification** — your Google account is not on the test-user list in Cloud Console.
 - **OAuth state mismatch** — connect again while logged in as admin.
 - **redirect_uri_mismatch** — add the exact callback URL for the host you use (see table above).
+- **Request had insufficient authentication scopes** — the app needs both `calendar.events` and `calendar.readonly`. In Cloud Console → **OAuth consent screen** → **Data access**, add those scopes if missing. Then revoke **NGA Fleet Calendar** (or your app name) under [Google Account → Third-party access](https://myaccount.google.com/permissions) and reconnect so Google issues a new refresh token with the full scope set.
 - **No refresh token** — revoke app access in Google Account → Security → Third-party access, then reconnect.
 - **Events missing location** — run Turo location backfill; bookings need `pickup_location_name` or a linked `locations` row.
 

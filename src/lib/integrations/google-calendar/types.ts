@@ -6,7 +6,11 @@ export type GoogleCalendarSourceKind = "booking" | "turo" | "blocked";
 
 export const GCAL_BUSINESS_TIMEZONE = "America/New_York";
 
-export const GCAL_SCOPES = ["https://www.googleapis.com/auth/calendar.events"];
+/** Events CRUD + calendar list (callback/admin picker use calendarList.list). */
+export const GCAL_SCOPES = [
+  "https://www.googleapis.com/auth/calendar.events",
+  "https://www.googleapis.com/auth/calendar.readonly",
+];
 
 export type GoogleCalendarConnectionRow = {
   id: string;
