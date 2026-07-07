@@ -406,7 +406,7 @@ export interface OwnerBooking extends PayoutBreakdown {
   originChannel?: "public_checkout" | "admin_panel" | "manager_panel" | "owner_panel" | "unknown" | null;
 }
 
-/** Blocked date range visible to the owner (manual blocks + Turo trips). */
+/** Blocked date range visible to the owner (manual and owner-created blocks only; Turo trips are in OwnerBooking). */
 export interface OwnerBlockedDate {
   id: string;
   vehicleId: string;

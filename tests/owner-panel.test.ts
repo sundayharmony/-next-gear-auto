@@ -43,10 +43,17 @@ test("owner create form is dedicated component with allowed fields", () => {
   assert.ok(!source.includes("canBulkUpdate"));
 });
 
+test("owner dataset excludes Turo rows from blockedDates (Turo trips live in bookings)", () => {
+  const source = fs.readFileSync(path.join(root, "src/lib/owner/owner-data.ts"), "utf8");
+  assert.ok(source.includes("filterManualBlockedDates"));
+  assert.ok(source.includes('kind: "turo"'));
+});
+
 test("owner availability API marks Turo trips as booked", () => {
   const source = fs.readFileSync(path.join(root, "src/app/api/owner/availability/route.ts"), "utf8");
   assert.ok(source.includes("filterActiveTuroTrips"));
   assert.ok(source.includes("turoBookedRanges"));
+  assert.ok(source.includes("filterManualBlockedDates"));
 });
 
 test("owner_portal_enabled revocation blocks owner portal access", () => {

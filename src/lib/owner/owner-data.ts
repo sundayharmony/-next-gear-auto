@@ -16,8 +16,9 @@ import {
   DEFAULT_OWNER_PERCENTAGE,
 } from "@/lib/owner/finance";
 import { getTuroDriverFromReason, resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
-import { filterActiveTuroTrips, TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
+import { filterActiveTuroTrips, filterManualBlockedDates, TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
+import { logger } from "@/lib/utils/logger";
 
 interface VehicleRow {
   id: string;
@@ -102,7 +103,7 @@ export async function loadOwnerDataset(
       .order("start_date", { ascending: true }),
   ]);
 
-  const blockedDates: OwnerBlockedDate[] = (blockedRows || []).map((b) => ({
+  const blockedDates: OwnerBlockedDate[] = filterManualBlockedDates(blockedRows || []).map((b) => ({
     id: b.id as string,
     vehicleId: b.vehicle_id as string,
     startDate: b.start_date as string,
@@ -239,6 +240,7 @@ async function fetchOwnerTuroBlocks(
     .select(fullSelect)
     .in("vehicle_id", vehicleIds)
     .eq("source", TURO_BLOCKED_SOURCE)
+    .is("cancelled_at", null)
     .order("start_date", { ascending: false })
     .limit(2000);
 
@@ -258,6 +260,9 @@ async function fetchOwnerTuroBlocks(
     error = fb.error;
   }
 
-  if (error) return [];
+  if (error) {
+    logger.error("Owner Turo blocks query failed", error);
+    return [];
+  }
   return (data || []) as Record<string, unknown>[];
 }

@@ -112,7 +112,11 @@ export async function GET(req: NextRequest) {
       { connected: "1" }
     );
   } catch (err) {
-    const message = err instanceof Error ? err.message : "Google OAuth failed";
+    let message = err instanceof Error ? err.message : "Google OAuth failed";
+    if (/invalid_client/i.test(message)) {
+      message =
+        "Google client secret is invalid — in Google Cloud Console open Credentials → NGA Fleet Calendar → reset the client secret, then update GOOGLE_CALENDAR_CLIENT_SECRET in Vercel and redeploy.";
+    }
     logger.error("Google Calendar OAuth callback failed", err);
     return redirectWithFlash(siteOrigin, { type: "error", message }, { error: message });
   }

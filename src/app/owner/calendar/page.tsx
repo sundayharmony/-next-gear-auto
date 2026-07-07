@@ -71,7 +71,7 @@ export default function OwnerCalendarPage() {
     <>
       <AdminPageHeader
         title="Booking Calendar"
-        subtitle="Website bookings and Turo trips for your vehicles"
+        subtitle="Turo trips and website bookings for your vehicles"
         actions={
           <Link href="/owner/bookings/create">
             <Button size="sm" className="gap-1 bg-white text-purple-700 hover:bg-purple-50">
