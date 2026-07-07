@@ -1,4 +1,4 @@
-import { stripRichHtmlToText } from "@/lib/utils/validation";
+import { stripRichHtmlToText, decodeHtmlEntities } from "@/lib/utils/validation";
 
 /**
  * Parses Turo booking confirmation email text to extract trip details.
@@ -27,6 +27,50 @@ export function buildTuroParseText(
   const subjPrefix = subj.slice(0, Math.min(40, subj.length)).toLowerCase();
   if (subjPrefix.length >= 12 && body.toLowerCase().includes(subjPrefix)) return body;
   return `${subj}\n\n${body}`;
+}
+
+/** True when text likely contains a pickup/dropoff location Turo can parse. */
+export function emailTextHasLocationSignals(text: string): boolean {
+  const t = String(text || "");
+  if (!t.trim()) return false;
+  return (
+    /pick[\s-]?up\s+location|drop[\s-]?off\s+location|return\s+location/i.test(t) ||
+    /(?:^|\n)\s*location\s*\n\s*[a-z0-9]/im.test(t) ||
+    /\blocation\s+\d{1,6}\s+/i.test(t) ||
+    /trip\s+with\s+your\s+.+?\s+at\s+.+\s+(?:is\s+)?booked/i.test(t) ||
+    /(?:^|\n)delivery\s+[A-Z]/m.test(t)
+  );
+}
+
+/**
+ * Preserve line breaks from Turo HTML (LOCATION block is often div-per-line).
+ * Unlike stripRichHtmlToText, keeps newlines for block boundaries.
+ */
+export function stripTuroHtmlToText(html: string): string {
+  let s = String(html || "");
+  s = s.replace(/<br\s*\/?>/gi, "\n");
+  s = s.replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n");
+  s = s.replace(/<[^>]+>/g, " ");
+  s = decodeHtmlEntities(s);
+  return s
+    .split("\n")
+    .map((line) => line.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join("\n");
+}
+
+/**
+ * Gmail often sends a compact plain body without LOCATION while HTML still has it.
+ * Merge stripped HTML when plain text lacks location signals.
+ */
+export function mergeTuroEmailBodies(plain: string, html?: string | null): string {
+  const p = String(plain || "").trim();
+  const strippedHtml = html ? stripTuroHtmlToText(String(html)) : "";
+  if (!strippedHtml) return p;
+  if (!p) return strippedHtml;
+  if (emailTextHasLocationSignals(p)) return p;
+  if (!emailTextHasLocationSignals(strippedHtml)) return p;
+  return `${p}\n\n${strippedHtml}`;
 }
 
 /** Reject Turo email boilerplate mistakenly captured as a pickup/dropoff location. */
@@ -116,6 +160,14 @@ export function extractTuroLocationBlock(text: string): string | null {
 
   const collapsed = extractCollapsedLocationBlock(text);
   if (collapsed) return collapsed;
+
+  const locationHeaderCollapsed = text.match(
+    /\blocation\s+([A-Za-z0-9][^.!?\n]{4,120}?)(?=\s+(?:trip\s+start|trip\s+end|reservation|view\s+trip|you\s+earn|mileage|jeep|tesla|toyota|ford|honda|ram\b|$))/i
+  );
+  if (locationHeaderCollapsed) {
+    const cleaned = sanitizeLocation(locationHeaderCollapsed[1].trim());
+    if (cleaned) return cleaned;
+  }
 
   const inline = text.match(/(?:^|\n)\s*location\s*[:–—-]\s*(.+?)(?:\n|$)/i);
   if (!inline) return null;

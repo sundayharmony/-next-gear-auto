@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { parseTuroEmail, sanitizeLocation } from "@/lib/utils/turo-email-parser";
+import { parseTuroEmail, sanitizeLocation, mergeTuroEmailBodies } from "@/lib/utils/turo-email-parser";
 import { TURO_BLOCKED_SOURCE, CANCELLED_REASON_PREFIX } from "@/lib/utils/blocked-dates";
 import { pickTuroCancellationMatch, pickTuroTripForMetadataRefresh, reasonMatchesTuroGuest, type TuroCancellationCandidate } from "@/lib/utils/turo-cancellation-match";
 import { getTuroDriverFromReason, isTuroTripSyncMutable, mergeTuroLocationField } from "@/lib/utils/turo-blocked-date";
@@ -149,8 +149,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    const emailHtml: string = String(body.emailHtml || body.email_html || "").slice(0, 65536);
+    const emailTextForParse = mergeTuroEmailBodies(emailText, emailHtml || null);
+
     // ── Parse the Turo email ──
-    const parsed = parseTuroEmail(emailText, emailSubject);
+    const parsed = parseTuroEmail(emailTextForParse, emailSubject);
     const tripLocation = sanitizeLocation(parsed.location);
     const isReconcileRefresh = explicitEventType === "reconcile_refresh";
     const isCancellationEvent =
@@ -279,7 +282,10 @@ export async function POST(req: NextRequest) {
     const vehicleLabel = `${matchedVehicle.year} ${matchedVehicle.make} ${matchedVehicle.model}`;
 
     const tripSyncMutable = isTuroTripSyncMutable(parsed.endDate!);
-    if (!isCancellationEvent && !tripSyncMutable) {
+    const allowPastTripMetadata =
+      isReconcileRefresh &&
+      (sourceMode === "location_backfill" || Boolean(tripLocation));
+    if (!isCancellationEvent && !tripSyncMutable && !allowPastTripMetadata) {
       return NextResponse.json({
         success: true,
         action: "skipped_past_trip",

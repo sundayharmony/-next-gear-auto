@@ -285,7 +285,9 @@ function runAccuracyReconciliation() {
 
 function sendToWebhook(message, eventType, sourceMode) {
   var subject = String(message.getSubject() || "");
-  var body = String(message.getPlainBody() || message.getBody() || "");
+  var plain = String(message.getPlainBody() || "").trim();
+  var rawBody = String(message.getBody() || "").trim();
+  var body = buildEmailTextForWebhook(plain, rawBody);
   var from = String(message.getFrom() || "");
   var messageId = String(message.getId() || "");
   var msgDate = message.getDate();
@@ -332,6 +334,47 @@ function sendToWebhook(message, eventType, sourceMode) {
 }
 
 // ═══════ HELPERS ═══════
+function emailTextHasLocationSignals(text) {
+  var t = String(text || "");
+  if (!t.trim()) return false;
+  return (
+    /pick[\s-]?up\s+location|drop[\s-]?off\s+location|return\s+location/i.test(t) ||
+    /(?:^|\n)\s*location\s*\n\s*[a-z0-9]/im.test(t) ||
+    /\blocation\s+\d{1,6}\s+/i.test(t) ||
+    /trip\s+with\s+your\s+.+?\s+at\s+.+\s+(?:is\s+)?booked/i.test(t) ||
+    /(?:^|\n)delivery\s+[A-Z]/m.test(t)
+  );
+}
+
+function stripHtmlToText(html) {
+  return String(html || "")
+    .replace(/<br\s*\/?>/gi, "\n")
+    .replace(/<\/(p|div|tr|li|h[1-6])>/gi, "\n")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/gi, " ")
+    .replace(/&amp;/gi, "&")
+    .split("\n")
+    .map(function (line) {
+      return line.replace(/\s+/g, " ").trim();
+    })
+    .filter(function (line) {
+      return Boolean(line);
+    })
+    .join("\n");
+}
+
+/** Gmail plain body is often compact; LOCATION lives in HTML — merge when needed. */
+function buildEmailTextForWebhook(plain, rawBody) {
+  var p = String(plain || "").trim();
+  var raw = String(rawBody || "").trim();
+  var htmlText = raw.indexOf("<") >= 0 ? stripHtmlToText(raw) : raw;
+  if (!htmlText) return p || raw;
+  if (!p) return htmlText;
+  if (emailTextHasLocationSignals(p)) return p;
+  if (!emailTextHasLocationSignals(htmlText)) return p;
+  return p + "\n\n" + htmlText;
+}
+
 function buildIncrementalQuery(lastSyncIso) {
   var fallback = TURO_FROM_QUERY + " newer_than:14d";
   if (!lastSyncIso) return fallback;

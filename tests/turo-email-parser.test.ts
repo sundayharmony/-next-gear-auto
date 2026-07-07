@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseTuroEmail, sanitizeLocation, buildTuroParseText, extractTuroLocationBlock } from "../src/lib/utils/turo-email-parser";
+import { parseTuroEmail, sanitizeLocation, buildTuroParseText, extractTuroLocationBlock, mergeTuroEmailBodies } from "../src/lib/utils/turo-email-parser";
 
 test("parseTuroEmail detects cancellation emails", () => {
   const text = `
@@ -214,6 +214,16 @@ test("extractTuroLocationBlock handles collapsed whitespace from stripped email 
   const collapsed =
     "View trip details Reservation ID: 362922878 LOCATION 31 Nunda Avenue Jersey City, NJ";
   assert.equal(extractTuroLocationBlock(collapsed), "31 Nunda Avenue Jersey City, NJ");
+});
+
+test("mergeTuroEmailBodies appends stripped HTML when plain body lacks location", () => {
+  const plain =
+    "Jeep Grand Cherokee 2024 booked by Kenya Trip start: 7/9/26 7:00 PM Trip end: 7/13/26 5:00 PM You earn: $218.78";
+  const html =
+    "<div>LOCATION</div><div>Newark Liberty International Airport</div><div>Newark, NJ</div>";
+  const merged = mergeTuroEmailBodies(plain, html);
+  const parsed = parseTuroEmail(merged, "Kenya's trip with your JEEP is booked!");
+  assert.equal(parsed.location, "Newark Liberty International Airport, Newark, NJ");
 });
 
 test("buildTuroParseText prepends subject without duplicating body", () => {
