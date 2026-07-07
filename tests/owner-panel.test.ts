@@ -49,6 +49,14 @@ test("owner dataset excludes Turo rows from blockedDates (Turo trips live in boo
   assert.ok(source.includes('kind: "turo"'));
 });
 
+test("owner Turo fetch includes source so filterActiveTuroTrips keeps rows", () => {
+  const source = fs.readFileSync(path.join(root, "src/lib/owner/owner-data.ts"), "utf8");
+  assert.match(
+    source,
+    /const fullSelect\s*=\s*\n\s*"[^"]*source[^"]*";/
+  );
+});
+
 test("owner availability API marks Turo trips as booked", () => {
   const source = fs.readFileSync(path.join(root, "src/app/api/owner/availability/route.ts"), "utf8");
   assert.ok(source.includes("filterActiveTuroTrips"));

@@ -232,7 +232,7 @@ async function fetchOwnerTuroBlocks(
   vehicleIds: string[]
 ): Promise<Record<string, unknown>[]> {
   const fullSelect =
-    "id, vehicle_id, start_date, end_date, earnings, reason, cancelled_at, created_at";
+    "id, vehicle_id, start_date, end_date, earnings, reason, cancelled_at, created_at, source";
   const minimalSelect = "id, vehicle_id, start_date, end_date, source, reason, created_at";
 
   let { data, error } = await supabase
