@@ -39,6 +39,7 @@ import {
 } from "@/components/owner/owner-shared";
 import { getVehicleDisplayName } from "@/lib/types";
 import type { EnrichedAdminOwner } from "@/lib/admin/owner-enrichment";
+import { isOwnerTuroBooking } from "@/lib/owner/finance";
 import { ManagePayoutsModal } from "../components/ManagePayoutsModal";
 import { SendPasswordEmailButton } from "../components/SendPasswordEmailButton";
 import { Badge } from "@/components/ui/badge";
@@ -314,39 +315,52 @@ export default function AdminOwnerDetailPage() {
               )}
             </AdminSection>
 
-            <AdminSection title="Recent bookings" description="Latest bookings on this owner's vehicles">
+            <AdminSection
+              title="Recent bookings"
+              description="Website reservations and Turo trips on this owner's vehicles. Only website bookings can be managed via payouts."
+            >
               {owner.recentBookings.length === 0 ? (
                 <AdminCard>
                   <p className="py-6 text-center text-sm text-gray-500">No bookings yet.</p>
                 </AdminCard>
               ) : (
                 <div className="space-y-2">
-                  {owner.recentBookings.map((b) => (
+                  {owner.recentBookings.map((b) => {
+                    const isTuro = isOwnerTuroBooking(b);
+                    return (
                     <div
                       key={b.id}
                       className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm"
                     >
                       <div className="min-w-0 flex-1">
-                        <p className="truncate font-medium text-gray-900">{b.vehicleName}</p>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="truncate font-medium text-gray-900">{b.vehicleName}</p>
+                          {isTuro ? (
+                            <Badge className="border-teal-200 bg-teal-100 text-teal-800">Turo</Badge>
+                          ) : null}
+                        </div>
                         <p className="text-xs text-gray-500">
                           {formatDate(b.pickupDate)} → {formatDate(b.returnDate)} · {b.customerName}
                         </p>
                       </div>
                       <div className="flex flex-wrap items-center gap-2">
                         <OwnerStatusBadge status={b.status} />
-                        <PayoutStatusBadge status={b.payoutStatus} />
+                        {!isTuro ? <PayoutStatusBadge status={b.payoutStatus} /> : null}
                         <span className="font-semibold tabular-nums text-gray-900">
                           {formatCurrency(b.ownerPayout)}
                         </span>
+                        {!isTuro ? (
                         <Link
                           href={`/admin/bookings?highlight=${encodeURIComponent(b.id)}`}
                           className="inline-flex items-center gap-0.5 text-sm text-purple-600 hover:text-purple-800"
                         >
                           Booking <ChevronRight className="h-4 w-4" />
                         </Link>
+                        ) : null}
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )}
             </AdminSection>

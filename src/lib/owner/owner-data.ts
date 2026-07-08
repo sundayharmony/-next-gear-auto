@@ -51,11 +51,6 @@ export interface LoadOwnerDatasetOptions {
    * Admin views should pass false to retain full history.
    */
   ownerPortalOnly?: boolean;
-  /**
-   * When true (admin payout management), retain cancelled website bookings so
-   * payout history and adjustments remain accessible. Display lists should omit this.
-   */
-  forPayouts?: boolean;
 }
 
 /**
@@ -232,9 +227,7 @@ export async function loadOwnerDataset(
     });
   }
 
-  if (!options?.forPayouts) {
-    visibleBookings = visibleBookings.filter(isOwnerActiveBooking);
-  }
+  visibleBookings = visibleBookings.filter(isOwnerActiveBooking);
 
   visibleBookings.sort((a, b) => {
     if (a.pickupDate !== b.pickupDate) return a.pickupDate < b.pickupDate ? 1 : -1;

@@ -5,7 +5,7 @@
  *   npx tsx --env-file=.env.local scripts/backfill-missing-turo-locations.ts
  *   npx tsx --env-file=.env.local scripts/backfill-missing-turo-locations.ts --emails scripts/turo-booking-emails.json
  *
- * emails JSON: [{ "subject": "Henry's trip...", "emailText": "..." }, ...]
+ * emails JSON: [{ "subject": "Henry's trip...", "emailText": "...", "emailHtml": "..." }, ...]
  *
  * Prefer Gmail Apps Script: resetLocationBackfillOffset() then runLocationBackfill180()
  */
@@ -70,6 +70,8 @@ async function main() {
   const emails = JSON.parse(readFileSync(emailsFile, "utf8")) as Array<{
     subject?: string;
     emailText: string;
+    emailHtml?: string;
+    email_html?: string;
   }>;
 
   const webhookUrl = `${siteUrl.replace(/\/$/, "")}/api/webhooks/turo-email`;
@@ -77,7 +79,7 @@ async function main() {
 
   let updated = 0;
   for (let i = 0; i < emails.length; i++) {
-    const { emailText, subject } = emails[i];
+    const { emailText, subject, emailHtml, email_html } = emails[i];
     const ts = Date.now();
     const res = await fetch(webhookUrl, {
       method: "POST",
@@ -89,6 +91,7 @@ async function main() {
       },
       body: JSON.stringify({
         emailText,
+        emailHtml: emailHtml ?? email_html,
         subject,
         eventType: "reconcile_refresh",
         sourceMode: "location_backfill",

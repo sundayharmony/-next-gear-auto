@@ -23,7 +23,7 @@ export async function GET(req: NextRequest) {
     if (!ownerId) {
       return NextResponse.json({ success: false, message: "ownerId is required" }, { status: 400 });
     }
-    const { bookings } = await loadOwnerDataset(ownerId, { forPayouts: true });
+    const { bookings } = await loadOwnerDataset(ownerId);
     return NextResponse.json(
       { success: true, data: bookings },
       { headers: { "Cache-Control": "no-store" } }
