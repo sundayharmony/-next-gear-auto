@@ -39,3 +39,7 @@ export type { LoadingStateProps } from "./loading-state";
 
 export { ErrorState } from "./error-state";
 export type { ErrorStateProps } from "./error-state";
+
+// Dialogs
+export { ConfirmDialog } from "./confirm-dialog";
+export type { ConfirmDialogProps } from "./confirm-dialog";

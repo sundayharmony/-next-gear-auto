@@ -52,3 +52,16 @@ export {
   ModalTitle,
   ModalDescription,
 } from "./modal";
+
+// Sheet
+export {
+  Sheet,
+  SheetTrigger,
+  SheetClose,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+  SheetBody,
+  SheetFooter,
+} from "./sheet";
