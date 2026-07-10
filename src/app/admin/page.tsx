@@ -20,6 +20,7 @@ import {
   AdminStatCard,
 } from "@/components/admin/admin-shell";
 import { addDaysToYmd, formatDate, formatTime, getLocalYmd } from "@/lib/utils/date-helpers";
+import { timelineAccentColors, getStatusColors } from "@/lib/design-system/status";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 
@@ -421,24 +422,9 @@ export default function AdminDashboardPage() {
             ) : (
               <div className="space-y-2.5">
                 {data.recentBookings.map((booking) => {
-                  const statusAccent: Record<string, string> = {
-                    pending: "border-l-yellow-400",
-                    confirmed: "border-l-green-400",
-                    active: "border-l-blue-400",
-                    completed: "border-l-gray-300",
-                    cancelled: "border-l-red-400",
-                    "no-show": "border-l-orange-400",
-                  };
-                  const statusDot: Record<string, string> = {
-                    pending: "bg-yellow-400",
-                    confirmed: "bg-green-400",
-                    active: "bg-blue-400",
-                    completed: "bg-gray-300",
-                    cancelled: "bg-red-400",
-                    "no-show": "bg-orange-400",
-                  };
-                  const accent = statusAccent[booking.status] || "border-l-gray-300";
-                  const dot = statusDot[booking.status] || "bg-gray-300";
+                  const statusColors = getStatusColors(booking.status);
+                  const accent = timelineAccentColors[booking.status] || "border-l-gray-300";
+                  const dot = statusColors.dot || "bg-gray-300";
                   const isActive = booking.status === "active";
                   const isPending = booking.status === "pending";
 

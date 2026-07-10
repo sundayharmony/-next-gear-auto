@@ -17,12 +17,12 @@ import {
   MapPin,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { STATUS_STEPS, TIME_SLOTS } from "../../types";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
-import { statusColors } from "@/lib/utils/status-colors";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { isAllowedExternalHref } from "@/lib/utils/safe-url";
 import { isAgreementComplete } from "@/lib/agreement/agreement-complete";
@@ -67,9 +67,7 @@ export function DetailStatusSection({ ctx }: DetailStatusSectionProps) {
           </p>
         </div>
         <div>
-          <Badge className={statusColors[booking.status] || ""}>
-            {booking.status}
-          </Badge>
+          <StatusBadge status={booking.status} />
         </div>
       </div>
 
@@ -486,9 +484,7 @@ export function DetailStatusSection({ ctx }: DetailStatusSectionProps) {
         </h3>
         {booking.insurance_opted_out ? (
           <div className="space-y-2">
-            <Badge className="bg-yellow-100 text-yellow-700">
-              Opted Out (Own Coverage)
-            </Badge>
+            <StatusBadge status="warning" label="Opted Out (Own Coverage)" />
             {booking.insurance_proof_url ? (
               <a
                 href={isAllowedExternalHref(booking.insurance_proof_url) || "#"}
@@ -516,9 +512,7 @@ export function DetailStatusSection({ ctx }: DetailStatusSectionProps) {
             )}
           </div>
         ) : (
-          <Badge className="bg-green-100 text-green-700">
-            NextGearAuto Insurance Included
-          </Badge>
+          <StatusBadge status="success" label="NextGearAuto Insurance Included" />
         )}
       </div>
     </>

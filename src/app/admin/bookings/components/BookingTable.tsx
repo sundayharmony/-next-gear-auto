@@ -6,9 +6,9 @@ import { usePathname } from "next/navigation";
 import { ArrowUp, ArrowDown, FileText, Shield, Check, AlertTriangle, StickyNote, Calendar, MapPin, CircleDollarSign } from "lucide-react";
 import { BookingRow, SortField, SortOrder } from "../types";
 import { formatDate, formatTime, formatDateShort } from "@/lib/utils/date-helpers";
-import { statusColors } from "@/lib/utils/status-colors";
 import { calculateRentalDays } from "@/lib/utils/price-calculator";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AdminTableWrap } from "@/components/admin/admin-shell";
@@ -213,9 +213,7 @@ export default function BookingTable({
                     )}
                   </div>
                 </div>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium shrink-0 ${statusColors[booking.status || "pending"] || "bg-gray-200 text-gray-800"}`}>
-                  {booking.status || "pending"}
-                </span>
+                <StatusBadge status={booking.status || "pending"} />
               </div>
 
               {/* Vehicle */}
@@ -470,9 +468,7 @@ export default function BookingTable({
 
                   {/* Status */}
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[booking.status || "pending"] || "bg-gray-200 text-gray-800"}`} aria-label={`Status: ${booking.status || "pending"}`}>
-                      {booking.status || "pending"}
-                    </span>
+                    <StatusBadge status={booking.status || "pending"} />
                   </td>
 
                   {/* Document Indicators */}
