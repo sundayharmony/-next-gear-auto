@@ -26,6 +26,10 @@ export type { FilterBarProps, FilterPillsProps, FilterPillOption, SearchInputPro
 export { CardList } from "./card-list";
 export type { CardListProps, CardListItem } from "./card-list";
 
+// Forms
+export { FormSection, FormRow, FormField, FormActions, FormCard } from "./form";
+export type { FormSectionProps, FormRowProps, FormFieldProps, FormActionsProps, FormCardProps } from "./form";
+
 // States
 export { EmptyState } from "./empty-state";
 export type { EmptyStateProps } from "./empty-state";
