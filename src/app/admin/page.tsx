@@ -20,6 +20,8 @@ import {
   AdminStatCard,
 } from "@/components/admin/admin-shell";
 import { addDaysToYmd, formatDate, formatTime, getLocalYmd } from "@/lib/utils/date-helpers";
+import { timelineAccentColors, getStatusColors } from "@/lib/design-system/status";
+import { LoadingState, ErrorState } from "@/components/patterns";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 
@@ -311,18 +313,13 @@ export default function AdminDashboardPage() {
 
       <AdminPageBody>
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" role="status" aria-label="Loading dashboard" />
-            <p className="mt-4 text-gray-500">Loading dashboard...</p>
-          </div>
+          <LoadingState label="Loading dashboard..." size="lg" />
         ) : error ? (
-          <div className="text-center py-12">
-            <div className="flex justify-center mb-4">
-              <AlertCircle className="h-12 w-12 text-red-500" />
-            </div>
-            <p className="text-gray-600 mb-4">Failed to load dashboard data.</p>
-            <Button onClick={() => fetchData()}>Retry</Button>
-          </div>
+          <ErrorState
+            title="Failed to load"
+            message="Failed to load dashboard data."
+            onRetry={() => fetchData()}
+          />
         ) : data ? (
           <>
             <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 mb-8">
@@ -421,24 +418,9 @@ export default function AdminDashboardPage() {
             ) : (
               <div className="space-y-2.5">
                 {data.recentBookings.map((booking) => {
-                  const statusAccent: Record<string, string> = {
-                    pending: "border-l-yellow-400",
-                    confirmed: "border-l-green-400",
-                    active: "border-l-blue-400",
-                    completed: "border-l-gray-300",
-                    cancelled: "border-l-red-400",
-                    "no-show": "border-l-orange-400",
-                  };
-                  const statusDot: Record<string, string> = {
-                    pending: "bg-yellow-400",
-                    confirmed: "bg-green-400",
-                    active: "bg-blue-400",
-                    completed: "bg-gray-300",
-                    cancelled: "bg-red-400",
-                    "no-show": "bg-orange-400",
-                  };
-                  const accent = statusAccent[booking.status] || "border-l-gray-300";
-                  const dot = statusDot[booking.status] || "bg-gray-300";
+                  const statusColors = getStatusColors(booking.status);
+                  const accent = timelineAccentColors[booking.status] || "border-l-gray-300";
+                  const dot = statusColors.dot || "bg-gray-300";
                   const isActive = booking.status === "active";
                   const isPending = booking.status === "pending";
 

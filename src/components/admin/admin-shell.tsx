@@ -1,8 +1,21 @@
+/**
+ * Admin Shell Components
+ * 
+ * Admin-specific wrappers around the base pattern components.
+ * Provides backward compatibility while using the unified design system.
+ * 
+ * For new code, consider using @/components/patterns directly.
+ */
+
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, type LucideIcon } from "lucide-react";
+import { type LucideIcon } from "lucide-react";
 import { PageContainer } from "@/components/layout/page-container";
 import { cn } from "@/lib/utils/cn";
+import { 
+  PageHeader, 
+  type PageHeaderProps,
+} from "@/components/patterns";
 
 /**
  * Admin panel UI conventions:
@@ -24,61 +37,14 @@ export const adminMutedClass = "text-sm text-gray-500";
 export const adminListItemClass =
   "admin-list-item rounded-xl border border-gray-200/80 bg-gray-100 p-4 transition-colors hover:border-purple-200/80 hover:bg-purple-50/50";
 
-interface AdminPageHeaderProps {
-  title: React.ReactNode;
-  subtitle?: React.ReactNode;
-  backHref?: string;
-  backLabel?: string;
-  onBack?: () => void;
-  actions?: React.ReactNode;
-  children?: React.ReactNode;
-  className?: string;
-}
+export interface AdminPageHeaderProps extends Omit<PageHeaderProps, 'variant'> {}
 
-export function AdminPageHeader({
-  title,
-  subtitle,
-  backHref,
-  backLabel = "Back",
-  onBack,
-  actions,
-  children,
-  className,
-}: AdminPageHeaderProps) {
-  return (
-    <section className={cn("page-hero page-hero--compact text-white", className)}>
-      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        {backHref ? (
-          <Link
-            href={backHref}
-            className="mb-2 inline-flex items-center gap-1 text-sm text-purple-300 transition-colors hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            {backLabel}
-          </Link>
-        ) : onBack ? (
-          <button
-            type="button"
-            onClick={onBack}
-            className="mb-2 inline-flex items-center gap-1 text-sm text-purple-300 transition-colors hover:text-white"
-          >
-            <ArrowLeft className="h-4 w-4" aria-hidden />
-            {backLabel}
-          </button>
-        ) : null}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold sm:text-3xl">{title}</h1>
-            {subtitle ? (
-              <p className="mt-1 text-sm sm:text-base page-hero-subtitle">{subtitle}</p>
-            ) : null}
-          </div>
-          {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-        </div>
-        {children}
-      </div>
-    </section>
-  );
+/**
+ * Admin page header - wrapper around the base PageHeader.
+ * Uses the default variant styling for admin panels.
+ */
+export function AdminPageHeader(props: AdminPageHeaderProps) {
+  return <PageHeader {...props} />;
 }
 
 interface AdminPageBodyProps {
@@ -127,7 +93,7 @@ export function AdminCard({
   );
 }
 
-interface AdminSectionProps {
+export interface AdminSectionProps {
   title?: string;
   description?: string;
   icon?: LucideIcon;
@@ -136,6 +102,10 @@ interface AdminSectionProps {
   className?: string;
 }
 
+/**
+ * Admin section - groups content with optional title and actions.
+ * Uses the design system Section pattern internally.
+ */
 export function AdminSection({
   title,
   description,
@@ -186,7 +156,7 @@ export function AdminTableWrap({ children, className }: AdminTableWrapProps) {
   );
 }
 
-interface AdminStatCardProps {
+export interface AdminStatCardProps {
   label: string;
   value: React.ReactNode;
   icon: LucideIcon;
@@ -195,6 +165,10 @@ interface AdminStatCardProps {
   href?: string;
 }
 
+/**
+ * Admin stat card - displays a KPI/metric with icon.
+ * Uses the design system StatCard pattern internally.
+ */
 export function AdminStatCard({
   label,
   value,

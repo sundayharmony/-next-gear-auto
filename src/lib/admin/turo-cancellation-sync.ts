@@ -223,7 +223,22 @@ export async function syncTuroCancellations(opts: {
       const row = rows.find((r) => r.id === id);
       if (!row) {
         result.skipped++;
-        result.errors.push(`Trip not found: ${id}`);
+        // Check if the record exists with a different source or was already deleted
+        const { data: anyRecord } = await supabase
+          .from("blocked_dates")
+          .select("id, source, cancelled_at")
+          .eq("id", id)
+          .maybeSingle();
+        
+        if (!anyRecord) {
+          result.errors.push(`Trip not found: ${id} (record does not exist in database)`);
+        } else if (anyRecord.source !== TURO_BLOCKED_SOURCE) {
+          result.errors.push(`Trip not found: ${id} (source is "${anyRecord.source}", not Turo)`);
+        } else if (anyRecord.cancelled_at) {
+          result.errors.push(`Trip not found: ${id} (already cancelled at ${anyRecord.cancelled_at})`);
+        } else {
+          result.errors.push(`Trip not found: ${id}`);
+        }
         continue;
       }
       if (isBlockedDateCancelled(row)) {

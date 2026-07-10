@@ -1,11 +1,39 @@
+/**
+ * Card Component
+ * 
+ * Unified card component with consistent styling.
+ * Consolidates the base Card and AdminCard patterns.
+ */
+
 import * as React from "react";
 import { cn } from "@/lib/utils/cn";
 
-const Card = React.forwardRef<HTMLDivElement, React.HTMLAttributes<HTMLDivElement>>(
-  ({ className, ...props }, ref) => (
-    <div
-      ref={ref}
-      className={cn("rounded-xl border border-gray-200 bg-white shadow-sm", className)}
+export interface CardProps extends React.HTMLAttributes<HTMLDivElement> {
+  /** Padding size */
+  padding?: "none" | "sm" | "md" | "lg";
+  /** Enable hover effect */
+  hover?: boolean;
+  /** Render as different element */
+  as?: "div" | "article" | "section";
+}
+
+const paddingClasses = {
+  none: "",
+  sm: "p-4",
+  md: "p-5",
+  lg: "p-6",
+};
+
+const Card = React.forwardRef<HTMLDivElement, CardProps>(
+  ({ className, padding, hover = false, as: Tag = "div", ...props }, ref) => (
+    <Tag
+      ref={ref as React.Ref<HTMLDivElement>}
+      className={cn(
+        "rounded-xl border border-gray-200 bg-white shadow-sm",
+        padding && paddingClasses[padding],
+        hover && "transition-shadow duration-200 hover:shadow-md cursor-pointer",
+        className
+      )}
       {...props}
     />
   )

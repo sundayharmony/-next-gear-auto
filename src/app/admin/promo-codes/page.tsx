@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { Select } from "@/components/ui/select";
 import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { logger } from "@/lib/utils/logger";
@@ -315,7 +316,7 @@ export default function AdminPromoCodesPage({
                                     {new Date(c.expiresAt + "T12:00:00").toLocaleDateString()}
                                   </span>
                                   {new Date(c.expiresAt + "T12:00:00") < new Date() && (
-                                    <Badge className="bg-red-100 text-red-700 text-[10px]">Expired</Badge>
+                                    <StatusBadge status="error" label="Expired" size="sm" />
                                   )}
                                 </>
                               ) : (
