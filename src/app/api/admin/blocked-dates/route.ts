@@ -124,6 +124,16 @@ export async function GET(req: NextRequest) {
       error = fallbackRes.error;
     }
 
+    if (data && (scope === "visible" || scope === "all")) {
+      data = data.filter((row) => {
+        if (row.source !== TURO_BLOCKED_SOURCE) return true;
+        if (scope === "all") return true;
+        return !isBlockedDateCancelled(
+          row as { cancelled_at?: string | null; reason?: string | null }
+        );
+      });
+    }
+
     if (error) {
       logger.error("Blocked dates GET error:", error);
       return NextResponse.json({ success: false, message: error.message }, { status: 500 });

@@ -2,6 +2,7 @@
 
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { usePathname } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 import { Plus, Mail, X } from "lucide-react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
@@ -26,12 +27,13 @@ import {
   BlockedDatesEditDrawer,
   BlockedDatesDetailDrawer,
 } from "./blocked-dates-drawer";
-import { useTuroSyncActions } from "./use-turo-sync-actions";
+import { useTuroSyncActions, invalidateTuroDependentQueries } from "./use-turo-sync-actions";
 import { useFilteredBlockedDates, useDisplayBlockedDates } from "./use-filtered-blocked-dates";
 import { isBlockedDateCancelled } from "@/lib/utils/blocked-dates";
 
 export default function BlockedDatesPage() {
   const pathname = usePathname();
+  const queryClient = useQueryClient();
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [blockedDates, setBlockedDates] = useState<BlockedDate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -230,6 +232,7 @@ export default function BlockedDatesPage() {
           const removed = data.data.deleted + data.data.marked;
           if (removed > 0) {
             await fetchData();
+            await invalidateTuroDependentQueries(queryClient);
             setSuccess(`Removed ${removed} cancelled Turo trip(s) from the calendar`);
           } else {
             setError(
@@ -292,6 +295,7 @@ export default function BlockedDatesPage() {
         setBlockedDates((prev) =>
           [...prev, data.data].sort((a, b) => a.start_date.localeCompare(b.start_date))
         );
+        await invalidateTuroDependentQueries(queryClient);
         setEmailText("");
         setParseResult(null);
         setEmailVehicleId("");
@@ -314,10 +318,12 @@ export default function BlockedDatesPage() {
       const data = await res.json().catch(() => ({}));
       if (res.ok && data.success) {
         setBlockedDates((prev) => prev.filter((b) => b.id !== id));
+        await invalidateTuroDependentQueries(queryClient);
         setSuccess("Block removed");
       } else if (res.status === 404) {
         setBlockedDates((prev) => prev.filter((b) => b.id !== id));
         await fetchData();
+        await invalidateTuroDependentQueries(queryClient);
         setError("This block is no longer in the database — list refreshed.");
       } else {
         setError(data.message || "Failed to remove block");

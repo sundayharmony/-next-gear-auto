@@ -1,8 +1,21 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { adminFetch } from "@/lib/utils/admin-fetch";
+import { staffKeys } from "@/lib/hooks/use-staff-query";
 import type { TuroSyncStatus } from "./blocked-dates-types";
+
+export async function invalidateTuroDependentQueries(
+  queryClient: ReturnType<typeof useQueryClient>
+) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["staff", "calendar"] }),
+    queryClient.invalidateQueries({ queryKey: ["staff", "finances"] }),
+    queryClient.invalidateQueries({ queryKey: ["staff", "blockedDates"] }),
+    queryClient.invalidateQueries({ queryKey: staffKeys.bookings() }),
+  ]);
+}
 
 export function useTuroSyncActions(
   fetchData: () => Promise<void>,
@@ -10,6 +23,7 @@ export function useTuroSyncActions(
   setSuccess: (msg: string) => void,
   setError: (msg: string) => void
 ) {
+  const queryClient = useQueryClient();
   const [cancellingId, setCancellingId] = useState<string | null>(null);
   const [syncingStatus, setSyncingStatus] = useState(false);
 
@@ -58,12 +72,15 @@ export function useTuroSyncActions(
 
         if (result.marked > 0 || result.deleted > 0) {
           await fetchData();
+          await invalidateTuroDependentQueries(queryClient);
           setSuccess("Turo trip marked cancelled");
         } else if (alreadyCancelled) {
           await fetchData();
+          await invalidateTuroDependentQueries(queryClient);
           setSuccess("Trip was already cancelled — list refreshed");
         } else if (tripNotFound) {
           await fetchData();
+          await invalidateTuroDependentQueries(queryClient);
           setError("This trip is no longer in the database — list refreshed.");
         } else {
           setError(result.errors?.[0] || data.message || "Could not mark trip cancelled");
@@ -74,7 +91,7 @@ export function useTuroSyncActions(
         setCancellingId(null);
       }
     },
-    [fetchData, setError, setSuccess]
+    [fetchData, queryClient, setError, setSuccess]
   );
 
   return { cancellingId, syncingStatus, refreshSyncStatus, handleMarkCancelled };

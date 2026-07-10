@@ -9,6 +9,7 @@ import {
   addProratedTuroRevenueByDay,
   forEachProratedTuroDay,
 } from "@/lib/utils/turo-blocked-date";
+import { isActiveCalendarBlock, isTuroBlockedSource } from "@/lib/utils/blocked-dates";
 import {
   addProratedBookingRevenueByDay,
   countBookedDaysInRange,
@@ -49,6 +50,10 @@ export interface FinancesComputedInput {
   dateRange: { from: string; to: string };
 }
 
+function isActiveTuroFinanceBlock(block: BlockedDateFinanceEntry): boolean {
+  return isTuroBlockedSource(block.source) && isActiveCalendarBlock(block);
+}
+
 export function useFinancesComputed({
   bookings,
   blockedDates,
@@ -71,8 +76,7 @@ export function useFinancesComputed({
 
   const turoRevenueEntries = useMemo(() => {
     return blockedDates
-      .filter((block) => block.source === "turo-email")
-      .filter((block) => !block.cancelled_at)
+      .filter(isActiveTuroFinanceBlock)
       .filter((block) => block.start_date <= dateRange.to && block.end_date >= dateRange.from)
       .map((block) => {
         const fullRevenue = resolveTuroTripRevenue(block);
@@ -274,8 +278,7 @@ export function useFinancesComputed({
     blockedDates
       .filter(
         (b) =>
-          b.source === "turo-email" &&
-          !b.cancelled_at &&
+          isActiveTuroFinanceBlock(b) &&
           b.start_date <= dateRange.to &&
           b.end_date >= dateRange.from
       )
@@ -334,8 +337,7 @@ export function useFinancesComputed({
     blockedDates
       .filter(
         (b) =>
-          b.source === "turo-email" &&
-          !b.cancelled_at &&
+          isActiveTuroFinanceBlock(b) &&
           b.start_date <= dateRange.to &&
           b.end_date >= dateRange.from
       )
@@ -470,8 +472,7 @@ export function useFinancesComputed({
     blockedDates
       .filter(
         (b) =>
-          b.source === "turo-email" &&
-          !b.cancelled_at &&
+          isActiveTuroFinanceBlock(b) &&
           b.start_date <= dateRange.to &&
           b.end_date >= dateRange.from
       )
@@ -511,8 +512,7 @@ export function useFinancesComputed({
     blockedDates
       .filter(
         (b) =>
-          b.source === "turo-email" &&
-          !b.cancelled_at &&
+          isActiveTuroFinanceBlock(b) &&
           b.start_date <= dateRange.to &&
           b.end_date >= dateRange.from
       )

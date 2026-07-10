@@ -402,6 +402,7 @@ export async function fetchGlobalOccupancy(
       const vid = String(row.vehicle_id);
       const vname = vehicleNameById.get(vid) || "Unknown Vehicle";
       const n = normalizeBlockedRow(row);
+      if (isBlockedDateCancelled(n)) continue;
       if (!overlapsRange(n.start_date, n.end_date, opts.from, opts.to)) continue;
       const entry = mapTuroBlock(row, vname, role, userId);
       if (!statusMatchesFilter(entry, status)) continue;
