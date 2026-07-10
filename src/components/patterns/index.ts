@@ -43,3 +43,10 @@ export type { ErrorStateProps } from "./error-state";
 // Dialogs
 export { ConfirmDialog } from "./confirm-dialog";
 export type { ConfirmDialogProps } from "./confirm-dialog";
+
+// Navigation
+export { Breadcrumbs } from "./breadcrumbs";
+export type { BreadcrumbsProps, BreadcrumbItem } from "./breadcrumbs";
+
+export { Tabs } from "./tabs";
+export type { TabsProps, TabItem } from "./tabs";
