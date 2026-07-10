@@ -21,6 +21,7 @@ import {
 } from "@/components/admin/admin-shell";
 import { addDaysToYmd, formatDate, formatTime, getLocalYmd } from "@/lib/utils/date-helpers";
 import { timelineAccentColors, getStatusColors } from "@/lib/design-system/status";
+import { LoadingState, ErrorState } from "@/components/patterns";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 
@@ -312,18 +313,13 @@ export default function AdminDashboardPage() {
 
       <AdminPageBody>
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-spin h-8 w-8 border-4 border-purple-600 border-t-transparent rounded-full mx-auto" role="status" aria-label="Loading dashboard" />
-            <p className="mt-4 text-gray-500">Loading dashboard...</p>
-          </div>
+          <LoadingState label="Loading dashboard..." size="lg" />
         ) : error ? (
-          <div className="text-center py-12">
-            <div className="flex justify-center mb-4">
-              <AlertCircle className="h-12 w-12 text-red-500" />
-            </div>
-            <p className="text-gray-600 mb-4">Failed to load dashboard data.</p>
-            <Button onClick={() => fetchData()}>Retry</Button>
-          </div>
+          <ErrorState
+            title="Failed to load"
+            message="Failed to load dashboard data."
+            onRetry={() => fetchData()}
+          />
         ) : data ? (
           <>
             <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 mb-8">
