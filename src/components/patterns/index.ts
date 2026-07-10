@@ -19,6 +19,13 @@ export type { SectionProps } from "./section";
 export { StatGrid, StatCard } from "./stat-grid";
 export type { StatGridProps, StatCardProps } from "./stat-grid";
 
+// Data Display
+export { FilterBar, FilterPills, SearchInput } from "./filter-bar";
+export type { FilterBarProps, FilterPillsProps, FilterPillOption, SearchInputProps } from "./filter-bar";
+
+export { CardList } from "./card-list";
+export type { CardListProps, CardListItem } from "./card-list";
+
 // States
 export { EmptyState } from "./empty-state";
 export type { EmptyStateProps } from "./empty-state";
