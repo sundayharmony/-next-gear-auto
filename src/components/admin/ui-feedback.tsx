@@ -24,17 +24,17 @@ export function AdminStatusBanner({
     <div
       role={type === "error" ? "alert" : "status"}
       aria-live="polite"
-      className={`mb-4 rounded-xl border px-4 py-3 text-sm flex items-center justify-between gap-3 ${styles} ${className}`}
+      className={`mb-4 rounded-xl border px-3 py-2.5 sm:px-4 sm:py-3 text-sm flex items-start sm:items-center justify-between gap-2 sm:gap-3 ${styles} ${className}`}
     >
-      <div className="flex items-center gap-2 min-w-0">
-        <Icon className="h-4 w-4 shrink-0" />
-        <span className="truncate">{message}</span>
+      <div className="flex items-start sm:items-center gap-2 min-w-0">
+        <Icon className="h-4 w-4 shrink-0 mt-0.5 sm:mt-0" />
+        <span className="break-words">{message}</span>
       </div>
       {onDismiss ? (
         <button
           onClick={onDismiss}
           aria-label="Dismiss message"
-          className="shrink-0 text-current/70 hover:text-current"
+          className="shrink-0 text-current/70 hover:text-current mt-0.5 sm:mt-0"
         >
           ×
         </button>

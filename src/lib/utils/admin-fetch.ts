@@ -10,6 +10,11 @@
 import { getCsrfToken } from "./csrf-fetch";
 
 const MAX_RETRIES = 1; // Maximum retry attempts to prevent infinite loops
+const DEFAULT_TIMEOUT_MS = 15000; // 15 seconds default
+
+export interface AdminFetchOptions extends RequestInit {
+  timeoutMs?: number;
+}
 
 /** After failed session refresh, send user to the staff area they were using (not always /admin). */
 function getStaffLoginRedirectPath(): string {
@@ -20,21 +25,22 @@ function getStaffLoginRedirectPath(): string {
   return "/login";
 }
 
-export async function adminFetch(url: string, options: RequestInit = {}): Promise<Response> {
+export async function adminFetch(url: string, options: AdminFetchOptions = {}): Promise<Response> {
   // Validate URL to prevent open redirect/SSRF: must start with "/"
   if (!url.startsWith("/")) {
     throw new Error("Invalid URL: must be a relative path starting with /");
   }
 
-  const headers = new Headers(options.headers || {});
+  const { timeoutMs = DEFAULT_TIMEOUT_MS, ...fetchOptions } = options;
+  const headers = new Headers(fetchOptions.headers || {});
 
   // Add timeout to fetch if not already provided
-  let signal = options.signal;
+  let signal = fetchOptions.signal;
   let timeoutId: ReturnType<typeof setTimeout> | undefined;
   let controller: AbortController | undefined;
   if (!signal) {
     controller = new AbortController();
-    timeoutId = setTimeout(() => controller!.abort(), 15000); // 15 second timeout
+    timeoutId = setTimeout(() => controller!.abort(), timeoutMs);
     signal = controller.signal;
   }
 
@@ -49,7 +55,7 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
   const executeRequest = async (): Promise<Response> => {
     // Ensure cookies are sent with the request
     const res = await fetch(url, {
-      ...options,
+      ...fetchOptions,
       headers,
       credentials: "same-origin",
       signal,
@@ -71,12 +77,12 @@ export async function adminFetch(url: string, options: RequestInit = {}): Promis
         if (refreshRes.ok) {
           // Get updated CSRF token and retry the original request with fresh tokens
           const newCsrf = getCsrfToken();
-          const retryHeaders = new Headers(options.headers || {});
+          const retryHeaders = new Headers(fetchOptions.headers || {});
           if (newCsrf) {
             retryHeaders.set("x-csrf-token", newCsrf);
           }
           const retryRes = await fetch(url, {
-            ...options,
+            ...fetchOptions,
             headers: retryHeaders,
             credentials: "same-origin",
             signal,
