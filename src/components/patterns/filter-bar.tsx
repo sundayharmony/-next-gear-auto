@@ -142,7 +142,7 @@ export function SearchInput({
   clearable = true,
 }: SearchInputProps) {
   const [localValue, setLocalValue] = React.useState(value);
-  const debounceRef = React.useRef<ReturnType<typeof setTimeout>>();
+  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   React.useEffect(() => {
     setLocalValue(value);
