@@ -6,6 +6,13 @@ This document provides a comprehensive audit and implementation plan to redesign
 
 **Goal:** Create a cohesive, premium, enterprise-grade SaaS experience with a unified design language.
 
+**Total Scope:**
+- **48 page files** across 5 route groups
+- **65 components** across 14 directories
+- **800+ Tailwind utility usages** to standardize
+- **6 overlay patterns** to consolidate
+- **4+ status color systems** to unify
+
 ---
 
 # Part 1: Complete UI Audit
@@ -830,4 +837,875 @@ Phase 7 (Page Migration)
 
 ---
 
+# Part 7: Detailed Phase Checklists
+
+## Phase 0: Foundation - Detailed Checklist
+
+### Pre-Implementation Verification
+- [ ] Backup current `globals.css`
+- [ ] Document current color usage with screenshots
+- [ ] Create baseline performance metrics (Lighthouse scores)
+- [ ] Run full test suite and record pass/fail count
+
+### Design Tokens Creation (`src/styles/tokens.css`)
+
+```css
+/* Create this file with all tokens */
+:root {
+  /* Colors - Primary */
+  --color-primary-50: #f5f3ff;
+  --color-primary-100: #ede9fe;
+  --color-primary-200: #ddd6fe;
+  --color-primary-300: #c4b5fd;
+  --color-primary-400: #a78bfa;
+  --color-primary-500: #8b5cf6;
+  --color-primary-600: #7c3aed;
+  --color-primary-700: #6d28d9;
+  --color-primary-800: #5b21b6;
+  --color-primary-900: #4c1d95;
+  
+  /* Colors - Neutral */
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
+  
+  /* Semantic Colors */
+  --color-success: #10b981;
+  --color-success-light: #d1fae5;
+  --color-warning: #f59e0b;
+  --color-warning-light: #fef3c7;
+  --color-error: #ef4444;
+  --color-error-light: #fee2e2;
+  --color-info: #3b82f6;
+  --color-info-light: #dbeafe;
+  
+  /* Spacing */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  
+  /* Border Radius */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.375rem;
+  --radius-lg: 0.5rem;
+  --radius-xl: 0.75rem;
+  --radius-2xl: 1rem;
+  --radius-full: 9999px;
+  
+  /* Shadows */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1), 0 2px 4px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1), 0 4px 6px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px rgba(0, 0, 0, 0.1), 0 10px 10px rgba(0, 0, 0, 0.04);
+  
+  /* Typography */
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  
+  /* Z-Index */
+  --z-dropdown: 50;
+  --z-sticky: 60;
+  --z-overlay: 70;
+  --z-modal: 80;
+  --z-popover: 90;
+  --z-toast: 100;
+}
+```
+
+### Files to Create
+- [ ] `src/styles/tokens.css` - Design tokens
+- [ ] `src/lib/design-system/index.ts` - Token exports
+- [ ] `src/lib/design-system/colors.ts` - Color utilities
+- [ ] `src/lib/design-system/status.ts` - Unified status colors
+
+### Verification Checklist
+- [ ] Tokens file created and imported in `globals.css`
+- [ ] No visual changes to any page
+- [ ] All existing tests still pass
+- [ ] Build completes without errors
+- [ ] Lighthouse scores unchanged (±5%)
+
+---
+
+## Phase 1: Primitives - Detailed Checklist
+
+### Button Component (`src/components/ui/button.tsx`)
+
+**Current State Analysis:**
+- Primary: `bg-purple-600 hover:bg-purple-700`
+- Gradient variant exists in some forms
+- Ghost: inconsistent hover colors
+- Sizes: `h-9`, `h-10`, `h-12`
+
+**Standardization Tasks:**
+- [ ] Audit all button usages: `rg "Button" --type tsx -c`
+- [ ] Define exactly 5 variants: `primary`, `secondary`, `outline`, `ghost`, `danger`
+- [ ] Define exactly 3 sizes: `sm` (h-8), `default` (h-10), `lg` (h-12)
+- [ ] Standardize border radius to `rounded-lg`
+- [ ] Add loading state with spinner
+- [ ] Add disabled styles
+
+**New Button Spec:**
+```tsx
+variants: {
+  primary: "bg-primary-600 text-white hover:bg-primary-700 focus:ring-primary-500",
+  secondary: "bg-gray-100 text-gray-900 hover:bg-gray-200",
+  outline: "border border-gray-300 bg-white hover:bg-gray-50",
+  ghost: "hover:bg-gray-100",
+  danger: "bg-red-600 text-white hover:bg-red-700"
+}
+sizes: {
+  sm: "h-8 px-3 text-sm",
+  default: "h-10 px-4 text-sm",
+  lg: "h-12 px-6 text-base"
+}
+```
+
+### Input Component (`src/components/ui/input.tsx`)
+
+**Standardization Tasks:**
+- [ ] Standardize height to `h-10`
+- [ ] Standardize border radius to `rounded-lg`
+- [ ] Standardize border color to `border-gray-300`
+- [ ] Standardize focus ring to `ring-2 ring-primary-500`
+- [ ] Add consistent error state styling
+- [ ] Remove `bg-gray-50` default (use `bg-white`)
+
+### Badge Component (`src/components/ui/badge.tsx`)
+
+**Current Implementations to Consolidate:**
+1. `Badge` (CVA) - 6 variants
+2. `OwnerStatusBadge` - hardcoded colors
+3. `PayoutStatusBadge` - hardcoded colors
+4. Inline status badges in tables
+5. `statusColors` utility
+
+**Unified Status Badge Spec:**
+```tsx
+const statusVariants = {
+  // Booking statuses
+  pending: "bg-amber-100 text-amber-800 border-amber-200",
+  confirmed: "bg-green-100 text-green-800 border-green-200",
+  active: "bg-blue-100 text-blue-800 border-blue-200",
+  completed: "bg-gray-100 text-gray-700 border-gray-200",
+  cancelled: "bg-red-100 text-red-800 border-red-200",
+  "no-show": "bg-orange-100 text-orange-800 border-orange-200",
+  
+  // Payment statuses
+  paid: "bg-green-100 text-green-800 border-green-200",
+  unpaid: "bg-red-100 text-red-800 border-red-200",
+  partial: "bg-amber-100 text-amber-800 border-amber-200",
+  
+  // Generic
+  success: "bg-green-100 text-green-800 border-green-200",
+  warning: "bg-amber-100 text-amber-800 border-amber-200",
+  error: "bg-red-100 text-red-800 border-red-200",
+  info: "bg-blue-100 text-blue-800 border-blue-200",
+  default: "bg-gray-100 text-gray-700 border-gray-200"
+}
+```
+
+### Card Component (`src/components/ui/card.tsx`)
+
+**Consolidation Tasks:**
+- [ ] Merge `Card` and `AdminCard` into single component
+- [ ] Add `padding` prop: `none`, `sm`, `md`, `lg`
+- [ ] Add `hover` prop for interactive cards
+- [ ] Standardize: `rounded-xl border border-gray-200 bg-white shadow-sm`
+
+### Skeleton Component
+
+**Consolidation Tasks:**
+- [ ] Merge `ui/Skeleton` and `admin/Skeleton`
+- [ ] Create preset configurations:
+  - `SkeletonCard`
+  - `SkeletonTable`
+  - `SkeletonList`
+  - `SkeletonDashboard`
+
+### Phase 1 Testing Checklist
+
+**Visual Regression:**
+- [ ] Screenshot all button states on Admin Dashboard
+- [ ] Screenshot all input states on Create Booking form
+- [ ] Screenshot all badge states on Bookings page
+- [ ] Compare before/after
+
+**Functional Testing:**
+- [ ] All forms submit correctly
+- [ ] All buttons trigger correct actions
+- [ ] Loading states display correctly
+- [ ] Error states display correctly
+
+**Accessibility Testing:**
+- [ ] Color contrast meets WCAG AA (4.5:1 for text)
+- [ ] Focus states visible on all interactive elements
+- [ ] Button labels are descriptive
+- [ ] Form labels associated correctly
+
+---
+
+## Phase 2: Layout - Detailed Checklist
+
+### PageHeader Component
+
+**Files Using Custom Headers (to migrate):**
+```
+src/app/admin/page.tsx - AdminPageHeader
+src/app/admin/invoices/InvoicesPageClient.tsx - Custom header
+src/app/account/page.tsx - inline page-hero
+src/app/booking/page.tsx - inline page-hero
+```
+
+**Unified PageHeader Spec:**
+```tsx
+interface PageHeaderProps {
+  title: string;
+  subtitle?: string;
+  backHref?: string;
+  backLabel?: string;
+  actions?: React.ReactNode;
+  children?: React.ReactNode;
+  variant?: 'default' | 'compact' | 'hero';
+}
+```
+
+### PageBody Component
+
+**Standardization:**
+- [ ] Consistent padding: `py-6 sm:py-8`
+- [ ] Consistent max-width: `max-w-7xl`
+- [ ] Consistent horizontal padding: `px-4 sm:px-6 lg:px-8`
+- [ ] Add `narrow` prop for `max-w-4xl`
+
+### StatGrid Component
+
+**Current Patterns Found:**
+```
+grid-cols-2 md:grid-cols-3 lg:grid-cols-5  (Admin Dashboard)
+grid-cols-2 sm:grid-cols-3 lg:grid-cols-4  (Vehicles)
+grid-cols-2 sm:grid-cols-4                  (Account)
+grid-cols-2 md:grid-cols-4                  (Manager Dashboard)
+```
+
+**Standardized StatGrid:**
+```tsx
+interface StatGridProps {
+  columns?: 2 | 3 | 4 | 5;
+  children: React.ReactNode;
+}
+
+// Always uses responsive breakpoints:
+// 2 cols → sm:2 md:3 lg:{columns}
+```
+
+### Section Component
+
+**Spec:**
+```tsx
+interface SectionProps {
+  title?: string;
+  description?: string;
+  icon?: LucideIcon;
+  actions?: React.ReactNode;
+  children: React.ReactNode;
+}
+```
+
+### Phase 2 Testing Checklist
+
+**Layout Testing:**
+- [ ] Test all pages at 320px width (mobile)
+- [ ] Test all pages at 768px width (tablet)
+- [ ] Test all pages at 1024px width (laptop)
+- [ ] Test all pages at 1440px width (desktop)
+- [ ] Test all pages at 1920px width (large desktop)
+
+**Responsive Behavior:**
+- [ ] No horizontal scroll at any breakpoint
+- [ ] Text remains readable at all sizes
+- [ ] Touch targets ≥44px on mobile
+- [ ] Proper spacing maintained
+
+---
+
+## Phase 3: Data Display - Detailed Checklist
+
+### DataTable Component
+
+**Current Table Implementations:**
+1. `AdminTableWrap` + custom table (Bookings)
+2. Inline table (Invoices, Locations, Promo Codes)
+3. Card list (Tickets, Reviews, Customers)
+4. Timeline grid (Calendar)
+
+**Unified DataTable Spec:**
+```tsx
+interface DataTableProps<T> {
+  columns: ColumnDef<T>[];
+  data: T[];
+  loading?: boolean;
+  error?: string;
+  emptyState?: React.ReactNode;
+  
+  // Sorting
+  sortable?: boolean;
+  defaultSort?: { column: string; direction: 'asc' | 'desc' };
+  
+  // Selection
+  selectable?: boolean;
+  selectedIds?: Set<string>;
+  onSelectionChange?: (ids: Set<string>) => void;
+  
+  // Pagination
+  pagination?: {
+    currentPage: number;
+    totalItems: number;
+    pageSize: number;
+    onPageChange: (page: number) => void;
+  };
+  
+  // Row interaction
+  onRowClick?: (row: T) => void;
+  
+  // Mobile
+  mobileCard?: (row: T) => React.ReactNode;
+}
+```
+
+### Table Migration Order (by complexity)
+
+| Priority | Page | Current Pattern | Columns | Complexity |
+|----------|------|-----------------|---------|------------|
+| 1 | Reviews | Card list | 5 fields | Low |
+| 2 | Instagram | Card list | 4 fields | Low |
+| 3 | Managers | List items | 4 fields | Low |
+| 4 | Promo Codes | Table + inline edit | 6 cols | Medium |
+| 5 | Locations | Table | 6 cols | Medium |
+| 6 | Maintenance | Table + detail panel | 7 cols | Medium |
+| 7 | Customers | Master-detail list | Complex | High |
+| 8 | Bookings | Table + filters + detail | 9 cols | High |
+| 9 | Invoices | Table + preview | 7 cols | High |
+| 10 | Finance | Tabs + tables + charts | Multiple | Very High |
+
+### FilterBar Component
+
+**Current Filter Patterns:**
+- Pill buttons (Bookings status)
+- Select dropdowns (Vehicle filter)
+- Search input (Customers)
+- Date range (Finance)
+
+**Unified FilterBar Spec:**
+```tsx
+interface FilterBarProps {
+  filters: FilterItem[];
+  values: Record<string, any>;
+  onChange: (key: string, value: any) => void;
+  onClear?: () => void;
+}
+
+type FilterItem = 
+  | { type: 'pills'; key: string; options: { value: string; label: string }[] }
+  | { type: 'select'; key: string; options: { value: string; label: string }[]; placeholder?: string }
+  | { type: 'search'; key: string; placeholder?: string }
+  | { type: 'date'; key: string; label?: string }
+  | { type: 'dateRange'; startKey: string; endKey: string };
+```
+
+### Phase 3 Testing Checklist
+
+**Data Integrity:**
+- [ ] All table data displays correctly
+- [ ] Sorting works in both directions
+- [ ] Filtering returns correct results
+- [ ] Pagination shows correct page counts
+- [ ] Search returns expected matches
+
+**Interaction Testing:**
+- [ ] Row click opens correct detail
+- [ ] Bulk selection works
+- [ ] Bulk actions apply to selected items
+- [ ] Empty state shows when no data
+- [ ] Loading state shows during fetch
+
+---
+
+## Phase 4: Forms - Detailed Checklist
+
+### Form Inventory
+
+| Page | Form Name | Fields | Validation |
+|------|-----------|--------|------------|
+| Marketing | Campaign | subject, bodyHtml, recipients | Required checks |
+| Promo Codes | Create/Edit | code, type, value, min, max, expires | Code unique, value > 0 |
+| Locations | Add/Edit | name, address, city, state, zip, lat, lng, surcharge | Name + address required |
+| Maintenance | Add/Edit | vehicle, title, desc, status, cost, dates, photos | Vehicle + title required |
+| Tickets | Add/Edit | booking, vehicle, plate, type, date, amount, status | Date required, amount ≥ 0 |
+| Managers | Add/Edit | name, email, phone | Name + email required |
+| Owners | Add | name, email, phone, password | Name + email required |
+| Vehicles | Add/Edit | 20+ fields | Make, model, year required |
+| Bookings | Create | 15+ fields | Complex validation |
+| Customer | Profile | name, phone, dob | Name required |
+
+### FormSection Component
+
+```tsx
+interface FormSectionProps {
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+}
+
+// Usage:
+<FormSection title="Vehicle Information" description="Basic details">
+  <FormField label="Make" required>
+    <Input {...register('make')} />
+  </FormField>
+</FormSection>
+```
+
+### FormActions Component
+
+```tsx
+interface FormActionsProps {
+  submitLabel?: string;
+  cancelLabel?: string;
+  onCancel?: () => void;
+  loading?: boolean;
+  disabled?: boolean;
+  align?: 'left' | 'right' | 'between';
+}
+
+// Renders consistently:
+// - Cancel on left (ghost variant)
+// - Submit on right (primary variant)
+// - Full-width on mobile
+```
+
+### Validation Display Standardization
+
+**Current Patterns:**
+- Inline below field (Input component)
+- Toast notification (some forms)
+- Banner at top (AdminStatusBanner)
+- Field highlight only (no message)
+
+**Standardized Approach:**
+1. Field-level errors: Inline below field with red text
+2. Form-level errors: Banner at top of form
+3. Success: Toast notification
+4. All errors must be announced to screen readers
+
+### Phase 4 Testing Checklist
+
+**Form Submission:**
+- [ ] All required field validation works
+- [ ] Error messages display correctly
+- [ ] Submit button disables during submission
+- [ ] Success feedback displays
+- [ ] Form resets after successful submission (where applicable)
+
+**Keyboard Navigation:**
+- [ ] Tab order is logical
+- [ ] Enter submits form
+- [ ] Escape cancels (where applicable)
+- [ ] Focus moves to first error on validation fail
+
+**Accessibility:**
+- [ ] All inputs have associated labels
+- [ ] Required fields marked with `aria-required`
+- [ ] Error fields have `aria-invalid`
+- [ ] Error messages linked with `aria-describedby`
+
+---
+
+## Phase 5: Modals - Detailed Checklist
+
+### Modal Inventory
+
+| Component | Type | Used By | Z-Index |
+|-----------|------|---------|---------|
+| `Modal` | Center/bottom | Customer areas | 80 |
+| `Sheet` | Side drawer | Admin bookings, customers | 80 |
+| `StaffCenterModal` | Center | Invoices, crop | 100 |
+| `StaffSidePanel` | Side | Turo, maintenance | 100 |
+| Fixed side panel | Custom | Booking detail | 100 |
+| Inline expandable | Toggle | Forms, filters | N/A |
+
+### Consolidated Modal System
+
+**Two Components:**
+
+1. **Modal** - For dialogs, confirmations, forms
+```tsx
+interface ModalProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  preventClose?: boolean;
+}
+```
+
+2. **Sheet** - For detail panels, forms
+```tsx
+interface SheetProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  title: string;
+  description?: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  side?: 'right' | 'bottom';
+  size?: 'sm' | 'md' | 'lg' | 'xl' | 'full';
+}
+```
+
+### Migration Mapping
+
+| Current | Target | Notes |
+|---------|--------|-------|
+| `Modal` | `Modal` | Keep |
+| `Sheet` | `Sheet` | Enhance |
+| `StaffCenterModal` | `Modal` | Migrate |
+| `StaffSidePanel` | `Sheet` | Migrate |
+| Fixed side panel | `Sheet` | Migrate |
+| `window.confirm` | `ConfirmDialog` | New component |
+
+### Phase 5 Testing Checklist
+
+**Modal Behavior:**
+- [ ] Opens with animation
+- [ ] Closes on backdrop click (unless preventClose)
+- [ ] Closes on Escape key
+- [ ] Focus trapped inside modal
+- [ ] Focus returns to trigger on close
+
+**Mobile Behavior:**
+- [ ] Bottom sheet on mobile (Modal)
+- [ ] Full-width on mobile (Sheet side="right")
+- [ ] Safe area padding at bottom
+- [ ] Swipe to close works
+
+**Accessibility:**
+- [ ] `role="dialog"` present
+- [ ] `aria-modal="true"` present
+- [ ] `aria-labelledby` points to title
+- [ ] Background content inert
+
+---
+
+## Phase 6: Navigation - Detailed Checklist
+
+### Navigation Inventory
+
+| Panel | Sidebar Items | Mobile Primary | Mobile More |
+|-------|---------------|----------------|-------------|
+| Admin | 19 | 4 | 15 |
+| Manager | 13 | 4 | 9 |
+| Owner | 5 | 4 | 1 |
+
+### Sidebar Standardization
+
+**Consistent Styling:**
+- Width: `w-64`
+- Background: `bg-gray-900`
+- Item padding: `px-3 py-2.5`
+- Active state: `bg-gray-800 text-white`
+- Hover state: `hover:bg-gray-800`
+- Icon size: `h-5 w-5`
+- Gap between icon and label: `gap-3`
+
+### Bottom Nav Standardization
+
+**Consistent Styling:**
+- Height: `h-16`
+- Background: `bg-white border-t`
+- Active indicator: Purple dot or bar
+- Icon size: `h-6 w-6`
+- Label: `text-xs`
+
+### Active State Unification
+
+**Current Patterns:**
+- Background change
+- Text color change
+- Underline
+- Border
+- Icon fill
+
+**Standardized:**
+- Sidebar: Background + text color
+- Bottom nav: Icon color + indicator
+- Tabs: Background pill
+
+### Phase 6 Testing Checklist
+
+**Navigation Flow:**
+- [ ] All nav links work
+- [ ] Active state shows on current page
+- [ ] Deep links work correctly
+- [ ] Back navigation works
+- [ ] Breadcrumbs show correct path
+
+**Mobile Navigation:**
+- [ ] Bottom nav shows on mobile
+- [ ] More menu opens/closes
+- [ ] All items accessible
+- [ ] Swipe back gesture works
+
+---
+
+## Phase 7: Page Migration - Detailed Checklist
+
+### Per-Page Migration Checklist Template
+
+For each page:
+
+**Pre-Migration:**
+- [ ] Screenshot current state (desktop + mobile)
+- [ ] Document all components used
+- [ ] Document all API calls
+- [ ] Document all state management
+- [ ] Identify any page-specific logic
+
+**Migration:**
+- [ ] Replace page header with `PageHeader`
+- [ ] Replace page body with `PageBody`
+- [ ] Replace cards with unified `Card`
+- [ ] Replace tables with `DataTable`
+- [ ] Replace forms with `FormSection`/`FormField`
+- [ ] Replace modals with unified `Modal`/`Sheet`
+- [ ] Replace badges with `StatusBadge`
+- [ ] Replace loading states with `LoadingState`
+- [ ] Replace empty states with `EmptyState`
+
+**Post-Migration:**
+- [ ] Compare screenshots before/after
+- [ ] Test all functionality
+- [ ] Test all API calls
+- [ ] Test all form submissions
+- [ ] Test all navigation
+- [ ] Run accessibility audit
+- [ ] Run performance audit
+
+### Admin Dashboard Migration (Reference Implementation)
+
+**Current Components:**
+- `AdminPageHeader`
+- `AdminPageBody`
+- `AdminStatCard` × 5
+- `AdminCard`
+- `AdminSection`
+- Custom booking cards
+- `Button`, `Badge`
+
+**Migration Tasks:**
+- [ ] Keep `AdminPageHeader` (it becomes the standard)
+- [ ] Replace stat grid with `StatGrid`
+- [ ] Replace highlight columns with `Section`
+- [ ] Replace booking cards with `CardList`
+- [ ] Standardize all colors to tokens
+- [ ] Standardize all spacing to tokens
+
+### Owner Panel Migration (Smallest - Good Test)
+
+**Pages:**
+1. Dashboard - Stats, chart, recent bookings
+2. Calendar - Month grid, booking list
+3. Create Booking - Multi-field form
+4. Finance - Filters, table, cards
+5. Availability - Form, calendar, list
+6. Notifications - List with read state
+
+**Estimated Complexity:** Low-Medium
+
+### Customer Account Migration
+
+**Sections:**
+1. Overview tab - Stats, highlight card
+2. Upcoming tab - Booking cards, actions
+3. Past tab - Booking cards, review form
+4. Profile tab - Edit form, documents
+
+**Special Considerations:**
+- Uses public site chrome (header/footer)
+- Tab navigation is client-side state
+- Must maintain auth gate logic
+
+---
+
+# Part 8: Testing Requirements
+
+## Test Categories
+
+### 1. Unit Tests
+- [ ] All new components have unit tests
+- [ ] All utility functions have unit tests
+- [ ] Minimum 80% code coverage on new code
+
+### 2. Integration Tests
+- [ ] Form submission flows
+- [ ] Data fetching and display
+- [ ] Navigation flows
+- [ ] Modal open/close cycles
+
+### 3. Visual Regression Tests
+- [ ] Screenshot comparison for all pages
+- [ ] Screenshot comparison for all components
+- [ ] Threshold: <1% pixel difference
+
+### 4. Accessibility Tests
+- [ ] axe-core audit passes on all pages
+- [ ] Keyboard navigation works everywhere
+- [ ] Screen reader testing (VoiceOver/NVDA)
+- [ ] Color contrast meets WCAG AA
+
+### 5. Performance Tests
+- [ ] Lighthouse Performance score ≥ 80
+- [ ] Lighthouse Accessibility score ≥ 90
+- [ ] Core Web Vitals in green
+- [ ] Bundle size not increased >10%
+
+### 6. Cross-Browser Tests
+- [ ] Chrome (latest)
+- [ ] Firefox (latest)
+- [ ] Safari (latest)
+- [ ] Edge (latest)
+- [ ] Mobile Safari (iOS)
+- [ ] Mobile Chrome (Android)
+
+### 7. Responsive Tests
+- [ ] 320px (small mobile)
+- [ ] 375px (iPhone)
+- [ ] 428px (iPhone Pro Max)
+- [ ] 768px (tablet)
+- [ ] 1024px (small laptop)
+- [ ] 1280px (laptop)
+- [ ] 1440px (desktop)
+- [ ] 1920px (large desktop)
+
+---
+
+# Part 9: Rollback Procedures
+
+## Per-Phase Rollback
+
+### Phase 0 (Foundation)
+```bash
+# Rollback tokens
+git checkout HEAD~1 -- src/styles/tokens.css
+git checkout HEAD~1 -- src/app/globals.css
+```
+
+### Phase 1-6 (Components)
+```bash
+# Feature flag approach
+# Set NEXT_PUBLIC_USE_NEW_COMPONENTS=false in .env
+# All new components check this flag
+```
+
+### Phase 7 (Pages)
+```bash
+# Each page migration is a separate commit
+# Rollback specific page:
+git revert <commit-hash>
+```
+
+## Full Rollback
+```bash
+# Tag before each phase
+git tag phase-0-complete
+git tag phase-1-complete
+# etc.
+
+# Full rollback to any phase:
+git checkout phase-X-complete
+```
+
+## Monitoring After Deploy
+
+- [ ] Error rate monitoring (Sentry/similar)
+- [ ] Performance monitoring (Vercel Analytics)
+- [ ] User feedback collection
+- [ ] 24-hour observation period per phase
+
+---
+
+# Part 10: Acceptance Criteria
+
+## Visual Acceptance
+- [ ] All panels use identical color palette
+- [ ] All panels use identical typography scale
+- [ ] All panels use identical spacing system
+- [ ] All panels use identical border radius
+- [ ] All panels use identical shadows
+- [ ] All panels use identical icons (Lucide)
+
+## Component Acceptance
+- [ ] Only ONE button component in use
+- [ ] Only ONE card component in use
+- [ ] Only ONE badge/status component in use
+- [ ] Only ONE table/data display component in use
+- [ ] Only TWO overlay components (Modal + Sheet)
+- [ ] Only ONE page header component in use
+- [ ] Only ONE empty state component in use
+- [ ] Only ONE loading state component in use
+
+## Code Quality Acceptance
+- [ ] No duplicate component files
+- [ ] All components have TypeScript types
+- [ ] All components have JSDoc documentation
+- [ ] No inline styles (all Tailwind)
+- [ ] All colors use design tokens
+- [ ] All spacing uses design tokens
+
+## Accessibility Acceptance
+- [ ] WCAG 2.1 AA compliance verified
+- [ ] Keyboard navigation complete
+- [ ] Screen reader tested
+- [ ] Color contrast verified
+- [ ] Focus management correct
+
+## Performance Acceptance
+- [ ] Lighthouse Performance ≥ 80
+- [ ] First Contentful Paint < 2s
+- [ ] Time to Interactive < 4s
+- [ ] Cumulative Layout Shift < 0.1
+- [ ] Bundle size increase < 10%
+
+---
+
 *This plan is ready for review and approval before implementation begins.*
+
+**Approval Checklist:**
+- [ ] Product Owner approval
+- [ ] Design review complete
+- [ ] Engineering lead approval
+- [ ] QA plan reviewed
+- [ ] Rollback procedure verified
