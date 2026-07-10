@@ -37,25 +37,93 @@ export type SyncCancellationsResult = {
   }>;
 };
 
-async function fetchActiveTuroRows(supabase: ReturnType<typeof getServiceSupabase>) {
+const TURO_PAGE_SIZE = 1000;
+const TURO_SELECT_FULL =
+  "id, vehicle_id, start_date, end_date, reason, location, cancelled_at, created_at, source";
+const TURO_SELECT_MINIMAL = "id, vehicle_id, start_date, end_date, reason, created_at, source";
+
+/** Direct lookup — avoids Supabase 1000-row cap on bulk fetches. */
+export async function fetchTuroTripById(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  id: string
+): Promise<{ row: TuroTripRow | null; hasCancelledAt: boolean }> {
   const full = await supabase
     .from("blocked_dates")
-    .select("id, vehicle_id, start_date, end_date, reason, location, cancelled_at, created_at, source")
+    .select(TURO_SELECT_FULL)
+    .eq("id", id)
     .eq("source", TURO_BLOCKED_SOURCE)
-    .order("start_date", { ascending: false });
+    .maybeSingle();
 
   if (!full.error) {
-    return { rows: (full.data || []) as TuroTripRow[], hasCancelledAt: true };
+    return { row: (full.data as TuroTripRow | null) ?? null, hasCancelledAt: true };
   }
 
   const minimal = await supabase
     .from("blocked_dates")
-    .select("id, vehicle_id, start_date, end_date, reason, created_at, source")
+    .select(TURO_SELECT_MINIMAL)
+    .eq("id", id)
     .eq("source", TURO_BLOCKED_SOURCE)
-    .order("start_date", { ascending: false });
+    .maybeSingle();
 
   if (minimal.error) throw new Error(minimal.error.message);
-  return { rows: (minimal.data || []) as TuroTripRow[], hasCancelledAt: false };
+  return { row: (minimal.data as TuroTripRow | null) ?? null, hasCancelledAt: false };
+}
+
+async function fetchPaginatedTuroRows(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  opts: { activeOnly?: boolean; cancelledOnly?: boolean; includePrefixCancelled?: boolean } = {}
+): Promise<{ rows: TuroTripRow[]; hasCancelledAt: boolean }> {
+  let hasCancelledAt = true;
+  const rows: TuroTripRow[] = [];
+  let offset = 0;
+
+  while (true) {
+    let query = supabase
+      .from("blocked_dates")
+      .select(TURO_SELECT_FULL)
+      .eq("source", TURO_BLOCKED_SOURCE)
+      .order("start_date", { ascending: false })
+      .range(offset, offset + TURO_PAGE_SIZE - 1);
+
+    if (opts.activeOnly) query = query.is("cancelled_at", null);
+    if (opts.cancelledOnly) query = query.not("cancelled_at", "is", null);
+
+    const page = await query;
+
+    if (page.error) {
+      if (!hasCancelledAt || offset > 0) throw new Error(page.error.message);
+      hasCancelledAt = false;
+
+      let fallbackQuery = supabase
+        .from("blocked_dates")
+        .select(TURO_SELECT_MINIMAL)
+        .eq("source", TURO_BLOCKED_SOURCE)
+        .order("start_date", { ascending: false })
+        .range(offset, offset + TURO_PAGE_SIZE - 1);
+
+      if (opts.activeOnly) fallbackQuery = fallbackQuery.is("cancelled_at", null);
+      if (opts.cancelledOnly) fallbackQuery = fallbackQuery.not("cancelled_at", "is", null);
+
+      const fallbackPage = await fallbackQuery;
+      if (fallbackPage.error) throw new Error(fallbackPage.error.message);
+
+      const batch = (fallbackPage.data || []) as TuroTripRow[];
+      rows.push(...batch);
+      if (batch.length < TURO_PAGE_SIZE) break;
+      offset += TURO_PAGE_SIZE;
+      continue;
+    }
+
+    const batch = (page.data || []) as TuroTripRow[];
+    rows.push(...batch);
+    if (batch.length < TURO_PAGE_SIZE) break;
+    offset += TURO_PAGE_SIZE;
+  }
+
+  if (opts.activeOnly && !opts.includePrefixCancelled) {
+    return { rows: rows.filter((r) => !isBlockedDateCancelled(r)), hasCancelledAt };
+  }
+  return { rows, hasCancelledAt };
 }
 
 function matchTrip(
@@ -113,6 +181,20 @@ async function matchVehicle(
     }
   }
   return matchScore >= 4 ? matched : null;
+}
+
+async function ensureVehicleNames(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  vehicleNameById: Map<string, string>,
+  vehicleIds: string[]
+) {
+  const missing = vehicleIds.filter((id) => !vehicleNameById.has(id));
+  if (!missing.length) return;
+
+  const { data: vs } = await supabase.from("vehicles").select("id, year, make, model").in("id", missing);
+  for (const v of vs || []) {
+    vehicleNameById.set(v.id, getVehicleDisplayName(v));
+  }
 }
 
 export async function markTuroBlockedDateCancelled(
@@ -180,21 +262,22 @@ export async function syncTuroCancellations(opts: {
     actions: [],
   };
 
-  const { rows, hasCancelledAt } = await fetchActiveTuroRows(supabase);
-  result.hasCancelledAt = hasCancelledAt;
-  let active = rows.filter((r) => !isBlockedDateCancelled(r));
-
   const vehicleNameById = new Map<string, string>();
-  const vehicleIds = [...new Set(rows.map((r) => r.vehicle_id))];
-  if (vehicleIds.length) {
-    const { data: vs } = await supabase.from("vehicles").select("id, year, make, model").in("id", vehicleIds);
-    for (const v of vs || []) {
-      vehicleNameById.set(v.id, getVehicleDisplayName(v));
-    }
-  }
+  const colProbe = await supabase.from("blocked_dates").select("cancelled_at").limit(1);
+  const hasCancelledAt = !colProbe.error;
+  result.hasCancelledAt = hasCancelledAt;
+
+  let active: TuroTripRow[] = [];
 
   if (opts.purgeAlreadyCancelled) {
-    for (const row of rows.filter(isBlockedDateCancelled)) {
+    const [{ rows: cancelledRows }, { rows: nullCancelledRows }] = await Promise.all([
+      fetchPaginatedTuroRows(supabase, { cancelledOnly: true }),
+      fetchPaginatedTuroRows(supabase, { activeOnly: true, includePrefixCancelled: true }),
+    ]);
+    const prefixOnlyCancelled = nullCancelledRows.filter(isBlockedDateCancelled);
+    const purgeRows = [...cancelledRows, ...prefixOnlyCancelled];
+
+    for (const row of purgeRows) {
       result.processed++;
       if (!deleteRows) {
         result.skipped++;
@@ -203,6 +286,7 @@ export async function syncTuroCancellations(opts: {
       try {
         await supabase.from("blocked_dates").delete().eq("id", row.id);
         result.deleted++;
+        await ensureVehicleNames(supabase, vehicleNameById, [row.vehicle_id]);
         result.actions.push({
           tripId: row.id,
           vehicleName: vehicleNameById.get(row.vehicle_id) || row.vehicle_id,
@@ -217,15 +301,21 @@ export async function syncTuroCancellations(opts: {
     }
   }
 
+  if (opts.emails?.length) {
+    const { rows } = await fetchPaginatedTuroRows(supabase, { activeOnly: true });
+    active = rows;
+  }
+
   if (opts.tripIds?.length) {
     for (const id of opts.tripIds) {
       result.processed++;
-      const row = rows.find((r) => r.id === id);
+      const { row } = await fetchTuroTripById(supabase, id);
       if (!row) {
         result.skipped++;
         result.errors.push(`Trip not found: ${id}`);
         continue;
       }
+      await ensureVehicleNames(supabase, vehicleNameById, [row.vehicle_id]);
       if (isBlockedDateCancelled(row)) {
         result.skipped++;
         result.actions.push({
@@ -312,12 +402,8 @@ export async function syncTuroCancellations(opts: {
 export async function listTuroCancellationStatus() {
   const supabase = getServiceSupabase();
 
-  const [activeCountRes, cancelledCountRes, activeRowsRes, hasColProbe] = await Promise.all([
-    supabase
-      .from("blocked_dates")
-      .select("id", { count: "exact", head: true })
-      .eq("source", TURO_BLOCKED_SOURCE)
-      .is("cancelled_at", null),
+  const [hasColProbe, cancelledCountRes, prefixCountRes, activeFetch] = await Promise.all([
+    supabase.from("blocked_dates").select("cancelled_at").limit(1),
     supabase
       .from("blocked_dates")
       .select("id", { count: "exact", head: true })
@@ -325,26 +411,28 @@ export async function listTuroCancellationStatus() {
       .not("cancelled_at", "is", null),
     supabase
       .from("blocked_dates")
-      .select("id, vehicle_id, start_date, end_date, reason, location, cancelled_at, created_at, source")
+      .select("id", { count: "exact", head: true })
       .eq("source", TURO_BLOCKED_SOURCE)
       .is("cancelled_at", null)
-      .order("start_date", { ascending: false }),
-    supabase.from("blocked_dates").select("cancelled_at").limit(1),
+      .ilike("reason", `${CANCELLED_REASON_PREFIX}%`),
+    fetchPaginatedTuroRows(supabase, { activeOnly: true }),
   ]);
 
   const hasCancelledAt = !hasColProbe.error;
-  if (activeCountRes.error) throw new Error(activeCountRes.error.message);
+  if (cancelledCountRes.error) throw new Error(cancelledCountRes.error.message);
 
-  const active = (activeRowsRes.data || []) as TuroTripRow[];
-  const activeCount = activeCountRes.count ?? active.length;
+  const activeRows = activeFetch.rows;
+  const activeCount = activeRows.length;
+  const cancelledCount =
+    (cancelledCountRes.count ?? 0) + (prefixCountRes.error ? 0 : prefixCountRes.count ?? 0);
 
   return {
     hasCancelledAt,
-    total: activeCount + (cancelledCountRes.count ?? 0),
+    total: activeCount + cancelledCount,
     active: activeCount,
-    cancelled: cancelledCountRes.count ?? 0,
-    activeMissingLocation: active.filter((r) => !storedTuroLocation(r.location)).length,
+    cancelled: cancelledCount,
+    activeMissingLocation: activeRows.filter((r) => !storedTuroLocation(r.location)).length,
     cancelledRows: [] as TuroTripRow[],
-    activeRows: active,
+    activeRows,
   };
 }

@@ -3,7 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
-import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
+import { TURO_BLOCKED_SOURCE, isBlockedDateCancelled } from "@/lib/utils/blocked-dates";
 import { queueGoogleCalendarBlockedDateSync } from "@/lib/integrations/google-calendar/hooks";
 
 /**
@@ -85,7 +85,10 @@ export async function GET(req: NextRequest) {
       } else if (turoRes.error) {
         error = turoRes.error;
       } else {
-        data = [...(manualRes.data || []), ...(turoRes.data || [])].sort((a, b) =>
+        const activeTuro = (turoRes.data || []).filter(
+          (row) => !isBlockedDateCancelled(row as { cancelled_at?: string | null; reason?: string | null })
+        );
+        data = [...(manualRes.data || []), ...activeTuro].sort((a, b) =>
           String(a.start_date).localeCompare(String(b.start_date))
         );
       }

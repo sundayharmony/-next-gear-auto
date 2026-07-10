@@ -44,11 +44,29 @@ export function useTuroSyncActions(
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        if (data.success && data.data.marked > 0) {
+        if (!data.success) {
+          setError(data.message || "Could not mark trip cancelled");
+          return;
+        }
+
+        const result = data.data;
+        const alreadyCancelled = result.actions?.some(
+          (a: { tripId: string; detail: string }) =>
+            a.tripId === id && a.detail === "Already cancelled"
+        );
+        const tripNotFound = result.errors?.some((e: string) => e === `Trip not found: ${id}`);
+
+        if (result.marked > 0 || result.deleted > 0) {
           await fetchData();
           setSuccess("Turo trip marked cancelled");
+        } else if (alreadyCancelled) {
+          await fetchData();
+          setSuccess("Trip was already cancelled — list refreshed");
+        } else if (tripNotFound) {
+          await fetchData();
+          setError("This trip is no longer in the database — list refreshed.");
         } else {
-          setError(data.data?.errors?.[0] || data.message || "Could not mark trip cancelled");
+          setError(result.errors?.[0] || data.message || "Could not mark trip cancelled");
         }
       } catch {
         setError("Network error — could not mark trip cancelled");

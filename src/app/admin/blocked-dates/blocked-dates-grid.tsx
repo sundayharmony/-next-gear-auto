@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
+import { isBlockedDateCancelled } from "@/lib/utils/blocked-dates";
 import {
   type BlockedDate,
   formatBlockedDate,
@@ -79,6 +80,7 @@ export function BlockedDatesGrid({
               86400000
           ) + 1;
         const isPast = block.end_date < today;
+        const isCancelled = isBlockedDateCancelled(block);
 
         return (
           <div
@@ -163,11 +165,15 @@ export function BlockedDatesGrid({
                   Extended
                 </Badge>
               )}
-              {block.cancelled_at && (
+              {isCancelled && (
                 <Badge
                   variant="outline"
                   className="text-red-700 border-red-300 bg-red-50 text-[10px]"
-                  title={`Cancelled ${new Date(block.cancelled_at).toLocaleString()}`}
+                  title={
+                    block.cancelled_at
+                      ? `Cancelled ${new Date(block.cancelled_at).toLocaleString()}`
+                      : "Cancelled"
+                  }
                 >
                   Cancelled
                 </Badge>
@@ -193,7 +199,7 @@ export function BlockedDatesGrid({
               >
                 <Pencil className="h-4 w-4" />
               </button>
-              {block.source === "turo-email" && !block.cancelled_at && onMarkCancelled && (
+              {block.source === "turo-email" && !isCancelled && onMarkCancelled && (
                 <button
                   onClick={(e) => {
                     e.stopPropagation();

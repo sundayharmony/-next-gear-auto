@@ -88,6 +88,23 @@ test("batch sync disambiguates duplicate exact-date rows by guest name", () => {
   assert.equal(picked?.id, "f");
 });
 
+test("turo cancellation sync resolves trip ids by direct database lookup", () => {
+  const source = fs.readFileSync(
+    path.join(process.cwd(), "src/lib/admin/turo-cancellation-sync.ts"),
+    "utf8"
+  );
+  assert.ok(source.includes("export async function fetchTuroTripById"));
+  assert.ok(source.includes('.eq("id", id)'));
+  assert.match(
+    source,
+    /if \(opts\.tripIds\?\.length\)[\s\S]*fetchTuroTripById/
+  );
+  assert.doesNotMatch(
+    source,
+    /if \(opts\.tripIds\?\.length\)[\s\S]*rows\.find\(\(r\) => r\.id === id\)/
+  );
+});
+
 test("turo webhook uses constant-time secret compare and replay guard", () => {
   const source = fs.readFileSync(
     path.join(process.cwd(), "src/app/api/webhooks/turo-email/route.ts"),

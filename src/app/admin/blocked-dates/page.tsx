@@ -311,11 +311,14 @@ export default function BlockedDatesPage() {
     setDeletingId(id);
     try {
       const res = await adminFetch(`/api/admin/blocked-dates?id=${id}`, { method: "DELETE" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
-      if (data.success) {
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success) {
         setBlockedDates((prev) => prev.filter((b) => b.id !== id));
         setSuccess("Block removed");
+      } else if (res.status === 404) {
+        setBlockedDates((prev) => prev.filter((b) => b.id !== id));
+        await fetchData();
+        setError("This block is no longer in the database — list refreshed.");
       } else {
         setError(data.message || "Failed to remove block");
       }
