@@ -2,11 +2,10 @@
 
 import { useLayoutEffect, useState } from "react";
 import { Sheet, SheetBody, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
-import { CustomerDetailDrawer } from "./customer-detail-drawer";
+import { CustomerDetailPanel } from "./components/CustomerDetailPanel";
 import type { CustomerRow } from "./use-customers-data";
 import type { StaffPanelBase } from "@/lib/admin/staff-panel-base";
 
-/** Tailwind `xl` — sheet is mobile/tablet only; desktop uses inline master-detail. */
 const NARROW_MQ = "(max-width: 1279px)";
 
 interface CustomerDetailSheetProps {
@@ -21,7 +20,7 @@ interface CustomerDetailSheetProps {
   onRefreshList: () => void;
 }
 
-/** Mobile/tablet slide-over for customer detail (xl+ uses inline master-detail). */
+/** Mobile/tablet full-screen sheet (xl+ uses inline master-detail). */
 export function CustomerDetailSheet({
   customer,
   open,
@@ -47,18 +46,13 @@ export function CustomerDetailSheet({
 
   return (
     <Sheet open={sheetOpen} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent
-        side="right"
-        tier="staff"
-        showClose={false}
-        className="p-0 gap-0 w-full max-w-none sm:max-w-lg"
-      >
+      <SheetContent side="right" tier="staff" showClose={false} className="p-0 gap-0 w-full max-w-none sm:max-w-lg">
         <SheetTitle className="sr-only">{customer.name} — customer details</SheetTitle>
         <SheetDescription className="sr-only">
-          View and manage this customer&apos;s profile, bookings, documents, and tickets.
+          Customer profile, documents, tickets, and booking history.
         </SheetDescription>
-        <SheetBody className="p-0 sm:p-0 overflow-y-auto">
-          <CustomerDetailDrawer
+        <SheetBody className="p-0 sm:p-0 h-full overflow-hidden">
+          <CustomerDetailPanel
             customer={customer}
             panelBase={panelBase}
             canMutateCustomers={canMutateCustomers}
@@ -67,6 +61,7 @@ export function CustomerDetailSheet({
             onSuccess={onSuccess}
             onError={onError}
             onRefreshList={onRefreshList}
+            showBack
           />
         </SheetBody>
       </SheetContent>
