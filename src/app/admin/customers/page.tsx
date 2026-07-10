@@ -17,11 +17,15 @@ import { useCustomersData, type CustomerRow } from "./use-customers-data";
 import { CustomerListPanel } from "./customer-list-panel";
 import { CustomerDetailDrawer } from "./customer-detail-drawer";
 import { CustomerDetailSheet } from "./customer-detail-sheet";
-import { STAFF_OVERLAY_Z } from "@/components/staff/staff-overlay-z";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils/cn";
+import {
+  Modal,
+  ModalContent,
+  ModalDescription,
+  ModalHeader,
+  ModalTitle,
+} from "@/components/ui/modal";
 
 export default function AdminCustomersPage({
   panelConfig = adminPanelConfig,
@@ -112,8 +116,10 @@ export default function AdminCustomersPage({
               fetchCustomers();
             }}
             onOpenCustomer={setSelectedCustomer}
-            onDeleteCustomer={handleDeleteFromList}
+            onDeleteCustomer={canMutateCustomers ? handleDeleteFromList : undefined}
+            canDeleteCustomers={canMutateCustomers}
             onAddCustomer={() => setShowAddCustomerModal(true)}
+            canAddCustomer={canMutateCustomers}
             currentPage={currentPage}
             pageSize={pageSize}
             onPageChange={handlePageChange}
@@ -216,56 +222,57 @@ function AddCustomerModal({
   };
 
   return (
-    <div className={cn("fixed inset-0 bg-black/50 flex items-center justify-center p-4", STAFF_OVERLAY_Z)}>
-      <Card className="w-full max-w-md">
-        <CardContent className="p-6">
-          <h2 className="text-lg font-bold mb-4">Add New Customer</h2>
-          <div className="space-y-3">
-            <div>
-              <label className="text-xs text-gray-600 font-semibold">
-                Full Name <span className="text-red-500">*</span>
-              </label>
-              <Input
-                value={formName}
-                onChange={(e) => setFormName(e.target.value)}
-                placeholder="John Doe"
-                className="mt-1"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-600 font-semibold">
-                Email <span className="text-red-500">*</span>
-              </label>
-              <Input
-                type="email"
-                value={formEmail}
-                onChange={(e) => setFormEmail(e.target.value)}
-                placeholder="john@example.com"
-                className="mt-1"
-                required
-              />
-            </div>
-            <div>
-              <label className="text-xs text-gray-600 font-semibold">Phone (optional)</label>
-              <Input
-                value={formPhone}
-                onChange={(e) => setFormPhone(e.target.value)}
-                placeholder="+1 (555) 000-0000"
-                className="mt-1"
-              />
-            </div>
+    <Modal open onOpenChange={(next) => { if (!next) onClose(); }}>
+      <ModalContent className="sm:max-w-md">
+        <ModalHeader>
+          <ModalTitle>Add New Customer</ModalTitle>
+          <ModalDescription>Creates a customer account for bookings and the owner portal.</ModalDescription>
+        </ModalHeader>
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-gray-600 font-semibold">
+              Full Name <span className="text-red-500">*</span>
+            </label>
+            <Input
+              value={formName}
+              onChange={(e) => setFormName(e.target.value)}
+              placeholder="John Doe"
+              className="mt-1"
+              required
+            />
           </div>
-          <div className="flex gap-2 mt-6">
-            <Button onClick={handleAddCustomer} disabled={submitting} className="flex-1">
-              Create Customer
-            </Button>
-            <Button onClick={onClose} variant="outline" className="flex-1">
-              Cancel
-            </Button>
+          <div>
+            <label className="text-xs text-gray-600 font-semibold">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <Input
+              type="email"
+              value={formEmail}
+              onChange={(e) => setFormEmail(e.target.value)}
+              placeholder="john@example.com"
+              className="mt-1"
+              required
+            />
           </div>
-        </CardContent>
-      </Card>
-    </div>
+          <div>
+            <label className="text-xs text-gray-600 font-semibold">Phone (optional)</label>
+            <Input
+              value={formPhone}
+              onChange={(e) => setFormPhone(e.target.value)}
+              placeholder="+1 (555) 000-0000"
+              className="mt-1"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 mt-6">
+          <Button onClick={handleAddCustomer} disabled={submitting} className="flex-1">
+            Create Customer
+          </Button>
+          <Button onClick={onClose} variant="outline" className="flex-1">
+            Cancel
+          </Button>
+        </div>
+      </ModalContent>
+    </Modal>
   );
 }

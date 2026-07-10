@@ -704,8 +704,6 @@ export function CustomerDetailDrawer({
 
   // Customer statistics
   const stats = useMemo(() => {
-    if (!customerBookings.length) return null;
-
     const nonCancelled = customerBookings.filter((b) => b.status !== "cancelled");
     const totalSpent = nonCancelled.reduce((sum, b) => sum + (b.total_price ?? 0), 0);
     const completedTrips = customerBookings.filter((b) => b.status === "completed").length;
@@ -1054,8 +1052,7 @@ export function CustomerDetailDrawer({
           ) : (
             <>
               {/* Stats Grid */}
-              {stats && (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mb-6">
                   <Card>
                     <CardContent className="p-4 text-center">
                       <DollarSign className="mx-auto h-5 w-5 text-green-500 mb-1" />
@@ -1099,7 +1096,6 @@ export function CustomerDetailDrawer({
                     </CardContent>
                   </Card>
                 </div>
-              )}
 
               <div className="grid lg:grid-cols-3 gap-6">
                 {/* Left Column: Customer Info */}
@@ -1400,7 +1396,7 @@ export function CustomerDetailDrawer({
                   </Card>
 
                   {/* Risk Assessment */}
-                  {stats && stats.totalBookings > 0 && (
+                  {stats.totalBookings > 0 && (
                     <Card>
                       <CardContent className="p-5">
                         <h3 className="text-sm font-semibold text-gray-500 uppercase mb-3">Risk Assessment</h3>

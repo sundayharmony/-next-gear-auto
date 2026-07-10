@@ -87,6 +87,18 @@ const SheetTitle = React.forwardRef<
 ));
 SheetTitle.displayName = "SheetTitle";
 
+const SheetDescription = React.forwardRef<
+  React.ComponentRef<typeof DialogPrimitive.Description>,
+  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Description>
+>(({ className, ...props }, ref) => (
+  <DialogPrimitive.Description
+    ref={ref}
+    className={cn("text-sm text-gray-500", className)}
+    {...props}
+  />
+));
+SheetDescription.displayName = "SheetDescription";
+
 const SheetBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
   <div className={cn("flex-1 overflow-y-auto px-4 py-4 sm:px-6", className)} {...props} />
 );
@@ -108,6 +120,7 @@ export {
   SheetContent,
   SheetHeader,
   SheetTitle,
+  SheetDescription,
   SheetBody,
   SheetFooter,
 };

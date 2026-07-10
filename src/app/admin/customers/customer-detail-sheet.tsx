@@ -1,9 +1,13 @@
 "use client";
 
-import { Sheet, SheetBody, SheetContent } from "@/components/ui/sheet";
+import { useLayoutEffect, useState } from "react";
+import { Sheet, SheetBody, SheetContent, SheetDescription, SheetTitle } from "@/components/ui/sheet";
 import { CustomerDetailDrawer } from "./customer-detail-drawer";
 import type { CustomerRow } from "./use-customers-data";
 import type { StaffPanelBase } from "@/lib/admin/staff-panel-base";
+
+/** Tailwind `xl` — sheet is mobile/tablet only; desktop uses inline master-detail. */
+const NARROW_MQ = "(max-width: 1279px)";
 
 interface CustomerDetailSheetProps {
   customer: CustomerRow;
@@ -29,14 +33,30 @@ export function CustomerDetailSheet({
   onError,
   onRefreshList,
 }: CustomerDetailSheetProps) {
+  const [isNarrowViewport, setIsNarrowViewport] = useState(false);
+
+  useLayoutEffect(() => {
+    const mq = window.matchMedia(NARROW_MQ);
+    const apply = () => setIsNarrowViewport(mq.matches);
+    apply();
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, []);
+
+  const sheetOpen = open && isNarrowViewport;
+
   return (
-    <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+    <Sheet open={sheetOpen} onOpenChange={(next) => !next && onClose()}>
       <SheetContent
         side="right"
         tier="staff"
         showClose={false}
-        className="xl:hidden p-0 gap-0 w-full max-w-none sm:max-w-lg"
+        className="p-0 gap-0 w-full max-w-none sm:max-w-lg"
       >
+        <SheetTitle className="sr-only">{customer.name} — customer details</SheetTitle>
+        <SheetDescription className="sr-only">
+          View and manage this customer&apos;s profile, bookings, documents, and tickets.
+        </SheetDescription>
         <SheetBody className="p-0 sm:p-0 overflow-y-auto">
           <CustomerDetailDrawer
             customer={customer}

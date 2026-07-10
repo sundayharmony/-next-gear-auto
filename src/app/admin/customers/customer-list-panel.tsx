@@ -30,8 +30,10 @@ interface CustomerListPanelProps {
   onSearch: () => void;
   onRefresh: () => void;
   onOpenCustomer: (customer: CustomerRow) => void;
-  onDeleteCustomer: (customer: CustomerRow) => void;
+  onDeleteCustomer?: (customer: CustomerRow) => void;
+  canDeleteCustomers?: boolean;
   onAddCustomer: () => void;
+  canAddCustomer?: boolean;
   currentPage: number;
   pageSize: number;
   onPageChange: (page: number) => void;
@@ -51,7 +53,9 @@ export function CustomerListPanel({
   onRefresh,
   onOpenCustomer,
   onDeleteCustomer,
+  canDeleteCustomers = false,
   onAddCustomer,
+  canAddCustomer = false,
   currentPage,
   pageSize,
   onPageChange,
@@ -102,9 +106,11 @@ export function CustomerListPanel({
         >
           <RefreshCw className={`h-3.5 w-3.5 mr-1 ${loading ? "animate-spin" : ""}`} /> Refresh
         </Button>
-        <Button onClick={onAddCustomer} className="bg-purple-600 hover:bg-purple-700">
-          <Plus className="h-4 w-4 mr-2" /> Add Customer
-        </Button>
+        {canAddCustomer ? (
+          <Button onClick={onAddCustomer} className="bg-purple-600 hover:bg-purple-700">
+            <Plus className="h-4 w-4 mr-2" /> Add Customer
+          </Button>
+        ) : null}
       </div>
 
       <div className="hidden lg:flex items-center gap-2 mb-4 text-xs text-gray-500">
@@ -166,18 +172,20 @@ export function CustomerListPanel({
                       </div>
                     </div>
                     <div className="flex gap-1 flex-shrink-0">
-                      <Button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onDeleteCustomer(c);
-                        }}
-                        variant="ghost"
-                        size="sm"
-                        className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
-                        aria-label={`Delete customer ${c.name}`}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                      {canDeleteCustomers && onDeleteCustomer ? (
+                        <Button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDeleteCustomer(c);
+                          }}
+                          variant="ghost"
+                          size="sm"
+                          className="h-7 w-7 p-0 text-red-600 hover:bg-red-50"
+                          aria-label={`Delete customer ${c.name}`}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      ) : null}
                       <ChevronRight className="h-4 w-4 text-gray-400 mt-1" />
                     </div>
                   </div>
