@@ -2,7 +2,6 @@ import type {
   OwnerBookingStatus,
   PayoutBreakdown,
 } from "@/lib/types";
-import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 
 /**
  * Owner payout math — the single source of truth shared by API routes and the
@@ -118,40 +117,20 @@ export function isOwnerActiveBooking(booking: { status: OwnerBookingStatus }): b
   return booking.status !== "cancelled";
 }
 
-/** Staff-created bookings (not public website checkout). */
-const PRIVATE_BOOKING_ORIGINS = new Set([
-  "admin_panel",
-  "manager_panel",
-  "owner_panel",
-]);
-
 /**
- * Owner portal visibility: public checkout bookings always show; staff/private
- * bookings only from today onward (by created_at, local calendar day).
+ * Owner portal visibility: only Turo trips. Website / staff / owner-panel
+ * bookings are intentionally hidden from the owner portal (admin payout views
+ * load the dataset without this filter).
  */
 export function isOwnerVisibleBooking(
   row: {
     kind?: string;
+    id?: string;
     origin_channel?: string | null;
     created_at?: string | null;
     createdAt?: string | null;
   },
-  todayYmd: string
+  _todayYmd?: string
 ): boolean {
-  if (isOwnerTuroBooking(row)) return true;
-
-  const channel = (row.origin_channel || "unknown").toLowerCase();
-  if (channel === "public_checkout") return true;
-  // Staff-panel + legacy rows default to hidden until today.
-  const isPrivate =
-    PRIVATE_BOOKING_ORIGINS.has(channel) || channel === "unknown";
-  if (!isPrivate) return true;
-
-  const createdRaw = row.created_at ?? row.createdAt;
-  if (!createdRaw) return false;
-
-  const createdDay = new Date(createdRaw);
-  if (Number.isNaN(createdDay.getTime())) return false;
-
-  return formatYyyyMmDdLocal(createdDay) >= todayYmd;
+  return isOwnerTuroBooking(row);
 }

@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyOwnerWithPortalAccess } from "@/lib/owner/owner-check";
-import { isOwnerVisibleBooking } from "@/lib/owner/finance";
 import { loadOwnerDataset } from "@/lib/owner/owner-data";
-import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { notifyOwner } from "@/lib/owner/notifications";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
@@ -19,8 +17,10 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
 
 /**
  * GET /api/owner/availability
- * Returns the owner's vehicles, blocked-date ranges, and confirmed booking
- * ranges so the calendar can distinguish booked / available / owner-blocked.
+ * Returns the owner's vehicles, blocked-date ranges, and Turo trip ranges
+ * so the calendar can distinguish booked / available / owner-blocked.
+ * Website bookings are intentionally omitted from owner-facing bookedRanges
+ * (POST still checks them for overlap conflicts).
  */
 export async function GET(req: NextRequest) {
   const auth = await verifyOwnerWithPortalAccess(req);
@@ -34,30 +34,11 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ success: true, data: { vehicles: [], blockedDates: [], bookedRanges: [] } });
     }
 
-    const [{ data: blocked }, { data: bookings }] = await Promise.all([
-      supabase
-        .from("blocked_dates")
-        .select("id, vehicle_id, start_date, end_date, reason, source, owner_id, cancelled_at")
-        .in("vehicle_id", vehicleIds)
-        .order("start_date", { ascending: true }),
-      supabase
-        .from("bookings")
-        .select("id, vehicle_id, pickup_date, return_date, status, created_at, origin_channel")
-        .in("vehicle_id", vehicleIds)
-        .not("status", "in", "(cancelled,no-show)")
-        .order("pickup_date", { ascending: true }),
-    ]);
-
-    const todayYmd = formatYyyyMmDdLocal(new Date());
-    const visibleBookings = (bookings || []).filter((b) =>
-      isOwnerVisibleBooking(
-        {
-          origin_channel: b.origin_channel as string | null,
-          created_at: b.created_at as string | null,
-        },
-        todayYmd
-      )
-    );
+    const { data: blocked } = await supabase
+      .from("blocked_dates")
+      .select("id, vehicle_id, start_date, end_date, reason, source, owner_id, cancelled_at")
+      .in("vehicle_id", vehicleIds)
+      .order("start_date", { ascending: true });
 
     const turoBookedRanges = filterActiveTuroTrips(blocked || []).map((b) => ({
       id: `turo:${b.id}`,
@@ -65,14 +46,6 @@ export async function GET(req: NextRequest) {
       startDate: b.start_date,
       endDate: b.end_date,
       status: "turo",
-    }));
-
-    const bookingRanges = visibleBookings.map((b) => ({
-      id: b.id,
-      vehicleId: b.vehicle_id,
-      startDate: b.pickup_date,
-      endDate: b.return_date,
-      status: b.status,
     }));
 
     return NextResponse.json(
@@ -92,7 +65,7 @@ export async function GET(req: NextRequest) {
             // Only owner-created blocks (source 'owner' + owner_id match) are removable here.
             removable: b.source === "owner" && b.owner_id === auth.ownerId,
           })),
-          bookedRanges: [...bookingRanges, ...turoBookedRanges],
+          bookedRanges: turoBookedRanges,
         },
       },
       { headers: { "Cache-Control": "no-store" } }

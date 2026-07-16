@@ -4,7 +4,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { OWNER_NAV_ITEMS } from "../src/lib/owner/owner-navigation";
 import { hasOwnerPortalAccess } from "../src/lib/auth/customer-capabilities";
-import { isOwnerActiveBooking } from "../src/lib/owner/finance";
+import { isOwnerActiveBooking, isOwnerVisibleBooking } from "../src/lib/owner/finance";
 
 const root = process.cwd();
 
@@ -60,36 +60,36 @@ test("owner Turo fetch includes source so filterActiveTuroTrips keeps rows", () 
   assert.ok(source.includes('.is("cancelled_at", null)'));
 });
 
-test("loadOwnerDataset excludes cancelled bookings except for payout admin", () => {
+test("loadOwnerDataset excludes cancelled bookings from owner portal", () => {
   const source = fs.readFileSync(path.join(root, "src/lib/owner/owner-data.ts"), "utf8");
   assert.ok(source.includes("isOwnerActiveBooking"));
   assert.ok(source.includes("isActiveCalendarBlock"));
-  assert.ok(source.includes("forPayouts"));
-  assert.match(
-    source,
-    /if\s*\(!options\?\.forPayouts\)\s*\{\s*visibleBookings\s*=\s*visibleBookings\.filter\(isOwnerActiveBooking\);/
-  );
+  assert.ok(source.includes("ownerPortalOnly"));
+  assert.ok(source.includes("isOwnerVisibleBooking"));
   assert.equal(isOwnerActiveBooking({ status: "upcoming" }), true);
   assert.equal(isOwnerActiveBooking({ status: "active" }), true);
   assert.equal(isOwnerActiveBooking({ status: "completed" }), true);
   assert.equal(isOwnerActiveBooking({ status: "cancelled" }), false);
 });
 
-test("admin owner-payouts route requests payout dataset with cancelled bookings", () => {
-  const source = fs.readFileSync(
-    path.join(root, "src/app/api/admin/owner-payouts/route.ts"),
-    "utf8"
-  );
-  assert.match(source, /loadOwnerDataset\(ownerId,\s*\{\s*forPayouts:\s*true\s*\}\)/);
+test("owner portal visibility is Turo-only", () => {
+  assert.equal(isOwnerVisibleBooking({ kind: "turo" }), true);
+  assert.equal(isOwnerVisibleBooking({ id: "turo:abc" }), true);
+  assert.equal(isOwnerVisibleBooking({ kind: "booking", origin_channel: "public_checkout" }), false);
+  assert.equal(isOwnerVisibleBooking({ kind: "booking", origin_channel: "admin_panel" }), false);
+  assert.equal(isOwnerVisibleBooking({ kind: "booking", origin_channel: "owner_panel" }), false);
 });
 
-test("owner availability API marks Turo trips as booked", () => {
+test("owner availability API marks Turo trips as booked and omits website bookings", () => {
   const source = fs.readFileSync(path.join(root, "src/app/api/owner/availability/route.ts"), "utf8");
   assert.ok(source.includes("filterActiveTuroTrips"));
   assert.ok(source.includes("turoBookedRanges"));
   assert.ok(source.includes("filterManualBlockedDates"));
   assert.ok(source.includes("isActiveCalendarBlock"));
   assert.ok(source.includes("cancelled_at"));
+  assert.ok(source.includes("bookedRanges: turoBookedRanges"));
+  // GET display is Turo-only; POST still queries bookings for overlap conflicts.
+  assert.ok(source.includes("Website bookings are intentionally omitted"));
 });
 
 test("owner_portal_enabled revocation blocks owner portal access", () => {

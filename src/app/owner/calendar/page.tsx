@@ -71,7 +71,7 @@ export default function OwnerCalendarPage() {
     <>
       <AdminPageHeader
         title="Booking Calendar"
-        subtitle="Turo trips and website bookings for your vehicles"
+        subtitle="Turo trips for your vehicles"
         actions={
           <Link href="/owner/bookings/create">
             <Button size="sm" className="gap-1 bg-white text-purple-700 hover:bg-purple-50">
@@ -156,7 +156,7 @@ export default function OwnerCalendarPage() {
         <div className="hidden space-y-2 sm:block">
           <h2 className="text-base font-semibold text-gray-900">All trips</h2>
           {(bookings || []).length === 0 ? (
-            <AdminCard><p className="py-6 text-center text-sm text-gray-500">No bookings or Turo trips yet.</p></AdminCard>
+            <AdminCard><p className="py-6 text-center text-sm text-gray-500">No Turo trips yet.</p></AdminCard>
           ) : (
             (bookings || []).map((b) => (
               <button
