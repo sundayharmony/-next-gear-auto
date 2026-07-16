@@ -203,7 +203,6 @@ export default function OwnerAvailabilityPage() {
                     <div
                       className={cn(
                         "flex min-h-[44px] items-center justify-center rounded-lg border text-sm",
-                        !inMonth && "opacity-40",
                         st === "booked" ? "border-red-200 bg-red-50 text-red-700"
                           : st === "blocked" ? "border-amber-200 bg-amber-50 text-amber-700"
                           : "border-green-100 bg-green-50/50 text-gray-600",
