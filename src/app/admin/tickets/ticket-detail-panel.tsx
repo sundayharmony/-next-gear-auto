@@ -5,17 +5,19 @@ import type { VehicleListItem, BookingDbRow } from "@/lib/types";
 import {
   Pencil,
   Trash2,
-  ArrowLeft,
   Loader2,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { PageContainer } from "@/components/layout/page-container";
+import {
+  AdminPageHeader,
+  AdminPageBody,
+  AdminCard,
+} from "@/components/admin/admin-shell";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { STATUS_COLORS, type TicketRecord } from "./tickets-shared";
@@ -63,8 +65,7 @@ export function TicketForm({
   isSubmitting,
 }: TicketFormProps) {
   return (
-    <Card>
-      <CardContent className="p-5 space-y-4">
+    <AdminCard className="space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           <div>
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Type</label>
@@ -216,8 +217,7 @@ export function TicketForm({
             Cancel
           </Button>
         </div>
-      </CardContent>
-    </Card>
+    </AdminCard>
   );
 }
 
@@ -245,42 +245,24 @@ export function TicketDetailView({
   onDelete,
 }: TicketDetailViewProps) {
   return (
-    <PageContainer>
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            aria-label="Back to tickets list"
-            className="p-2 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div className="flex-1">
-            <h1 className="text-2xl font-bold text-gray-900">
-              Ticket {ticket.prefix && ticket.ticketNumber
-                ? `${ticket.prefix}-${ticket.ticketNumber}`
-                : ticket.id.slice(0, 12)}
-            </h1>
-            <p className="text-sm text-gray-500">
-              {ticket.ticketType === "traffic" ? "Traffic Violation" : "Parking Violation"}
-            </p>
-          </div>
+    <>
+      <AdminPageHeader
+        title={
+          ticket.prefix && ticket.ticketNumber
+            ? `Ticket ${ticket.prefix}-${ticket.ticketNumber}`
+            : `Ticket ${ticket.id.slice(0, 12)}`
+        }
+        subtitle={ticket.ticketType === "traffic" ? "Traffic Violation" : "Parking Violation"}
+        onBack={onBack}
+        backLabel="Back to tickets"
+        actions={
           <div className="flex gap-2">
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={onEdit}
-            >
+            <Button size="sm" variant="outline" className="page-hero-btn-outline" onClick={onEdit}>
               <Pencil className="h-4 w-4 mr-1" /> Edit
             </Button>
             {deleteConfirm === ticket.id ? (
               <div className="flex gap-1">
-                <Button
-                  size="sm"
-                  variant="danger"
-                  onClick={onDelete}
-                  disabled={isDeleting}
-                >
+                <Button size="sm" variant="danger" onClick={onDelete} disabled={isDeleting}>
                   {isDeleting ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -290,12 +272,7 @@ export function TicketDetailView({
                     "Confirm Delete"
                   )}
                 </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={onDeleteCancel}
-                  disabled={isDeleting}
-                >
+                <Button size="sm" variant="outline" className="page-hero-btn-outline" onClick={onDeleteCancel} disabled={isDeleting}>
                   Cancel
                 </Button>
               </div>
@@ -303,15 +280,16 @@ export function TicketDetailView({
               <Button
                 size="sm"
                 variant="outline"
-                className="text-red-600 hover:bg-red-50"
+                className="page-hero-btn-outline text-red-200 hover:text-white"
                 onClick={onDeleteConfirm}
               >
                 <Trash2 className="h-4 w-4 mr-1" /> Delete
               </Button>
             )}
           </div>
-        </div>
-
+        }
+      />
+      <AdminPageBody>
         <div className="bg-gradient-to-br from-gray-900 to-red-900 rounded-xl p-4 sm:p-6 text-white">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
             <div>
@@ -336,9 +314,8 @@ export function TicketDetailView({
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <Card>
-            <CardContent className="p-5 space-y-4">
-              <h3 className="font-bold text-gray-900">Ticket Information</h3>
+          <AdminCard className="space-y-4">
+              <h3 className="font-semibold text-gray-900">Ticket Information</h3>
               <div className="space-y-3 text-sm">
                 {ticket.state && (
                   <div className="flex justify-between">
@@ -377,12 +354,10 @@ export function TicketDetailView({
                   </div>
                 )}
               </div>
-            </CardContent>
-          </Card>
+          </AdminCard>
 
-          <Card>
-            <CardContent className="p-5 space-y-4">
-              <h3 className="font-bold text-gray-900">Linked Trip</h3>
+          <AdminCard className="space-y-4">
+              <h3 className="font-semibold text-gray-900">Linked Trip</h3>
               <div className="space-y-3 text-sm">
                 {ticket.vehicleName && (
                   <div className="flex justify-between">
@@ -417,20 +392,17 @@ export function TicketDetailView({
                   <p className="text-gray-400 text-center py-4">No booking linked</p>
                 )}
               </div>
-            </CardContent>
-          </Card>
+          </AdminCard>
         </div>
 
         {ticket.notes && (
-          <Card>
-            <CardContent className="p-5">
-              <h3 className="font-bold text-gray-900 mb-2">Notes</h3>
-              <p className="text-sm text-gray-600 whitespace-pre-wrap">{ticket.notes}</p>
-            </CardContent>
-          </Card>
+          <AdminCard>
+            <h3 className="font-semibold text-gray-900 mb-2">Notes</h3>
+            <p className="text-sm text-gray-600 whitespace-pre-wrap">{ticket.notes}</p>
+          </AdminCard>
         )}
-      </div>
-    </PageContainer>
+      </AdminPageBody>
+    </>
   );
 }
 
@@ -456,18 +428,9 @@ export function TicketEditPanel({
   isSubmitting,
 }: TicketEditPanelProps) {
   return (
-    <PageContainer>
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onCancel}
-            aria-label="Back to tickets list"
-            className="p-2 hover:bg-gray-100 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <h1 className="text-2xl font-bold text-gray-900">Edit Ticket</h1>
-        </div>
+    <>
+      <AdminPageHeader title="Edit Ticket" onBack={onCancel} backLabel="Back to tickets" />
+      <AdminPageBody>
         <TicketForm
           form={form}
           setForm={setForm}
@@ -479,7 +442,7 @@ export function TicketEditPanel({
           isEdit
           isSubmitting={isSubmitting}
         />
-      </div>
-    </PageContainer>
+      </AdminPageBody>
+    </>
   );
 }

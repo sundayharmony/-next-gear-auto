@@ -9,7 +9,9 @@ import {
   AdminCard,
   AdminSection,
   AdminTableWrap,
+  adminListItemClass,
 } from "@/components/admin/admin-shell";
+import { cn } from "@/lib/utils/cn";
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Button } from "@/components/ui/button";
@@ -138,7 +140,7 @@ export default function OwnerFinancePage() {
                       key={b.id}
                       type="button"
                       onClick={() => setSelected(b)}
-                      className="w-full rounded-xl border border-gray-200 bg-white p-4 text-left shadow-sm transition-colors hover:border-purple-300 active:bg-purple-50/40"
+                      className={cn(adminListItemClass, "w-full text-left")}
                     >
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">

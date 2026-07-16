@@ -17,6 +17,12 @@ import {
   Car,
 } from "lucide-react";
 import type { Vehicle as SharedVehicle } from "@/lib/types";
+import {
+  AdminCard,
+  adminSectionTitleClass,
+  adminMutedClass,
+} from "@/components/admin/admin-shell";
+import { cn } from "@/lib/utils/cn";
 
 export interface Booking {
   id: string;
@@ -131,6 +137,16 @@ export function fmtCurrency(val: number): string {
   return `$${Math.round(val).toLocaleString()}`;
 }
 
+const ACCENT_ICON_BG: Record<string, string> = {
+  green: "bg-green-50 text-green-600",
+  red: "bg-red-50 text-red-600",
+  purple: "bg-purple-50 text-purple-600",
+  blue: "bg-blue-50 text-blue-600",
+  amber: "bg-amber-50 text-amber-600",
+  gray: "bg-gray-100 text-gray-600",
+};
+
+/** Finance-specific stat tile — uses shared AdminCard chrome. */
 export function StatCard({
   label,
   value,
@@ -148,38 +164,16 @@ export function StatCard({
   accent?: "green" | "red" | "purple" | "blue" | "amber" | "gray";
   onClick?: () => void;
 }) {
-  const accentMap = {
-    green: "from-green-500 to-emerald-600",
-    red: "from-red-500 to-rose-600",
-    purple: "from-purple-500 to-violet-600",
-    blue: "from-blue-500 to-indigo-600",
-    amber: "from-amber-500 to-orange-600",
-    gray: "from-gray-500 to-slate-600",
-  };
-
-  return (
-    <div
-      className={`bg-white rounded-2xl border border-gray-100 p-4 sm:p-5 hover:shadow-md transition-all admin-card-press ${onClick ? "cursor-pointer hover:border-purple-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-purple-500" : ""}`}
-      onClick={onClick}
-      tabIndex={onClick ? 0 : undefined}
-      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
-      role={onClick ? "button" : undefined}
-    >
-      <div className="flex items-start justify-between mb-2 sm:mb-3">
-        <div
-          className={`p-2 sm:p-2.5 rounded-xl bg-gradient-to-br ${accentMap[accent]} text-white`}
-        >
-          {icon}
-        </div>
-        {trend && (
+  const inner = (
+    <>
+      <div className="mb-2 flex items-start justify-between sm:mb-3">
+        <div className={cn("rounded-lg p-2 sm:p-2.5", ACCENT_ICON_BG[accent])}>{icon}</div>
+        {trend ? (
           <div
-            className={`flex items-center gap-0.5 text-xs font-medium ${
-              trend === "up"
-                ? "text-green-600"
-                : trend === "down"
-                  ? "text-red-500"
-                  : "text-gray-400"
-            }`}
+            className={cn(
+              "flex items-center gap-0.5 text-xs font-medium",
+              trend === "up" ? "text-green-600" : trend === "down" ? "text-red-500" : "text-gray-400"
+            )}
           >
             {trend === "up" ? (
               <ArrowUpRight className="h-3.5 w-3.5" />
@@ -187,17 +181,42 @@ export function StatCard({
               <ArrowDownRight className="h-3.5 w-3.5" />
             ) : null}
           </div>
-        )}
+        ) : null}
       </div>
-      <p className="text-xl sm:text-2xl font-bold text-gray-900 tracking-tight">{value}</p>
-      <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5 sm:mt-1 font-medium uppercase tracking-wide">
+      <p className="text-xl font-bold tracking-tight text-gray-900 tabular-nums sm:text-2xl">{value}</p>
+      <p className="mt-0.5 text-[11px] font-medium uppercase tracking-wide text-gray-500 sm:mt-1 sm:text-xs">
         {label}
       </p>
-      {subtext && <p className="text-[11px] sm:text-xs text-gray-500 mt-0.5">{subtext}</p>}
-    </div>
+      {subtext ? <p className="mt-0.5 text-[11px] text-gray-500 sm:text-xs">{subtext}</p> : null}
+    </>
+  );
+
+  if (!onClick) {
+    return (
+      <AdminCard padding="sm" className="h-full">
+        {inner}
+      </AdminCard>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="block h-full w-full rounded-xl text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2"
+    >
+      <AdminCard
+        padding="sm"
+        hover
+        className="h-full cursor-pointer admin-card-press hover:border-purple-200/80"
+      >
+        {inner}
+      </AdminCard>
+    </button>
   );
 }
 
+/** @deprecated Prefer AdminSection — kept for finance tab call sites. */
 export function SectionHeader({
   title,
   subtitle,
@@ -208,14 +227,12 @@ export function SectionHeader({
   action?: React.ReactNode;
 }) {
   return (
-    <div className="flex items-end justify-between mb-4">
-      <div>
-        <h2 className="text-lg font-bold text-gray-900">{title}</h2>
-        {subtitle && (
-          <p className="text-sm text-gray-500 mt-0.5">{subtitle}</p>
-        )}
+    <div className="mb-4 flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className={adminSectionTitleClass}>{title}</h2>
+        {subtitle ? <p className={cn(adminMutedClass, "mt-0.5")}>{subtitle}</p> : null}
       </div>
-      {action}
+      {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
     </div>
   );
 }

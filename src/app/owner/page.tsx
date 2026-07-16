@@ -19,11 +19,14 @@ import {
   AdminStatCard,
   AdminCard,
   AdminSection,
+  adminListItemClass,
 } from "@/components/admin/admin-shell";
+import { AdminEmptyState } from "@/components/admin/ui-feedback";
 import { useOwnerData } from "@/lib/owner/owner-data-context";
 import { OwnerStatusBadge, OwnerBookingDetailModal } from "@/components/owner/owner-shared";
 import { formatCurrency, formatDate } from "@/lib/utils/date-helpers";
 import type { OwnerBooking } from "@/lib/types";
+import { cn } from "@/lib/utils/cn";
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -96,14 +99,15 @@ export default function OwnerDashboardPage() {
 
             <AdminSection title="Recent Bookings" description="Tap a booking to see the payout breakdown">
               {recentBookings.length === 0 ? (
-                <AdminCard><p className="py-6 text-center text-sm text-gray-500">No bookings yet.</p></AdminCard>
+                <AdminEmptyState title="No bookings yet." />
               ) : (
                 <div className="space-y-2">
                   {recentBookings.map((b) => (
                     <button
                       key={b.id}
+                      type="button"
                       onClick={() => setSelected(b)}
-                      className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200/80 bg-white p-4 text-left shadow-sm transition-colors hover:border-purple-200 hover:bg-purple-50/40"
+                      className={cn(adminListItemClass, "flex w-full items-center justify-between gap-3 text-left")}
                     >
                       <div className="min-w-0">
                         <p className="truncate font-medium text-gray-900">{b.vehicleName}</p>

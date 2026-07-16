@@ -2,13 +2,11 @@
 
 import React from "react";
 import {
-  ArrowLeft,
   DollarSign,
   TrendingUp,
   BarChart3,
   Car,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   BarChart,
@@ -19,9 +17,14 @@ import {
   ResponsiveContainer,
   CartesianGrid,
 } from "recharts";
-import { PageContainer } from "@/components/layout/page-container";
+import {
+  AdminPageHeader,
+  AdminPageBody,
+  AdminCard,
+  AdminSection,
+} from "@/components/admin/admin-shell";
 import { formatDate } from "@/lib/utils/date-helpers";
-import { StatCard, SectionHeader } from "./finances-shared";
+import { StatCard } from "./finances-shared";
 import type { FinanceBooking } from "./use-finances-data";
 
 interface DailyRevenueDay {
@@ -49,22 +52,14 @@ export function FinancesDailyRevenueView({
       : null;
 
   return (
-    <PageContainer>
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            aria-label="Back to finances overview"
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Daily Revenue</h1>
-            <p className="text-sm text-gray-500">Day-by-day revenue breakdown — all time</p>
-          </div>
-        </div>
-
+    <>
+      <AdminPageHeader
+        title="Daily Revenue"
+        subtitle="Day-by-day revenue breakdown — all time"
+        onBack={onBack}
+        backLabel="Back to finances"
+      />
+      <AdminPageBody>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
           <StatCard
             label="Total Revenue"
@@ -93,12 +88,11 @@ export function FinancesDailyRevenueView({
           />
         </div>
 
-        <Card>
-          <CardContent className="p-5">
-            <SectionHeader
-              title="Revenue Over Time"
-              subtitle={`${allTimeDailyRevenue.length} days with revenue`}
-            />
+        <AdminSection
+          title="Revenue Over Time"
+          description={`${allTimeDailyRevenue.length} days with revenue`}
+        >
+          <AdminCard>
             <div className="h-52 sm:h-64 lg:h-72">
               <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <BarChart
@@ -142,12 +136,11 @@ export function FinancesDailyRevenueView({
                 </BarChart>
               </ResponsiveContainer>
             </div>
-          </CardContent>
-        </Card>
+          </AdminCard>
+        </AdminSection>
 
-        <Card>
-          <CardContent className="p-5">
-            <SectionHeader title="All Revenue by Day" subtitle={`${allTimeDailyRevenue.length} days`} />
+        <AdminSection title="All Revenue by Day" description={`${allTimeDailyRevenue.length} days`}>
+          <AdminCard>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
@@ -196,9 +189,9 @@ export function FinancesDailyRevenueView({
                 </tfoot>
               </table>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-    </PageContainer>
+          </AdminCard>
+        </AdminSection>
+      </AdminPageBody>
+    </>
   );
 }

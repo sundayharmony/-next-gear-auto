@@ -2,11 +2,15 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { FileText, Loader2, RefreshCw, Search } from "lucide-react";
+import { Loader2, RefreshCw, Search } from "lucide-react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
-import { PageContainer } from "@/components/layout/page-container";
-import { Card, CardContent } from "@/components/ui/card";
+import {
+  AdminPageHeader,
+  AdminPageBody,
+  AdminTableWrap,
+} from "@/components/admin/admin-shell";
+import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -117,137 +121,142 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
   const filtered = useMemo(() => invoices, [invoices]);
 
   return (
-    <PageContainer>
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-            <FileText className="h-7 w-7 text-purple-600" />
-            Invoices
-          </h1>
-          <p className="text-sm text-gray-500 mt-1">
-            View sent invoices, edit line items, and track payment status from live booking balances.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={loadList} disabled={loading}>
-            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          {isAdmin && (
-            <Button variant="outline" size="sm" onClick={handleBackfill} disabled={backfilling}>
-              {backfilling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-              Import from history
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {error && (
-        <div className="mb-4 rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700">{error}</div>
-      )}
-      {success && (
-        <div className="mb-4 rounded-lg bg-green-50 border border-green-200 p-3 text-sm text-green-700">{success}</div>
-      )}
-
-      <div className="flex flex-col lg:flex-row gap-6">
-        <div className="flex-1 min-w-0 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Search customer, email, booking ID…"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-              className="sm:w-40"
+    <>
+      <AdminPageHeader
+        title="Invoices"
+        subtitle="View sent invoices, edit line items, and track payment status from live booking balances."
+        actions={
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadList}
+              disabled={loading}
+              className="page-hero-btn-outline"
             >
-              <option value="all">All statuses</option>
-              <option value="unpaid">Unpaid</option>
-              <option value="partial">Partial</option>
-              <option value="overdue">Overdue</option>
-              <option value="paid">Paid</option>
-            </Select>
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            {isAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBackfill}
+                disabled={backfilling}
+                className="page-hero-btn-outline"
+              >
+                {backfilling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                Import from history
+              </Button>
+            )}
+          </div>
+        }
+      />
+      <AdminPageBody>
+        {error && (
+          <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} />
+        )}
+        {success && (
+          <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} />
+        )}
+
+        <div className="flex flex-col lg:flex-row gap-6">
+          <div className="flex-1 min-w-0 space-y-4">
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  placeholder="Search customer, email, booking ID…"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+                className="sm:w-40"
+              >
+                <option value="all">All statuses</option>
+                <option value="unpaid">Unpaid</option>
+                <option value="partial">Partial</option>
+                <option value="overdue">Overdue</option>
+                <option value="paid">Paid</option>
+              </Select>
+            </div>
+
+            {loading ? (
+              <p className="py-8 text-center text-sm text-gray-500">Loading invoices…</p>
+            ) : filtered.length === 0 ? (
+              <AdminEmptyState
+                title="No invoices yet"
+                description="Send one from a booking, or use Import from history (admin)."
+              />
+            ) : (
+              <AdminTableWrap>
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b bg-gray-50 text-left text-xs text-gray-500 uppercase">
+                      <th className="px-4 py-3">Customer</th>
+                      <th className="px-4 py-3">Vehicle</th>
+                      <th className="px-4 py-3">Sent</th>
+                      <th className="px-4 py-3">Due</th>
+                      <th className="px-4 py-3 text-right">Total</th>
+                      <th className="px-4 py-3 text-right">Balance</th>
+                      <th className="px-4 py-3">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map((inv) => (
+                      <tr
+                        key={inv.id}
+                        className={`border-b cursor-pointer hover:bg-purple-50/50 ${
+                          selectedId === inv.id ? "bg-purple-50" : ""
+                        }`}
+                        onClick={() => setSelectedId(inv.id)}
+                      >
+                        <td className="px-4 py-3">
+                          <div className="font-medium text-gray-900">{inv.customer_name || "—"}</div>
+                          <div className="text-xs text-gray-500">{inv.customer_email}</div>
+                        </td>
+                        <td className="px-4 py-3 text-gray-700">{inv.vehicleName}</td>
+                        <td className="px-4 py-3 text-gray-600">
+                          {inv.sent_at ? formatDate(inv.sent_at) : "—"}
+                        </td>
+                        <td className="px-4 py-3 text-gray-600">{formatDate(inv.due_date)}</td>
+                        <td className="px-4 py-3 text-right">{fmt(inv.charges_total)}</td>
+                        <td className="px-4 py-3 text-right font-medium">{fmt(inv.liveBalance)}</td>
+                        <td className="px-4 py-3">
+                          <Badge className={INVOICE_STATUS_COLORS[inv.paymentStatus]}>
+                            {INVOICE_STATUS_LABELS[inv.paymentStatus]}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </AdminTableWrap>
+            )}
           </div>
 
-          <Card>
-            <CardContent className="p-0">
-              {loading ? (
-                <p className="p-8 text-center text-sm text-gray-500">Loading invoices…</p>
-              ) : filtered.length === 0 ? (
-                <p className="p-8 text-center text-sm text-gray-500">
-                  No invoices yet. Send one from a booking, or use Import from history (admin).
-                </p>
-              ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b bg-gray-50 text-left text-xs text-gray-500 uppercase">
-                        <th className="px-4 py-3">Customer</th>
-                        <th className="px-4 py-3">Vehicle</th>
-                        <th className="px-4 py-3">Sent</th>
-                        <th className="px-4 py-3">Due</th>
-                        <th className="px-4 py-3 text-right">Total</th>
-                        <th className="px-4 py-3 text-right">Balance</th>
-                        <th className="px-4 py-3">Status</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filtered.map((inv) => (
-                        <tr
-                          key={inv.id}
-                          className={`border-b cursor-pointer hover:bg-purple-50/50 ${
-                            selectedId === inv.id ? "bg-purple-50" : ""
-                          }`}
-                          onClick={() => setSelectedId(inv.id)}
-                        >
-                          <td className="px-4 py-3">
-                            <div className="font-medium text-gray-900">{inv.customer_name || "—"}</div>
-                            <div className="text-xs text-gray-500">{inv.customer_email}</div>
-                          </td>
-                          <td className="px-4 py-3 text-gray-700">{inv.vehicleName}</td>
-                          <td className="px-4 py-3 text-gray-600">
-                            {inv.sent_at ? formatDate(inv.sent_at) : "—"}
-                          </td>
-                          <td className="px-4 py-3 text-gray-600">{formatDate(inv.due_date)}</td>
-                          <td className="px-4 py-3 text-right">{fmt(inv.charges_total)}</td>
-                          <td className="px-4 py-3 text-right font-medium">{fmt(inv.liveBalance)}</td>
-                          <td className="px-4 py-3">
-                            <Badge className={INVOICE_STATUS_COLORS[inv.paymentStatus]}>
-                              {INVOICE_STATUS_LABELS[inv.paymentStatus]}
-                            </Badge>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          {selectedId && (
+            <InvoicePreviewPanel
+              detailLoading={detailLoading}
+              detail={detail}
+              bookingsHref={bookingsHref}
+              onClose={() => setSelectedId(null)}
+              onSuccess={setSuccess}
+              onError={setError}
+              onRefreshList={loadList}
+              onReloadDetail={loadDetail}
+              onDeleted={() => {
+                setSelectedId(null);
+                setDetail(null);
+              }}
+            />
+          )}
         </div>
-
-        {selectedId && (
-          <InvoicePreviewPanel
-            detailLoading={detailLoading}
-            detail={detail}
-            bookingsHref={bookingsHref}
-            onClose={() => setSelectedId(null)}
-            onSuccess={setSuccess}
-            onError={setError}
-            onRefreshList={loadList}
-            onReloadDetail={loadDetail}
-            onDeleted={() => {
-              setSelectedId(null);
-              setDetail(null);
-            }}
-          />
-        )}
-      </div>
-    </PageContainer>
+      </AdminPageBody>
+    </>
   );
 }

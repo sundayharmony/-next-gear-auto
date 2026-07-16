@@ -14,8 +14,9 @@ import {
 import {
   AdminPageHeader,
   AdminPageBody,
-  AdminCard,
+  adminListItemClass,
 } from "@/components/admin/admin-shell";
+import { AdminEmptyState } from "@/components/admin/ui-feedback";
 import { Button } from "@/components/ui/button";
 import { useOwnerNotifications } from "@/lib/owner/use-owner-notifications";
 import { formatDate } from "@/lib/utils/date-helpers";
@@ -58,12 +59,7 @@ export default function OwnerNotificationsPage() {
         {loading ? (
           <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading notifications" /></div>
         ) : notifications.length === 0 ? (
-          <AdminCard>
-            <div className="flex flex-col items-center gap-2 py-10 text-center">
-              <Bell className="h-8 w-8 text-gray-300" />
-              <p className="text-sm text-gray-500">No notifications yet.</p>
-            </div>
-          </AdminCard>
+          <AdminEmptyState title="No notifications yet." />
         ) : (
           <div className="space-y-2">
             {notifications.map((n) => {
@@ -71,10 +67,12 @@ export default function OwnerNotificationsPage() {
               return (
                 <button
                   key={n.id}
+                  type="button"
                   onClick={() => !n.isRead && markRead(n.id)}
                   className={cn(
-                    "flex w-full items-start gap-3 rounded-xl border p-4 text-left shadow-sm transition-colors",
-                    n.isRead ? "border-gray-200/80 bg-white" : "border-purple-200 bg-purple-50/40"
+                    adminListItemClass,
+                    "flex w-full items-start gap-3 text-left",
+                    !n.isRead && "border-purple-200 bg-purple-50/40"
                   )}
                 >
                   <span className={cn("mt-0.5 rounded-lg p-2", ICON_STYLE[n.type] ?? "text-gray-600 bg-gray-100")}>

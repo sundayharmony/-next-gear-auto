@@ -11,9 +11,8 @@ import {
   AlertTriangle,
   CheckCircle,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AdminPageHeader, AdminPageBody } from "@/components/admin/admin-shell";
+import { AdminPageHeader, AdminPageBody, AdminStatCard } from "@/components/admin/admin-shell";
 import { AdminStatusBanner } from "@/components/admin/ui-feedback";
 import { VehicleCategory, getVehicleDisplayName } from "@/lib/types";
 import { VehicleFilters } from "./vehicle-filters";
@@ -154,58 +153,34 @@ export default function AdminVehiclesPage() {
         ) : null}
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="rounded-lg bg-gray-100 p-2">
-                <Car className="h-5 w-5 text-gray-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-gray-900">
-                  {stats.total}
-                </div>
-                <p className="text-sm text-gray-600">Total Vehicles</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="rounded-lg bg-green-100 p-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-green-600">
-                  {stats.available}
-                </div>
-                <p className="text-sm text-gray-600">Available</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="rounded-lg bg-yellow-100 p-2">
-                <AlertTriangle className="h-5 w-5 text-yellow-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-yellow-600">
-                  {stats.inMaintenance}
-                </div>
-                <p className="text-sm text-gray-600">In Maintenance</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="p-4 flex items-center gap-3">
-              <div className="rounded-lg bg-purple-100 p-2">
-                <DollarSign className="h-5 w-5 text-purple-600" />
-              </div>
-              <div>
-                <div className="text-2xl font-bold text-purple-600">
-                  ${stats.avgRate}
-                </div>
-                <p className="text-sm text-gray-600">Avg Daily Rate</p>
-              </div>
-            </CardContent>
-          </Card>
+          <AdminStatCard
+            label="Total Vehicles"
+            value={stats.total}
+            icon={Car}
+            iconClassName="text-gray-600"
+            iconBgClassName="bg-gray-100"
+          />
+          <AdminStatCard
+            label="Available"
+            value={stats.available}
+            icon={CheckCircle}
+            iconClassName="text-green-600"
+            iconBgClassName="bg-green-100"
+          />
+          <AdminStatCard
+            label="In Maintenance"
+            value={stats.inMaintenance}
+            icon={AlertTriangle}
+            iconClassName="text-yellow-600"
+            iconBgClassName="bg-yellow-100"
+          />
+          <AdminStatCard
+            label="Avg Daily Rate"
+            value={`$${stats.avgRate}`}
+            icon={DollarSign}
+            iconClassName="text-purple-600"
+            iconBgClassName="bg-purple-100"
+          />
         </div>
 
         {showAddForm && (

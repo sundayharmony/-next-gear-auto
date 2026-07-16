@@ -2,7 +2,6 @@
 
 import React from "react";
 import {
-  ArrowLeft,
   DollarSign,
   TrendingUp,
   Receipt,
@@ -11,14 +10,18 @@ import {
   Car,
   MoreHorizontal,
 } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { PageContainer } from "@/components/layout/page-container";
+import {
+  AdminPageHeader,
+  AdminPageBody,
+  AdminCard,
+  AdminSection,
+  adminListItemClass,
+} from "@/components/admin/admin-shell";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { prorateBookingRevenueInRange } from "@/lib/finance/booking-proration";
 import {
   StatCard,
-  SectionHeader,
   CATEGORY_COLORS,
   CATEGORY_ICONS,
 } from "./finances-shared";
@@ -53,24 +56,14 @@ export function FinancesVehicleDetail({ detail, dateRange, onBack }: FinancesVeh
   });
 
   return (
-    <PageContainer>
-      <div className="space-y-6">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            aria-label="Back to finances overview"
-            className="p-2 hover:bg-gray-100 rounded-lg"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </button>
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              {vehicle.year} {vehicle.make} {vehicle.model}
-            </h1>
-            <p className="text-sm text-gray-500">Vehicle Financial Breakdown</p>
-          </div>
-        </div>
-
+    <>
+      <AdminPageHeader
+        title={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+        subtitle="Vehicle Financial Breakdown"
+        onBack={onBack}
+        backLabel="Back to finances"
+      />
+      <AdminPageBody>
         <div className="page-hero-card p-4 sm:p-6 text-white">
           <div
             className={`grid grid-cols-1 sm:grid-cols-2 ${financingInfo ? "md:grid-cols-4" : "md:grid-cols-3"} gap-4 sm:gap-6`}
@@ -113,9 +106,8 @@ export function FinancesVehicleDetail({ detail, dateRange, onBack }: FinancesVeh
           <StatCard label="Bookings" value={`${vBookings.length}`} icon={<Car className="h-4 w-4" />} accent="amber" />
         </div>
 
-        <Card>
-          <CardContent className="p-5">
-            <SectionHeader title="Booking History" subtitle={`${vBookings.length} total bookings`} />
+        <AdminSection title="Booking History" description={`${vBookings.length} total bookings`}>
+          <AdminCard>
             {vBookings.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-6">No bookings found</p>
             ) : (
@@ -159,12 +151,11 @@ export function FinancesVehicleDetail({ detail, dateRange, onBack }: FinancesVeh
                 </table>
               </div>
             )}
-          </CardContent>
-        </Card>
+          </AdminCard>
+        </AdminSection>
 
-        <Card>
-          <CardContent className="p-5">
-            <SectionHeader title="Expense Breakdown" />
+        <AdminSection title="Expense Breakdown">
+          <AdminCard>
             {Object.keys(catBreakdown).length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-6">No expenses recorded</p>
             ) : (
@@ -202,12 +193,11 @@ export function FinancesVehicleDetail({ detail, dateRange, onBack }: FinancesVeh
                   })}
               </div>
             )}
-          </CardContent>
-        </Card>
+          </AdminCard>
+        </AdminSection>
 
-        <Card>
-          <CardContent className="p-5">
-            <SectionHeader title="Expense History" subtitle={`${vExpenses.length} records`} />
+        <AdminSection title="Expense History" description={`${vExpenses.length} records`}>
+          <AdminCard>
             {vExpenses.length === 0 ? (
               <p className="text-sm text-gray-500 text-center py-6">No expenses</p>
             ) : (
@@ -215,10 +205,7 @@ export function FinancesVehicleDetail({ detail, dateRange, onBack }: FinancesVeh
                 {vExpenses
                   .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
                   .map((exp) => (
-                    <div
-                      key={exp.id}
-                      className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                    >
+                    <div key={exp.id} className={`${adminListItemClass} flex items-center gap-3`}>
                       <div
                         className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0"
                         style={{ backgroundColor: CATEGORY_COLORS[exp.category] || "#6B7280" }}
@@ -239,10 +226,10 @@ export function FinancesVehicleDetail({ detail, dateRange, onBack }: FinancesVeh
                   ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
-    </PageContainer>
+          </AdminCard>
+        </AdminSection>
+      </AdminPageBody>
+    </>
   );
 }
 

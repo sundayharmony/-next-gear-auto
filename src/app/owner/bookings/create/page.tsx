@@ -9,6 +9,7 @@ import {
   AdminPageBody,
   AdminCard,
 } from "@/components/admin/admin-shell";
+import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
 import { Button } from "@/components/ui/button";
 import { useOwnerData } from "@/lib/owner/owner-data-context";
 import { OwnerCreateBookingForm } from "@/components/owner/OwnerCreateBookingForm";
@@ -26,7 +27,7 @@ export default function OwnerCreateBookingPage() {
         subtitle="Reserve one of your vehicles for a guest"
         actions={
           <Link href="/owner/calendar">
-            <Button variant="outline" size="sm" className="gap-1 border-white/30 bg-white/10 text-white hover:bg-white/20">
+            <Button variant="outline" size="sm" className="page-hero-btn-outline gap-1">
               <ArrowLeft className="h-4 w-4" />
               Calendar
             </Button>
@@ -35,14 +36,10 @@ export default function OwnerCreateBookingPage() {
       />
       <AdminPageBody>
         {toastError && (
-          <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-            {toastError}
-          </div>
+          <AdminStatusBanner type="error" message={toastError} onDismiss={() => setToastError(null)} />
         )}
         {toastSuccess && (
-          <div className="mb-4 rounded-lg border border-green-200 bg-green-50 px-4 py-3 text-sm text-green-800">
-            {toastSuccess}
-          </div>
+          <AdminStatusBanner type="success" message={toastSuccess} onDismiss={() => setToastSuccess(null)} />
         )}
 
         {loading && vehicles.length === 0 ? (
@@ -54,11 +51,10 @@ export default function OwnerCreateBookingPage() {
             <p className="py-6 text-center text-sm text-red-600">{error}</p>
           </AdminCard>
         ) : vehicles.length === 0 ? (
-          <AdminCard>
-            <p className="py-6 text-center text-sm text-gray-500">
-              No vehicles are assigned to your owner account yet. Contact admin to assign vehicles before creating bookings.
-            </p>
-          </AdminCard>
+          <AdminEmptyState
+            title="No vehicles assigned"
+            description="Contact admin to assign vehicles before creating bookings."
+          />
         ) : (
           <OwnerCreateBookingForm
             vehicles={vehicles}

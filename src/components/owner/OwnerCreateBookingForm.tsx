@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Car, Loader2, MapPin, User, X } from "lucide-react";
-import { Card } from "@/components/ui/card";
+import { AdminCard } from "@/components/admin/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DatePicker } from "@/components/ui/date-picker";
@@ -169,7 +169,7 @@ export function OwnerCreateBookingForm({
   const todayKey = new Date().toISOString().slice(0, 10);
 
   return (
-    <Card className="relative overflow-hidden border border-gray-200/80 shadow-lg">
+    <AdminCard padding="none" className="relative overflow-hidden shadow-lg">
       <div className="flex items-center justify-between border-b border-gray-100 bg-gray-50/80 px-4 py-3 sm:px-6">
         <div>
           <h2 className="text-lg font-semibold text-gray-900">New reservation</h2>
@@ -267,6 +267,6 @@ export function OwnerCreateBookingForm({
           </Button>
         </div>
       </form>
-    </Card>
+    </AdminCard>
   );
 }

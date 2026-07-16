@@ -3,9 +3,13 @@
 import React from "react";
 import Link from "next/link";
 import { Calendar, BarChart3, Car, Clock, RefreshCw, Info } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
+import {
+  AdminPageBody,
+  AdminPageHeader,
+  AdminStatCard,
+  AdminCard,
+} from "@/components/admin/admin-shell";
 import { Skeleton } from "@/components/admin/skeleton";
 import { useManagerAnalytics } from "@/lib/hooks/use-manager-analytics";
 
@@ -25,7 +29,7 @@ export default function ManagerDashboardPage() {
       />
 
       <AdminPageBody>
-        <div className="mb-6 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900 flex gap-2">
+        <div className="mb-6 flex gap-2 rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-900">
           <Info className="h-5 w-5 shrink-0 text-blue-600" />
           <p>
             <strong>Bookings</strong> covers day-to-day trip management for manager-origin reservations.
@@ -34,40 +38,52 @@ export default function ManagerDashboardPage() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 mb-8">
+          <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
             {Array.from({ length: 4 }).map((_, i) => (
-              <Card key={i}>
-                <CardContent className="p-4">
-                  <Skeleton className="h-14 w-full rounded-lg" />
-                </CardContent>
-              </Card>
+              <AdminCard key={i} padding="sm">
+                <Skeleton className="h-14 w-full rounded-lg" />
+              </AdminCard>
             ))}
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4 mb-8">
-              <Card><CardContent className="p-4"><div className="flex items-center gap-3"><Calendar className="h-5 w-5 text-purple-600" /><div><p className="text-xl font-bold text-gray-900">{data?.totalBookings ?? 0}</p><p className="text-xs text-gray-500">Total Bookings</p></div></div></CardContent></Card>
-              <Card><CardContent className="p-4"><div className="flex items-center gap-3"><Clock className="h-5 w-5 text-blue-600" /><div><p className="text-xl font-bold text-gray-900">{data?.totalBookedDays ?? 0}</p><p className="text-xs text-gray-500">Booked Days</p></div></div></CardContent></Card>
-              <Card><CardContent className="p-4"><div className="flex items-center gap-3"><Car className="h-5 w-5 text-green-600" /><div><p className="text-xl font-bold text-gray-900">{data?.statusCounts?.active ?? 0}</p><p className="text-xs text-gray-500">Active</p></div></div></CardContent></Card>
-              <Card><CardContent className="p-4"><div className="flex items-center gap-3"><BarChart3 className="h-5 w-5 text-amber-600" /><div><p className="text-xl font-bold text-gray-900">{data?.avgBookingDurationDays ?? 0}</p><p className="text-xs text-gray-500">Avg Days/Booking</p></div></div></CardContent></Card>
+            <div className="mb-8 grid grid-cols-2 gap-3 sm:gap-4 md:grid-cols-4">
+              <AdminStatCard label="Total Bookings" value={data?.totalBookings ?? 0} icon={Calendar} />
+              <AdminStatCard
+                label="Booked Days"
+                value={data?.totalBookedDays ?? 0}
+                icon={Clock}
+                iconClassName="text-blue-600"
+                iconBgClassName="bg-blue-50"
+              />
+              <AdminStatCard
+                label="Active"
+                value={data?.statusCounts?.active ?? 0}
+                icon={Car}
+                iconClassName="text-green-600"
+                iconBgClassName="bg-green-50"
+              />
+              <AdminStatCard
+                label="Avg Days/Booking"
+                value={data?.avgBookingDurationDays ?? 0}
+                icon={BarChart3}
+                iconClassName="text-amber-600"
+                iconBgClassName="bg-amber-50"
+              />
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Link href="/manager/bookings">
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-5">
-                    <h3 className="text-lg font-semibold text-gray-900">Manage Bookings</h3>
-                    <p className="text-sm text-gray-500 mt-1">Create and monitor manager-origin bookings.</p>
-                  </CardContent>
-                </Card>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <Link href="/manager/bookings" className="block h-full">
+                <AdminCard hover className="h-full cursor-pointer hover:border-purple-200/80">
+                  <h3 className="text-base font-semibold text-gray-900">Manage Bookings</h3>
+                  <p className="mt-1 text-sm text-gray-500">Create and monitor manager-origin bookings.</p>
+                </AdminCard>
               </Link>
-              <Link href="/manager/analytics">
-                <Card className="hover:shadow-md transition-shadow">
-                  <CardContent className="p-5">
-                    <h3 className="text-lg font-semibold text-gray-900">Operational Analytics</h3>
-                    <p className="text-sm text-gray-500 mt-1">Status and utilization insights without finance metrics.</p>
-                  </CardContent>
-                </Card>
+              <Link href="/manager/analytics" className="block h-full">
+                <AdminCard hover className="h-full cursor-pointer hover:border-purple-200/80">
+                  <h3 className="text-base font-semibold text-gray-900">Operational Analytics</h3>
+                  <p className="mt-1 text-sm text-gray-500">Status and utilization insights without finance metrics.</p>
+                </AdminCard>
               </Link>
             </div>
           </>

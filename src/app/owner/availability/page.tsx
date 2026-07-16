@@ -9,7 +9,9 @@ import {
   AdminPageBody,
   AdminCard,
   AdminSection,
+  adminListItemClass,
 } from "@/components/admin/admin-shell";
+import { AdminEmptyState } from "@/components/admin/ui-feedback";
 import { Select } from "@/components/ui/select";
 import { DatePicker } from "@/components/ui/date-picker";
 import { Input } from "@/components/ui/input";
@@ -140,7 +142,7 @@ export default function OwnerAvailabilityPage() {
         {loading && vehicles.length === 0 ? (
           <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading availability" /></div>
         ) : vehicles.length === 0 ? (
-          <AdminCard><p className="py-6 text-center text-sm text-gray-500">No vehicles assigned to your account yet.</p></AdminCard>
+          <AdminEmptyState title="No vehicles assigned to your account yet." />
         ) : (
           <>
             <AdminCard padding="sm">
@@ -218,13 +220,13 @@ export default function OwnerAvailabilityPage() {
 
             <AdminSection title="Your blocked dates" icon={ShieldBan}>
               {ownerBlocks.length === 0 ? (
-                <AdminCard><p className="py-6 text-center text-sm text-gray-500">You haven&apos;t blocked any dates.</p></AdminCard>
+                <AdminEmptyState title="You haven't blocked any dates." />
               ) : (
                 <div className="space-y-2">
                   {ownerBlocks.map((b) => {
                     const v = vehicles.find((x) => x.id === b.vehicleId);
                     return (
-                      <div key={b.id} className="flex items-center justify-between gap-3 rounded-xl border border-gray-200/80 bg-white p-4 shadow-sm">
+                      <div key={b.id} className={cn(adminListItemClass, "flex items-center justify-between gap-3")}>
                         <div className="min-w-0">
                           <p className="truncate font-medium text-gray-900">{v ? `${v.year} ${v.make} ${v.model}` : "Vehicle"}</p>
                           <p className="text-xs text-gray-500">{formatDate(b.startDate)} → {formatDate(b.endDate)}{b.reason ? ` · ${b.reason}` : ""}</p>

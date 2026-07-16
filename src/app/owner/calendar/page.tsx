@@ -8,7 +8,9 @@ import {
   AdminPageHeader,
   AdminPageBody,
   AdminCard,
+  adminListItemClass,
 } from "@/components/admin/admin-shell";
+import { AdminEmptyState } from "@/components/admin/ui-feedback";
 import { useOwnerData } from "@/lib/owner/owner-data-context";
 import { MonthCalendar } from "@/components/owner/month-calendar";
 import { OwnerMobileAgendaView } from "@/components/owner/mobile-agenda-view";
@@ -156,14 +158,14 @@ export default function OwnerCalendarPage() {
         <div className="hidden space-y-2 sm:block">
           <h2 className="text-base font-semibold text-gray-900">All trips</h2>
           {(bookings || []).length === 0 ? (
-            <AdminCard><p className="py-6 text-center text-sm text-gray-500">No Turo trips yet.</p></AdminCard>
+            <AdminEmptyState title="No Turo trips yet." />
           ) : (
             (bookings || []).map((b) => (
               <button
                 key={b.id}
                 type="button"
                 onClick={() => setSelected(b)}
-                className="flex w-full items-center justify-between gap-3 rounded-xl border border-gray-200/80 bg-white p-4 text-left shadow-sm transition-colors hover:border-purple-200 hover:bg-purple-50/40"
+                className={cn(adminListItemClass, "flex w-full items-center justify-between gap-3 text-left")}
               >
                 <div className="min-w-0">
                   <p className="truncate font-medium text-gray-900">

@@ -1,10 +1,16 @@
 "use client";
 
 import React, { useMemo } from "react";
-import { BarChart3, RefreshCw } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
+import { BarChart3, RefreshCw, Calendar, Clock, Car, Timer } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
+import {
+  AdminPageBody,
+  AdminPageHeader,
+  AdminStatCard,
+  AdminCard,
+  AdminSection,
+} from "@/components/admin/admin-shell";
+import { AdminEmptyState } from "@/components/admin/ui-feedback";
 import { useManagerAnalytics } from "@/lib/hooks/use-manager-analytics";
 
 export default function ManagerAnalyticsPage() {
@@ -25,52 +31,67 @@ export default function ManagerAnalyticsPage() {
 
       <AdminPageBody>
         {loading ? (
-          <div className="text-center py-12">
-            <RefreshCw className="h-8 w-8 animate-spin text-purple-600 mx-auto" />
+          <div className="py-12 text-center">
+            <RefreshCw className="mx-auto h-8 w-8 animate-spin text-purple-600" />
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <Card><CardContent className="p-4"><p className="text-xs text-gray-500 uppercase">Bookings</p><p className="text-2xl font-bold text-gray-900">{data?.totalBookings ?? 0}</p></CardContent></Card>
-              <Card><CardContent className="p-4"><p className="text-xs text-gray-500 uppercase">Booked Days</p><p className="text-2xl font-bold text-gray-900">{data?.totalBookedDays ?? 0}</p></CardContent></Card>
-              <Card><CardContent className="p-4"><p className="text-xs text-gray-500 uppercase">Vehicles</p><p className="text-2xl font-bold text-gray-900">{data?.uniqueVehicles ?? 0}</p></CardContent></Card>
-              <Card><CardContent className="p-4"><p className="text-xs text-gray-500 uppercase">Avg Duration</p><p className="text-2xl font-bold text-gray-900">{data?.avgBookingDurationDays ?? 0}</p></CardContent></Card>
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+              <AdminStatCard label="Bookings" value={data?.totalBookings ?? 0} icon={Calendar} />
+              <AdminStatCard
+                label="Booked Days"
+                value={data?.totalBookedDays ?? 0}
+                icon={Clock}
+                iconClassName="text-blue-600"
+                iconBgClassName="bg-blue-50"
+              />
+              <AdminStatCard
+                label="Vehicles"
+                value={data?.uniqueVehicles ?? 0}
+                icon={Car}
+                iconClassName="text-green-600"
+                iconBgClassName="bg-green-50"
+              />
+              <AdminStatCard
+                label="Avg Duration"
+                value={data?.avgBookingDurationDays ?? 0}
+                icon={Timer}
+                iconClassName="text-amber-600"
+                iconBgClassName="bg-amber-50"
+              />
             </div>
 
-            <Card>
-              <CardContent className="p-5">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <BarChart3 className="h-4 w-4 text-purple-600" /> Status Breakdown
-                </h2>
-                {statusEntries.length === 0 ? (
-                  <p className="text-gray-500">No status data available.</p>
-                ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+            <AdminSection title="Status Breakdown" icon={BarChart3}>
+              {statusEntries.length === 0 ? (
+                <AdminEmptyState title="No status data available." />
+              ) : (
+                <AdminCard>
+                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
                     {statusEntries.map(([status, count]) => (
-                      <div key={status} className="rounded-lg border p-3">
-                        <p className="text-xs text-gray-500 uppercase">{status}</p>
+                      <div key={status} className="rounded-lg border border-gray-200/80 p-3">
+                        <p className="text-xs uppercase text-gray-500">{status}</p>
                         <p className="text-xl font-semibold text-gray-900">{count}</p>
                       </div>
                     ))}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </AdminCard>
+              )}
+            </AdminSection>
 
-            <Card>
-              <CardContent className="p-5">
-                <h2 className="text-lg font-semibold text-gray-900 mb-2">Leakage Sentinel</h2>
+            <AdminSection title="Leakage Sentinel">
+              <AdminCard>
                 <p className="text-sm text-gray-600">
                   Expected origin: <strong>{data?.leakageSentinel.expectedOrigin || "manager_panel"}</strong>
                 </p>
-                <p className="text-sm text-gray-600">
+                <p className="mt-1 text-sm text-gray-600">
                   Checked rows: <strong>{data?.leakageSentinel.checkedRows ?? 0}</strong>
                 </p>
-                <p className="text-sm text-gray-600">
-                  Non-manager-origin rows detected: <strong>{data?.leakageSentinel.nonManagerOriginRows ?? 0}</strong>
+                <p className="mt-1 text-sm text-gray-600">
+                  Non-manager-origin rows detected:{" "}
+                  <strong>{data?.leakageSentinel.nonManagerOriginRows ?? 0}</strong>
                 </p>
-              </CardContent>
-            </Card>
+              </AdminCard>
+            </AdminSection>
           </>
         )}
       </AdminPageBody>
