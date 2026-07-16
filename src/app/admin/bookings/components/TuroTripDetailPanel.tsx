@@ -7,7 +7,7 @@ import { X, Car, MapPin, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
-import { getTuroDriverFromReason, resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
+import { getTuroDriverFromReason, formatTuroReasonForDisplay, resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
 import type { BookingRow } from "../types";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { StaffSidePanel } from "@/components/staff/staff-overlay";
@@ -26,11 +26,13 @@ export function TuroTripDetailPanel({ booking, onClose }: TuroTripDetailPanelPro
   if (!isTuroRow(booking)) return null;
 
   const driver = getTuroDriverFromReason(booking.turo_reason ?? null) || booking.customer_name || "Turo";
+  const canViewPricing = booking.canViewPricing !== false;
   const revenue =
     typeof booking.total_price === "number" && booking.total_price > 0
       ? booking.total_price
       : resolveTuroTripRevenue({ earnings: null, reason: booking.turo_reason ?? null });
-  const showMoney = booking.canViewPricing !== false && revenue > 0;
+  const showMoney = canViewPricing && revenue > 0;
+  const notesDisplay = formatTuroReasonForDisplay(booking.turo_reason, { hideMoney: !canViewPricing });
 
   return (
     <StaffSidePanel onClose={onClose} ariaLabel="Turo trip details">
@@ -108,10 +110,10 @@ export function TuroTripDetailPanel({ booking, onClose }: TuroTripDetailPanelPro
             </div>
           ) : null}
 
-          {booking.turo_reason ? (
+          {notesDisplay ? (
             <div>
               <p className="text-xs text-gray-500">Notes</p>
-              <p className="text-sm text-gray-800 whitespace-pre-wrap">{booking.turo_reason}</p>
+              <p className="text-sm text-gray-800 whitespace-pre-wrap">{notesDisplay}</p>
             </div>
           ) : null}
 

@@ -5,6 +5,7 @@ import { Ticket, Link2, MapPin } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
+import { formatTuroReasonForDisplay } from "@/lib/utils/turo-blocked-date";
 import type { BookingDetailContext } from "./booking-detail-context";
 
 interface DetailTuroSectionProps {
@@ -12,7 +13,7 @@ interface DetailTuroSectionProps {
 }
 
 export function DetailTuroSection({ ctx }: DetailTuroSectionProps) {
-  const { booking, bookingTickets, ticketsPagePath } = ctx;
+  const { booking, bookingTickets, ticketsPagePath, canViewPricing } = ctx;
 
   const hasTuroMetadata =
     Boolean(booking.turo_reason) ||
@@ -22,6 +23,10 @@ export function DetailTuroSection({ ctx }: DetailTuroSectionProps) {
   if (bookingTickets.length === 0 && !hasTuroMetadata) {
     return null;
   }
+
+  const notesDisplay = formatTuroReasonForDisplay(booking.turo_reason, {
+    hideMoney: !canViewPricing,
+  });
 
   return (
     <>
@@ -42,10 +47,10 @@ export function DetailTuroSection({ ctx }: DetailTuroSectionProps) {
               Extension detected for this Turo trip.
             </div>
           ) : null}
-          {booking.turo_reason ? (
+          {notesDisplay ? (
             <div>
               <p className="text-xs text-gray-500">Notes</p>
-              <p className="text-sm text-gray-800 whitespace-pre-wrap">{booking.turo_reason}</p>
+              <p className="text-sm text-gray-800 whitespace-pre-wrap">{notesDisplay}</p>
             </div>
           ) : null}
         </div>

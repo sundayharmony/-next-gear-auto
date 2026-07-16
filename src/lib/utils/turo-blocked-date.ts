@@ -30,6 +30,23 @@ export function getTuroDriverFromReason(reason: string | null | undefined): stri
 }
 
 /**
+ * Display-safe Turo reason for staff who cannot view pricing.
+ * Strips `$…` amounts (and surrounding em-dash separators) while keeping guest text.
+ */
+export function formatTuroReasonForDisplay(
+  reason: string | null | undefined,
+  opts?: { hideMoney?: boolean }
+): string {
+  if (!reason) return "";
+  if (!opts?.hideMoney) return reason;
+  return reason
+    .replace(/\s*[—–-]\s*\$\s*[\d,]+(?:\.\d{1,2})?/gi, "")
+    .replace(/\$\s*[\d,]+(?:\.\d{1,2})?/gi, "")
+    .replace(/\s{2,}/g, " ")
+    .trim();
+}
+
+/**
  * Decide whether to write `location` on merge/update.
  * Fills missing/invalid stored values; replaces junk; optional force on reconcile.
  */
