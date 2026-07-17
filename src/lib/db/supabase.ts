@@ -34,6 +34,7 @@ type Database = {
       payment_records: GenericTable;
       booking_payments: GenericTable;
       promo_codes: GenericTable;
+      customer_credit_ledger: GenericTable;
       reviews: GenericTable;
       tickets: GenericTable;
       expenses: GenericTable;
@@ -221,6 +222,9 @@ export interface DbBooking {
   promo_code: string | null;
   discount_amount: number;
   promo_redemption_counted: boolean;
+  credit_applied?: number;
+  referral_credit_awarded?: boolean;
+  credit_spent?: boolean;
   origin_channel: "public_checkout" | "admin_panel" | "manager_panel" | "owner_panel" | "unknown" | null;
   created_by_role: "admin" | "manager" | "customer" | null;
   created_by_user_id: string | null;

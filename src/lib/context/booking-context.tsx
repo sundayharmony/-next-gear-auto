@@ -38,6 +38,7 @@ interface BookingState {
   pickupLocationName: string | null;
   returnLocationName: string | null;
   locationSurcharge: number;
+  creditToApply: number;
 }
 
 type BookingAction =
@@ -60,6 +61,7 @@ type BookingAction =
   | { type: "SET_INSURANCE_PROOF"; payload: { url: string | null; optedOut: boolean } }
   | { type: "SET_ID_DOCUMENT_URL"; payload: string | null }
   | { type: "SET_LOCATIONS"; payload: { pickupLocationId: string | null; returnLocationId: string | null; pickupLocationName: string | null; returnLocationName: string | null; surcharge: number } }
+  | { type: "SET_CREDIT_TO_APPLY"; payload: number }
   | { type: "RESET" };
 
 const initialState: BookingState = {
@@ -87,6 +89,7 @@ const initialState: BookingState = {
   pickupLocationName: null,
   returnLocationName: null,
   locationSurcharge: 0,
+  creditToApply: 0,
 };
 
 function bookingReducer(state: BookingState, action: BookingAction): BookingState {
@@ -159,6 +162,8 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
         returnLocationName: action.payload.returnLocationName,
         locationSurcharge: action.payload.surcharge,
       };
+    case "SET_CREDIT_TO_APPLY":
+      return { ...state, creditToApply: Math.max(0, action.payload) };
     case "SUBMIT_START":
       return { ...state, isSubmitting: true, error: null };
     case "SUBMIT_SUCCESS":
@@ -189,6 +194,7 @@ interface BookingContextType extends BookingState {
   setInsuranceProof: (url: string | null, optedOut: boolean) => void;
   setIdDocumentUrl: (url: string | null) => void;
   setLocations: (pickupLocationId: string | null, returnLocationId: string | null, pickupLocationName: string | null, returnLocationName: string | null, surcharge: number) => void;
+  setCreditToApply: (amount: number) => void;
   submitBooking: () => Promise<void>;
   resetBooking: () => void;
 }
@@ -299,6 +305,10 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "SET_LOCATIONS", payload: { pickupLocationId, returnLocationId, pickupLocationName, returnLocationName, surcharge } });
   }, []);
 
+  const setCreditToApply = useCallback((amount: number) => {
+    dispatch({ type: "SET_CREDIT_TO_APPLY", payload: amount });
+  }, []);
+
   const submitBooking = useCallback(async () => {
     if (submitInFlightRef.current || state.isSubmitting) {
       return;
@@ -333,7 +343,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       step: state.currentStep,
     });
 
-    const chargeTotal = getCheckoutTotal(state.pricing, state.locationSurcharge);
+    const chargeTotal = getCheckoutTotal(state.pricing, state.locationSurcharge, state.creditToApply);
 
     try {
       // Call our checkout API which creates booking in Supabase + Stripe Checkout session
@@ -362,6 +372,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           pickupLocationName: state.pickupLocationName,
           returnLocationName: state.returnLocationName,
           locationSurcharge: state.locationSurcharge,
+          creditToApply: state.creditToApply > 0 ? state.creditToApply : undefined,
         }),
       });
 
@@ -477,6 +488,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       setInsuranceProof,
       setIdDocumentUrl,
       setLocations,
+      setCreditToApply,
       submitBooking,
       resetBooking,
     }),
@@ -498,6 +510,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       setInsuranceProof,
       setIdDocumentUrl,
       setLocations,
+      setCreditToApply,
       submitBooking,
       resetBooking,
     ]

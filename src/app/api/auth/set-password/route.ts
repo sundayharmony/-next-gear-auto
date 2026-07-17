@@ -8,6 +8,7 @@ import { validatePasswordToken } from "@/lib/auth/password-token";
 import { setAuthCookies } from "@/lib/auth/jwt";
 import { CUSTOMER_CAPABILITIES_SELECT, resolveCustomerRoles } from "@/lib/auth/customer-capabilities";
 import { issueCustomerTokens } from "@/lib/auth/issue-customer-tokens";
+import { ensureReferralCodeForCustomer } from "@/lib/referrals/referral-codes";
 
 export async function POST(request: Request) {
   try {
@@ -96,6 +97,8 @@ export async function POST(request: Request) {
         { status: 500 }
       );
     }
+
+    await ensureReferralCodeForCustomer(supabase, customer.id);
 
     // Return user data so frontend can log them in
     const roles = resolveCustomerRoles(customer);

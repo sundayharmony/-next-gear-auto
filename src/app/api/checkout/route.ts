@@ -25,6 +25,10 @@ import {
   validateAndApplyPromo,
   type PromoCodeRow,
 } from "@/lib/promo-codes/promo-integrity";
+import {
+  clampCreditApplication,
+  getCustomerCreditBalance,
+} from "@/lib/referrals/customer-credits";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
@@ -44,8 +48,15 @@ export async function POST(request: NextRequest) {
     return rateLimitResponse(rateCheck.resetAt);
   }
 
-  const supabase = getServiceSupabase();
+    const supabase = getServiceSupabase();
   try {
+    let auth: Awaited<ReturnType<typeof getAuthFromRequest>> | null = null;
+    try {
+      auth = await getAuthFromRequest(request);
+    } catch {
+      auth = null;
+    }
+
     let body: any;
     try {
       body = await request.json();
@@ -85,6 +96,7 @@ export async function POST(request: NextRequest) {
       pickupLocationName,
       returnLocationName,
       locationSurcharge,
+      creditToApply: creditToApplyRaw,
     } = body;
 
     // Validate required field types
@@ -286,6 +298,7 @@ export async function POST(request: NextRequest) {
     // ignored: eligibility and value are derived entirely from current server data.
     let appliedPromoCode: string | null = null;
     let appliedDiscountAmount = 0;
+    let appliedPromoOwnerId: string | null = null;
     if (promoCode) {
       // Validate promo code format before querying database
       if (typeof promoCode !== "string" || !/^[a-zA-Z0-9_-]{1,50}$/.test(promoCode)) {
@@ -320,6 +333,8 @@ export async function POST(request: NextRequest) {
       const promoResult = validateAndApplyPromo(
         serverPricing,
         promo as PromoCodeRow,
+        new Date(),
+        { customerId: auth?.sub ?? null },
       );
       if (!promoResult.ok) {
         return NextResponse.json(
@@ -331,6 +346,8 @@ export async function POST(request: NextRequest) {
       serverPricing = promoResult.pricing;
       appliedPromoCode = promo.code;
       appliedDiscountAmount = promoResult.pricing.discount?.discountAmount ?? 0;
+      appliedPromoOwnerId =
+        (promo as PromoCodeRow).owner_customer_id ?? null;
     }
 
     // Add location surcharge (validated against DB)
@@ -354,51 +371,16 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    const serverTotal = Math.round(serverPricing.total * 100) / 100;
-
-    // Fix 3: Reject large price mismatches (> $1.00) instead of just logging
-    if (totalPrice != null && Math.abs(totalPrice - serverTotal) > 1.00) {
-      logger.warn(`Price mismatch rejected: client=${totalPrice}, server=${serverTotal}, booking for vehicle ${vehicleId}`);
-      logBookingEvent("checkout_price_mismatch", {
-        vehicleId,
-        client: totalPrice,
-        server: serverTotal,
-      });
-      return NextResponse.json(
-        { success: false, message: "Price mismatch detected. Please try again." },
-        { status: 400 }
-      );
-    }
-
-    // Allow small rounding tolerance ($0.02) between client and server for logging only
-    if (totalPrice != null && Math.abs(totalPrice - serverTotal) > 0.02 && Math.abs(totalPrice - serverTotal) <= 1.00) {
-      logger.warn(`Minor price variance: client=${totalPrice}, server=${serverTotal}, booking for vehicle ${vehicleId}`);
-    }
-
-    // Always use server-calculated price
-    const chargeAmount = serverTotal;
-
-    if (!Number.isFinite(chargeAmount) || chargeAmount < 0) {
-      return NextResponse.json(
-        { success: false, message: "Invalid charge amount calculated" },
-        { status: 500 }
-      );
-    }
-
-    // Stripe requires minimum charge of $0.50
-    if (chargeAmount > 0 && chargeAmount < 0.50) {
-      return NextResponse.json(
-        { success: false, message: "Minimum booking amount is $0.50" },
-        { status: 400 }
-      );
-    }
+    const serverTotalBeforeCredit = Math.round(serverPricing.total * 100) / 100;
 
     // 1. Resolve customer — guests with a matching email reuse saved profile data
-    let auth: Awaited<ReturnType<typeof getAuthFromRequest>> | null = null;
+    let authForCustomer: Awaited<ReturnType<typeof getAuthFromRequest>> | null = auth;
     try {
-      auth = await getAuthFromRequest(request);
+      if (!authForCustomer) {
+        authForCustomer = await getAuthFromRequest(request);
+      }
     } catch {
-      auth = null;
+      authForCustomer = null;
     }
 
     const customerResolution = await resolveCheckoutCustomer(
@@ -409,7 +391,7 @@ export async function POST(request: NextRequest) {
         phone: customerDetails.phone || "",
         dob: customerDetails.dob || "",
       },
-      auth
+      authForCustomer
     );
 
     if (!customerResolution.ok) {
@@ -428,7 +410,88 @@ export async function POST(request: NextRequest) {
       matchedExisting,
     } = customerResolution.customer;
 
-    if (matchedExisting && !auth) {
+    if (
+      appliedPromoOwnerId &&
+      appliedPromoOwnerId === customerId
+    ) {
+      return NextResponse.json(
+        { success: false, message: "You cannot use your own referral code" },
+        { status: 400 },
+      );
+    }
+
+    const creditToApply =
+      typeof creditToApplyRaw === "number" && Number.isFinite(creditToApplyRaw)
+        ? Math.max(0, creditToApplyRaw)
+        : 0;
+
+    let creditApplied = 0;
+    if (creditToApply > 0) {
+      if (!authForCustomer?.sub) {
+        return NextResponse.json(
+          { success: false, message: "Sign in to use account credit" },
+          { status: 401 },
+        );
+      }
+      if (authForCustomer.sub !== customerId) {
+        return NextResponse.json(
+          { success: false, message: "Account credit can only be used on your own bookings" },
+          { status: 403 },
+        );
+      }
+
+      const availableBalance = await getCustomerCreditBalance(supabase, customerId);
+      creditApplied = clampCreditApplication(
+        creditToApply,
+        availableBalance,
+        serverTotalBeforeCredit,
+      );
+
+      if (creditApplied <= 0) {
+        return NextResponse.json(
+          { success: false, message: "Insufficient account credit" },
+          { status: 400 },
+        );
+      }
+    }
+
+    const chargeAmount = Math.round((serverTotalBeforeCredit - creditApplied) * 100) / 100;
+
+    // Fix 3: Reject large price mismatches (> $1.00) instead of just logging
+    if (totalPrice != null && Math.abs(totalPrice - chargeAmount) > 1.00) {
+      logger.warn(`Price mismatch rejected: client=${totalPrice}, server=${chargeAmount}, booking for vehicle ${vehicleId}`);
+      logBookingEvent("checkout_price_mismatch", {
+        vehicleId,
+        client: totalPrice,
+        server: chargeAmount,
+      });
+      return NextResponse.json(
+        { success: false, message: "Price mismatch detected. Please try again." },
+        { status: 400 }
+      );
+    }
+
+    // Allow small rounding tolerance ($0.02) between client and server for logging only
+    if (totalPrice != null && Math.abs(totalPrice - chargeAmount) > 0.02 && Math.abs(totalPrice - chargeAmount) <= 1.00) {
+      logger.warn(`Minor price variance: client=${totalPrice}, server=${chargeAmount}, booking for vehicle ${vehicleId}`);
+    }
+
+    if (!Number.isFinite(chargeAmount) || chargeAmount < 0) {
+      return NextResponse.json(
+        { success: false, message: "Invalid charge amount calculated" },
+        { status: 500 }
+      );
+    }
+
+    // Stripe requires minimum charge of $0.50 when amount is positive
+    if (chargeAmount > 0 && chargeAmount < 0.50) {
+      return NextResponse.json(
+        { success: false, message: "Minimum booking amount is $0.50" },
+        { status: 400 }
+      );
+    }
+
+    if (matchedExisting && !authForCustomer) {
       logBookingEvent("checkout_matched_existing_customer", {
         customerId,
         email: bookingCustomerEmail,
@@ -457,9 +520,10 @@ export async function POST(request: NextRequest) {
       pickup_time: pickupTime || null,
       return_time: returnTime || null,
       extras: extras || [],
-      total_price: serverTotal,
+      total_price: serverTotalBeforeCredit,
       promo_code: appliedPromoCode,
       discount_amount: appliedDiscountAmount,
+      credit_applied: creditApplied,
       deposit: 0,
       status: "pending",
       signed_name: signedName || null,
@@ -508,7 +572,7 @@ export async function POST(request: NextRequest) {
         returnDate,
         pickupTime: pickupTime || undefined,
         returnTime: returnTime || undefined,
-        totalPrice: serverTotal,
+        totalPrice: serverTotalBeforeCredit,
         deposit: 0,
         needsPassword,
         pickupLocationName: pickupLocationName || undefined,
@@ -561,9 +625,10 @@ export async function POST(request: NextRequest) {
           booking_id: bookingId,
           customer_id: customerId || "",
           vehicle_id: vehicleId,
-          total_price: serverTotal.toString(),
+          total_price: serverTotalBeforeCredit.toString(),
           promo_code: appliedPromoCode || "",
           discount_amount: appliedDiscountAmount.toString(),
+          credit_applied: creditApplied.toString(),
         },
         success_url: `${siteUrl}/booking/success?session_id={CHECKOUT_SESSION_ID}&booking_id=${bookingId}`,
         cancel_url: `${siteUrl}/booking/cancel?booking_id=${bookingId}`,
@@ -605,7 +670,7 @@ export async function POST(request: NextRequest) {
       returnDate,
       pickupTime: pickupTime || undefined,
       returnTime: returnTime || undefined,
-      totalPrice: serverTotal,
+      totalPrice: serverTotalBeforeCredit,
       deposit: chargeAmount,
       pickupLocationName: pickupLocationName || undefined,
       returnLocationName: returnLocationName || undefined,

@@ -11,6 +11,12 @@ export interface PromoCodeRow {
   expires_at: string | null;
   description: string | null;
   is_active: boolean;
+  promo_type?: "campaign" | "referral" | string | null;
+  owner_customer_id?: string | null;
+}
+
+export interface PromoValidationContext {
+  customerId?: string | null;
 }
 
 type PromoValidationResult =
@@ -40,9 +46,19 @@ export function validatePromoEligibility(
   promo: PromoCodeRow,
   bookingAmount: number,
   now = new Date(),
+  context: PromoValidationContext = {},
 ): PromoEligibilityResult {
   if (!promo.is_active) {
     return { ok: false, message: "This promo code is no longer active" };
+  }
+
+  if (
+    promo.promo_type === "referral" &&
+    promo.owner_customer_id &&
+    context.customerId &&
+    promo.owner_customer_id === context.customerId
+  ) {
+    return { ok: false, message: "You cannot use your own referral code" };
   }
 
   if (promo.expires_at && promoExpiry(promo.expires_at) < now) {
@@ -68,8 +84,9 @@ export function validateAndApplyPromo(
   pricing: PricingBreakdown,
   promo: PromoCodeRow,
   now = new Date(),
+  context: PromoValidationContext = {},
 ): PromoValidationResult {
-  const eligibility = validatePromoEligibility(promo, pricing.subtotal, now);
+  const eligibility = validatePromoEligibility(promo, pricing.subtotal, now, context);
   if (!eligibility.ok) {
     return eligibility;
   }

@@ -7,6 +7,7 @@ import { useVehicles } from "@/lib/hooks/useVehicles";
 import { useAuth } from "@/lib/context/auth-context";
 import { useFleetBookedDates } from "@/lib/hooks/use-fleet-booked-dates";
 import { getCheckoutTotal } from "@/lib/booking/checkout-total";
+import { clampCreditApplication } from "@/lib/referrals/customer-credits";
 import {
   canProceedForStep,
   getStep1ValidationError,
@@ -43,6 +44,7 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
   const { initialVehicles, initialLocations } = options ?? {};
   const hasSsrLocations = Boolean(initialLocations && initialLocations.length > 0);
   const booking = useBooking();
+  const { setCreditToApply } = booking;
   const searchParams = useSearchParams();
   const { user, isAuthenticated } = useAuth();
 
@@ -209,6 +211,8 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
   const [promoInput, setPromoInput] = useState("");
   const [promoLoading, setPromoLoading] = useState(false);
   const [promoError, setPromoError] = useState("");
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [creditLoading, setCreditLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState("");
   const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(booking.idDocumentUrl);
@@ -295,7 +299,61 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
     ],
   );
 
-  const checkoutTotal = getCheckoutTotal(booking.pricing, booking.locationSurcharge);
+  const checkoutTotal = getCheckoutTotal(
+    booking.pricing,
+    booking.locationSurcharge,
+    booking.creditToApply,
+  );
+
+  const subtotalBeforeCredit = getCheckoutTotal(booking.pricing, booking.locationSurcharge, 0);
+
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setCreditBalance(0);
+      setCreditToApply(0);
+      return;
+    }
+
+    let cancelled = false;
+    setCreditLoading(true);
+
+    fetch("/api/account/referral", { credentials: "include" })
+      .then(async (res) => {
+        if (!res.ok) return null;
+        return res.json();
+      })
+      .then((data) => {
+        if (cancelled) return;
+        const balance = Number(data?.data?.balance ?? 0);
+        setCreditBalance(Number.isFinite(balance) ? balance : 0);
+      })
+      .catch((error) => {
+        logger.error("Failed to load account credit:", error);
+      })
+      .finally(() => {
+        if (!cancelled) setCreditLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthenticated, setCreditToApply]);
+
+  const handleApplyCredit = useCallback(
+    (amount: number) => {
+      const applied = clampCreditApplication(amount, creditBalance, subtotalBeforeCredit);
+      setCreditToApply(applied);
+    },
+    [setCreditToApply, creditBalance, subtotalBeforeCredit],
+  );
+
+  const handleApplyMaxCredit = useCallback(() => {
+    handleApplyCredit(creditBalance);
+  }, [creditBalance, handleApplyCredit]);
+
+  const handleClearCredit = useCallback(() => {
+    setCreditToApply(0);
+  }, [setCreditToApply]);
 
   const canProceed = useCallback(
     () =>
@@ -489,6 +547,14 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
     promoLoading,
     promoError,
     setPromoError,
+    creditBalance,
+    creditLoading,
+    creditApplied: booking.creditToApply,
+    handleApplyCredit,
+    handleApplyMaxCredit,
+    handleClearCredit,
+    subtotalBeforeCredit,
+    isAuthenticated,
     uploadedFile,
     setUploadedFile,
     uploadError,

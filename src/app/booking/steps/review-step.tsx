@@ -33,6 +33,7 @@ export interface ReviewStepProps {
   promoDiscount: { discountAmount: number; description?: string } | null;
   locationSurcharge: number;
   checkoutTotal: number;
+  subtotalBeforeCredit: number;
   promoInput: string;
   setPromoInput: (value: string) => void;
   promoLoading: boolean;
@@ -40,6 +41,12 @@ export interface ReviewStepProps {
   setPromoError: (error: string) => void;
   onApplyPromo: () => void;
   onRemovePromo: () => void;
+  creditBalance: number;
+  creditLoading: boolean;
+  creditApplied: number;
+  onApplyMaxCredit: () => void;
+  onClearCredit: () => void;
+  isAuthenticated: boolean;
   details: CustomerDetailsState;
   agreementSignatures: Record<string, string | null>;
   setAgreementSignatures: (signatures: Record<string, string | null>) => void;
@@ -60,6 +67,7 @@ export function ReviewStep({
   promoDiscount,
   locationSurcharge,
   checkoutTotal,
+  subtotalBeforeCredit,
   promoInput,
   setPromoInput,
   promoLoading,
@@ -67,6 +75,12 @@ export function ReviewStep({
   setPromoError,
   onApplyPromo,
   onRemovePromo,
+  creditBalance,
+  creditLoading,
+  creditApplied,
+  onApplyMaxCredit,
+  onClearCredit,
+  isAuthenticated,
   details,
   agreementSignatures,
   setAgreementSignatures,
@@ -169,6 +183,12 @@ export function ReviewStep({
                         <span>-${promoDiscount.discountAmount.toFixed(2)}</span>
                       </div>
                     )}
+                    {creditApplied > 0 && (
+                      <div className="flex justify-between text-sm text-green-600">
+                        <span>Account credit</span>
+                        <span>-${creditApplied.toFixed(2)}</span>
+                      </div>
+                    )}
                     {locationSurcharge > 0 && (
                       <div className="flex justify-between text-sm">
                         <span className="text-gray-500">Location Surcharge</span>
@@ -246,6 +266,41 @@ export function ReviewStep({
           )}
         </CardContent>
       </Card>
+
+      {isAuthenticated && creditBalance > 0 && (
+        <Card>
+          <CardContent className="p-6">
+            <h3 className="font-semibold text-gray-900 mb-3">Account Credit</h3>
+            <p className="text-sm text-gray-600 mb-3">
+              Available balance: <span className="font-semibold text-gray-900">${creditBalance.toFixed(2)}</span>
+            </p>
+            {creditApplied > 0 ? (
+              <div className="flex items-center justify-between rounded-lg bg-green-50 border border-green-200 p-3">
+                <span className="text-sm text-green-700">
+                  Applying ${creditApplied.toFixed(2)} toward this booking
+                </span>
+                <button
+                  type="button"
+                  onClick={onClearCredit}
+                  aria-label="Remove account credit"
+                  className="text-green-600 hover:text-green-800"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ) : (
+              <Button
+                variant="outline"
+                onClick={onApplyMaxCredit}
+                disabled={creditLoading}
+                aria-busy={creditLoading}
+              >
+                {creditLoading ? "Loading credit…" : `Apply up to $${Math.min(creditBalance, subtotalBeforeCredit).toFixed(2)}`}
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-6">

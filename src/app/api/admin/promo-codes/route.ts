@@ -31,6 +31,8 @@ export async function GET(req: NextRequest) {
     if (!error && data && data.length > 0) {
       const codes = data.map((c) => ({
         code: c.code,
+        promoType: c.promo_type ?? "campaign",
+        ownerCustomerId: c.owner_customer_id ?? null,
         discountType: c.discount_type,
         discountValue: c.discount_value,
         minBookingAmount: c.min_booking_amount,
@@ -151,7 +153,7 @@ export async function PUT(request: NextRequest) {
 
     const { data: existingPromo, error: existingPromoError } = await supabase
       .from("promo_codes")
-      .select("discount_type, discount_value")
+      .select("discount_type, discount_value, promo_type")
       .eq("code", body.code.toUpperCase())
       .maybeSingle();
     if (existingPromoError) {
@@ -165,6 +167,13 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json(
         { success: false, message: "Promo code not found" },
         { status: 404 },
+      );
+    }
+
+    if (existingPromo.promo_type === "referral") {
+      return NextResponse.json(
+        { success: false, message: "Referral codes are system-managed and cannot be edited" },
+        { status: 403 },
       );
     }
 
@@ -239,6 +248,27 @@ export async function DELETE(request: NextRequest) {
 
     if (!code) {
       return NextResponse.json({ success: false, message: "Code required" }, { status: 400 });
+    }
+
+    const { data: existingPromo, error: existingPromoError } = await supabase
+      .from("promo_codes")
+      .select("promo_type")
+      .eq("code", code.toUpperCase())
+      .maybeSingle();
+
+    if (existingPromoError) {
+      logger.error("Promo code lookup error:", existingPromoError);
+      return NextResponse.json(
+        { success: false, message: "Unable to validate promo code" },
+        { status: 500 },
+      );
+    }
+
+    if (existingPromo?.promo_type === "referral") {
+      return NextResponse.json(
+        { success: false, message: "Referral codes are system-managed and cannot be deleted" },
+        { status: 403 },
+      );
     }
 
     const { error } = await supabase

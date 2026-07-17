@@ -189,6 +189,13 @@ export function BookingPageInner({
               setPromoError={w.setPromoError}
               onApplyPromo={w.handleApplyPromo}
               onRemovePromo={w.handleRemovePromo}
+              creditBalance={w.creditBalance}
+              creditLoading={w.creditLoading}
+              creditApplied={w.creditApplied}
+              onApplyMaxCredit={w.handleApplyMaxCredit}
+              onClearCredit={w.handleClearCredit}
+              isAuthenticated={w.isAuthenticated}
+              subtotalBeforeCredit={w.subtotalBeforeCredit}
               details={w.details}
               agreementSignatures={w.agreementSignatures}
               setAgreementSignatures={w.setAgreementSignatures}

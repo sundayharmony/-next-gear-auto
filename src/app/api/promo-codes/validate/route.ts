@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { promoLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/utils/logger";
+import { getAuthFromRequest } from "@/lib/auth/jwt";
 import {
   validatePromoEligibility,
   type PromoCodeRow,
@@ -42,6 +43,14 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
+    let authCustomerId: string | null = null;
+    try {
+      const auth = await getAuthFromRequest(req);
+      authCustomerId = auth?.sub ?? null;
+    } catch {
+      authCustomerId = null;
+    }
+
     // Look up promo code from database first, fall back to JSON file
     const { data: promo, error } = await supabase
       .from("promo_codes")
@@ -63,6 +72,8 @@ export async function POST(req: NextRequest) {
     const eligibility = validatePromoEligibility(
       promo as PromoCodeRow,
       safeBookingAmount,
+      new Date(),
+      { customerId: authCustomerId },
     );
     if (!eligibility.ok) {
       return NextResponse.json(

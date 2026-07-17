@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import {
   Calendar, Clock, User,
   Car, Download, XCircle, Star, LogOut, Shield,
-  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw, CheckCircle2, ShieldCheck, Loader2, AlertTriangle
+  FileText, BarChart3, MapPin, Phone, Mail, RefreshCw, CheckCircle2, ShieldCheck, Loader2, AlertTriangle,
+  Gift, Copy, Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -23,6 +24,7 @@ import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
 import { csrfFetch } from "@/lib/utils/csrf-fetch";
 import type { Vehicle } from "@/lib/types";
+import type { CreditLedgerEntry } from "@/lib/referrals/customer-credits";
 
 type Tab = "overview" | "upcoming" | "past" | "profile";
 
@@ -68,6 +70,11 @@ export default function AccountPage() {
   const [profileForm, setProfileForm] = useState({ name: "", phone: "", dob: "" });
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileMsg, setProfileMsg] = useState("");
+  const [referralCode, setReferralCode] = useState<string | null>(null);
+  const [creditBalance, setCreditBalance] = useState(0);
+  const [creditLedger, setCreditLedger] = useState<CreditLedgerEntry[]>([]);
+  const [referralLoading, setReferralLoading] = useState(false);
+  const [codeCopied, setCodeCopied] = useState(false);
 
   // Fetch vehicles for vehicle name lookup (only when authenticated)
   const { vehicles: hookVehicles } = useVehicles(isAuthenticated);
@@ -106,6 +113,42 @@ export default function AccountPage() {
       fetchBookings();
     }
   }, [isAuthenticated, user, fetchBookings]);
+
+  const fetchReferral = useCallback(async () => {
+    if (!isAuthenticated) return;
+    setReferralLoading(true);
+    try {
+      const res = await fetch("/api/account/referral", { credentials: "include" });
+      if (!res.ok) return;
+      const data = await res.json();
+      if (data.success && data.data) {
+        setReferralCode(data.data.referralCode ?? null);
+        setCreditBalance(Number(data.data.balance ?? 0));
+        setCreditLedger(Array.isArray(data.data.ledger) ? data.data.ledger : []);
+      }
+    } catch (err) {
+      logger.error("Failed to fetch referral details:", err);
+    } finally {
+      setReferralLoading(false);
+    }
+  }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      fetchReferral();
+    }
+  }, [isAuthenticated, user, fetchReferral]);
+
+  const handleCopyReferralCode = useCallback(async () => {
+    if (!referralCode) return;
+    try {
+      await navigator.clipboard.writeText(referralCode);
+      setCodeCopied(true);
+      setTimeout(() => setCodeCopied(false), 2000);
+    } catch (err) {
+      logger.error("Failed to copy referral code:", err);
+    }
+  }, [referralCode]);
 
   // Initialize profile form when user loads
   useEffect(() => {
@@ -716,6 +759,71 @@ export default function AccountPage() {
                     </CardContent>
                   </Card>
                 </div>
+
+                <Card className="border-purple-200">
+                  <CardContent className="p-5">
+                    <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <Gift className="h-4 w-4 text-purple-600" />
+                      Refer Friends & Earn Credit
+                    </h3>
+                    {referralLoading ? (
+                      <div className="flex items-center gap-2 text-sm text-gray-500">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Loading referral details…
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <p className="text-sm text-gray-600">
+                          Share your code for 7.5% off a friend&apos;s booking. When they complete their rental, you earn that discount amount as account credit.
+                        </p>
+                        {referralCode ? (
+                          <div className="flex flex-wrap items-center gap-3">
+                            <code className="rounded-lg bg-purple-50 px-3 py-2 text-lg font-bold tracking-wide text-purple-700">
+                              {referralCode}
+                            </code>
+                            <Button size="sm" variant="outline" onClick={handleCopyReferralCode}>
+                              {codeCopied ? (
+                                <>
+                                  <Check className="h-4 w-4 mr-1" /> Copied
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-4 w-4 mr-1" /> Copy Code
+                                </>
+                              )}
+                            </Button>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-gray-500">Your referral code will appear once your account password is set.</p>
+                        )}
+                        <div className="rounded-lg bg-gray-50 px-4 py-3">
+                          <p className="text-xs uppercase tracking-wide text-gray-500">Account credit balance</p>
+                          <p className="text-2xl font-bold text-gray-900">${creditBalance.toFixed(2)}</p>
+                        </div>
+                        {creditLedger.length > 0 && (
+                          <div>
+                            <p className="text-sm font-medium text-gray-700 mb-2">Recent activity</p>
+                            <ul className="space-y-2 text-sm">
+                              {creditLedger.slice(0, 5).map((entry) => (
+                                <li key={entry.id} className="flex items-center justify-between text-gray-600">
+                                  <span>
+                                    {entry.sourceType === "referral_reward" && "Referral reward"}
+                                    {entry.sourceType === "booking_redemption" && "Applied to booking"}
+                                    {entry.sourceType === "admin_adjustment" && "Account adjustment"}
+                                    {entry.sourceBookingId ? ` · ${entry.sourceBookingId}` : ""}
+                                  </span>
+                                  <span className={entry.amount >= 0 ? "text-green-600 font-medium" : "text-gray-900 font-medium"}>
+                                    {entry.amount >= 0 ? "+" : ""}${entry.amount.toFixed(2)}
+                                  </span>
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
 
                 {/* Next Upcoming Rental */}
                 {upcomingBookings.length > 0 && (

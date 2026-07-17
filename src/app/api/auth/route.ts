@@ -15,6 +15,7 @@ import {
 } from "@/lib/auth/customer-capabilities";
 import { issueCustomerTokens } from "@/lib/auth/issue-customer-tokens";
 import { isValidEmailFormat } from "@/lib/utils/validation";
+import { ensureReferralCodeForCustomer } from "@/lib/referrals/referral-codes";
 
 function normalizeRole(role: unknown): AppRole {
   if (isAppRole(role)) return role;
@@ -318,6 +319,8 @@ export async function POST(request: Request) {
             .maybeSingle();
 
           if (updated) {
+            await ensureReferralCodeForCustomer(adminDb, updated.id);
+
             // Validate role type before casting
             const roleValue = updated.role || "customer";
             const updatedRole = normalizeRole(roleValue);
@@ -381,6 +384,8 @@ export async function POST(request: Request) {
           { status: 500 }
         );
       }
+
+      await ensureReferralCodeForCustomer(adminDb, newCustomer.id);
 
       const mapped = {
         id: newCustomer.id,
