@@ -3,7 +3,7 @@ import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendBookingConfirmationWithAgreement, sendBookingPendingEmail, sendAdminNewBooking } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
-import { calculateRentalHours, calculatePricing, applyDiscount } from "@/lib/utils/price-calculator";
+import { calculateRentalHours, calculatePricing } from "@/lib/utils/price-calculator";
 import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import {
   escapeHtml,
@@ -20,6 +20,11 @@ import {
   PUBLIC_BOOKING_ADVANCE_ERROR,
   publicPickupMeetsMinimumAdvance,
 } from "@/lib/booking/public-booking-guards";
+import {
+  confirmFreeBooking,
+  validateAndApplyPromo,
+  type PromoCodeRow,
+} from "@/lib/promo-codes/promo-integrity";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
@@ -72,7 +77,6 @@ export async function POST(request: NextRequest) {
       deposit,
       signedName,
       promoCode,
-      discountAmount,
       insuranceProofUrl,
       insuranceOptedOut,
       idDocumentUrl,
@@ -94,13 +98,6 @@ export async function POST(request: NextRequest) {
     if (typeof totalPrice !== 'undefined' && typeof totalPrice !== 'number') {
       return NextResponse.json(
         { success: false, message: "totalPrice must be a number" },
-        { status: 400 }
-      );
-    }
-
-    if (typeof discountAmount !== 'undefined' && typeof discountAmount !== 'number') {
-      return NextResponse.json(
-        { success: false, message: "discountAmount must be a number" },
         { status: 400 }
       );
     }
@@ -285,10 +282,13 @@ export async function POST(request: NextRequest) {
 
     let serverPricing = calculatePricing(rentalHours, vehicle.daily_rate, validatedExtras);
 
-    // Apply promo code discount if provided (re-validate server-side)
-    if (promoCode && discountAmount && discountAmount > 0) {
+    // Apply promo code discount if provided. The client discount is intentionally
+    // ignored: eligibility and value are derived entirely from current server data.
+    let appliedPromoCode: string | null = null;
+    let appliedDiscountAmount = 0;
+    if (promoCode) {
       // Validate promo code format before querying database
-      if (!/^[a-zA-Z0-9_-]{1,50}$/.test(promoCode)) {
+      if (typeof promoCode !== "string" || !/^[a-zA-Z0-9_-]{1,50}$/.test(promoCode)) {
         return NextResponse.json(
           { success: false, message: "Invalid promo code format" },
           { status: 400 }
@@ -300,52 +300,37 @@ export async function POST(request: NextRequest) {
         .from("promo_codes")
         .select("*")
         .ilike("code", promoCode)
-        .eq("is_active", true)
         .maybeSingle();
 
-      if (!promoError && promo) {
-        const isExpired = promo.expires_at && new Date(promo.expires_at) < new Date();
-        const isOverLimit = promo.max_uses && promo.used_count >= promo.max_uses;
-
-        if (!isExpired && !isOverLimit) {
-          serverPricing = applyDiscount(serverPricing, {
-            code: promo.code,
-            discountType: promo.discount_type,
-            discountValue: promo.discount_value,
-            discountAmount: 0, // will be recalculated
-            description: promo.description || "",
-          });
-
-          // Fix 4: Atomically increment usage with optimistic locking
-          // Only succeeds if used_count hasn't changed since we read it (optimistic lock)
-          // and is still below max_uses. Prevents concurrent checkouts from both applying the same last-use code.
-          if (promo.max_uses) {
-            const currentCount = promo.used_count ?? 0;
-            const { count: updated } = await supabase
-              .from("promo_codes")
-              .update({ used_count: currentCount + 1 })
-              .eq("id", promo.id)
-              .eq("used_count", currentCount)  // Optimistic lock: verify count hasn't changed
-              .lt("used_count", promo.max_uses);
-
-            if (updated === 0) {
-              // Race condition: another checkout used the last redemption or count changed
-              return NextResponse.json(
-                { success: false, message: "This promo code has reached its usage limit" },
-                { status: 409 }
-              );
-            }
-          } else {
-            // No max_uses limit — just increment for tracking
-            const currentCount = promo.used_count ?? 0;
-            await supabase
-              .from("promo_codes")
-              .update({ used_count: currentCount + 1 })
-              .eq("id", promo.id)
-              .eq("used_count", currentCount);  // Optimistic lock for consistency
-          }
-        }
+      if (promoError) {
+        logger.error("Checkout promo lookup error:", promoError);
+        return NextResponse.json(
+          { success: false, message: "Unable to verify promo code" },
+          { status: 500 }
+        );
       }
+
+      if (!promo) {
+        return NextResponse.json(
+          { success: false, message: "Invalid promo code" },
+          { status: 400 }
+        );
+      }
+
+      const promoResult = validateAndApplyPromo(
+        serverPricing,
+        promo as PromoCodeRow,
+      );
+      if (!promoResult.ok) {
+        return NextResponse.json(
+          { success: false, message: promoResult.message },
+          { status: 400 }
+        );
+      }
+
+      serverPricing = promoResult.pricing;
+      appliedPromoCode = promo.code;
+      appliedDiscountAmount = promoResult.pricing.discount?.discountAmount ?? 0;
     }
 
     // Add location surcharge (validated against DB)
@@ -473,6 +458,8 @@ export async function POST(request: NextRequest) {
       return_time: returnTime || null,
       extras: extras || [],
       total_price: serverTotal,
+      promo_code: appliedPromoCode,
+      discount_amount: appliedDiscountAmount,
       deposit: 0,
       status: "pending",
       signed_name: signedName || null,
@@ -501,10 +488,15 @@ export async function POST(request: NextRequest) {
 
     // 3. Handle $0 bookings — skip Stripe, auto-confirm, send emails directly
     if (chargeAmount <= 0) {
-      await supabase
-        .from("bookings")
-        .update({ status: "confirmed", deposit: 0 })
-        .eq("id", bookingId);
+      try {
+        await confirmFreeBooking(supabase, bookingId);
+      } catch (error) {
+        logger.error("Failed to confirm free booking:", error);
+        return NextResponse.json(
+          { success: false, message: "Failed to confirm booking" },
+          { status: 500 },
+        );
+      }
 
       // Send confirmation emails (includes set-password link when needed)
       const emailData = {
@@ -570,8 +562,8 @@ export async function POST(request: NextRequest) {
           customer_id: customerId || "",
           vehicle_id: vehicleId,
           total_price: serverTotal.toString(),
-          promo_code: promoCode || "",
-          discount_amount: (discountAmount ?? 0).toString(),
+          promo_code: appliedPromoCode || "",
+          discount_amount: appliedDiscountAmount.toString(),
         },
         success_url: `${siteUrl}/booking/success?session_id={CHECKOUT_SESSION_ID}&booking_id=${bookingId}`,
         cancel_url: `${siteUrl}/booking/cancel?booking_id=${bookingId}`,

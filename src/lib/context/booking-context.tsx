@@ -263,15 +263,20 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ code, bookingAmount: state.pricing?.subtotal ?? 0 }),
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const data = await res.json();
+      const data = await res.json().catch(() => null);
+      if (!res.ok) {
+        return {
+          success: false,
+          error: data?.message || "Failed to validate promo code",
+        };
+      }
       if (data.success) {
         dispatch({ type: "SET_PROMO", payload: { code: data.data.code, discount: data.data } });
         // Recalculate pricing synchronously after promo is set
         dispatch({ type: "CALCULATE_PRICING" });
         return { success: true };
       }
-      return { success: false, error: data.error || "Invalid promo code" };
+      return { success: false, error: data.message || "Invalid promo code" };
     } catch {
       return { success: false, error: "Failed to validate promo code" };
     }

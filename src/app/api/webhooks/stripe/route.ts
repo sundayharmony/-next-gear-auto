@@ -5,6 +5,7 @@ import { sendBookingConfirmationWithAgreement, sendAdminNewBooking } from "@/lib
 import { logger } from "@/lib/utils/logger";
 import { sumBookingPaymentAmounts } from "@/lib/bookings/payments";
 import { getVehicleDisplayName } from "@/lib/types";
+import { redeemBookingPromo } from "@/lib/promo-codes/promo-integrity";
 
 function getStripe(): Stripe {
   const stripeKey = process.env.STRIPE_SECRET_KEY;
@@ -57,6 +58,15 @@ export async function POST(request: Request) {
             .maybeSingle();
 
           if (alreadyProcessed) {
+            try {
+              await redeemBookingPromo(supabase, bookingId);
+            } catch (error) {
+              logger.error("Error retrying promo redemption:", error);
+              return NextResponse.json(
+                { error: "Promo redemption failed" },
+                { status: 500 },
+              );
+            }
             logger.info(`Webhook duplicate skipped for session: ${session.id}`);
             return NextResponse.json({ received: true });
           }
@@ -99,10 +109,24 @@ export async function POST(request: Request) {
               deposit: depositTotal,
             })
             .eq("id", bookingId)
-            .neq("status", "confirmed");
+            .eq("status", "pending");
 
           if (updateError) {
             logger.error("Error updating booking status:", updateError);
+            return NextResponse.json(
+              { error: "Booking confirmation failed" },
+              { status: 500 },
+            );
+          }
+
+          try {
+            await redeemBookingPromo(supabase, bookingId);
+          } catch (error) {
+            logger.error("Error recording promo redemption:", error);
+            return NextResponse.json(
+              { error: "Promo redemption failed" },
+              { status: 500 },
+            );
           }
 
           const { error: paymentError } = await supabase.from("payment_records").upsert(

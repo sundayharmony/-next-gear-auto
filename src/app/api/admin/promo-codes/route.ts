@@ -3,6 +3,19 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 
+function discountValidationMessage(type: unknown, value: unknown): string | null {
+  if (type !== "percentage" && type !== "fixed") {
+    return "Discount type must be percentage or fixed";
+  }
+  if (typeof value !== "number" || !Number.isFinite(value) || value < 0) {
+    return "Discount value must be a non-negative number";
+  }
+  if (type === "percentage" && value > 100) {
+    return "Percentage discount must be between 0 and 100";
+  }
+  return null;
+}
+
 // GET: List all promo codes (Supabase with JSON fallback)
 export async function GET(req: NextRequest) {
   const auth = await verifyAdminOrManager(req);
@@ -58,11 +71,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate discount value is between 0-100
+    const discountType = body.discountType || "percentage";
     const discountValue = body.discountValue !== undefined ? body.discountValue : 10;
-    if (typeof discountValue !== "number" || discountValue < 0 || discountValue > 100) {
+    const discountError = discountValidationMessage(discountType, discountValue);
+    if (discountError) {
       return NextResponse.json(
-        { success: false, message: "Discount value must be a number between 0 and 100" },
+        { success: false, message: discountError },
         { status: 400 }
       );
     }
@@ -99,7 +113,7 @@ export async function POST(request: NextRequest) {
       .from("promo_codes")
       .insert({
         code: body.code.toUpperCase(),
-        discount_type: body.discountType || "percentage",
+        discount_type: discountType,
         discount_value: discountValue,
         min_booking_amount: body.minBookingAmount ?? 0,
         max_uses: body.maxUses || 100,
@@ -135,12 +149,38 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ success: false, message: "Code is required" }, { status: 400 });
     }
 
-    // Validate discount value if being updated
-    if (body.discountValue !== undefined) {
-      if (typeof body.discountValue !== "number" || body.discountValue < 0 || body.discountValue > 100) {
+    const { data: existingPromo, error: existingPromoError } = await supabase
+      .from("promo_codes")
+      .select("discount_type, discount_value")
+      .eq("code", body.code.toUpperCase())
+      .maybeSingle();
+    if (existingPromoError) {
+      logger.error("Promo code lookup error:", existingPromoError);
+      return NextResponse.json(
+        { success: false, message: "Unable to validate promo code" },
+        { status: 500 },
+      );
+    }
+    if (!existingPromo) {
+      return NextResponse.json(
+        { success: false, message: "Promo code not found" },
+        { status: 404 },
+      );
+    }
+
+    const effectiveDiscountType =
+      body.discountType ?? existingPromo.discount_type;
+    const effectiveDiscountValue =
+      body.discountValue ?? existingPromo.discount_value;
+    if (body.discountType !== undefined || body.discountValue !== undefined) {
+      const discountError = discountValidationMessage(
+        effectiveDiscountType,
+        effectiveDiscountValue,
+      );
+      if (discountError) {
         return NextResponse.json(
-          { success: false, message: "Discount value must be a number between 0 and 100" },
-          { status: 400 }
+          { success: false, message: discountError },
+          { status: 400 },
         );
       }
     }

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { promoLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/utils/logger";
+import {
+  validatePromoEligibility,
+  type PromoCodeRow,
+} from "@/lib/promo-codes/promo-integrity";
 
 export async function POST(req: NextRequest) {
   try {
@@ -52,31 +56,17 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Database promo code validation
-    if (!promo.is_active) {
+    const safeBookingAmount =
+      typeof bookingAmount === "number" && Number.isFinite(bookingAmount)
+        ? bookingAmount
+        : 0;
+    const eligibility = validatePromoEligibility(
+      promo as PromoCodeRow,
+      safeBookingAmount,
+    );
+    if (!eligibility.ok) {
       return NextResponse.json(
-        { success: false, message: "This promo code is no longer active" },
-        { status: 400 }
-      );
-    }
-
-    if (promo.expires_at && new Date(promo.expires_at.includes("T") ? promo.expires_at : promo.expires_at + "T23:59:59") < new Date()) {
-      return NextResponse.json(
-        { success: false, message: "This promo code has expired" },
-        { status: 400 }
-      );
-    }
-
-    if (promo.max_uses && promo.used_count >= promo.max_uses) {
-      return NextResponse.json(
-        { success: false, message: "This promo code has reached its usage limit" },
-        { status: 400 }
-      );
-    }
-
-    if (bookingAmount && promo.min_booking_amount && bookingAmount < promo.min_booking_amount) {
-      return NextResponse.json(
-        { success: false, message: `Minimum booking amount of $${promo.min_booking_amount} required` },
+        { success: false, message: eligibility.message },
         { status: 400 }
       );
     }
@@ -84,16 +74,13 @@ export async function POST(req: NextRequest) {
     // Calculate discount
     let discountAmount = 0;
     if (promo.discount_type === "percentage") {
-      discountAmount = (bookingAmount && Number.isFinite(bookingAmount)) ? Math.round(bookingAmount * (promo.discount_value / 100) * 100) / 100 : 0;
+      discountAmount = Math.round(safeBookingAmount * (promo.discount_value / 100) * 100) / 100;
     } else {
-      discountAmount = promo.discount_value;
+      discountAmount = Math.min(promo.discount_value, safeBookingAmount);
     }
 
-    // NOTE: Promo code usage is validated at checkout (server-side) where the
-    // actual booking is created. We do NOT increment used_count here during
-    // validation — only during checkout to avoid inflating the count when users
-    // validate a code but never complete their booking. The checkout route
-    // re-validates the code and increments atomically.
+    // Validation never consumes a redemption. Confirmed bookings are counted
+    // atomically by redeem_booking_promo after free checkout or Stripe payment.
 
     return NextResponse.json({
       success: true,

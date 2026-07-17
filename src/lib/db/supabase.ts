@@ -70,6 +70,14 @@ type Database = {
         };
         Returns: { thread_id: string; created_new: boolean }[];
       };
+      redeem_booking_promo: {
+        Args: { p_booking_id: string };
+        Returns: boolean;
+      };
+      confirm_free_booking: {
+        Args: { p_booking_id: string };
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;
@@ -210,6 +218,9 @@ export interface DbBooking {
   pickup_location_id: string | null;
   return_location_id: string | null;
   location_surcharge: number | null;
+  promo_code: string | null;
+  discount_amount: number;
+  promo_redemption_counted: boolean;
   origin_channel: "public_checkout" | "admin_panel" | "manager_panel" | "owner_panel" | "unknown" | null;
   created_by_role: "admin" | "manager" | "customer" | null;
   created_by_user_id: string | null;
