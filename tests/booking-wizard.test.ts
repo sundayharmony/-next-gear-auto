@@ -12,8 +12,8 @@ import {
 import type { BookingExtra, Vehicle } from "../src/lib/types";
 
 const baseSearchDates: SearchDatesState = {
-  pickup: "2026-07-01",
-  return: "2026-07-03",
+  pickup: "2099-07-01",
+  return: "2099-07-03",
   pickupTime: "10:00",
   returnTime: "10:00",
 };
@@ -90,7 +90,7 @@ describe("getStep1ValidationError", () => {
   it("rejects return before pickup", () => {
     assert.equal(
       getStep1ValidationError({
-        searchDates: { pickup: "2026-07-05", return: "2026-07-03", pickupTime: "10:00", returnTime: "10:00" },
+        searchDates: { pickup: "2099-07-05", return: "2099-07-03", pickupTime: "10:00", returnTime: "10:00" },
         locationsCount: 0,
         selectedPickupLocation: "",
       }),
@@ -106,6 +106,42 @@ describe("getStep1ValidationError", () => {
         selectedPickupLocation: "",
       }),
       "Please select a pickup location"
+    );
+  });
+
+  it("requires public pickup to be at least 24 hours away", () => {
+    const now = new Date("2030-07-17T13:00:00.000Z"); // 9:00 AM America/New_York
+    const base = {
+      return: "2030-07-20",
+      returnTime: "10:00",
+      locationsCount: 0,
+      selectedPickupLocation: "",
+      now,
+    };
+
+    assert.equal(
+      getStep1ValidationError({
+        ...base,
+        searchDates: {
+          pickup: "2030-07-18",
+          return: base.return,
+          pickupTime: "08:59",
+          returnTime: base.returnTime,
+        },
+      }),
+      "Public bookings must be made at least 24 hours before pickup.",
+    );
+    assert.equal(
+      getStep1ValidationError({
+        ...base,
+        searchDates: {
+          pickup: "2030-07-18",
+          return: base.return,
+          pickupTime: "09:00",
+          returnTime: base.returnTime,
+        },
+      }),
+      null,
     );
   });
 });
@@ -130,7 +166,7 @@ describe("canProceedForStep", () => {
       canProceedForStep(
         baseCanProceed({
           step: 1,
-          searchDates: { ...baseSearchDates, return: "2026-06-01" },
+          searchDates: { ...baseSearchDates, return: "2099-06-01" },
         })
       ),
       false
@@ -141,8 +177,8 @@ describe("canProceedForStep", () => {
     const booked = {
       v1: [
         {
-          pickupDate: "2026-07-01",
-          returnDate: "2026-07-03",
+          pickupDate: "2099-07-01",
+          returnDate: "2099-07-03",
           pickupTime: "10:00",
           returnTime: "10:00",
         },

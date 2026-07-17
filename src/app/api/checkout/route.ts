@@ -16,6 +16,10 @@ import { isYyyyMmDd, isoDateOrderingOk } from "@/lib/utils/booking-dates";
 import { resolveCheckoutCustomer } from "@/lib/bookings/resolve-guest-checkout-customer";
 import { queueGoogleCalendarBookingSync } from "@/lib/integrations/google-calendar/hooks";
 import { getAuthFromRequest } from "@/lib/auth/jwt";
+import {
+  PUBLIC_BOOKING_ADVANCE_ERROR,
+  publicPickupMeetsMinimumAdvance,
+} from "@/lib/booking/public-booking-guards";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
 
@@ -170,6 +174,13 @@ export async function POST(request: NextRequest) {
     if (typeof returnTime === "string" && /^\d{1,2}:\d{2}$/.test(returnTime)) {
       const [h, m] = returnTime.split(":").map(Number);
       returnFull.setHours(h, m, 0, 0);
+    }
+
+    if (!publicPickupMeetsMinimumAdvance(pickupDate, pickupTime)) {
+      return NextResponse.json(
+        { success: false, message: PUBLIC_BOOKING_ADVANCE_ERROR },
+        { status: 400 },
+      );
     }
 
     if (returnFull <= pickupFull) {

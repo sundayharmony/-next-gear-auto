@@ -2,6 +2,10 @@ import { rangesConflictWithSelection, type BookedRange } from "@/lib/booking/boo
 import { localMidnightFromYyyyMmDd } from "@/lib/utils/booking-dates";
 import { calculateRentalHours } from "@/lib/utils/price-calculator";
 import { isValidEmailFormat } from "@/lib/utils/validation";
+import {
+  PUBLIC_BOOKING_ADVANCE_ERROR,
+  publicPickupMeetsMinimumAdvance,
+} from "@/lib/booking/public-booking-guards";
 import type { BookingExtra, Vehicle } from "@/lib/types";
 
 export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -24,6 +28,7 @@ export interface Step1ValidationInput {
   searchDates: SearchDatesState;
   locationsCount: number;
   selectedPickupLocation: string;
+  now?: Date;
 }
 
 /** Pure validation for step 1 — safe to call during render (e.g. disabled button). */
@@ -34,11 +39,21 @@ export function getStep1ValidationError(input: Step1ValidationInput): string | n
     return null;
   }
 
-  const today = new Date();
+  const today = new Date(input.now ?? new Date());
   today.setHours(0, 0, 0, 0);
   const pickupDate = localMidnightFromYyyyMmDd(searchDates.pickup);
   if (isNaN(pickupDate.getTime()) || pickupDate < today) {
     return "Pick-up date cannot be in the past";
+  }
+
+  if (
+    !publicPickupMeetsMinimumAdvance(
+      searchDates.pickup,
+      searchDates.pickupTime,
+      input.now,
+    )
+  ) {
+    return PUBLIC_BOOKING_ADVANCE_ERROR;
   }
 
   const returnDate = localMidnightFromYyyyMmDd(searchDates.return);

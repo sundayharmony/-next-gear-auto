@@ -123,7 +123,7 @@ export function bookingConflictsWithAny(
   );
 }
 
-async function hasBlockedDateOverlap(
+export async function hasBlockedDateOverlap(
   supabase: { from: (t: string) => any },
   vehicleId: string,
   pickupDate: string,
@@ -135,7 +135,7 @@ async function hasBlockedDateOverlap(
     .eq("vehicle_id", vehicleId)
     .lte("start_date", returnDate)
     .gte("end_date", pickupDate)
-    .limit(20);
+    .is("cancelled_at", null);
 
   const activeBlocks = (blocks || []).filter(isActiveCalendarBlock);
   return activeBlocks.length > 0;

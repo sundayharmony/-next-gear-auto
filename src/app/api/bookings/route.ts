@@ -35,6 +35,10 @@ import {
 import { sanitizePostgrestSearch } from "@/lib/utils/safe-url";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import { notifyVehicleOwner } from "@/lib/owner/notifications";
+import {
+  PUBLIC_BOOKING_ADVANCE_ERROR,
+  publicPickupMeetsMinimumAdvance,
+} from "@/lib/booking/public-booking-guards";
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
@@ -483,6 +487,16 @@ export async function POST(request: NextRequest) {
     if (!isoDateOrderingOk(body.pickupDate, body.returnDate)) {
       return NextResponse.json(
         { success: false, message: "returnDate must be on or after pickupDate" },
+        { status: 400 },
+      );
+    }
+    if (
+      !isAdminUser &&
+      !isManagerUser &&
+      !publicPickupMeetsMinimumAdvance(body.pickupDate, body.pickupTime)
+    ) {
+      return NextResponse.json(
+        { success: false, message: PUBLIC_BOOKING_ADVANCE_ERROR },
         { status: 400 },
       );
     }

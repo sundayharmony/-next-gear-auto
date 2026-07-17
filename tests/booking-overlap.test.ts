@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   bookingIntervalsConflict,
   bookingConflictsWithAny,
+  hasBlockedDateOverlap,
   toBookingInterval,
 } from "@/lib/utils/booking-overlap";
 
@@ -47,4 +48,54 @@ test("bookingConflictsWithAny aggregates rows", () => {
     },
   ];
   assert.equal(bookingConflictsWithAny(proposed, rows, 60), false);
+});
+
+test("blocked-date overlap filters cancellations before evaluating active Turo rows", async () => {
+  const calls: string[] = [];
+  const query = {
+    data: [
+      {
+        id: "active-turo",
+        cancelled_at: null,
+        reason: "Turo: Bledi — $377.99",
+      },
+    ],
+    select() {
+      calls.push("select");
+      return this;
+    },
+    eq() {
+      calls.push("eq");
+      return this;
+    },
+    lte() {
+      calls.push("lte");
+      return this;
+    },
+    gte() {
+      calls.push("gte");
+      return this;
+    },
+    is(column: string, value: null) {
+      calls.push(`is:${column}:${value}`);
+      return this;
+    },
+  };
+  const supabase = {
+    from(table: string) {
+      assert.equal(table, "blocked_dates");
+      return query;
+    },
+  };
+
+  assert.equal(
+    await hasBlockedDateOverlap(
+      supabase,
+      "0211bbf5-79a3-4a84-9a73-aa63dd4c38ac",
+      "2026-07-17",
+      "2026-07-19",
+    ),
+    true,
+  );
+  assert.ok(calls.includes("is:cancelled_at:null"));
 });
