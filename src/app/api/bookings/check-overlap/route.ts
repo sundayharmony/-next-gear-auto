@@ -26,6 +26,8 @@ export async function GET(req: NextRequest) {
   const staffAuth = await verifyAdminOrManager(req);
   let overlapMode: BookingOverlapMode = "default";
   let ownerId: string | null = null;
+  // Admins and managers can overbook - they bypass overlap checks on the actual booking creation
+  const canOverbook = staffAuth.authorized && (staffAuth.role === "admin" || staffAuth.role === "manager");
 
   if (staffAuth.authorized) {
     overlapMode = staffAuth.role === "manager" ? "manager" : "default";
@@ -121,6 +123,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       hasOverlap: hasRealOverlap || blockedConflict,
+      canOverbook,
       conflicting: conflicting || [],
       blockedDates: blockedConflict ? "Vehicle has blocked dates in this range (Turo or manual block)" : null,
     });

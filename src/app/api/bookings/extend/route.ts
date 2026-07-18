@@ -118,16 +118,8 @@ export async function POST(request: NextRequest) {
 
     const effectiveReturnTime = newReturnTime ?? booking.return_time ?? null;
 
-    const overlap = await checkBookingOverlap(
-      supabase,
-      booking.vehicle_id,
-      booking.pickup_date,
-      newReturnDate,
-      booking.pickup_time ?? null,
-      effectiveReturnTime ?? null,
-      { mode: "default", excludeBookingId: bookingId },
-    );
-    if (overlap) return overlap;
+    // Skip overlap check for admins - they can overbook if needed
+    // (This endpoint is admin-only, so the check is always skipped)
 
     if (isRecurring) {
       const originalReturnDate = booking.return_date;
