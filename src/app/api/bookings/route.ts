@@ -516,9 +516,8 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Double-booking check — admins bypass; managers use confirmed/active + blocked_dates only (no 60min gap)
-    const canBypassOverlap = isAdminUser;
-    const overlapMode = isManagerUser ? "manager" : "default";
+    // Double-booking check — admins and managers can bypass (overbook); customers/public use strict checks
+    const canBypassOverlap = isAdminUser || isManagerUser;
     if (!canBypassOverlap && body.vehicleId && body.pickupDate && body.returnDate) {
       const overlap = await checkBookingOverlap(
         supabase,
@@ -527,7 +526,6 @@ export async function POST(request: NextRequest) {
         body.returnDate,
         body.pickupTime || null,
         body.returnTime || null,
-        { mode: overlapMode },
       );
       if (overlap) return overlap;
     }
@@ -641,7 +639,6 @@ export async function POST(request: NextRequest) {
         body.returnDate,
         body.pickupTime || null,
         body.returnTime || null,
-        { mode: overlapMode },
       );
       if (finalOverlap) return finalOverlap;
     }
@@ -972,20 +969,15 @@ export async function PATCH(request: NextRequest) {
       }
     }
 
-    const isAdminEditor = auth.role === "admin";
     const schedulingKeys = ["vehicle_id", "pickup_date", "return_date", "pickup_time", "return_time"] as const;
     const scheduleChanged = schedulingKeys.some((k) => updateFields[k] !== undefined && updateFields[k] !== booking[k]);
-    const managerTouchesSchedule =
-      !isAdminEditor &&
-      isManagerEditor &&
+    const staffTouchesSchedule =
+      (auth.role === "admin" || isManagerEditor) &&
       schedulingKeys.some((k) => updateFields[k] !== undefined);
 
-    if (managerTouchesSchedule) {
-      const vId = String(updateFields.vehicle_id ?? booking.vehicle_id);
+    if (staffTouchesSchedule) {
       const pu = String(updateFields.pickup_date ?? booking.pickup_date);
       const rd = String(updateFields.return_date ?? booking.return_date);
-      const pt = (updateFields.pickup_time !== undefined ? updateFields.pickup_time : booking.pickup_time) as string | null;
-      const rt = (updateFields.return_time !== undefined ? updateFields.return_time : booking.return_time) as string | null;
 
       if (!isYyyyMmDd(pu) || !isYyyyMmDd(rd)) {
         return NextResponse.json(
@@ -999,15 +991,9 @@ export async function PATCH(request: NextRequest) {
           { status: 400 },
         );
       }
-
-      const overlap = await checkBookingOverlap(supabase, vId, pu, rd, pt ?? null, rt ?? null, {
-        mode: "manager",
-        excludeBookingId: bookingId,
-      });
-      if (overlap) return overlap;
     }
 
-    // Admins can change dates on any booking — skip overlap check for PATCH (managers validated above)
+    // Admins and managers can change dates on any booking — skip overlap check for PATCH (staff can overbook)
 
     const { error } = await supabase
       .from("bookings")
