@@ -65,7 +65,7 @@ export const managerBookingsConfig: BookingsPageConfig = {
   bookingsEndpoint: "/api/manager/bookings",
   vehiclesEndpoint: "/api/admin/vehicles",
   customersEndpoint: "/api/admin/customers",
-  sendBookingEmailEndpoint: null,
+  sendBookingEmailEndpoint: "/api/admin/send-booking-email",
   customerDetailsBasePath: "/manager/customers",
   ticketsPagePath: "/manager/tickets",
   capabilities: {
@@ -73,7 +73,7 @@ export const managerBookingsConfig: BookingsPageConfig = {
     canBulkUpdate: false,
     canBulkEmail: false,
     canCreateBookings: true,
-    canSendBookingEmail: false,
+    canSendBookingEmail: true,
     canSendInvoice: true,
     canViewAdminNotes: false,
     canViewActivityTimeline: false,

@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { verifyAdmin } from "@/lib/auth/admin-check";
+import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { sendBookingSignAgreement } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
 
 export async function POST(req: NextRequest) {
-  const auth = await verifyAdmin(req);
+  const auth = await verifyAdminOrManager(req);
   if (!auth.authorized) return auth.response;
 
   try {
@@ -21,6 +21,24 @@ export async function POST(req: NextRequest) {
     }
 
     const supabase = getServiceSupabase();
+
+    // Managers can only send emails for their own bookings
+    if (auth.role === "manager") {
+      const { data: bookingCheck } = await supabase
+        .from("bookings")
+        .select("created_by_user_id, origin_channel")
+        .eq("id", bookingId)
+        .maybeSingle();
+
+      if (!bookingCheck || 
+          bookingCheck.origin_channel !== "manager_panel" || 
+          bookingCheck.created_by_user_id !== auth.userId) {
+        return NextResponse.json(
+          { success: false, message: "You can only send emails for your own bookings" },
+          { status: 403 }
+        );
+      }
+    }
 
     // If resetAgreement is true, clear the existing agreement so the customer
     // can sign a fresh one from the link we're about to send.
