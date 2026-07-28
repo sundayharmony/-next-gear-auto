@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from "react";
-import { X, Check, AlertTriangle, Calculator, MapPin, Upload, User, Car, CalendarDays, Package, CreditCard, Clock, Shield, FileText } from "lucide-react";
+import { X, Check, AlertTriangle, Calculator, Upload, User, Car, CalendarDays, Package, CreditCard, Clock, Shield, FileText } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +29,7 @@ import { useCreateBookingPricing } from "../hooks/use-create-booking-pricing";
 import { useCreateBookingOverlap } from "../hooks/use-create-booking-overlap";
 import { BookingFormSectionHeader } from "@/components/forms/booking-form-section-header";
 import { FormField } from "@/components/ui/form-field";
+import { LocationCombobox } from "@/components/location-combobox";
 
 interface CreateBookingFormProps {
   vehicles: Vehicle[];
@@ -692,48 +693,35 @@ export default function CreateBookingForm({
           )}
 
           {/* Locations */}
-          {!locationsLoading && locations.length > 0 && (
+          {!locationsLoading && (
             <div className="space-y-3 pt-1">
-              <div>
-                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 flex items-center gap-1">
-                  <MapPin className="w-3 h-3 text-purple-500" /> Pickup Location
-                </label>
-                <Select
-                  value={pickupLocationId}
-                  onChange={(e) => {
-                    setPickupLocationId(e.target.value);
-                    if (!differentDropoff) setReturnLocationId(e.target.value);
-                  }}
-                >
-                  <option value="">Select location...</option>
-                  {locations.map(l => (
-                    <option key={l.id} value={l.id}>
-                      {l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}{l.is_default ? ' (Default)' : ''}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+              {locationsError && (
+                <p className="text-xs text-amber-700">{locationsError}</p>
+              )}
+              <LocationCombobox
+                label="Pickup Location"
+                locations={locations}
+                value={pickupLocationId}
+                enableAddressSearch={!isOwnerVariant}
+                onLocationsChange={setLocationsState}
+                onChange={(id) => {
+                  setPickupLocationId(id);
+                  if (!differentDropoff) setReturnLocationId(id);
+                }}
+              />
               <label className="flex items-center gap-2 cursor-pointer">
                 <input type="checkbox" checked={differentDropoff} onChange={(e) => { setDifferentDropoff(e.target.checked); if (!e.target.checked) setReturnLocationId(pickupLocationId); }} className="rounded border-gray-300 text-purple-600 focus:ring-purple-500" />
                 <span className="text-xs text-gray-600">Different dropoff location</span>
               </label>
               {differentDropoff && (
-                <div>
-                  <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5 flex items-center gap-1">
-                    <MapPin className="w-3 h-3 text-purple-500" /> Dropoff Location
-                  </label>
-                  <Select
-                    value={returnLocationId}
-                    onChange={(e) => setReturnLocationId(e.target.value)}
-                  >
-                    <option value="">Select location...</option>
-                    {locations.map(l => (
-                      <option key={l.id} value={l.id}>
-                        {l.name}{l.surcharge > 0 ? ` (+$${l.surcharge.toFixed(2)})` : ''}{l.is_default ? ' (Default)' : ''}
-                      </option>
-                    ))}
-                  </Select>
-                </div>
+                <LocationCombobox
+                  label="Dropoff Location"
+                  locations={locations}
+                  value={returnLocationId}
+                  enableAddressSearch={!isOwnerVariant}
+                  onLocationsChange={setLocationsState}
+                  onChange={setReturnLocationId}
+                />
               )}
             </div>
           )}
