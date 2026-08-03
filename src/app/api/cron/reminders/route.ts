@@ -11,7 +11,7 @@ import { isRecurringLongTermBooking } from "@/lib/bookings/recurring-payments";
 import {
   getRecurringBillingSummary,
   getStagedRecurringReturnDate,
-  isWeeklyDueOnDate,
+  isRecurringPaymentDueOnDate,
   parseRecurringBookingMeta,
 } from "@/lib/utils/recurring-booking";
 import { getBusinessTodayYyyyMmDd } from "@/lib/utils/booking-dates";
@@ -148,8 +148,7 @@ export async function GET(request: Request) {
 
     for (const booking of recurringActive || []) {
       const meta = parseRecurringBookingMeta(booking.admin_notes);
-      if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) continue;
-      if (!isWeeklyDueOnDate(meta.weeklyDueDay, todayStr)) continue;
+      if (!isRecurringPaymentDueOnDate(meta, todayStr)) continue;
 
       const billing = getRecurringBillingSummary(
         {
@@ -205,7 +204,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `Sent ${pickupCount} pickup, ${returnCount} return, ${paymentReminderCount} weekly payment reminders; advanced ${advancedPeriodCount} recurring periods`,
+      message: `Sent ${pickupCount} pickup, ${returnCount} return, ${paymentReminderCount} recurring payment reminders; advanced ${advancedPeriodCount} recurring periods`,
       timestamp: new Date().toISOString(),
     });
   } catch (error) {

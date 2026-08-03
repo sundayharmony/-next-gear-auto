@@ -205,6 +205,7 @@ export async function createPanelBooking(
         const existingMeta = parseRecurringBookingMeta(rawAdminNotes);
         return upsertRecurringBookingMeta(rawAdminNotes, {
           isRecurringLongTerm: existingMeta.isRecurringLongTerm,
+          periodType: existingMeta.periodType,
           weeklyDueDay: existingMeta.weeklyDueDay,
         });
       })()

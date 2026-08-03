@@ -12,11 +12,13 @@ import {
   getBookingDisplayTotal,
   getDisplayReturnDate,
   getRecurringBillingSummary,
+  getRecurringPeriodType,
   getStagedRecurringReturnDate,
   getNextRecurringPeriodEnd,
   parseRecurringBookingMeta,
   stripRecurringBookingMeta,
   upsertRecurringBookingMeta,
+  type RecurringPeriodType,
   type WeeklyDueDay,
 } from "@/lib/utils/recurring-booking";
 import { isAllowedExternalHref } from "@/lib/utils/safe-url";
@@ -154,6 +156,7 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
 
   const canGenerateWeekToWeekContract =
     recurringMeta.isRecurringLongTerm &&
+    getRecurringPeriodType(recurringMeta) === "weekly" &&
     (booking.status === "confirmed" || booking.status === "active");
 
   const displayTotalPrice = getBookingDisplayTotal(booking);
@@ -275,7 +278,7 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
       const updated = { ...booking, return_date: nextRecurringPeriodEnd };
       onUpdateBooking(updated);
       setEditData(updated);
-      onSuccess(`Continued next week to ${nextRecurringPeriodEnd}`);
+      onSuccess(`Continued next ${getRecurringPeriodType(recurringMeta) === "daily" ? "day" : "week"} to ${nextRecurringPeriodEnd}`);
     } catch (err) {
       logger.error("Failed to continue recurring period", err);
       onError(err instanceof Error ? err.message : "Failed to continue billing period");
@@ -286,6 +289,7 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
     nextRecurringPeriodEnd,
     saving,
     booking,
+    recurringMeta,
     onUpdateBooking,
     setEditData,
     onSuccess,
@@ -302,17 +306,28 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
 
   const updateRecurringMeta = useCallback(
     (
-      next: Partial<{ isRecurringLongTerm: boolean; weeklyDueDay: WeeklyDueDay | undefined }>
+      next: Partial<{
+        isRecurringLongTerm: boolean;
+        periodType: RecurringPeriodType;
+        weeklyDueDay: WeeklyDueDay | undefined;
+      }>
     ) => {
       const current = parseRecurringBookingMeta(
         typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes
       );
       const merged = {
         isRecurringLongTerm: next.isRecurringLongTerm ?? current.isRecurringLongTerm,
+        periodType: next.periodType ?? current.periodType ?? getRecurringPeriodType(current),
         weeklyDueDay: next.weeklyDueDay ?? current.weeklyDueDay,
       };
       if (!merged.isRecurringLongTerm) {
         merged.weeklyDueDay = undefined;
+        merged.periodType = "weekly";
+      } else if (getRecurringPeriodType(merged) === "daily") {
+        merged.weeklyDueDay = undefined;
+        merged.periodType = "daily";
+      } else {
+        merged.periodType = "weekly";
       }
       const updatedNotes = upsertRecurringBookingMeta(
         typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes,
@@ -696,8 +711,18 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
           setEditData(updated);
           onSuccess(
             result.data?.payments_added
-              ? `Marked caught up through ${recurringBilling.weeksDue} week(s)`
-              : "Already caught up on weekly payments"
+              ? `Marked caught up through ${recurringBilling.weeksDue} ${
+                  recurringBilling.periodType === "daily"
+                    ? recurringBilling.weeksDue === 1
+                      ? "day"
+                      : "days"
+                    : recurringBilling.weeksDue === 1
+                      ? "week"
+                      : "weeks"
+                }`
+              : `Already caught up on ${
+                  recurringBilling.periodType === "daily" ? "daily" : "weekly"
+                } payments`
           );
           return;
         }

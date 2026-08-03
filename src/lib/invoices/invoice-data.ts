@@ -99,12 +99,17 @@ export function buildBookingInvoiceData(
   const lineItems: InvoiceLineItem[] = [];
 
   if (recurring) {
+    const periodAdjective = recurring.periodType === "daily" ? "Daily" : "Weekly";
+    const periodNoun = recurring.periodType === "daily" ? "day" : "week";
+    const periodNounPlural = recurring.periodType === "daily" ? "days" : "weeks";
     lineItems.push({
-      label: `Weekly rental rate`,
+      label: `${periodAdjective} rental rate`,
       amount: recurring.weeklyRate,
     });
     lineItems.push({
-      label: `Contract total (${recurring.weeksDue} week${recurring.weeksDue === 1 ? "" : "s"} due)`,
+      label: `Contract total (${recurring.weeksDue} ${
+        recurring.weeksDue === 1 ? periodNoun : periodNounPlural
+      } due)`,
       amount: recurring.contractTotalToDate,
     });
   } else if (

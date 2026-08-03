@@ -24,6 +24,9 @@ import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { isAllowedExternalHref } from "@/lib/utils/safe-url";
 import {
   WEEKLY_DUE_DAY_OPTIONS,
+  RECURRING_PERIOD_TYPE_OPTIONS,
+  getRecurringPeriodType,
+  type RecurringPeriodType,
   type WeeklyDueDay,
 } from "@/lib/utils/recurring-booking";
 import {
@@ -105,6 +108,12 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
       ? extensionCalendarDays(extendBaseReturn, extendDate)
       : 0;
   const isRecurringExtend = recurringMeta.isRecurringLongTerm;
+  const recurringPeriodType = getRecurringPeriodType(recurringMeta);
+  const periodNoun = recurringPeriodType === "daily" ? "day" : "week";
+  const periodNounPlural = recurringPeriodType === "daily" ? "days" : "weeks";
+  const periodAdjective = recurringPeriodType === "daily" ? "daily" : "weekly";
+  const rateLabel =
+    recurringPeriodType === "daily" ? "Daily rate" : "Weekly rate";
 
   const applyExtendDays = (rawDays: number) => {
     const days = Math.max(1, Math.floor(rawDays) || 1);
@@ -212,7 +221,7 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-gray-600">
-                {recurringBilling ? "Weekly rate" : "Total Price"}
+                {recurringBilling ? rateLabel : "Total Price"}
               </span>
               <span className="font-semibold">
                 ${(recurringBilling?.weeklyRate ?? booking.total_price ?? 0).toFixed(2)}
@@ -221,8 +230,8 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
             {recurringBilling && (
               <div className="flex justify-between text-sm">
                 <span className="text-gray-600">
-                  Contract to date ({recurringBilling.weeksDue} week
-                  {recurringBilling.weeksDue === 1 ? "" : "s"})
+                  Contract to date ({recurringBilling.weeksDue}{" "}
+                  {recurringBilling.weeksDue === 1 ? periodNoun : periodNounPlural})
                 </span>
                 <span className="font-semibold">${displayTotalPrice.toFixed(2)}</span>
               </div>
@@ -346,7 +355,7 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
                 >
                   <Check className="w-3 h-3 mr-1" />
                   {recurringBilling
-                    ? "Mark weekly payments caught up"
+                    ? `Mark ${periodAdjective} payments caught up`
                     : "Mark Fully Paid"}
                 </Button>
               ) : (
@@ -518,7 +527,7 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
 
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">
-                  {isRecurringExtend ? "New weekly rate ($)" : "Extension Charge ($)"}
+                  {isRecurringExtend ? `New ${rateLabel.toLowerCase()} ($)` : "Extension Charge ($)"}
                 </label>
                 <input
                   type="number"
@@ -531,7 +540,7 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
                 />
                 <p className="text-xs text-gray-400 mt-1">
                   {isRecurringExtend
-                    ? "Leave 0 to keep the current weekly rate. A non-zero amount replaces the weekly rate."
+                    ? `Leave 0 to keep the current ${rateLabel.toLowerCase()}. A non-zero amount replaces the ${rateLabel.toLowerCase()}.`
                     : "Auto-filled from daily rate; edit anytime. Enter 0 for a free extension."}
                 </p>
               </div>
@@ -626,26 +635,56 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
               Mark this booking as recurring long-term
             </label>
 
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
-                Weekly Due Day
-              </label>
-              <Select
-                value={recurringMeta.weeklyDueDay || ""}
-                onChange={(e) =>
-                  updateRecurringMeta({
-                    weeklyDueDay: (e.target.value || undefined) as WeeklyDueDay | undefined,
-                  })
-                }
-                disabled={!recurringMeta.isRecurringLongTerm}
-              >
-                <option value="">Select due day</option>
-                {WEEKLY_DUE_DAY_OPTIONS.map((day) => (
-                  <option key={day} value={day}>
-                    {day}
-                  </option>
-                ))}
-              </Select>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
+                  Period type
+                </label>
+                <Select
+                  value={getRecurringPeriodType(recurringMeta)}
+                  onChange={(e) =>
+                    updateRecurringMeta({
+                      periodType: e.target.value as RecurringPeriodType,
+                      weeklyDueDay:
+                        e.target.value === "daily"
+                          ? undefined
+                          : recurringMeta.weeklyDueDay,
+                    })
+                  }
+                  disabled={!recurringMeta.isRecurringLongTerm}
+                >
+                  {RECURRING_PERIOD_TYPE_OPTIONS.map((type) => (
+                    <option key={type} value={type}>
+                      {type === "daily" ? "Day to day" : "Week to week"}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {getRecurringPeriodType(recurringMeta) === "weekly" ? (
+                <div>
+                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">
+                    Weekly Due Day
+                  </label>
+                  <Select
+                    value={recurringMeta.weeklyDueDay || ""}
+                    onChange={(e) =>
+                      updateRecurringMeta({
+                        weeklyDueDay: (e.target.value || undefined) as
+                          | WeeklyDueDay
+                          | undefined,
+                      })
+                    }
+                    disabled={!recurringMeta.isRecurringLongTerm}
+                  >
+                    <option value="">Select due day</option>
+                    {WEEKLY_DUE_DAY_OPTIONS.map((day) => (
+                      <option key={day} value={day}>
+                        {day}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              ) : null}
             </div>
           </div>
         ) : (
@@ -653,14 +692,21 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
             {recurringMeta.isRecurringLongTerm ? (
               <>
                 <Badge className="bg-purple-100 text-purple-800">
-                  Recurring Long-Term: Enabled
+                  Recurring Long-Term:{" "}
+                  {recurringPeriodType === "daily" ? "Day to day" : "Week to week"}
                 </Badge>
-                <p className="text-sm text-gray-600">
-                  Weekly due day:{" "}
-                  <span className="font-medium text-gray-800">
-                    {recurringMeta.weeklyDueDay || "Not set"}
-                  </span>
-                </p>
+                {recurringPeriodType === "weekly" ? (
+                  <p className="text-sm text-gray-600">
+                    Weekly due day:{" "}
+                    <span className="font-medium text-gray-800">
+                      {recurringMeta.weeklyDueDay || "Not set"}
+                    </span>
+                  </p>
+                ) : (
+                  <p className="text-sm text-gray-600">
+                    Billed daily at the daily rate through today.
+                  </p>
+                )}
                 {stagedRecurringReturn ? (
                   <Button
                     size="sm"
@@ -680,28 +726,32 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
                       disabled={saving || !["confirmed", "active"].includes(booking.status)}
                       onClick={() => void handleContinueRecurringPeriod()}
                     >
-                      Continue next week (to {nextRecurringPeriodEnd})
+                      Continue next {periodNoun} (to {nextRecurringPeriodEnd})
                     </Button>
                     <p className="text-xs text-gray-500">
-                      Rolls the period end forward without changing the weekly rate. Use “Mark weekly payments caught up” separately for money.
+                      Rolls the period end forward without changing the{" "}
+                      {rateLabel.toLowerCase()}. Use “Mark {periodAdjective} payments caught up”
+                      separately for money.
                     </p>
                   </div>
                 ) : null}
-                {canGenerateWeekToWeekContract ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="text-xs"
-                    onClick={openWeekToWeekContract}
-                  >
-                    <FileText className="w-3 h-3 mr-1" />
-                    Open Week-to-Week Contract
-                  </Button>
-                ) : (
-                  <p className="text-xs text-amber-700">
-                    Week-to-week contract is available after booking is confirmed or active.
-                  </p>
-                )}
+                {recurringPeriodType === "weekly" ? (
+                  canGenerateWeekToWeekContract ? (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={openWeekToWeekContract}
+                    >
+                      <FileText className="w-3 h-3 mr-1" />
+                      Open Week-to-Week Contract
+                    </Button>
+                  ) : (
+                    <p className="text-xs text-amber-700">
+                      Week-to-week contract is available after booking is confirmed or active.
+                    </p>
+                  )
+                ) : null}
               </>
             ) : (
               <p className="text-sm text-gray-500">

@@ -7,6 +7,7 @@ import {
 
 const RECURRING_FLAG_KEY = "RECURRING_LONG_TERM";
 const WEEKLY_DUE_DAY_KEY = "WEEKLY_DUE_DAY";
+const PERIOD_TYPE_KEY = "PERIOD_TYPE";
 const META_LINE_REGEX = /^\[([A-Z_]+):(.*)\]$/;
 
 export const WEEKLY_DUE_DAY_OPTIONS = [
@@ -20,6 +21,9 @@ export const WEEKLY_DUE_DAY_OPTIONS = [
 ] as const;
 
 export type WeeklyDueDay = (typeof WEEKLY_DUE_DAY_OPTIONS)[number];
+export type RecurringPeriodType = "weekly" | "daily";
+
+export const RECURRING_PERIOD_TYPE_OPTIONS: RecurringPeriodType[] = ["weekly", "daily"];
 
 const WEEKLY_DUE_JS_DAY: Record<WeeklyDueDay, number> = {
   Sunday: 0,
@@ -31,8 +35,13 @@ const WEEKLY_DUE_JS_DAY: Record<WeeklyDueDay, number> = {
   Saturday: 6,
 };
 
+/** Max roll iterations: ~10y weekly or ~10y daily. */
+const MAX_PERIOD_ROLLS = 4000;
+
 export interface RecurringBookingMeta {
   isRecurringLongTerm: boolean;
+  /** Defaults to weekly when omitted (legacy notes). */
+  periodType?: RecurringPeriodType;
   weeklyDueDay?: WeeklyDueDay;
 }
 
@@ -42,6 +51,27 @@ function normalizeWeeklyDueDay(value: string | undefined): WeeklyDueDay | undefi
     (day) => day.toLowerCase() === value.trim().toLowerCase()
   );
   return matched;
+}
+
+function normalizePeriodType(value: string | undefined): RecurringPeriodType | undefined {
+  if (!value) return undefined;
+  const normalized = value.trim().toLowerCase();
+  if (normalized === "daily") return "daily";
+  if (normalized === "weekly") return "weekly";
+  return undefined;
+}
+
+/** Effective period type for a recurring booking (legacy notes without PERIOD_TYPE ⇒ weekly). */
+export function getRecurringPeriodType(meta: RecurringBookingMeta): RecurringPeriodType {
+  if (meta.periodType === "daily") return "daily";
+  return "weekly";
+}
+
+/** True when recurring LT is fully configured for billing/roll. */
+export function isRecurringConfigured(meta: RecurringBookingMeta): boolean {
+  if (!meta.isRecurringLongTerm) return false;
+  if (getRecurringPeriodType(meta) === "daily") return true;
+  return Boolean(meta.weeklyDueDay);
 }
 
 export function parseRecurringBookingMeta(notes?: string | null): RecurringBookingMeta {
@@ -59,7 +89,8 @@ export function parseRecurringBookingMeta(notes?: string | null): RecurringBooki
   const recurringRaw = metadata.get(RECURRING_FLAG_KEY);
   const isRecurringLongTerm = recurringRaw?.toLowerCase() === "true";
   const weeklyDueDay = normalizeWeeklyDueDay(metadata.get(WEEKLY_DUE_DAY_KEY));
-  return { isRecurringLongTerm, weeklyDueDay };
+  const periodType = normalizePeriodType(metadata.get(PERIOD_TYPE_KEY));
+  return { isRecurringLongTerm, weeklyDueDay, periodType };
 }
 
 export function stripRecurringBookingMeta(notes?: string | null): string {
@@ -81,8 +112,12 @@ export function upsertRecurringBookingMeta(
 
   const metaLines: string[] = [];
   metaLines.push(`[${RECURRING_FLAG_KEY}:${meta.isRecurringLongTerm ? "true" : "false"}]`);
-  if (meta.weeklyDueDay) {
-    metaLines.push(`[${WEEKLY_DUE_DAY_KEY}:${meta.weeklyDueDay}]`);
+  if (meta.isRecurringLongTerm) {
+    const periodType = getRecurringPeriodType(meta);
+    metaLines.push(`[${PERIOD_TYPE_KEY}:${periodType}]`);
+    if (periodType === "weekly" && meta.weeklyDueDay) {
+      metaLines.push(`[${WEEKLY_DUE_DAY_KEY}:${meta.weeklyDueDay}]`);
+    }
   }
 
   if (!cleanedNotes) {
@@ -105,9 +140,22 @@ export function nextWeeklyDueOnOrAfter(
   return formatYyyyMmDdLocal(cursor);
 }
 
+/** Next period end after `fromIso` for the given recurring configuration. */
+export function nextRecurringPeriodEndOnOrAfter(
+  fromIso: string,
+  meta: RecurringBookingMeta
+): string | null {
+  if (!isRecurringConfigured(meta)) return null;
+  if (getRecurringPeriodType(meta) === "daily") {
+    return fromIso.split("T")[0];
+  }
+  if (!meta.weeklyDueDay) return null;
+  return nextWeeklyDueOnOrAfter(fromIso, meta.weeklyDueDay);
+}
+
 /**
  * For recurring long-term rentals, the stored `return_date` is the end of the current billing
- * period. After that day passes, the contract rolls forward to the next weekly due date.
+ * period. After that day passes, the contract rolls forward to the next period end.
  */
 export function getEffectiveReturnDate(
   storedReturnDate: string,
@@ -115,17 +163,17 @@ export function getEffectiveReturnDate(
   todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): string {
   const meta = parseRecurringBookingMeta(adminNotes);
-  if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) {
+  if (!isRecurringConfigured(meta)) {
     return storedReturnDate;
   }
 
-  let effective = storedReturnDate;
+  let effective = storedReturnDate.split("T")[0];
   let guard = 0;
-  while (effective < todayYyyyMmDd && guard < 520) {
-    const next = nextWeeklyDueOnOrAfter(
-      addCalendarDaysYyyyMmDd(effective, 1),
-      meta.weeklyDueDay
-    );
+  while (effective < todayYyyyMmDd && guard < MAX_PERIOD_ROLLS) {
+    const next =
+      getRecurringPeriodType(meta) === "daily"
+        ? addCalendarDaysYyyyMmDd(effective, 1)
+        : nextWeeklyDueOnOrAfter(addCalendarDaysYyyyMmDd(effective, 1), meta.weeklyDueDay!);
     if (next <= effective) break;
     effective = next;
     guard++;
@@ -164,7 +212,7 @@ export function isActiveBookingOverdue(
 ): boolean {
   if (status !== "active") return false;
   const meta = parseRecurringBookingMeta(adminNotes);
-  if (meta.isRecurringLongTerm && meta.weeklyDueDay) {
+  if (isRecurringConfigured(meta)) {
     return false;
   }
   return storedReturnDate < todayYyyyMmDd;
@@ -208,11 +256,6 @@ export function getBookingBalanceDue(
   return Math.max(0, total - (Number(booking.deposit) || 0));
 }
 
-/**
- * End date used for vehicle occupancy (overlap, booked-dates, availability).
- * Recurring LT uses rolled weekly due; active rentals extend through today so the
- * vehicle stays blocked while the contract is ongoing.
- */
 /** Stored return_date to persist when the rolled billing period has moved forward. */
 export function getStagedRecurringReturnDate(
   storedReturnDate: string,
@@ -220,7 +263,7 @@ export function getStagedRecurringReturnDate(
   todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): string | null {
   const meta = parseRecurringBookingMeta(adminNotes);
-  if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) return null;
+  if (!isRecurringConfigured(meta)) return null;
 
   const storedKey = storedReturnDate.split("T")[0];
   const effective = getEffectiveReturnDate(storedKey, adminNotes, todayYyyyMmDd);
@@ -228,22 +271,21 @@ export function getStagedRecurringReturnDate(
 }
 
 /**
- * Next weekly period end after the current stored return_date.
- * Works on/before/after the due day (unlike getStagedRecurringReturnDate, which
- * only returns a value after the stored period has already passed).
+ * Next period end after the current stored return_date.
+ * Works on/before/after the due day (unlike getStagedRecurringReturnDate).
  */
 export function getNextRecurringPeriodEnd(
   storedReturnDate: string,
   adminNotes?: string | null,
 ): string | null {
   const meta = parseRecurringBookingMeta(adminNotes);
-  if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) return null;
+  if (!isRecurringConfigured(meta)) return null;
 
   const storedKey = storedReturnDate.split("T")[0];
-  const next = nextWeeklyDueOnOrAfter(
-    addCalendarDaysYyyyMmDd(storedKey, 1),
-    meta.weeklyDueDay,
-  );
+  const next =
+    getRecurringPeriodType(meta) === "daily"
+      ? addCalendarDaysYyyyMmDd(storedKey, 1)
+      : nextWeeklyDueOnOrAfter(addCalendarDaysYyyyMmDd(storedKey, 1), meta.weeklyDueDay!);
   return next > storedKey ? next : null;
 }
 
@@ -252,6 +294,16 @@ export function isWeeklyDueOnDate(
   dateIso: string
 ): boolean {
   return nextWeeklyDueOnOrAfter(dateIso, weeklyDueDay) === dateIso.split("T")[0];
+}
+
+/** True when a recurring payment reminder should fire for `dateIso`. */
+export function isRecurringPaymentDueOnDate(
+  meta: RecurringBookingMeta,
+  dateIso: string
+): boolean {
+  if (!isRecurringConfigured(meta)) return false;
+  if (getRecurringPeriodType(meta) === "daily") return true;
+  return Boolean(meta.weeklyDueDay && isWeeklyDueOnDate(meta.weeklyDueDay, dateIso));
 }
 
 export function getBookingOccupancyEndDate(
@@ -267,7 +319,7 @@ export function getBookingOccupancyEndDate(
   const storedReturnKey = (booking.return_date || "").split("T")[0];
   const meta = parseRecurringBookingMeta(booking.admin_notes);
 
-  if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) {
+  if (!isRecurringConfigured(meta)) {
     return storedReturnKey;
   }
 
@@ -326,26 +378,49 @@ export function getDisplayReturnDate(
 }
 
 export interface RecurringBillingSummary {
+  periodType: RecurringPeriodType;
+  /** Period rate (daily or weekly). Kept as weeklyRate for back-compat callers. */
   weeklyRate: number;
+  /** Periods due (days or weeks). Kept as weeksDue for back-compat callers. */
   weeksDue: number;
   contractTotalToDate: number;
   amountReceived: number;
   balanceDue: number;
 }
 
-/** Count weekly payment due dates from pickup through today (inclusive). */
 export const RECURRING_WEEK_NOTE_PREFIX = "recurring_week:";
+export const RECURRING_DAY_NOTE_PREFIX = "recurring_day:";
 
 export function recurringWeekPaymentNote(periodEndIso: string): string {
   return `${RECURRING_WEEK_NOTE_PREFIX}${periodEndIso}`;
 }
 
+export function recurringDayPaymentNote(periodEndIso: string): string {
+  return `${RECURRING_DAY_NOTE_PREFIX}${periodEndIso}`;
+}
+
+export function recurringPeriodPaymentNote(
+  periodEndIso: string,
+  periodType: RecurringPeriodType
+): string {
+  return periodType === "daily"
+    ? recurringDayPaymentNote(periodEndIso)
+    : recurringWeekPaymentNote(periodEndIso);
+}
+
 export function parseRecurringWeekPaymentNote(
   note: string | null | undefined
 ): string | null {
-  if (!note?.startsWith(RECURRING_WEEK_NOTE_PREFIX)) return null;
-  const key = note.slice(RECURRING_WEEK_NOTE_PREFIX.length).trim();
-  return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : null;
+  if (!note) return null;
+  if (note.startsWith(RECURRING_WEEK_NOTE_PREFIX)) {
+    const key = note.slice(RECURRING_WEEK_NOTE_PREFIX.length).trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : null;
+  }
+  if (note.startsWith(RECURRING_DAY_NOTE_PREFIX)) {
+    const key = note.slice(RECURRING_DAY_NOTE_PREFIX.length).trim();
+    return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : null;
+  }
+  return null;
 }
 
 const LEGACY_RECURRING_WEEK_NOTE_RE = /^recurring weekly payment \(week (\d+)\)$/i;
@@ -400,6 +475,23 @@ export function getRecognizedRecurringPeriodEnds(
   return paid;
 }
 
+/** Daily due dates from pickup through throughDate (inclusive). */
+export function listRecurringDailyDueDates(
+  pickupDate: string,
+  throughDate: string
+): string[] {
+  const dates: string[] = [];
+  let due = pickupDate.split("T")[0];
+  const end = throughDate.split("T")[0];
+  let guard = 0;
+  while (due <= end && guard < MAX_PERIOD_ROLLS) {
+    dates.push(due);
+    due = addCalendarDaysYyyyMmDd(due, 1);
+    guard++;
+  }
+  return dates;
+}
+
 /** Weekly due dates from pickup through throughDate (inclusive). */
 export function listRecurringWeeklyDueDates(
   pickupDate: string,
@@ -409,7 +501,7 @@ export function listRecurringWeeklyDueDates(
   const dates: string[] = [];
   let due = nextWeeklyDueOnOrAfter(pickupDate, weeklyDueDay);
   let guard = 0;
-  while (due <= throughDate && guard < 520) {
+  while (due <= throughDate && guard < MAX_PERIOD_ROLLS) {
     dates.push(due);
     due = nextWeeklyDueOnOrAfter(addCalendarDaysYyyyMmDd(due, 1), weeklyDueDay);
     guard++;
@@ -417,20 +509,32 @@ export function listRecurringWeeklyDueDates(
   return dates;
 }
 
+export function listRecurringDueDates(
+  pickupDate: string,
+  meta: RecurringBookingMeta,
+  throughDate: string
+): string[] {
+  if (!isRecurringConfigured(meta)) return [];
+  if (getRecurringPeriodType(meta) === "daily") {
+    return listRecurringDailyDueDates(pickupDate, throughDate);
+  }
+  return listRecurringWeeklyDueDates(pickupDate, meta.weeklyDueDay!, throughDate);
+}
+
 export function countRecurringWeeklyPaymentsDue(
   pickupDate: string,
   weeklyDueDay: WeeklyDueDay,
   todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): number {
-  let count = 0;
-  let due = nextWeeklyDueOnOrAfter(pickupDate, weeklyDueDay);
-  let guard = 0;
-  while (due <= todayYyyyMmDd && guard < 520) {
-    count++;
-    due = nextWeeklyDueOnOrAfter(addCalendarDaysYyyyMmDd(due, 1), weeklyDueDay);
-    guard++;
-  }
-  return count;
+  return listRecurringWeeklyDueDates(pickupDate, weeklyDueDay, todayYyyyMmDd).length;
+}
+
+export function countRecurringPaymentsDue(
+  pickupDate: string,
+  meta: RecurringBookingMeta,
+  todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
+): number {
+  return listRecurringDueDates(pickupDate, meta, todayYyyyMmDd).length;
 }
 
 export function getRecurringBillingSummary(
@@ -443,19 +547,17 @@ export function getRecurringBillingSummary(
   todayYyyyMmDd: string = getBusinessTodayYyyyMmDd()
 ): RecurringBillingSummary | null {
   const meta = parseRecurringBookingMeta(booking.admin_notes);
-  if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) return null;
+  if (!isRecurringConfigured(meta)) return null;
 
+  const periodType = getRecurringPeriodType(meta);
   const weeklyRate = Math.max(0, Number(booking.total_price) || 0);
-  const weeksDue = countRecurringWeeklyPaymentsDue(
-    booking.pickup_date,
-    meta.weeklyDueDay,
-    todayYyyyMmDd
-  );
+  const weeksDue = countRecurringPaymentsDue(booking.pickup_date, meta, todayYyyyMmDd);
   const contractTotalToDate = Math.round(weeklyRate * weeksDue * 100) / 100;
   const amountReceived = Math.max(0, Number(booking.deposit) || 0);
   const balanceDue = Math.max(0, Math.round((contractTotalToDate - amountReceived) * 100) / 100);
 
   return {
+    periodType,
     weeklyRate,
     weeksDue,
     contractTotalToDate,
@@ -491,7 +593,7 @@ export function enrichBookingOverdueFields(
   );
 
   const billing =
-    meta.isRecurringLongTerm && booking.pickup_date
+    isRecurringConfigured(meta) && booking.pickup_date
       ? getRecurringBillingSummary(
           {
             pickup_date: booking.pickup_date,
@@ -504,7 +606,7 @@ export function enrichBookingOverdueFields(
       : null;
 
   return {
-    ...(meta.isRecurringLongTerm ? { effective_return_date: effectiveReturn } : {}),
+    ...(isRecurringConfigured(meta) ? { effective_return_date: effectiveReturn } : {}),
     ...(billing
       ? {
           effective_total_price: billing.contractTotalToDate,
