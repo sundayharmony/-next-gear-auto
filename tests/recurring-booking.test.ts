@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import {
   countRecurringWeeklyPaymentsDue,
   getEffectiveReturnDate,
+  getNextRecurringPeriodEnd,
   getRecurringBillingSummary,
+  getStagedRecurringReturnDate,
   isActiveBookingOverdue,
   isRecurringPaymentOverdue,
   nextWeeklyDueOnOrAfter,
@@ -109,4 +111,23 @@ test("recurring billing summary multiplies weekly rate by weeks due", () => {
   assert.equal(summary!.weeksDue, 2);
   assert.equal(summary!.contractTotalToDate, 650);
   assert.equal(summary!.balanceDue, 325);
+});
+
+test("next recurring period end works on or before the due day", () => {
+  // Stored period ends Thursday 2026-05-14; next week is 2026-05-21 even before that day passes.
+  assert.equal(
+    getNextRecurringPeriodEnd("2026-05-14", RECURRING_NOTES),
+    "2026-05-21"
+  );
+  assert.equal(
+    getStagedRecurringReturnDate("2026-05-14", RECURRING_NOTES, "2026-05-14"),
+    null
+  );
+});
+
+test("staged recurring return still only appears after the period has passed", () => {
+  assert.equal(
+    getStagedRecurringReturnDate("2026-05-14", RECURRING_NOTES, "2026-05-16"),
+    "2026-05-21"
+  );
 });

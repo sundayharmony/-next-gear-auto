@@ -1,4 +1,5 @@
 import {
+  addCalendarDaysYyyyMmDd,
   formatYyyyMmDdLocal,
   getBusinessTodayYyyyMmDd,
   localMidnightFromYyyyMmDd,
@@ -88,12 +89,6 @@ export function upsertRecurringBookingMeta(
     return metaLines.join("\n");
   }
   return `${cleanedNotes}\n${metaLines.join("\n")}`;
-}
-
-function addCalendarDaysYyyyMmDd(iso: string, days: number): string {
-  const d = localMidnightFromYyyyMmDd(iso);
-  d.setDate(d.getDate() + days);
-  return formatYyyyMmDdLocal(d);
 }
 
 /** First calendar date on or after `fromIso` that falls on `weeklyDueDay` (local calendar). */
@@ -230,6 +225,26 @@ export function getStagedRecurringReturnDate(
   const storedKey = storedReturnDate.split("T")[0];
   const effective = getEffectiveReturnDate(storedKey, adminNotes, todayYyyyMmDd);
   return effective > storedKey ? effective : null;
+}
+
+/**
+ * Next weekly period end after the current stored return_date.
+ * Works on/before/after the due day (unlike getStagedRecurringReturnDate, which
+ * only returns a value after the stored period has already passed).
+ */
+export function getNextRecurringPeriodEnd(
+  storedReturnDate: string,
+  adminNotes?: string | null,
+): string | null {
+  const meta = parseRecurringBookingMeta(adminNotes);
+  if (!meta.isRecurringLongTerm || !meta.weeklyDueDay) return null;
+
+  const storedKey = storedReturnDate.split("T")[0];
+  const next = nextWeeklyDueOnOrAfter(
+    addCalendarDaysYyyyMmDd(storedKey, 1),
+    meta.weeklyDueDay,
+  );
+  return next > storedKey ? next : null;
 }
 
 export function isWeeklyDueOnDate(

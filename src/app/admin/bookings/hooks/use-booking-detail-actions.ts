@@ -13,6 +13,7 @@ import {
   getDisplayReturnDate,
   getRecurringBillingSummary,
   getStagedRecurringReturnDate,
+  getNextRecurringPeriodEnd,
   parseRecurringBookingMeta,
   stripRecurringBookingMeta,
   upsertRecurringBookingMeta,
@@ -143,6 +144,10 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
     booking.return_date,
     booking.admin_notes
   );
+  const nextRecurringPeriodEnd = getNextRecurringPeriodEnd(
+    booking.return_date,
+    booking.admin_notes
+  );
   const visibleAdminNotes = stripRecurringBookingMeta(
     typeof editData.admin_notes === "string" ? editData.admin_notes : booking.admin_notes
   );
@@ -238,6 +243,47 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
     }
   }, [
     stagedRecurringReturn,
+    saving,
+    booking,
+    onUpdateBooking,
+    setEditData,
+    onSuccess,
+    onError,
+    setSaving,
+  ]);
+
+  const handleContinueRecurringPeriod = useCallback(async () => {
+    if (!nextRecurringPeriodEnd || saving) return;
+    if (!["confirmed", "active"].includes(booking.status)) {
+      onError("Only confirmed or active bookings can continue");
+      return;
+    }
+    setSaving(true);
+    try {
+      const response = await adminFetch(`/api/bookings`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId: booking.id,
+          continueRecurringPeriod: true,
+        }),
+      });
+      if (!response.ok) {
+        const errBody = await response.json().catch(() => ({}));
+        throw new Error(errBody.message || "Failed to continue billing period");
+      }
+      const updated = { ...booking, return_date: nextRecurringPeriodEnd };
+      onUpdateBooking(updated);
+      setEditData(updated);
+      onSuccess(`Continued next week to ${nextRecurringPeriodEnd}`);
+    } catch (err) {
+      logger.error("Failed to continue recurring period", err);
+      onError(err instanceof Error ? err.message : "Failed to continue billing period");
+    } finally {
+      setSaving(false);
+    }
+  }, [
+    nextRecurringPeriodEnd,
     saving,
     booking,
     onUpdateBooking,
@@ -861,7 +907,8 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
       onError("Please enter a valid extension amount (0 or more)");
       return;
     }
-    if (extendDate <= booking.return_date) {
+    const baseReturn = displayReturnDate || booking.return_date;
+    if (extendDate <= baseReturn) {
       onError("New return date must be after the current return date");
       return;
     }
@@ -905,6 +952,7 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
     extendDate,
     extendAmount,
     extendTime,
+    displayReturnDate,
     booking,
     onUpdateBooking,
     onSuccess,
@@ -922,6 +970,7 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
     displayReturnDate,
     recurringBilling,
     stagedRecurringReturn,
+    nextRecurringPeriodEnd,
     visibleAdminNotes,
     canGenerateWeekToWeekContract,
     displayTotalPrice,
@@ -938,6 +987,7 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
     canManageRow,
     openWeekToWeekContract,
     handleAdvanceRecurringPeriod,
+    handleContinueRecurringPeriod,
     toggleEditMode,
     updateRecurringMeta,
     handleStatusStepClick,
