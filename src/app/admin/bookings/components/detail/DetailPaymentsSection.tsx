@@ -27,6 +27,11 @@ import {
   type WeeklyDueDay,
 } from "@/lib/utils/recurring-booking";
 import {
+  addCalendarDaysYyyyMmDd,
+  extensionCalendarDays,
+} from "@/lib/utils/booking-dates";
+import { suggestDailyExtensionAmount } from "@/lib/bookings/extension-pricing";
+import {
   INVOICE_STATUS_COLORS,
   INVOICE_STATUS_LABELS,
 } from "@/lib/invoices/invoice-status";
@@ -84,10 +89,39 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
     recurringMeta,
     updateRecurringMeta,
     stagedRecurringReturn,
+    nextRecurringPeriodEnd,
     handleAdvanceRecurringPeriod,
+    handleContinueRecurringPeriod,
     canGenerateWeekToWeekContract,
     openWeekToWeekContract,
+    vehicles,
   } = ctx;
+
+  const vehicleDailyRate =
+    vehicles.find((v) => v.id === booking.vehicle_id)?.dailyRate ?? 0;
+  const extendBaseReturn = displayReturnDate || booking.return_date;
+  const extendDaysCount =
+    extendDate && extendDate > extendBaseReturn
+      ? extensionCalendarDays(extendBaseReturn, extendDate)
+      : 0;
+  const isRecurringExtend = recurringMeta.isRecurringLongTerm;
+
+  const applyExtendDays = (rawDays: number) => {
+    const days = Math.max(1, Math.floor(rawDays) || 1);
+    const nextDate = addCalendarDaysYyyyMmDd(extendBaseReturn, days);
+    setExtendDate(nextDate);
+    if (!isRecurringExtend) {
+      setExtendAmount(String(suggestDailyExtensionAmount(days, vehicleDailyRate)));
+    }
+  };
+
+  const applyExtendDate = (nextDate: string) => {
+    setExtendDate(nextDate);
+    if (!isRecurringExtend && nextDate && nextDate > extendBaseReturn) {
+      const days = extensionCalendarDays(extendBaseReturn, nextDate);
+      setExtendAmount(String(suggestDailyExtensionAmount(days, vehicleDailyRate)));
+    }
+  };
 
   return (
     <>
@@ -439,13 +473,35 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
                 {booking.return_time && ` at ${formatTime(booking.return_time)}`}
               </p>
 
+              {!isRecurringExtend && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-gray-600">Days to extend</label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={extendDaysCount > 0 ? extendDaysCount : ""}
+                    onChange={(e) => applyExtendDays(Number(e.target.value))}
+                    placeholder="1"
+                    className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
+                  />
+                  {vehicleDailyRate > 0 && extendDaysCount > 0 && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      {extendDaysCount} day{extendDaysCount === 1 ? "" : "s"} × $
+                      {vehicleDailyRate.toFixed(2)}/day = $
+                      {suggestDailyExtensionAmount(extendDaysCount, vehicleDailyRate).toFixed(2)}
+                    </p>
+                  )}
+                </div>
+              )}
+
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">New Return Date</label>
                 <input
                   type="date"
                   value={extendDate}
-                  min={booking.return_date}
-                  onChange={(e) => setExtendDate(e.target.value)}
+                  min={addCalendarDaysYyyyMmDd(extendBaseReturn, 1)}
+                  onChange={(e) => applyExtendDate(e.target.value)}
                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
                 />
               </div>
@@ -461,7 +517,9 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
               </div>
 
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Extension Charge ($)</label>
+                <label className="mb-1 block text-xs font-medium text-gray-600">
+                  {isRecurringExtend ? "New weekly rate ($)" : "Extension Charge ($)"}
+                </label>
                 <input
                   type="number"
                   min="0"
@@ -471,20 +529,37 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
                   placeholder="0.00"
                   className="w-full rounded-md border border-gray-300 bg-white px-3 py-1.5 text-sm"
                 />
-                <p className="text-xs text-gray-400 mt-1">Enter 0 for a free extension</p>
+                <p className="text-xs text-gray-400 mt-1">
+                  {isRecurringExtend
+                    ? "Leave 0 to keep the current weekly rate. A non-zero amount replaces the weekly rate."
+                    : "Auto-filled from daily rate; edit anytime. Enter 0 for a free extension."}
+                </p>
               </div>
 
-              {extendDate && extendDate > booking.return_date && (
+              {extendDate && extendDate > extendBaseReturn && (
                 <div className="rounded-md border border-gray-200 bg-white p-3 text-xs space-y-1">
                   <p className="text-gray-600">
-                    Extension: <span className="font-medium">{Math.ceil((new Date(extendDate + "T00:00:00").getTime() - new Date(booking.return_date + "T00:00:00").getTime()) / (1000 * 60 * 60 * 24))} day(s)</span>
+                    Extension:{" "}
+                    <span className="font-medium">
+                      {extensionCalendarDays(extendBaseReturn, extendDate)} day(s)
+                    </span>
                   </p>
-                  <p className="text-gray-600">
-                    Additional charge: <span className="font-medium text-purple-600">${parseFloat(extendAmount || "0").toFixed(2)}</span>
-                  </p>
-                  <p className="text-gray-600">
-                    New total: <span className="font-medium">${(Number(booking.total_price) + parseFloat(extendAmount || "0")).toFixed(2)}</span>
-                  </p>
+                  {!isRecurringExtend && (
+                    <>
+                      <p className="text-gray-600">
+                        Additional charge:{" "}
+                        <span className="font-medium text-purple-600">
+                          ${parseFloat(extendAmount || "0").toFixed(2)}
+                        </span>
+                      </p>
+                      <p className="text-gray-600">
+                        New total:{" "}
+                        <span className="font-medium">
+                          ${(Number(booking.total_price) + parseFloat(extendAmount || "0")).toFixed(2)}
+                        </span>
+                      </p>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -494,7 +569,11 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
                   disabled={extending || !extendDate}
                   className="flex-1 rounded-md bg-purple-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {extending ? "Extending..." : "Extend & Send Payment Link"}
+                  {extending
+                    ? "Extending..."
+                    : isRecurringExtend
+                      ? "Update Period"
+                      : "Extend & Send Payment Link"}
                 </button>
                 <button
                   onClick={() => { setShowExtend(false); setExtendResult(null); }}
@@ -592,6 +671,21 @@ export function DetailPaymentsSection({ ctx }: DetailPaymentsSectionProps) {
                   >
                     Advance billing period to {stagedRecurringReturn}
                   </Button>
+                ) : nextRecurringPeriodEnd ? (
+                  <div className="space-y-1">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      disabled={saving || !["confirmed", "active"].includes(booking.status)}
+                      onClick={() => void handleContinueRecurringPeriod()}
+                    >
+                      Continue next week (to {nextRecurringPeriodEnd})
+                    </Button>
+                    <p className="text-xs text-gray-500">
+                      Rolls the period end forward without changing the weekly rate. Use “Mark weekly payments caught up” separately for money.
+                    </p>
+                  </div>
                 ) : null}
                 {canGenerateWeekToWeekContract ? (
                   <Button

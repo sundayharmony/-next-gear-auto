@@ -18,6 +18,7 @@ import {
   bookingIntersectsRange,
   enrichBookingOverdueFields,
   getStagedRecurringReturnDate,
+  getNextRecurringPeriodEnd,
   parseRecurringBookingMeta,
   upsertRecurringBookingMeta,
 } from "@/lib/utils/recurring-booking";
@@ -854,6 +855,11 @@ export async function PATCH(request: NextRequest) {
 
     // Build update object — only include fields that were actually sent
     const updateFields: Record<string, any> = {};
+    let recurringPeriodAction: {
+      kind: "advanced" | "continued";
+      from: string;
+      to: string;
+    } | null = null;
 
     if (body.advanceRecurringPeriod === true) {
       const stagedReturn = getStagedRecurringReturnDate(
@@ -862,7 +868,43 @@ export async function PATCH(request: NextRequest) {
       );
       if (stagedReturn) {
         updateFields.return_date = stagedReturn;
+        recurringPeriodAction = {
+          kind: "advanced",
+          from: booking.return_date,
+          to: stagedReturn,
+        };
       }
+    }
+
+    if (body.continueRecurringPeriod === true) {
+      if (auth.role !== "admin") {
+        return NextResponse.json(
+          { success: false, message: "Only admins can continue a recurring period" },
+          { status: 403 }
+        );
+      }
+      if (!["confirmed", "active"].includes(booking.status)) {
+        return NextResponse.json(
+          { success: false, message: "Only confirmed or active bookings can continue" },
+          { status: 400 }
+        );
+      }
+      const nextReturn = getNextRecurringPeriodEnd(
+        booking.return_date,
+        booking.admin_notes
+      );
+      if (!nextReturn) {
+        return NextResponse.json(
+          { success: false, message: "Booking is not a recurring long-term rental with a weekly due day" },
+          { status: 400 }
+        );
+      }
+      updateFields.return_date = nextReturn;
+      recurringPeriodAction = {
+        kind: "continued",
+        from: booking.return_date,
+        to: nextReturn,
+      };
     }
 
     if (body.status !== undefined) updateFields.status = body.status;
@@ -1006,6 +1048,21 @@ export async function PATCH(request: NextRequest) {
         { success: false, message: "Failed to update booking" },
         { status: 500 }
       );
+    }
+
+    if (recurringPeriodAction) {
+      await supabase.from("booking_activity").insert({
+        booking_id: bookingId,
+        action:
+          recurringPeriodAction.kind === "continued"
+            ? "recurring_period_continued"
+            : "recurring_period_advanced",
+        details: {
+          original_return_date: recurringPeriodAction.from,
+          new_return_date: recurringPeriodAction.to,
+        },
+        performed_by: auth.email || auth.sub,
+      });
     }
 
     // If status changed to cancelled, delete manual blocked dates only (do not remove Turo trips).

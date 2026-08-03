@@ -46,3 +46,22 @@ export function wholeCalendarDaysBetween(pickupYyyyMmDd: string, returnYyyyMmDd:
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return 1;
   return Math.max(1, Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
 }
+
+/** Add (or subtract) whole calendar days to a `YYYY-MM-DD` local date. */
+export function addCalendarDaysYyyyMmDd(iso: string, days: number): string {
+  const d = localMidnightFromYyyyMmDd(iso.split("T")[0]);
+  if (isNaN(d.getTime())) return iso.split("T")[0];
+  d.setDate(d.getDate() + days);
+  return formatYyyyMmDdLocal(d);
+}
+
+/**
+ * Whole calendar days from `from` to `to` (local midnights).
+ * Same day → 0; May 14 → May 17 → 3. Used for extension day counts.
+ */
+export function extensionCalendarDays(fromYyyyMmDd: string, toYyyyMmDd: string): number {
+  const start = localMidnightFromYyyyMmDd(fromYyyyMmDd.split("T")[0]);
+  const end = localMidnightFromYyyyMmDd(toYyyyMmDd.split("T")[0]);
+  if (isNaN(start.getTime()) || isNaN(end.getTime())) return 0;
+  return Math.max(0, Math.round((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)));
+}

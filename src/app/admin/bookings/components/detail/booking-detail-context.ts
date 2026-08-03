@@ -101,6 +101,7 @@ export interface BookingDetailContext {
     typeof import("@/lib/utils/recurring-booking").getRecurringBillingSummary
   > | null;
   stagedRecurringReturn: string | null;
+  nextRecurringPeriodEnd: string | null;
   visibleAdminNotes: string;
   canGenerateWeekToWeekContract: boolean;
   displayTotalPrice: number;
@@ -136,6 +137,7 @@ export interface BookingDetailContext {
   handleRecalculatePrice: () => void;
   handleExtendBooking: () => Promise<void>;
   handleAdvanceRecurringPeriod: () => Promise<void>;
+  handleContinueRecurringPeriod: () => Promise<void>;
   openWeekToWeekContract: () => void;
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
