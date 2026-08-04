@@ -243,6 +243,9 @@ export async function createPanelBooking(
     return { ok: false, status: 500, message: "Failed to create booking" };
   }
 
+  // Queue as soon as the row exists so later email/vehicle failures still sync.
+  queueGoogleCalendarBookingSync(bookingId);
+
   const notifyEmail = bookingEmail?.trim() || null;
   const displayName = (bookingName || "Customer").slice(0, 100);
 
@@ -300,8 +303,6 @@ export async function createPanelBooking(
       bookingId
     ).catch(logger.error);
   }
-
-  queueGoogleCalendarBookingSync(bookingId);
 
   return { ok: true, bookingId, customerId };
 }

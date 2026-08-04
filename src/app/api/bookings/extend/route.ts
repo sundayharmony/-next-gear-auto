@@ -8,6 +8,7 @@ import { checkBookingOverlap } from "@/lib/utils/booking-overlap";
 import { isRecurringLongTermBooking } from "@/lib/bookings/recurring-payments";
 import { getEffectiveReturnDate } from "@/lib/utils/recurring-booking";
 import { regenerateSignedAgreementForBooking } from "@/lib/agreement/signed-agreement";
+import { queueGoogleCalendarBookingSync } from "@/lib/integrations/google-calendar/hooks";
 import Stripe from "stripe";
 
 /** Matches IDs from create booking: `bk` + 7 hex chars (see POST /api/bookings). */
@@ -148,6 +149,8 @@ export async function POST(request: NextRequest) {
           { status: 500 }
         );
       }
+
+      queueGoogleCalendarBookingSync(bookingId);
 
       await supabase.from("booking_activity").insert({
         booking_id: bookingId,
@@ -301,6 +304,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
+
+    queueGoogleCalendarBookingSync(bookingId);
 
     // 11. Log the extension activity
     await supabase.from("booking_activity").insert({
