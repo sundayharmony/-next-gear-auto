@@ -699,6 +699,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Queue as soon as the row exists so later email/vehicle failures still sync.
+    queueGoogleCalendarBookingSync(bookingId);
+
     // Resolved customer email on the booking row (includes customerId lookup when body had no email)
     const notifyEmail = bookingEmail?.trim() || null;
     const displayName = (bookingName || body.customerDetails?.name || body.customerName || "Customer").slice(0, 100);
@@ -767,8 +770,6 @@ export async function POST(request: NextRequest) {
       `${vehicleName} booked ${body.pickupDate} → ${body.returnDate}.`,
       bookingId
     ).catch(logger.error);
-
-    queueGoogleCalendarBookingSync(bookingId);
 
     return NextResponse.json(
       { data: { id: bookingId, customer_id: customerId }, success: true },

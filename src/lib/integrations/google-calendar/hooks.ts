@@ -1,14 +1,14 @@
-import { logger } from "@/lib/utils/logger";
 import { syncBlockedDateById, syncBookingById } from "./sync";
+import { scheduleGoogleCalendarWork } from "./schedule-after";
+
+export { scheduleGoogleCalendarWork } from "./schedule-after";
 
 export function queueGoogleCalendarBookingSync(bookingId: string): void {
-  void syncBookingById(bookingId).catch((err) => {
-    logger.error("Google Calendar booking sync failed:", err);
-  });
+  scheduleGoogleCalendarWork("booking sync", () => syncBookingById(bookingId));
 }
 
 export function queueGoogleCalendarBlockedDateSync(blockedDateId: string): void {
-  void syncBlockedDateById(blockedDateId).catch((err) => {
-    logger.error("Google Calendar blocked date sync failed:", err);
-  });
+  scheduleGoogleCalendarWork("blocked date sync", () =>
+    syncBlockedDateById(blockedDateId)
+  );
 }
