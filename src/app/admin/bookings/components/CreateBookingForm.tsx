@@ -21,7 +21,9 @@ import { Location } from "@/lib/types";
 import {
   nextWeeklyDueOnOrAfter,
   upsertRecurringBookingMeta,
+  RECURRING_PERIOD_TYPE_OPTIONS,
   WEEKLY_DUE_DAY_OPTIONS,
+  type RecurringPeriodType,
   type WeeklyDueDay,
 } from "@/lib/utils/recurring-booking";
 import { calculatePricing } from "@/lib/utils/price-calculator";
@@ -65,6 +67,7 @@ const emptyForm = {
   selectedExtras: [] as string[],
   paymentMethod: "stripe",
   isRecurringLongTerm: false,
+  periodType: "weekly" as RecurringPeriodType,
   weeklyDueDay: "",
 };
 
@@ -115,7 +118,16 @@ export default function CreateBookingForm({
   }, [prefillData]);
 
   useEffect(() => {
-    if (!form.isRecurringLongTerm || !form.weeklyDueDay || !form.pickupDate) return;
+    if (!form.isRecurringLongTerm || !form.pickupDate) return;
+    if (form.periodType === "daily") {
+      setForm((prev) =>
+        prev.returnDate === prev.pickupDate
+          ? prev
+          : { ...prev, returnDate: prev.pickupDate }
+      );
+      return;
+    }
+    if (!form.weeklyDueDay) return;
     const firstDue = nextWeeklyDueOnOrAfter(
       form.pickupDate,
       form.weeklyDueDay as WeeklyDueDay
@@ -123,7 +135,12 @@ export default function CreateBookingForm({
     setForm((prev) =>
       prev.returnDate === firstDue ? prev : { ...prev, returnDate: firstDue }
     );
-  }, [form.isRecurringLongTerm, form.weeklyDueDay, form.pickupDate]);
+  }, [
+    form.isRecurringLongTerm,
+    form.periodType,
+    form.weeklyDueDay,
+    form.pickupDate,
+  ]);
 
   // Click-outside detection for dropdown
   useEffect(() => {
@@ -293,13 +310,19 @@ export default function CreateBookingForm({
     if (form.totalPrice <= 0) {
       onError(
         form.isRecurringLongTerm
-          ? "Weekly rate must be greater than zero"
+          ? form.periodType === "daily"
+            ? "Daily rate must be greater than zero"
+            : "Weekly rate must be greater than zero"
           : "Total price must be greater than zero"
       );
       return false;
     }
-    if (form.isRecurringLongTerm && !form.weeklyDueDay) {
-      onError("Weekly due day is required for recurring long-term bookings");
+    if (
+      form.isRecurringLongTerm &&
+      form.periodType === "weekly" &&
+      !form.weeklyDueDay
+    ) {
+      onError("Weekly due day is required for weekly recurring long-term bookings");
       return false;
     }
     return true;
@@ -338,7 +361,11 @@ export default function CreateBookingForm({
         adminNotes: form.isRecurringLongTerm
           ? upsertRecurringBookingMeta("", {
               isRecurringLongTerm: true,
-              weeklyDueDay: form.weeklyDueDay as WeeklyDueDay,
+              periodType: form.periodType,
+              weeklyDueDay:
+                form.periodType === "weekly"
+                  ? (form.weeklyDueDay as WeeklyDueDay)
+                  : undefined,
             })
           : "",
       };
@@ -806,7 +833,11 @@ export default function CreateBookingForm({
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
-                {form.isRecurringLongTerm ? "Weekly Rate ($)" : "Total Price ($)"}
+                {form.isRecurringLongTerm
+                  ? form.periodType === "daily"
+                    ? "Daily Rate ($)"
+                    : "Weekly Rate ($)"
+                  : "Total Price ($)"}
               </label>
               <div className="relative">
                 <Input
@@ -882,7 +913,11 @@ export default function CreateBookingForm({
         {/* ═══ SECTION 6: Recurring Long-Term (staff only) ═══ */}
         {!isOwnerVariant ? (
         <section className="space-y-4">
-          <BookingFormSectionHeader icon={CalendarDays} title="Recurring Long-Term (Optional)" subtitle="Enable for week-to-week long-term renters" />
+          <BookingFormSectionHeader
+            icon={CalendarDays}
+            title="Recurring Long-Term (Optional)"
+            subtitle="Enable for day-to-day or week-to-week long-term renters"
+          />
 
           <label className="flex items-center gap-2 text-sm text-gray-700">
             <input
@@ -903,19 +938,48 @@ export default function CreateBookingForm({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
-                Weekly Due Day {form.isRecurringLongTerm ? <span className="text-red-500">*</span> : null}
+                Period type{" "}
+                {form.isRecurringLongTerm ? <span className="text-red-500">*</span> : null}
               </label>
               <Select
-                value={form.weeklyDueDay}
-                onChange={(e) => setForm({ ...form, weeklyDueDay: e.target.value })}
+                value={form.periodType}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    periodType: e.target.value as RecurringPeriodType,
+                    weeklyDueDay:
+                      e.target.value === "daily" ? "" : form.weeklyDueDay,
+                  })
+                }
                 disabled={!form.isRecurringLongTerm}
               >
-                <option value="">Select due day...</option>
-                {WEEKLY_DUE_DAY_OPTIONS.map((day) => (
-                  <option key={day} value={day}>{day}</option>
+                {RECURRING_PERIOD_TYPE_OPTIONS.map((type) => (
+                  <option key={type} value={type}>
+                    {type === "daily" ? "Day to day" : "Week to week"}
+                  </option>
                 ))}
               </Select>
             </div>
+            {form.periodType === "weekly" ? (
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1.5">
+                  Weekly Due Day{" "}
+                  {form.isRecurringLongTerm ? <span className="text-red-500">*</span> : null}
+                </label>
+                <Select
+                  value={form.weeklyDueDay}
+                  onChange={(e) => setForm({ ...form, weeklyDueDay: e.target.value })}
+                  disabled={!form.isRecurringLongTerm}
+                >
+                  <option value="">Select due day...</option>
+                  {WEEKLY_DUE_DAY_OPTIONS.map((day) => (
+                    <option key={day} value={day}>
+                      {day}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            ) : null}
           </div>
         </section>
         ) : null}

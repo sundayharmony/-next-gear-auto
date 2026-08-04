@@ -4,9 +4,10 @@ import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import {
   getRecognizedRecurringPeriodEnds,
   getRecurringBillingSummary,
-  listRecurringWeeklyDueDates,
+  isRecurringConfigured,
+  listRecurringDueDates,
   parseRecurringBookingMeta,
-  recurringWeekPaymentNote,
+  recurringPeriodPaymentNote,
 } from "@/lib/utils/recurring-booking";
 
 export interface SyncRecurringPaymentsResult {
@@ -16,7 +17,7 @@ export interface SyncRecurringPaymentsResult {
 }
 
 /**
- * Ensures one booking_payments row per weekly period due through today, then
+ * Ensures one booking_payments row per billing period due through today, then
  * recalculates deposit from the ledger. Used when marking recurring rentals caught up.
  */
 export async function syncRecurringPaymentsToDate(
@@ -45,16 +46,16 @@ export async function syncRecurringPaymentsToDate(
   }
 
   const meta = parseRecurringBookingMeta(booking.admin_notes);
-  if (!meta.weeklyDueDay) {
-    throw new Error("Weekly due day is not set for this recurring rental");
+  if (!isRecurringConfigured(meta)) {
+    throw new Error(
+      summary.periodType === "daily"
+        ? "Daily recurring rental is not configured"
+        : "Weekly due day is not set for this recurring rental"
+    );
   }
 
   const today = formatYyyyMmDdLocal(new Date());
-  const dueDates = listRecurringWeeklyDueDates(
-    booking.pickup_date,
-    meta.weeklyDueDay,
-    today
-  );
+  const dueDates = listRecurringDueDates(booking.pickup_date, meta, today);
 
   const { data: existing, error: listError } = await supabase
     .from("booking_payments")
@@ -85,7 +86,7 @@ export async function syncRecurringPaymentsToDate(
       booking_id: bookingId,
       amount: summary.weeklyRate,
       method,
-      note: recurringWeekPaymentNote(periodEnd),
+      note: recurringPeriodPaymentNote(periodEnd, summary.periodType),
     });
     if (insertError) {
       throw new Error(insertError.message);
@@ -122,6 +123,5 @@ export async function syncRecurringPaymentsToDate(
 }
 
 export function isRecurringLongTermBooking(adminNotes?: string | null): boolean {
-  const meta = parseRecurringBookingMeta(adminNotes);
-  return meta.isRecurringLongTerm && !!meta.weeklyDueDay;
+  return isRecurringConfigured(parseRecurringBookingMeta(adminNotes));
 }

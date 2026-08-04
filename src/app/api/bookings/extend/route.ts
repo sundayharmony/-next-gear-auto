@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
         {
           success: false,
           message: isRecurring
-            ? "New billing period end must be after the current weekly due date"
+            ? "New billing period end must be after the current period end"
             : "New return date must be after the current return date",
         },
         { status: 400 }

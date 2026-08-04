@@ -2,7 +2,10 @@
 
 import type React from "react";
 import type { StaffPanelBase } from "@/lib/admin/staff-panel-base";
-import type { WeeklyDueDay } from "@/lib/utils/recurring-booking";
+import type {
+  RecurringPeriodType,
+  WeeklyDueDay,
+} from "@/lib/utils/recurring-booking";
 import type {
   ActivityRecord,
   BookingRow,
@@ -95,7 +98,11 @@ export interface BookingDetailContext {
   canViewPricing: boolean;
   canManageRow: boolean;
   currentStatusIndex: number;
-  recurringMeta: { isRecurringLongTerm: boolean; weeklyDueDay?: WeeklyDueDay };
+  recurringMeta: {
+    isRecurringLongTerm: boolean;
+    periodType?: RecurringPeriodType;
+    weeklyDueDay?: WeeklyDueDay;
+  };
   displayReturnDate: string;
   recurringBilling: ReturnType<
     typeof import("@/lib/utils/recurring-booking").getRecurringBillingSummary
@@ -116,7 +123,11 @@ export interface BookingDetailContext {
   canOverrideAgreement: boolean;
   toggleEditMode: () => void;
   updateRecurringMeta: (
-    next: Partial<{ isRecurringLongTerm: boolean; weeklyDueDay: WeeklyDueDay | undefined }>
+    next: Partial<{
+      isRecurringLongTerm: boolean;
+      periodType: RecurringPeriodType;
+      weeklyDueDay: WeeklyDueDay | undefined;
+    }>
   ) => void;
   handleStatusStepClick: (stepIndex: number) => void;
   updateStatus: (newStatus: string) => Promise<void>;

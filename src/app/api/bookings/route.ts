@@ -657,6 +657,7 @@ export async function POST(request: NextRequest) {
           const existingMeta = parseRecurringBookingMeta(rawAdminNotes);
           return upsertRecurringBookingMeta(rawAdminNotes, {
             isRecurringLongTerm: existingMeta.isRecurringLongTerm,
+            periodType: existingMeta.periodType,
             weeklyDueDay: existingMeta.weeklyDueDay,
           });
         })()
@@ -895,7 +896,11 @@ export async function PATCH(request: NextRequest) {
       );
       if (!nextReturn) {
         return NextResponse.json(
-          { success: false, message: "Booking is not a recurring long-term rental with a weekly due day" },
+          {
+            success: false,
+            message:
+              "Booking is not a configured recurring long-term rental (daily, or weekly with due day)",
+          },
           { status: 400 }
         );
       }
@@ -934,15 +939,25 @@ export async function PATCH(request: NextRequest) {
       const incomingMeta = parseRecurringBookingMeta(
         typeof body.admin_notes === "string" ? body.admin_notes : ""
       );
-      if (incomingMeta.isRecurringLongTerm && !incomingMeta.weeklyDueDay) {
+      const periodType =
+        incomingMeta.periodType === "daily" ? "daily" : "weekly";
+      if (
+        incomingMeta.isRecurringLongTerm &&
+        periodType === "weekly" &&
+        !incomingMeta.weeklyDueDay
+      ) {
         return NextResponse.json(
-          { success: false, message: "Weekly due day is required for recurring long-term bookings" },
+          { success: false, message: "Weekly due day is required for weekly recurring long-term bookings" },
           { status: 400 }
         );
       }
       updateFields.admin_notes = upsertRecurringBookingMeta(body.admin_notes, {
         isRecurringLongTerm: incomingMeta.isRecurringLongTerm,
-        weeklyDueDay: incomingMeta.weeklyDueDay,
+        periodType: incomingMeta.isRecurringLongTerm ? periodType : undefined,
+        weeklyDueDay:
+          incomingMeta.isRecurringLongTerm && periodType === "weekly"
+            ? incomingMeta.weeklyDueDay
+            : undefined,
       });
     }
     if (body.payment_method !== undefined) updateFields.payment_method = body.payment_method;
