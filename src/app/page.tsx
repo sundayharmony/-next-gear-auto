@@ -8,7 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { PageContainer } from "@/components/layout/page-container";
 import { HomeReviews } from "@/components/home/home-reviews";
-import { fetchPublicReviews } from "@/lib/reviews/public-reviews";
+import { fetchPublicReviews, fetchPublicReviewAggregate } from "@/lib/reviews/public-reviews";
 import {
   vehicleThumbnailSizes,
   VEHICLE_THUMBNAIL_WIDTH,
@@ -19,10 +19,13 @@ import { logger } from "@/lib/utils/logger";
 import { SITE_URL } from "@/lib/constants";
 
 export const metadata: Metadata = {
-  title: "NextGearAuto - Premium Car Rental in Jersey City",
+  title: "Premium Car Rental in Jersey City",
   description: "Affordable car rentals in Jersey City, NJ. Book premium vehicles at competitive prices. From compact cars to SUVs, find your perfect ride today.",
+  alternates: {
+    canonical: SITE_URL,
+  },
   openGraph: {
-    title: "NextGearAuto - Premium Car Rental",
+    title: "NextGearAuto - Premium Car Rental in Jersey City",
     description: "Book premium vehicles at competitive prices in Jersey City",
     url: SITE_URL,
     type: "website",
@@ -50,7 +53,10 @@ interface Vehicle {
 
 export default async function HomePage() {
   const nonce = (await headers()).get("x-nonce") ?? undefined;
-  const homeReviews = await fetchPublicReviews(3);
+  const [homeReviews, reviewAggregate] = await Promise.all([
+    fetchPublicReviews(3),
+    fetchPublicReviewAggregate(),
+  ]);
 
   // Fetch featured vehicles from Supabase
   const supabase = getServiceSupabase();
@@ -90,7 +96,16 @@ export default async function HomePage() {
   return (
     <>
       <script type="application/ld+json" nonce={nonce} suppressHydrationWarning>
-        {JSON.stringify(generateLocalBusinessSchema())}
+        {JSON.stringify(
+          generateLocalBusinessSchema(
+            reviewAggregate
+              ? {
+                  ratingValue: reviewAggregate.ratingValue,
+                  reviewCount: reviewAggregate.reviewCount,
+                }
+              : undefined
+          )
+        )}
       </script>
 
       {/* Hero Section */}

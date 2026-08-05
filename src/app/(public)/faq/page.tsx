@@ -4,12 +4,18 @@ import { HelpCircle, ArrowRight, FileText, Shield, CreditCard, Car } from "lucid
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
+import type { Metadata } from "next";
 import { FAQAccordion } from "@/components/sections/faq-accordion";
 import { generateFAQSchema } from "@/lib/utils/schema-generators";
+import { SITE_URL } from "@/lib/constants";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "FAQ & Policies",
-  description: "Frequently asked questions about NextGearAuto rentals, policies, pricing, and more.",
+  description:
+    "Frequently asked questions about NextGearAuto rentals, policies, pricing, and more.",
+  alternates: {
+    canonical: `${SITE_URL}/faq`,
+  },
 };
 
 const generalFaqs = [

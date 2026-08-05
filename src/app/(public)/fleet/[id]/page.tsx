@@ -57,6 +57,7 @@ async function getVehicleById(id: string): Promise<Vehicle | null> {
       .from("vehicles")
       .select("*")
       .eq("id", id)
+      .eq("is_published", true)
       .single();
 
     if (error || !data) return null;
@@ -99,7 +100,8 @@ async function getAllVehicleIds(): Promise<string[]> {
   try {
     const { data, error } = await supabase
       .from("vehicles")
-      .select("id");
+      .select("id")
+      .eq("is_published", true);
 
     if (error || !data) return [];
     return data.map((v) => v.id);
@@ -128,6 +130,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
   const displayName = `${vehicle.year} ${vehicle.make} ${vehicle.model}`;
   const specs = vehicle.specs || {};
+  const ogImage = Array.isArray(vehicle.images) ? vehicle.images.find(Boolean) : null;
   return {
     title: `${displayName} Rental - $${vehicle.daily_rate}/day`,
     description: `Rent a ${displayName} in Jersey City, NJ. ${specs.passengers ?? "?"} passengers, ${specs.luggage ?? "?"} bags, ${specs.mpg ?? "?"} MPG. Starting at $${vehicle.daily_rate}/day.${avgRating ? ` Rated ${avgRating}/5.` : ""}`,
@@ -135,10 +138,26 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
       canonical: `${SITE_URL}/fleet/${vehicle.id}`,
     },
     openGraph: {
-      title: `${displayName} Rental - $${vehicle.daily_rate}/day | NextGearAuto`,
+      title: `${displayName} Rental - $${vehicle.daily_rate}/day`,
       description: `Rent a ${displayName} in Jersey City. ${vehicle.description}`,
       url: `${SITE_URL}/fleet/${vehicle.id}`,
       type: "website",
+      ...(ogImage
+        ? {
+            images: [
+              {
+                url: ogImage,
+                alt: `${displayName} for rent at NextGearAuto`,
+              },
+            ],
+          }
+        : {}),
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `${displayName} Rental - $${vehicle.daily_rate}/day`,
+      description: `Rent a ${displayName} in Jersey City, NJ.`,
+      ...(ogImage ? { images: [ogImage] } : {}),
     },
   };
 }

@@ -1,4 +1,4 @@
-import { SITE_NAME, SITE_URL, CONTACT_INFO } from "@/lib/constants";
+import { SITE_NAME, SITE_URL, CONTACT_INFO, INSTAGRAM_URL } from "@/lib/constants";
 
 // Organization schema - used in root layout
 export function generateOrganizationSchema() {
@@ -23,13 +23,16 @@ export function generateOrganizationSchema() {
       postalCode: CONTACT_INFO.zip,
       addressCountry: "US",
     },
-    sameAs: [],
+    sameAs: [INSTAGRAM_URL],
   };
 }
 
 // LocalBusiness schema - used on homepage
-export function generateLocalBusinessSchema() {
-  return {
+export function generateLocalBusinessSchema(opts?: {
+  ratingValue?: number;
+  reviewCount?: number;
+}) {
+  const schema: Record<string, unknown> = {
     "@context": "https://schema.org",
     "@type": "AutoRental",
     name: SITE_NAME,
@@ -38,6 +41,7 @@ export function generateLocalBusinessSchema() {
     url: SITE_URL,
     telephone: CONTACT_INFO.phone,
     email: CONTACT_INFO.email,
+    sameAs: [INSTAGRAM_URL],
     address: {
       "@type": "PostalAddress",
       streetAddress: CONTACT_INFO.address,
@@ -82,14 +86,23 @@ export function generateLocalBusinessSchema() {
         name: "New Jersey",
       },
     },
-    aggregateRating: {
+  };
+
+  if (
+    typeof opts?.ratingValue === "number" &&
+    typeof opts?.reviewCount === "number" &&
+    opts.reviewCount > 0
+  ) {
+    schema.aggregateRating = {
       "@type": "AggregateRating",
-      ratingValue: 4.8,
-      reviewCount: "100",
+      ratingValue: Number(opts.ratingValue.toFixed(1)),
+      reviewCount: String(opts.reviewCount),
       bestRating: "5",
       worstRating: "1",
-    },
-  };
+    };
+  }
+
+  return schema;
 }
 
 // Product schema - used on vehicle detail pages

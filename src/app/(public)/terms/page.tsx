@@ -3,11 +3,17 @@ import Link from "next/link";
 import { AlertCircle, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/page-container";
+import { SITE_URL } from "@/lib/constants";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "NextGearAuto terms of service - rental policies, restrictions, and legal agreements.",
+  description:
+    "NextGearAuto terms of service - rental policies, restrictions, and legal agreements.",
+  alternates: {
+    canonical: `${SITE_URL}/terms`,
+  },
 };
 
 export default function TermsPage() {

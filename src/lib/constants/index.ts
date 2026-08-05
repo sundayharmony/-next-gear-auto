@@ -4,6 +4,22 @@ export const SITE_NAME = "NextGearAuto";
 export const SITE_DESCRIPTION = "Premium car rentals at competitive prices. Choose from our well-maintained fleet of compact cars, sedans, SUVs, and trucks.";
 /** Canonical public origin (must match Vercel primary domain to avoid redirect loops). */
 export const SITE_URL = "https://www.rentnextgearauto.com";
+export const INSTAGRAM_URL = "https://www.instagram.com/drivenextgearauto/";
+
+/** Prefer the canonical production host for sitemap/robots/structured data. */
+export function getCanonicalSiteUrl(): string {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim();
+  if (!fromEnv) return SITE_URL;
+  try {
+    const parsed = new URL(fromEnv);
+    if (parsed.hostname === "localhost" || parsed.hostname === "127.0.0.1") {
+      return fromEnv.replace(/\/$/, "");
+    }
+  } catch {
+    // fall through to canonical
+  }
+  return SITE_URL;
+}
 
 export const CONTACT_INFO = {
   phone: "(551) 429-3472",
