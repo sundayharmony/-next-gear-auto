@@ -1,11 +1,16 @@
 import React from "react";
 import { Suspense } from "react";
+import type { Metadata } from "next";
 import { WeekToWeekContractPageClient } from "@/components/week-to-week-contract-page-client";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Week-to-Week Long-Term Rental Contract",
   description:
     "Week-to-week long-term rental contract (admin/manager access). Open from a recurring booking in the bookings panel.",
+  robots: {
+    index: false,
+    follow: false,
+  },
 };
 
 export default function WeekToWeekContractPage() {

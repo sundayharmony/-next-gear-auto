@@ -4,12 +4,17 @@ import { Car, Users, Shield, Award, Heart, Target, Clock, MapPin, ArrowRight } f
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
-import { SITE_NAME } from "@/lib/constants";
+import type { Metadata } from "next";
+import { SITE_NAME, SITE_URL } from "@/lib/constants";
 import { getServiceSupabase } from "@/lib/db/supabase";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "About Us",
-  description: "Learn about NextGearAuto - your trusted local car rental company. Our story, mission, and commitment to quality service.",
+  description:
+    "Learn about NextGearAuto - your trusted local car rental company. Our story, mission, and commitment to quality service.",
+  alternates: {
+    canonical: `${SITE_URL}/about`,
+  },
 };
 
 export default async function AboutPage() {

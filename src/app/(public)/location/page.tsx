@@ -3,17 +3,30 @@ import { MapPin, Phone, Mail, Clock, Car, Navigation } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout/page-container";
-import { CONTACT_INFO, SITE_NAME } from "@/lib/constants";
+import type { Metadata } from "next";
+import { CONTACT_INFO, SITE_NAME, SITE_URL } from "@/lib/constants";
 import { ContactForm } from "@/components/forms/contact-form";
+import { generateLocalBusinessSchema } from "@/lib/utils/schema-generators";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Location & Contact",
-  description: "Visit NextGearAuto or get in touch. Find our address, hours, and contact information.",
+  description:
+    "Visit NextGearAuto in Jersey City, NJ or get in touch. Find our address, hours, phone, and contact form.",
+  alternates: {
+    canonical: `${SITE_URL}/location`,
+  },
 };
 
 export default function LocationPage() {
   return (
     <>
+      <script
+        type="application/ld+json"
+        suppressHydrationWarning
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(generateLocalBusinessSchema()),
+        }}
+      />
       {/* Hero */}
       <section className="page-hero page-hero--lg text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">

@@ -61,3 +61,38 @@ export async function fetchPublicReviews(limit = 3): Promise<PublicReview[]> {
     return FALLBACK_REVIEWS;
   }
 }
+
+/** Aggregate of all approved reviews for schema.org LocalBusiness. */
+export async function fetchPublicReviewAggregate(): Promise<{
+  ratingValue: number;
+  reviewCount: number;
+} | null> {
+  const supabase = getServiceSupabase();
+
+  try {
+    const { data, error } = await supabase
+      .from("reviews")
+      .select("rating")
+      .eq("status", "approved")
+      .limit(500);
+
+    if (error || !data?.length) {
+      if (error) logger.error("Public review aggregate fetch error:", error);
+      return null;
+    }
+
+    const ratings = data
+      .map((r) => Number(r.rating))
+      .filter((n) => Number.isFinite(n) && n > 0);
+    if (!ratings.length) return null;
+
+    const sum = ratings.reduce((acc, n) => acc + n, 0);
+    return {
+      ratingValue: sum / ratings.length,
+      reviewCount: ratings.length,
+    };
+  } catch (err) {
+    logger.error("Public review aggregate fetch error:", err);
+    return null;
+  }
+}

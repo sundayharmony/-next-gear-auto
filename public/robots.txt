@@ -2,10 +2,23 @@
 User-agent: *
 Allow: /
 
-# Block access to admin and API routes from crawlers
+# Staff / account / auth
 Disallow: /admin/
+Disallow: /account/
 Disallow: /api/
-Disallow: /auth/
+Disallow: /owner/
+Disallow: /manager/
+Disallow: /staff/
+Disallow: /login
+Disallow: /signup
+Disallow: /set-password
+Disallow: /reset-password
+
+# Transactional / private booking flows
+Disallow: /booking/success
+Disallow: /booking/cancel
+Disallow: /booking/agreement
+Disallow: /week-to-week-contract
 
 # Sitemap
 Sitemap: https://www.rentnextgearauto.com/sitemap.xml

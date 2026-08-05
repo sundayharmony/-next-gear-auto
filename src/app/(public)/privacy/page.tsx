@@ -3,11 +3,17 @@ import Link from "next/link";
 import { Shield, Mail, Phone, MapPin, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/page-container";
+import { SITE_URL } from "@/lib/constants";
 
-export const metadata = {
+export const metadata: Metadata = {
   title: "Privacy Policy",
-  description: "NextGearAuto privacy policy - how we collect, use, and protect your personal information.",
+  description:
+    "NextGearAuto privacy policy - how we collect, use, and protect your personal information.",
+  alternates: {
+    canonical: `${SITE_URL}/privacy`,
+  },
 };
 
 export default function PrivacyPage() {
