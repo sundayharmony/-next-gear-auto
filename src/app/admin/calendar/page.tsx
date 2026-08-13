@@ -13,7 +13,7 @@ import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
 import type { BlockedDateEntry } from "./calendar-model";
 import { filterTimelineVehicles } from "./calendar-booking-display";
-import { getDefaultTimelineStart } from "./calendar-timeline-range";
+import { getDefaultTimelineStart, getTimelineStartForToday } from "./calendar-timeline-range";
 import { TuroTripDetailPanel } from "@/app/admin/bookings/components/TuroTripDetailPanel";
 import { InPersonAgreementSign } from "@/app/admin/bookings/components/InPersonAgreementSign";
 import {
@@ -294,7 +294,7 @@ export default function AdminCalendarPage({
   }, [calendarMonthStart, selectedDay]);
 
   const goToToday = useCallback(() => {
-    // Keep the lookback window — only scroll the timeline to today's column.
+    setTimelineStart(getTimelineStartForToday());
   }, []);
 
   const selectedBlockedVehicle = selectedBlocked
