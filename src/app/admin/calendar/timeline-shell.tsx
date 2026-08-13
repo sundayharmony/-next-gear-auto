@@ -32,8 +32,11 @@ export interface TimelineShellProps {
   blockedDates: BlockedDateEntry[];
   timelineStart: Date;
   timelineWindowDays: number;
+  mobileAgendaStart: Date;
   onPreviousWeek: () => void;
   onNextWeek: () => void;
+  onMobilePreviousWeek: () => void;
+  onMobileNextWeek: () => void;
   onPreviousFortnight: () => void;
   onNextFortnight: () => void;
   onToday: () => void;
@@ -47,8 +50,11 @@ export function TimelineShell({
   blockedDates,
   timelineStart,
   timelineWindowDays,
+  mobileAgendaStart,
   onPreviousWeek,
   onNextWeek,
+  onMobilePreviousWeek,
+  onMobileNextWeek,
   onPreviousFortnight,
   onNextFortnight,
   onToday,
@@ -62,9 +68,9 @@ export function TimelineShell({
           bookings={bookings}
           vehicles={vehicles}
           blockedDates={blockedDates}
-          start={timelineStart}
-          onPrevious={onPreviousWeek}
-          onNext={onNextWeek}
+          start={mobileAgendaStart}
+          onPrevious={onMobilePreviousWeek}
+          onNext={onMobileNextWeek}
           onToday={onToday}
           onBookingClick={onBookingClick}
           onBlockedDateClick={onBlockedDateClick}

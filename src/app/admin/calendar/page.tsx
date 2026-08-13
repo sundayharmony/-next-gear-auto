@@ -87,6 +87,12 @@ export default function AdminCalendarPage({
 
   const [timelineStart, setTimelineStart] = useState<Date>(() => getDefaultTimelineStart());
 
+  const [mobileAgendaStart, setMobileAgendaStart] = useState<Date>(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return today;
+  });
+
   const [calendarViewDate, setCalendarViewDate] = useState<Date>(() => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -294,7 +300,9 @@ export default function AdminCalendarPage({
   }, [calendarMonthStart, selectedDay]);
 
   const goToToday = useCallback(() => {
-    // Keep the lookback window — only scroll the timeline to today's column.
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    setMobileAgendaStart(today);
   }, []);
 
   const selectedBlockedVehicle = selectedBlocked
@@ -436,6 +444,7 @@ export default function AdminCalendarPage({
               blockedDates={blockedDates}
               timelineStart={timelineStart}
               timelineWindowDays={TIMELINE_WINDOW_DAYS}
+              mobileAgendaStart={mobileAgendaStart}
               onPreviousWeek={() => {
                 const newStart = new Date(timelineStart);
                 newStart.setDate(newStart.getDate() - 7);
@@ -445,6 +454,20 @@ export default function AdminCalendarPage({
                 const newStart = new Date(timelineStart);
                 newStart.setDate(newStart.getDate() + 7);
                 setTimelineStart(newStart);
+              }}
+              onMobilePreviousWeek={() => {
+                setMobileAgendaStart((prev) => {
+                  const newStart = new Date(prev);
+                  newStart.setDate(newStart.getDate() - 7);
+                  return newStart;
+                });
+              }}
+              onMobileNextWeek={() => {
+                setMobileAgendaStart((prev) => {
+                  const newStart = new Date(prev);
+                  newStart.setDate(newStart.getDate() + 7);
+                  return newStart;
+                });
               }}
               onPreviousFortnight={() => {
                 const newStart = new Date(timelineStart);
