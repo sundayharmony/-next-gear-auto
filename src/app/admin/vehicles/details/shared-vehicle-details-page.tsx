@@ -174,7 +174,7 @@ export function SharedVehicleDetailsPage({
   }, [vehicleId, isAdminPanel, vehicle?.isPublished, vehicle?.isAvailable]);
 
   const statusFilters = useMemo(
-    () => ["all", "pending", "confirmed", "active", "completed", "cancelled"],
+    () => ["all", "pending_approval", "pending", "confirmed", "active", "completed", "cancelled"],
     []
   );
 

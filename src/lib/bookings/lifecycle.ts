@@ -3,11 +3,12 @@
  * Used by API routes; clients should rely on server responses, not duplicate rules.
  */
 
-export const BOOKING_STATUSES = ["pending", "confirmed", "active", "completed", "cancelled", "no-show"] as const;
+export const BOOKING_STATUSES = ["pending_approval", "pending", "confirmed", "active", "completed", "cancelled", "no-show"] as const;
 export type BookingStatus = (typeof BOOKING_STATUSES)[number];
 
 /** Directed edges: from -> allowed next statuses */
 export const VALID_TRANSITIONS: Record<BookingStatus, BookingStatus[]> = {
+  pending_approval: ["pending", "cancelled"],
   pending: ["confirmed", "cancelled"],
   confirmed: ["active", "cancelled", "no-show"],
   active: ["completed", "cancelled", "no-show"],

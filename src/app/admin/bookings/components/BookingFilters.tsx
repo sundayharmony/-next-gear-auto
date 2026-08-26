@@ -54,8 +54,8 @@ interface BookingFiltersProps {
   statusFilterPreset?: "admin" | "manager";
 }
 
-const STATUSES_ADMIN = ["all", "pending", "confirmed", "active", "completed", "cancelled"] as const;
-const STATUSES_MANAGER = ["all", "pending", "confirmed", "active"] as const;
+const STATUSES_ADMIN = ["all", "pending_approval", "pending", "confirmed", "active", "completed", "cancelled"] as const;
+const STATUSES_MANAGER = ["all", "pending_approval", "pending", "confirmed", "active"] as const;
 
 export default function BookingFilters({
   statusFilter,

@@ -1,7 +1,9 @@
 import { NextResponse, NextRequest } from "next/server";
-import Stripe from "stripe";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { sendBookingConfirmationWithAgreement, sendBookingPendingEmail, sendAdminNewBooking } from "@/lib/email/mailer";
+import {
+  sendBookingPendingApprovalEmail,
+  sendAdminBookingApprovalNeeded,
+} from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
 import { calculateRentalHours, calculatePricing } from "@/lib/utils/price-calculator";
 import { checkoutLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
@@ -21,7 +23,6 @@ import {
   publicPickupMeetsMinimumAdvance,
 } from "@/lib/booking/public-booking-guards";
 import {
-  confirmFreeBooking,
   validateAndApplyPromo,
   type PromoCodeRow,
 } from "@/lib/promo-codes/promo-integrity";
@@ -31,14 +32,6 @@ import {
 } from "@/lib/referrals/customer-credits";
 import extrasData from "@/data/extras.json";
 import type { BookingExtra } from "@/lib/types";
-
-function getStripe(): Stripe {
-  const stripeKey = process.env.STRIPE_SECRET_KEY;
-  if (!stripeKey) {
-    throw new Error("STRIPE_SECRET_KEY is not configured");
-  }
-  return new Stripe(stripeKey);
-}
 
 export async function POST(request: NextRequest) {
   // ─── Rate limiting (Bug 16) ─────────────────────────────────────────
@@ -505,8 +498,8 @@ export async function POST(request: NextRequest) {
       return finalOverlap;
     }
 
-    // 2. Create booking in Supabase (status: pending)
-    // Use crypto for better collision prevention
+    // 2. Create booking in Supabase (status: pending_approval)
+    // Public checkout bookings require admin approval before payment is collected.
     const bookingId = "bk" + crypto.randomUUID().replace(/-/g, "").slice(0, 7);
     const { error: bookingError } = await supabase.from("bookings").insert({
       id: bookingId,
@@ -525,7 +518,7 @@ export async function POST(request: NextRequest) {
       discount_amount: appliedDiscountAmount,
       credit_applied: creditApplied,
       deposit: 0,
-      status: "pending",
+      status: "pending_approval",
       signed_name: signedName || null,
       insurance_proof_url: insuranceProofUrl || null,
       insurance_opted_out: insuranceOptedOut || false,
@@ -550,117 +543,7 @@ export async function POST(request: NextRequest) {
 
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://rentnextgearauto.com";
 
-    // 3. Handle $0 bookings — skip Stripe, auto-confirm, send emails directly
-    if (chargeAmount <= 0) {
-      try {
-        await confirmFreeBooking(supabase, bookingId);
-      } catch (error) {
-        logger.error("Failed to confirm free booking:", error);
-        return NextResponse.json(
-          { success: false, message: "Failed to confirm booking" },
-          { status: 500 },
-        );
-      }
-
-      // Send confirmation emails (includes set-password link when needed)
-      const emailData = {
-        bookingId,
-        customerName: bookingCustomerName || "Customer",
-        customerEmail: bookingCustomerEmail,
-        vehicleName: vehicleName || "Vehicle",
-        pickupDate,
-        returnDate,
-        pickupTime: pickupTime || undefined,
-        returnTime: returnTime || undefined,
-        totalPrice: serverTotalBeforeCredit,
-        deposit: 0,
-        needsPassword,
-        pickupLocationName: pickupLocationName || undefined,
-        returnLocationName: returnLocationName || undefined,
-      };
-
-      sendBookingConfirmationWithAgreement(emailData).catch(logger.error);
-      sendAdminNewBooking(emailData).catch(logger.error);
-
-      return NextResponse.json({
-        success: true,
-        data: {
-          sessionId: null,
-          sessionUrl: `${siteUrl}/booking/success?booking_id=${bookingId}`,
-          bookingId,
-          freeBooking: true,
-        },
-      });
-    }
-
-    // 4. Create Stripe Checkout Session for paid bookings
-    if (!process.env.STRIPE_SECRET_KEY?.trim()) {
-      await supabase.from("bookings").delete().eq("id", bookingId);
-      return NextResponse.json(
-        { success: false, message: "Payment processing is temporarily unavailable. Please try again shortly." },
-        { status: 503 }
-      );
-    }
-
-    let session: Stripe.Checkout.Session;
-    try {
-      session = await getStripe().checkout.sessions.create({
-        payment_method_types: ["card", "cashapp", "link"],
-        mode: "payment",
-        customer_email: bookingCustomerEmail,
-        line_items: [
-          {
-            price_data: {
-              currency: "usd",
-              product_data: {
-                name: `NextGearAuto - Vehicle Rental`,
-                description: `${vehicleName || "Vehicle"} rental: ${pickupDate}${pickupTime ? " at " + pickupTime : ""} to ${returnDate}${returnTime ? " at " + returnTime : ""}`,
-              },
-              unit_amount: Math.max(1, Math.round((Number.isFinite(chargeAmount) ? chargeAmount : 0) * 100)), // Stripe uses cents, min 1 cent
-            },
-            quantity: 1,
-          },
-        ],
-        metadata: {
-          booking_id: bookingId,
-          customer_id: customerId || "",
-          vehicle_id: vehicleId,
-          total_price: serverTotalBeforeCredit.toString(),
-          promo_code: appliedPromoCode || "",
-          discount_amount: appliedDiscountAmount.toString(),
-          credit_applied: creditApplied.toString(),
-        },
-        success_url: `${siteUrl}/booking/success?session_id={CHECKOUT_SESSION_ID}&booking_id=${bookingId}`,
-        cancel_url: `${siteUrl}/booking/cancel?booking_id=${bookingId}`,
-      });
-    } catch (stripeError) {
-      logger.error("Stripe session creation failed, deleting orphaned booking:", stripeError);
-      await supabase.from("bookings").delete().eq("id", bookingId);
-      const message =
-        stripeError instanceof Stripe.errors.StripeError
-          ? "Unable to start payment. Please try again or contact support."
-          : "Payment processing failed. Please try again.";
-      return NextResponse.json({ success: false, message }, { status: 502 });
-    }
-
-    if (!session.url) {
-      logger.error("Stripe checkout session missing redirect URL", {
-        sessionId: session.id,
-        bookingId,
-      });
-      await supabase.from("bookings").delete().eq("id", bookingId);
-      return NextResponse.json(
-        { success: false, message: "Unable to start payment. Please try again." },
-        { status: 502 }
-      );
-    }
-
-    // 5. Update booking with Stripe session ID
-    await supabase
-      .from("bookings")
-      .update({ stripe_session_id: session.id })
-      .eq("id", bookingId);
-
+    // 3. Send emails for pending approval booking
     const emailData = {
       bookingId,
       customerName: bookingCustomerName || "Customer",
@@ -676,20 +559,24 @@ export async function POST(request: NextRequest) {
       returnLocationName: returnLocationName || undefined,
     };
 
-    // Fire and forget - don't block the response
-    sendBookingPendingEmail(emailData).catch((error) => {
-      logger.error("Failed to send pending email to customer:", error);
-    });
-    sendAdminNewBooking(emailData).catch((error) => {
-      logger.error("Failed to send admin notification for pending booking:", error);
+    // Send "under review" email to customer
+    sendBookingPendingApprovalEmail(emailData).catch((error) => {
+      logger.error("Failed to send pending approval email to customer:", error);
     });
 
+    // Send "approval needed" notification to admin
+    sendAdminBookingApprovalNeeded(emailData).catch((error) => {
+      logger.error("Failed to send admin approval notification:", error);
+    });
+
+    // 4. Return success - customer will receive payment link after admin approval
     return NextResponse.json({
       success: true,
       data: {
-        sessionId: session.id,
-        sessionUrl: session.url,
+        sessionId: null,
+        sessionUrl: `${siteUrl}/booking/submitted?booking_id=${bookingId}`,
         bookingId,
+        pendingApproval: true,
       },
     });
   } catch (error) {

@@ -382,6 +382,100 @@ export function adminNewBookingTemplate(data: EmailData): string {
   `);
 }
 
+export function bookingPendingApprovalTemplate(data: EmailData): string {
+  if (!data || !data.customerName || !data.bookingId) {
+    throw new Error("Invalid email data: missing required fields");
+  }
+  const result = bookingEmailTemplate(
+    data,
+    {
+      subject: "Booking Under Review",
+      heading: "Booking Under Review",
+      message: "thank you for your reservation request! Your booking is currently under review by our team.",
+      showConfirmationLink: false,
+      accountUrl: `${SITE_URL}/account`,
+      accountLinkText: "View My Booking",
+      bottomNote:
+        "You'll receive a payment link via email once your booking is approved. This typically takes a few hours during business hours. If you have any questions, please contact us.",
+    }
+  );
+  return result.html;
+}
+
+export function adminBookingApprovalNeededTemplate(data: EmailData): string {
+  if (!data || !data.customerName || !data.bookingId) {
+    throw new Error("Invalid email data: missing required fields");
+  }
+  return wrapEmail(`
+    ${headerBlock('New Booking Awaiting Approval', 'A customer has requested a booking', '#f59e0b', '#d97706')}
+    ${bookingIdBlock(data.bookingId, '#f59e0b', '#fffbeb')}
+    <tr>
+      <td style="padding: 0 32px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background: #fffbeb; border-radius: 12px; padding: 16px; margin-bottom: 20px; border: 1px solid #fbbf24;">
+          <tr>
+            <td style="padding: 12px;">
+              <p style="margin: 0; color: #92400e; font-size: 14px; font-weight: 600;">⏳ Action Required</p>
+              <p style="margin: 8px 0 0; color: #78350f; font-size: 13px; line-height: 1.5;">This booking requires your approval before the customer can proceed with payment. Review the details below and approve or decline in the admin dashboard.</p>
+            </td>
+          </tr>
+        </table>
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${renterDetailRow(data.customerName)}
+          ${detailRow('Email', escapeHtml(data.customerEmail))}
+          ${detailRow('Vehicle', escapeHtml(data.vehicleName), true)}
+        </table>
+        ${dateTimeBlock('Pick-up', data.pickupDate, data.pickupTime, '#f59e0b', 'linear-gradient(135deg, #fffbeb, #fef3c7)')}
+        ${dateTimeBlock('Return', data.returnDate, data.returnTime, '#d97706', 'linear-gradient(135deg, #fffbeb, #fef3c7)')}
+        ${data.pickupLocationName ? `
+<tr>
+  <td style="padding:8px 12px;color:#6b7280;font-size:14px;">Pickup Location</td>
+  <td style="padding:8px 12px;font-weight:600;color:#111827;font-size:14px;">${escapeHtml(data.pickupLocationName)}${data.returnLocationName && data.returnLocationName !== data.pickupLocationName ? `<br/><span style="color:#6b7280;font-weight:400;">Return: ${escapeHtml(data.returnLocationName)}</span>` : ''}</td>
+</tr>` : ''}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 16px 0; color: #6b7280; font-size: 14px;">Total Amount</td>
+            <td style="padding: 16px 0; color: #f59e0b; font-size: 22px; font-weight: 800; text-align: right;">$${(data.totalPrice ?? 0).toFixed(2)}</td>
+          </tr>
+        </table>
+        ${ctaButton('Review & Approve', `${SITE_URL}/admin/bookings`, '#f59e0b')}
+      </td>
+    </tr>
+  `);
+}
+
+export function bookingApprovedPaymentLinkTemplate(data: EmailData & { paymentUrl: string }): string {
+  if (!data || !data.customerName || !data.bookingId || !data.paymentUrl) {
+    throw new Error("Invalid email data: missing required fields");
+  }
+  return wrapEmail(`
+    ${headerBlock('Booking Approved!', 'Complete your payment to confirm', '#10b981', '#059669')}
+    ${bookingIdBlock(data.bookingId, '#10b981', '#ecfdf5')}
+    <tr>
+      <td style="padding: 0 32px;">
+        ${renterGreetingCentered(data.customerName, 'great news! Your booking has been approved. Complete your payment below to confirm your reservation.')}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          ${detailRow('Vehicle', escapeHtml(data.vehicleName), true)}
+        </table>
+        ${dateTimeBlock('Pick-up', data.pickupDate, data.pickupTime, '#10b981', 'linear-gradient(135deg, #ecfdf5, #d1fae5)')}
+        ${dateTimeBlock('Return', data.returnDate, data.returnTime, '#d97706', 'linear-gradient(135deg, #fffbeb, #fef3c7)')}
+        ${data.pickupLocationName ? `
+<tr>
+  <td style="padding:8px 12px;color:#6b7280;font-size:14px;">Pickup Location</td>
+  <td style="padding:8px 12px;font-weight:600;color:#111827;font-size:14px;">${escapeHtml(data.pickupLocationName)}${data.returnLocationName && data.returnLocationName !== data.pickupLocationName ? `<br/><span style="color:#6b7280;font-weight:400;">Return: ${escapeHtml(data.returnLocationName)}</span>` : ''}</td>
+</tr>` : ''}
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td style="padding: 16px 0; color: #6b7280; font-size: 14px;">Amount Due</td>
+            <td style="padding: 16px 0; color: #10b981; font-size: 22px; font-weight: 800; text-align: right;">$${(data.totalPrice ?? 0).toFixed(2)}</td>
+          </tr>
+        </table>
+        ${ctaButton('Complete Payment', data.paymentUrl, '#10b981')}
+        <p style="margin: 20px 0 0; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">This payment link will expire in 24 hours. If you have any questions, please contact us.</p>
+      </td>
+    </tr>
+  `);
+}
+
 export function cancellationTemplate(data: EmailData): string {
   if (!data || !data.customerName || !data.bookingId) {
     throw new Error("Invalid email data: missing required fields");

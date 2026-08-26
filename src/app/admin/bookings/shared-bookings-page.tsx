@@ -76,7 +76,7 @@ export function SharedBookingsPage({ config }: SharedBookingsPageProps) {
   useEffect(() => {
     if (statusFromUrlApplied) return;
     const status = searchParams.get("status");
-    if (status && ["all", "pending", "confirmed", "active", "completed", "cancelled"].includes(status)) {
+    if (status && ["all", "pending_approval", "pending", "confirmed", "active", "completed", "cancelled"].includes(status)) {
       setStatusFilter(status);
     }
     setStatusFromUrlApplied(true);

@@ -13,7 +13,7 @@ import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
 import type { BlockedDateEntry } from "./calendar-model";
 import { filterTimelineVehicles } from "./calendar-booking-display";
-import { getDefaultTimelineStart } from "./calendar-timeline-range";
+import { getDefaultTimelineStart, getTimelineStartForToday } from "./calendar-timeline-range";
 import { TuroTripDetailPanel } from "@/app/admin/bookings/components/TuroTripDetailPanel";
 import { InPersonAgreementSign } from "@/app/admin/bookings/components/InPersonAgreementSign";
 import {
@@ -294,7 +294,7 @@ export default function AdminCalendarPage({
   }, [calendarMonthStart, selectedDay]);
 
   const goToToday = useCallback(() => {
-    // Keep the lookback window — only scroll the timeline to today's column.
+    setTimelineStart(getTimelineStartForToday());
   }, []);
 
   const selectedBlockedVehicle = selectedBlocked
@@ -383,7 +383,7 @@ export default function AdminCalendarPage({
                   <span id="calendar-status-filter-label" className="text-xs font-medium text-gray-500 shrink-0 mr-1">
                     Status
                   </span>
-                  {["all", "pending", "confirmed", "active", "completed"].map((status) => (
+                  {["all", "pending_approval", "pending", "confirmed", "active", "completed"].map((status) => (
                     <Button
                       key={status}
                       type="button"
@@ -393,7 +393,7 @@ export default function AdminCalendarPage({
                       aria-pressed={statusFilter === status}
                       className="capitalize h-7 text-[11px] sm:text-xs shrink-0 px-2.5"
                     >
-                      {status === "all" ? "All" : status}
+                      {status === "all" ? "All" : status === "pending_approval" ? "Awaiting" : status}
                     </Button>
                   ))}
                 </div>

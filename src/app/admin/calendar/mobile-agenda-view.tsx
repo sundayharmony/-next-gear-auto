@@ -192,6 +192,7 @@ export function MobileAgendaView({
               <div className="flex items-start gap-3">
                 {/* Status bar */}
                 <div className={`w-1 self-stretch rounded-full shrink-0 ${
+                  booking.status === "pending_approval" ? "bg-amber-500" :
                   booking.status === "pending" ? "bg-yellow-400" :
                   booking.status === "confirmed" ? "bg-green-400" :
                   booking.status === "active" ? "bg-blue-400" :
@@ -245,6 +246,7 @@ export function MobileAgendaView({
 
                     {/* Status badge */}
                     <span className={`ml-auto capitalize text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      booking.status === "pending_approval" ? "bg-amber-100 text-amber-700" :
                       booking.status === "pending" ? "bg-yellow-100 text-yellow-700" :
                       booking.status === "confirmed" ? "bg-green-100 text-green-700" :
                       booking.status === "active" ? "bg-blue-100 text-blue-700" :
@@ -252,7 +254,7 @@ export function MobileAgendaView({
                       booking.status === "no-show" ? "bg-orange-100 text-orange-700" :
                       "bg-gray-100 text-gray-600"
                     }`}>
-                      {booking.status}
+                      {booking.status === "pending_approval" ? "Awaiting" : booking.status}
                     </span>
                   </div>
                 </div>

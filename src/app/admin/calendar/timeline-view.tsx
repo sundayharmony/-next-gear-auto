@@ -41,6 +41,7 @@ const DAY_COL_MIN_PX = 112;
 const VEHICLE_COL_PX = 168;
 
 const STATUS_ACCENT: Record<string, string> = {
+  pending_approval: "border-l-amber-600",
   pending: "border-l-amber-500",
   confirmed: "border-l-emerald-500",
   active: "border-l-blue-500",
@@ -698,12 +699,12 @@ export function TimelineView({
 
         <div className="border-t border-gray-200 bg-gray-50/60 px-4 py-3 sm:px-5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs">
           <span className="text-gray-400 font-semibold uppercase tracking-wider text-[10px]">Legend</span>
-          {(["pending", "confirmed", "active", "completed", "no-show"] as const).map((status) => (
+          {(["pending_approval", "pending", "confirmed", "active", "completed", "no-show"] as const).map((status) => (
             <div key={status} className="flex items-center gap-1.5">
               <div
                 className={`w-3 h-3 rounded-sm border-l-2 ${STATUS_ACCENT[status]} ${statusBgColors[status]} border ${statusBorderColors[status]}`}
               />
-              <span className="capitalize text-gray-600">{status === "no-show" ? "No-show" : status}</span>
+              <span className="capitalize text-gray-600">{status === "no-show" ? "No-show" : status === "pending_approval" ? "Pending Approval" : status}</span>
             </div>
           ))}
           <div className="flex items-center gap-1.5">

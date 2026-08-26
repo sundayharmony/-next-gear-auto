@@ -1,9 +1,10 @@
 "use client";
 
-import React from "react";
-import { X, Check, Mail, AlertTriangle, PenLine } from "lucide-react";
+import React, { useState } from "react";
+import { X, Check, Mail, AlertTriangle, PenLine, ThumbsUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { isAgreementComplete } from "@/lib/agreement/agreement-complete";
+import { adminFetch } from "@/lib/utils/admin-fetch";
 import type { BookingDetailContext } from "./booking-detail-context";
 
 interface DetailActionsBarProps {
@@ -25,9 +26,35 @@ export function DetailActionsBar({ ctx }: DetailActionsBarProps) {
     onStartInPersonSign,
     updateStatus,
     onError,
+    onSuccess,
+    onUpdateBooking,
     confirmingCancel,
     setConfirmingCancel,
   } = ctx;
+
+  const [approving, setApproving] = useState(false);
+
+  const handleApproveBooking = async () => {
+    setApproving(true);
+    try {
+      const res = await adminFetch("/api/admin/bookings/approve", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: booking.id }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        onError?.(json.message || "Failed to approve booking");
+        return;
+      }
+      onSuccess?.("Booking approved! Payment link sent to customer.");
+      onUpdateBooking?.({ ...booking, status: "pending" } as typeof booking);
+    } catch (err) {
+      onError?.("Failed to approve booking");
+    } finally {
+      setApproving(false);
+    }
+  };
 
   return (
     <div className="sticky bottom-0 bg-white border-t border-gray-200 px-4 sm:px-6 py-4 pb-[calc(1rem+env(safe-area-inset-bottom,0px))] lg:pb-4 space-y-3">
@@ -86,6 +113,16 @@ export function DetailActionsBar({ ctx }: DetailActionsBarProps) {
                 </p>
               )}
               {/* Next status button */}
+              {booking.status === "pending_approval" && (
+                <Button
+                  onClick={handleApproveBooking}
+                  disabled={approving}
+                  className="w-full bg-amber-500 hover:bg-amber-600 text-white text-xs"
+                >
+                  <ThumbsUp className="w-3 h-3 mr-1" />
+                  {approving ? "Approving..." : "Approve & Send Payment Link"}
+                </Button>
+              )}
               {booking.status === "pending" && (
                 isAgreementComplete(booking) ? (
                   <Button
