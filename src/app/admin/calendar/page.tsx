@@ -13,7 +13,10 @@ import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
 import type { BlockedDateEntry } from "./calendar-model";
 import { filterTimelineVehicles } from "./calendar-booking-display";
-import { getDefaultTimelineStart, getTimelineStartForToday } from "./calendar-timeline-range";
+import {
+  getDesktopTimelineStart,
+  getMobileTimelineStart,
+} from "./calendar-timeline-range";
 import { TuroTripDetailPanel } from "@/app/admin/bookings/components/TuroTripDetailPanel";
 import { InPersonAgreementSign } from "@/app/admin/bookings/components/InPersonAgreementSign";
 import {
@@ -85,7 +88,16 @@ export default function AdminCalendarPage({
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [vehicleFilter, setVehicleFilter] = useState<string>("all");
 
-  const [timelineStart, setTimelineStart] = useState<Date>(() => getDefaultTimelineStart());
+  const [desktopTimelineStart, setDesktopTimelineStart] = useState<Date>(
+    () => getDesktopTimelineStart()
+  );
+  const [mobileTimelineStart, setMobileTimelineStart] = useState<Date>(
+    () => getMobileTimelineStart()
+  );
+  const timelineStart =
+    desktopTimelineStart.getTime() <= mobileTimelineStart.getTime()
+      ? desktopTimelineStart
+      : mobileTimelineStart;
 
   const [calendarViewDate, setCalendarViewDate] = useState<Date>(() => {
     const today = new Date();
@@ -99,7 +111,9 @@ export default function AdminCalendarPage({
     d.setDate(1);
     return d;
   }, [calendarViewDate]);
-  const [selectedDay, setSelectedDay] = useState<string | null>(null);
+  const [selectedDay, setSelectedDay] = useState<string | null>(() =>
+    getLocalYmd(new Date())
+  );
 
   const [selectedBooking, setSelectedBooking] = useState<AdminBookingRow | null>(null);
   const [showBookingDetail, setShowBookingDetail] = useState(false);
@@ -294,7 +308,8 @@ export default function AdminCalendarPage({
   }, [calendarMonthStart, selectedDay]);
 
   const goToToday = useCallback(() => {
-    setTimelineStart(getTimelineStartForToday());
+    setDesktopTimelineStart(getDesktopTimelineStart());
+    setMobileTimelineStart(getMobileTimelineStart());
   }, []);
 
   const selectedBlockedVehicle = selectedBlocked
@@ -434,27 +449,28 @@ export default function AdminCalendarPage({
               bookings={filteredBookings}
               vehicles={timelineVehicles}
               blockedDates={blockedDates}
-              timelineStart={timelineStart}
+              desktopTimelineStart={desktopTimelineStart}
+              mobileTimelineStart={mobileTimelineStart}
               timelineWindowDays={TIMELINE_WINDOW_DAYS}
               onPreviousWeek={() => {
-                const newStart = new Date(timelineStart);
+                const newStart = new Date(mobileTimelineStart);
                 newStart.setDate(newStart.getDate() - 7);
-                setTimelineStart(newStart);
+                setMobileTimelineStart(newStart);
               }}
               onNextWeek={() => {
-                const newStart = new Date(timelineStart);
+                const newStart = new Date(mobileTimelineStart);
                 newStart.setDate(newStart.getDate() + 7);
-                setTimelineStart(newStart);
+                setMobileTimelineStart(newStart);
               }}
               onPreviousFortnight={() => {
-                const newStart = new Date(timelineStart);
+                const newStart = new Date(desktopTimelineStart);
                 newStart.setDate(newStart.getDate() - 14);
-                setTimelineStart(newStart);
+                setDesktopTimelineStart(newStart);
               }}
               onNextFortnight={() => {
-                const newStart = new Date(timelineStart);
+                const newStart = new Date(desktopTimelineStart);
                 newStart.setDate(newStart.getDate() + 14);
-                setTimelineStart(newStart);
+                setDesktopTimelineStart(newStart);
               }}
               onToday={goToToday}
               onBookingClick={openBookingDetail}
