@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { generateBillOfSalePdf } from "@/lib/vehicle-sale/bill-of-sale-pdf";
-import { hasBlockingBookingsForSale } from "@/lib/vehicle-sale/guards";
+import { hasBlockingBookingsForSale, SALE_BLOCKING_STATUSES } from "@/lib/vehicle-sale/guards";
 import type { SellVehicleRequestBody, VehicleSaleRecord } from "@/lib/vehicle-sale/types";
 import { logger } from "@/lib/utils/logger";
 import { isYyyyMmDd } from "@/lib/utils/booking-dates";
@@ -172,7 +172,7 @@ export async function POST(
     .from("bookings")
     .select("id, status, return_date")
     .eq("vehicle_id", vehicleId)
-    .in("status", ["pending", "confirmed", "active"]);
+    .in("status", [...SALE_BLOCKING_STATUSES]);
 
   if (bookingsErr) {
     logger.error("Sell vehicle bookings check error:", bookingsErr);
@@ -184,7 +184,7 @@ export async function POST(
       {
         success: false,
         message:
-          "Cannot sell: this vehicle has open bookings (pending, confirmed, or active). Complete or cancel them first.",
+          "Cannot sell: this vehicle has open bookings (awaiting approval, pending, confirmed, or active). Complete or cancel them first.",
       },
       { status: 409 },
     );

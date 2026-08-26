@@ -3,7 +3,12 @@ import assert from "node:assert/strict";
 import { hasBlockingBookingsForSale, SALE_BLOCKING_STATUSES } from "@/lib/vehicle-sale/guards";
 
 test("SALE_BLOCKING_STATUSES includes operational rentals", () => {
-  assert.deepEqual(SALE_BLOCKING_STATUSES, ["pending", "confirmed", "active"]);
+  assert.deepEqual(SALE_BLOCKING_STATUSES, [
+    "pending_approval",
+    "pending",
+    "confirmed",
+    "active",
+  ]);
 });
 
 test("hasBlockingBookingsForSale blocks active booking with future return", () => {
@@ -28,4 +33,12 @@ test("hasBlockingBookingsForSale ignores active booking that already ended", () 
     "2026-05-16",
   );
   assert.equal(blocked, false);
+});
+
+test("hasBlockingBookingsForSale blocks pending_approval requests", () => {
+  const blocked = hasBlockingBookingsForSale(
+    [{ id: "b1", status: "pending_approval", return_date: "2099-01-01" }],
+    "2026-05-16",
+  );
+  assert.equal(blocked, true);
 });

@@ -8,6 +8,12 @@ import {
   validateStatusTransition,
 } from "@/lib/bookings/lifecycle";
 
+test("pending_approval may become pending or cancelled", () => {
+  assert.deepEqual(getAllowedTransitions("pending_approval"), ["pending", "cancelled"]);
+  assert.equal(canTransitionStatus("pending_approval", "pending"), true);
+  assert.equal(canTransitionStatus("pending_approval", "confirmed"), false);
+});
+
 test("pending may become confirmed or cancelled", () => {
   assert.deepEqual(getAllowedTransitions("pending"), ["confirmed", "cancelled"]);
   assert.equal(canTransitionStatus("pending", "confirmed"), true);

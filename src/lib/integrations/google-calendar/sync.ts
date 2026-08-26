@@ -25,7 +25,7 @@ import {
   type GoogleCalendarSourceKind,
 } from "./types";
 
-const ACTIVE_BOOKING_STATUSES = ["pending", "confirmed", "active", "completed"];
+const ACTIVE_BOOKING_STATUSES = ["pending_approval", "pending", "confirmed", "active", "completed"];
 
 export type SyncItemResult = { ok: true } | { ok: false; error: string };
 
