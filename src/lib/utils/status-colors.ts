@@ -1,5 +1,6 @@
 /** Centralized status badge colors for bookings across the admin panel */
 export const statusColors: Record<string, string> = {
+  pending_approval: "bg-amber-100 text-amber-700",
   pending: "bg-yellow-100 text-yellow-700",
   confirmed: "bg-green-100 text-green-700",
   active: "bg-blue-100 text-blue-700",
@@ -10,6 +11,7 @@ export const statusColors: Record<string, string> = {
 
 /** Background colors for calendar/timeline blocks */
 export const statusBgColors: Record<string, string> = {
+  pending_approval: "bg-amber-100",
   pending: "bg-yellow-100",
   confirmed: "bg-green-100",
   active: "bg-blue-100",
@@ -20,6 +22,7 @@ export const statusBgColors: Record<string, string> = {
 
 /** Border colors for calendar/timeline blocks */
 export const statusBorderColors: Record<string, string> = {
+  pending_approval: "border-amber-400",
   pending: "border-yellow-400",
   confirmed: "border-green-400",
   active: "border-blue-400",

@@ -383,7 +383,7 @@ export default function AdminCalendarPage({
                   <span id="calendar-status-filter-label" className="text-xs font-medium text-gray-500 shrink-0 mr-1">
                     Status
                   </span>
-                  {["all", "pending", "confirmed", "active", "completed"].map((status) => (
+                  {["all", "pending_approval", "pending", "confirmed", "active", "completed"].map((status) => (
                     <Button
                       key={status}
                       type="button"
@@ -393,7 +393,7 @@ export default function AdminCalendarPage({
                       aria-pressed={statusFilter === status}
                       className="capitalize h-7 text-[11px] sm:text-xs shrink-0 px-2.5"
                     >
-                      {status === "all" ? "All" : status}
+                      {status === "all" ? "All" : status === "pending_approval" ? "Awaiting" : status}
                     </Button>
                   ))}
                 </div>

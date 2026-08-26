@@ -144,6 +144,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     onError,
     onSuccess,
     onStartInPersonSign,
+    onUpdateBooking,
   };
 
   return (

@@ -153,4 +153,5 @@ export interface BookingDetailContext {
   onError: (msg: string) => void;
   onSuccess: (msg: string) => void;
   onStartInPersonSign?: () => void;
+  onUpdateBooking?: (updated: BookingRow) => void;
 }

@@ -4,7 +4,10 @@ import { escapeHtml, stripRichHtmlToText } from "@/lib/utils/validation";
 import {
   bookingConfirmationTemplate,
   bookingPendingTemplate,
+  bookingPendingApprovalTemplate,
   adminNewBookingTemplate,
+  adminBookingApprovalNeededTemplate,
+  bookingApprovedPaymentLinkTemplate,
   cancellationTemplate,
   pickupReminderTemplate,
   returnReminderTemplate,
@@ -175,6 +178,64 @@ export async function sendAdminNewBooking(data: BookingEmailData) {
     logger.info("Admin notification sent for booking:", data.bookingId);
   } catch (error) {
     logger.error("Failed to send admin notification:", error);
+    throw error;
+  }
+}
+
+export async function sendBookingPendingApprovalEmail(data: BookingEmailData) {
+  try {
+    const transporter = getTransporter();
+    const html = bookingPendingApprovalTemplate(data);
+    await sendMailWithRetry(transporter, {
+      from: FROM_CUSTOMER,
+      to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
+      subject: `Booking Under Review - ${data.bookingId}`,
+      html,
+      text: stripHtmlTags(html),
+    });
+    logger.info("Pending approval email sent for booking:", data.bookingId);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send pending approval email:", errorMsg);
+    throw error;
+  }
+}
+
+export async function sendAdminBookingApprovalNeeded(data: BookingEmailData) {
+  try {
+    const transporter = getTransporter();
+    const html = adminBookingApprovalNeededTemplate(data);
+    await sendMailWithRetry(transporter, {
+      from: FROM_SYSTEM,
+      to: ADMIN_EMAIL,
+      subject: `⏳ Approval Needed: ${data.bookingId} - ${data.vehicleName}`,
+      html,
+      text: stripHtmlTags(html),
+    });
+    logger.info("Admin approval notification sent for booking:", data.bookingId);
+  } catch (error) {
+    logger.error("Failed to send admin approval notification:", error);
+    throw error;
+  }
+}
+
+export async function sendBookingApprovedPaymentLink(data: BookingEmailData & { paymentUrl: string }) {
+  try {
+    const transporter = getTransporter();
+    const html = bookingApprovedPaymentLinkTemplate(data);
+    await sendMailWithRetry(transporter, {
+      from: FROM_CUSTOMER,
+      to: data.customerEmail,
+      bcc: ADMIN_EMAIL,
+      subject: `Booking Approved - Complete Payment | ${data.bookingId}`,
+      html,
+      text: stripHtmlTags(html),
+    });
+    logger.info("Payment link email sent for approved booking:", data.bookingId);
+  } catch (error) {
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    logger.error("Failed to send payment link email:", errorMsg);
     throw error;
   }
 }
