@@ -60,6 +60,7 @@ const MIXED_AUTH_ROUTES = new Set([
   "src/app/api/reviews/route.ts",
   "src/app/api/rental-agreement/generate/route.ts",
   "src/app/api/instagram/route.ts",
+  "src/app/api/account/referral/route.ts",
 ]);
 
 const STAFF_AUTH_ROUTES = new Set([
@@ -97,7 +98,7 @@ const METHOD_OVERRIDES = {
     "*": "admin-only",
   },
   "src/app/api/admin/integrations/google-calendar/callback/route.ts": {
-    "*": "admin-only",
+    GET: "public",
   },
   "src/app/api/admin/integrations/google-calendar/disconnect/route.ts": {
     "*": "admin-only",

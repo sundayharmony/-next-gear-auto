@@ -8,6 +8,8 @@ export default defineConfig([
       "react-hooks/rules-of-hooks": "error",
       // Valid patterns (URL sync, theme mount, data fetch on open) — too noisy as errors project-wide
       "react-hooks/set-state-in-effect": "off",
+      // Passing a ref object into `ref={}` is valid; the compiler plugin still flags it.
+      "react-hooks/refs": "off",
       "react/no-unescaped-entities": "off",
       "react-hooks/static-components": "off",
       "react-hooks/immutability": "off",

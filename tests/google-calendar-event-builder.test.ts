@@ -91,7 +91,8 @@ test("buildBookingCalendarEvent marks cancelled bookings for deletion", () => {
   );
   assert.equal(built.shouldDelete, true);
   assert.equal(built.location, "Hoboken, NJ");
-  assert.match(built.start.dateTime || "", /2026-07-10T10:00:00/);
+  const startDateTime = "dateTime" in built.start ? built.start.dateTime : "";
+  assert.match(startDateTime, /2026-07-10T10:00:00/);
 });
 
 test("buildTuroCalendarEvent includes sanitized location and skips past trips", () => {
