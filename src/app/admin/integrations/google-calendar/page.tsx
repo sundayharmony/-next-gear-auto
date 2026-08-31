@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Calendar, Loader2, Plug, RefreshCw, Unplug } from "lucide-react";
+import {
+  displayGoogleCalendarError,
+  GOOGLE_CALENDAR_RECONNECT_MESSAGE,
+} from "@/lib/integrations/google-calendar/errors";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +23,7 @@ type Status = {
   connectedAt: string | null;
   lastSyncAt: string | null;
   lastError: string | null;
+  needsReconnect?: boolean;
   oauthRedirectUri?: string;
   flash?: { type: "success" | "error"; message: string };
 };
@@ -61,11 +66,22 @@ export default function GoogleCalendarIntegrationPage() {
       if (data.flash?.type === "error") setError(data.flash.message);
       if (data.flash?.type === "success") setSuccess(data.flash.message);
       setSelectedCalendarId(data.calendarId || "");
-      if (data.connected) {
+      if (data.connected && !data.needsReconnect) {
         const calRes = await adminFetch("/api/admin/integrations/google-calendar/calendars");
         const calJson = await calRes.json();
         if (calRes.ok && calJson.success) {
           setCalendars(calJson.data as CalendarOption[]);
+        } else {
+          setCalendars([]);
+          const calMessage =
+            typeof calJson.message === "string"
+              ? calJson.message
+              : "Failed to list Google calendars";
+          if (calJson.reconnectRequired) {
+            setStatus({ ...data, needsReconnect: true, lastError: calMessage });
+          } else {
+            setError(displayGoogleCalendarError(calMessage) || calMessage);
+          }
         }
       } else {
         setCalendars([]);
@@ -111,6 +127,17 @@ export default function GoogleCalendarIntegrationPage() {
     }
   };
 
+  const handleReconnect = async () => {
+    try {
+      await adminFetch("/api/admin/integrations/google-calendar/disconnect", {
+        method: "POST",
+      });
+    } catch (err) {
+      logger.warn("Google Calendar disconnect before reconnect failed", err);
+    }
+    window.location.href = "/api/admin/integrations/google-calendar/connect";
+  };
+
   const handleSync = async () => {
     setSyncing(true);
     const controller = new AbortController();
@@ -123,6 +150,7 @@ export default function GoogleCalendarIntegrationPage() {
       const json = await res.json();
       if (!res.ok || !json.success) {
         setError(json.message || "Sync failed");
+        await loadStatus();
         return;
       }
       const data = json.data as {
@@ -200,7 +228,7 @@ export default function GoogleCalendarIntegrationPage() {
             {loading ? (
               <div className="flex items-center gap-2 text-gray-500">
                 <Loader2 className="h-4 w-4 animate-spin" />
-                Loading connection statusâ€¦
+                Loading connection status…
               </div>
             ) : (
               <>
@@ -273,9 +301,22 @@ export default function GoogleCalendarIntegrationPage() {
                     {status.lastSyncAt && (
                       <p>Last sync: {new Date(status.lastSyncAt).toLocaleString()}</p>
                     )}
-                    {status.lastError && (
-                      <p className="text-red-600">Last error: {status.lastError}</p>
-                    )}
+                    {status.needsReconnect ? (
+                      <div className="text-sm text-red-900 bg-red-50 border border-red-200 rounded-md p-4 space-y-2">
+                        <p className="font-medium">
+                          {displayGoogleCalendarError(status.lastError) ||
+                            GOOGLE_CALENDAR_RECONNECT_MESSAGE}
+                        </p>
+                        <p>
+                          Sync is paused until you reconnect. Click Reconnect, approve Calendar
+                          access, then Sync now.
+                        </p>
+                      </div>
+                    ) : status.lastError ? (
+                      <p className="text-red-600">
+                        Last error: {displayGoogleCalendarError(status.lastError) || status.lastError}
+                      </p>
+                    ) : null}
                   </div>
                 )}
 
@@ -308,14 +349,21 @@ export default function GoogleCalendarIntegrationPage() {
                     </Button>
                   ) : (
                     <>
-                      <Button onClick={handleSync} disabled={syncing}>
-                        {syncing ? (
-                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        ) : (
-                          <RefreshCw className="h-4 w-4 mr-2" />
-                        )}
-                        Sync now
-                      </Button>
+                      {status.needsReconnect ? (
+                        <Button onClick={() => void handleReconnect()}>
+                          <Plug className="h-4 w-4 mr-2" />
+                          Reconnect
+                        </Button>
+                      ) : (
+                        <Button onClick={handleSync} disabled={syncing}>
+                          {syncing ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <RefreshCw className="h-4 w-4 mr-2" />
+                          )}
+                          Sync now
+                        </Button>
+                      )}
                       <Button variant="outline" onClick={handleDisconnect}>
                         <Unplug className="h-4 w-4 mr-2" />
                         Disconnect

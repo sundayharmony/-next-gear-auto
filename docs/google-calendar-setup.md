@@ -85,6 +85,7 @@ The admin **Google Calendar** page shows the redirect URI for your current host 
 
 ## Troubleshooting
 
+- **invalid_grant** — Google rejected the stored refresh token (revoked, expired, or the Google Cloud app is in **Testing** and the token aged out). On Admin → Google Calendar, click **Reconnect** (or Disconnect then Connect), approve Calendar access, then **Sync now**. Do not rotate `GOOGLE_CALENDAR_ENCRYPTION_KEY` unless you plan to reconnect immediately — a new key cannot decrypt the saved token.
 - **invalid_client** — the client secret in Vercel does not match Google Cloud. Open **Credentials** → your Web client → **Reset secret**, copy the new value into `GOOGLE_CALENDAR_CLIENT_SECRET` on Vercel (Production), then redeploy.
 - **"Google hasn't verified this app"** — expected in Testing mode; add yourself as a test user and click **Continue**.
 - **Access blocked: app has not completed verification** — your Google account is not on the test-user list in Cloud Console.

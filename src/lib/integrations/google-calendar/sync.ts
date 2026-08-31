@@ -5,6 +5,10 @@ import { logger } from "@/lib/utils/logger";
 import { calendarClientFromRefreshToken } from "./client";
 import { decryptRefreshToken, encryptRefreshToken } from "./crypto";
 import {
+  formatGoogleCalendarError,
+  isReconnectRequiredMessage,
+} from "./errors";
+import {
   buildBookingCalendarEvent,
   buildManualBlockCalendarEvent,
   buildTuroCalendarEvent,
@@ -48,11 +52,31 @@ async function createSyncContext(): Promise<SyncContext | null> {
   if (!isGoogleCalendarConfigured()) return null;
   const connection = await getGoogleCalendarConnection();
   if (!connection) return null;
-  const refreshToken = decryptRefreshToken(connection.refresh_token_enc);
-  return {
-    calendar: calendarClientFromRefreshToken(refreshToken),
-    calendarId: connection.calendar_id,
-  };
+  try {
+    const refreshToken = decryptRefreshToken(connection.refresh_token_enc);
+    return {
+      calendar: calendarClientFromRefreshToken(refreshToken),
+      calendarId: connection.calendar_id,
+    };
+  } catch (err) {
+    const message = formatGoogleCalendarError(err);
+    await setConnectionSyncMeta({ lastError: message });
+    throw new Error(message);
+  }
+}
+
+async function assertCalendarReachable(ctx: SyncContext): Promise<void> {
+  try {
+    await ctx.calendar.events.list({
+      calendarId: ctx.calendarId,
+      maxResults: 1,
+      singleEvents: true,
+    });
+  } catch (err) {
+    const message = formatGoogleCalendarError(err);
+    await setConnectionSyncMeta({ lastError: message });
+    throw new Error(message);
+  }
 }
 
 function isMissingTableError(error: { message?: string } | null): boolean {
@@ -93,6 +117,7 @@ export async function getGoogleCalendarStatus(): Promise<GoogleCalendarPublicSta
       connectedAt: null,
       lastSyncAt: null,
       lastError: null,
+      needsReconnect: false,
     };
   }
   return {
@@ -102,7 +127,12 @@ export async function getGoogleCalendarStatus(): Promise<GoogleCalendarPublicSta
     connectedAt: connection.connected_at,
     lastSyncAt: connection.last_sync_at,
     lastError: connection.last_error,
+    needsReconnect: isReconnectRequiredMessage(connection.last_error),
   };
+}
+
+export async function recordGoogleCalendarError(message: string): Promise<void> {
+  await setConnectionSyncMeta({ lastError: message });
 }
 
 export async function saveGoogleCalendarConnection(opts: {
@@ -284,7 +314,7 @@ async function syncBuiltEventWithContext(
     if (updateMeta) await setConnectionSyncMeta({ touched: true, lastError: null });
     return { ok: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = formatGoogleCalendarError(err);
     logger.error("Google Calendar sync error", {
       message,
       sourceKind: built.sourceKind,
@@ -342,7 +372,7 @@ async function deleteCalendarEventWithContext(
     if (updateMeta) await setConnectionSyncMeta({ touched: true, lastError: null });
     return { ok: true };
   } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
+    const message = formatGoogleCalendarError(err);
     logger.error("Google Calendar delete error", { message, sourceKind, sourceId });
     if (updateMeta) await setConnectionSyncMeta({ lastError: message });
     return { ok: false, error: message };
@@ -405,6 +435,7 @@ export async function reconcileFleetCalendar(opts?: {
   if (!isGoogleCalendarConfigured()) return result;
   const ctx = await createSyncContext();
   if (!ctx) return result;
+  await assertCalendarReachable(ctx);
 
   const pastDays = opts?.pastDays ?? 30;
   const futureDays = opts?.futureDays ?? 180;
@@ -477,6 +508,10 @@ export async function reconcileFleetCalendar(opts?: {
       result.errors.push(
         itemErrorLabel(built.sourceKind, built.sourceId, syncResult.error)
       );
+      if (isReconnectRequiredMessage(syncResult.error)) {
+        await setConnectionSyncMeta({ touched: true, lastError: syncResult.error });
+        return result;
+      }
       continue;
     }
     const after = await getEventLink(built.sourceKind, built.sourceId);
@@ -514,6 +549,10 @@ export async function reconcileFleetCalendar(opts?: {
             deleteResult.error
           )
         );
+        if (isReconnectRequiredMessage(deleteResult.error)) {
+          await setConnectionSyncMeta({ touched: true, lastError: deleteResult.error });
+          return result;
+        }
         continue;
       }
       result.deleted++;

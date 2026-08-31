@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { formatGoogleCalendarError } from "@/lib/integrations/google-calendar/errors";
 import { formatReconcileSummary, reconcileFleetCalendar } from "@/lib/integrations/google-calendar/sync";
 
 export const maxDuration = 300;
@@ -20,7 +21,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        message: err instanceof Error ? err.message : "Sync failed",
+        message: formatGoogleCalendarError(err),
       },
       { status: 500 }
     );

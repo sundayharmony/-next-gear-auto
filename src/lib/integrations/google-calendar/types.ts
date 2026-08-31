@@ -53,6 +53,7 @@ export type GoogleCalendarPublicStatus = {
   connectedAt: string | null;
   lastSyncAt: string | null;
   lastError: string | null;
+  needsReconnect: boolean;
 };
 
 export type GoogleCalendarListItem = {

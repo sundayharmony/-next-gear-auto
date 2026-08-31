@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyAdmin } from "@/lib/auth/admin-check";
+import { formatGoogleCalendarError } from "@/lib/integrations/google-calendar/errors";
 import {
   GCAL_OAUTH_FLASH_COOKIE,
   getCanonicalSiteOrigin,
@@ -10,35 +11,55 @@ import {
   reconcileFleetCalendar,
   updateGoogleCalendarSelection,
 } from "@/lib/integrations/google-calendar/sync";
+import { logger } from "@/lib/utils/logger";
+
+function oauthRedirectUri(): string | undefined {
+  try {
+    return `${getCanonicalSiteOrigin()}/api/admin/integrations/google-calendar/callback`;
+  } catch {
+    return undefined;
+  }
+}
 
 export async function GET(req: NextRequest) {
   const auth = await verifyAdmin(req);
   if (!auth.authorized) return auth.response;
 
-  const status = await getGoogleCalendarStatus();
-  const flashRaw = req.cookies.get(GCAL_OAUTH_FLASH_COOKIE)?.value;
-  let flash: { type: "success" | "error"; message: string } | undefined;
-  if (flashRaw) {
-    try {
-      flash = JSON.parse(flashRaw) as { type: "success" | "error"; message: string };
-    } catch {
-      flash = undefined;
+  try {
+    const status = await getGoogleCalendarStatus();
+    const flashRaw = req.cookies.get(GCAL_OAUTH_FLASH_COOKIE)?.value;
+    let flash: { type: "success" | "error"; message: string } | undefined;
+    if (flashRaw) {
+      try {
+        flash = JSON.parse(flashRaw) as { type: "success" | "error"; message: string };
+      } catch {
+        flash = undefined;
+      }
     }
-  }
 
-  const response = NextResponse.json({
-    success: true,
-    data: {
-      ...status,
-      configured: isGoogleCalendarConfigured(),
-      oauthRedirectUri: `${getCanonicalSiteOrigin()}/api/admin/integrations/google-calendar/callback`,
-      flash,
-    },
-  });
-  if (flashRaw) {
-    response.cookies.delete(GCAL_OAUTH_FLASH_COOKIE);
+    const response = NextResponse.json({
+      success: true,
+      data: {
+        ...status,
+        configured: isGoogleCalendarConfigured(),
+        oauthRedirectUri: oauthRedirectUri(),
+        flash,
+      },
+    });
+    if (flashRaw) {
+      response.cookies.delete(GCAL_OAUTH_FLASH_COOKIE);
+    }
+    return response;
+  } catch (err) {
+    logger.error("Google Calendar status load failed", err);
+    return NextResponse.json(
+      {
+        success: false,
+        message: formatGoogleCalendarError(err),
+      },
+      { status: 500 }
+    );
   }
-  return response;
 }
 
 export async function POST(req: NextRequest) {
@@ -63,7 +84,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        message: err instanceof Error ? err.message : "Failed to update calendar",
+        message: formatGoogleCalendarError(err),
       },
       { status: 500 }
     );
