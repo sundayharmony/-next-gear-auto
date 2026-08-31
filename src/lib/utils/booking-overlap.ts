@@ -5,7 +5,13 @@ import { isActiveCalendarBlock } from "@/lib/utils/blocked-dates";
 
 export type BookingOverlapMode = "default" | "manager";
 
-const DEFAULT_STATUSES = ["confirmed", "active", "pending"] as const;
+/** Public checkout occupancy: holds inventory for submitted-but-unpaid requests too. */
+export const DEFAULT_OCCUPANCY_STATUSES = [
+  "confirmed",
+  "active",
+  "pending",
+  "pending_approval",
+] as const;
 const MANAGER_STATUSES = ["confirmed", "active"] as const;
 
 /** Single source of truth for POST /bookings, check-overlap GET, and tooling. */
@@ -16,7 +22,7 @@ export function overlapConfigForMode(mode: BookingOverlapMode): {
   if (mode === "manager") {
     return { statuses: MANAGER_STATUSES, minGapMinutes: 0 };
   }
-  return { statuses: DEFAULT_STATUSES, minGapMinutes: 60 };
+  return { statuses: DEFAULT_OCCUPANCY_STATUSES, minGapMinutes: 60 };
 }
 
 export interface BookingInterval {

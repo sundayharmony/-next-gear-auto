@@ -4,6 +4,7 @@ import {
   bookingIntervalsConflict,
   bookingConflictsWithAny,
   hasBlockedDateOverlap,
+  overlapConfigForMode,
   toBookingInterval,
 } from "@/lib/utils/booking-overlap";
 
@@ -98,4 +99,19 @@ test("blocked-date overlap filters cancellations before evaluating active Turo r
     true,
   );
   assert.ok(calls.includes("is:cancelled_at:null"));
+});
+
+test("default occupancy includes pending_approval so public holds inventory", () => {
+  const { statuses, minGapMinutes } = overlapConfigForMode("default");
+  assert.equal(minGapMinutes, 60);
+  assert.ok(statuses.includes("pending_approval"));
+  assert.ok(statuses.includes("pending"));
+  assert.ok(statuses.includes("confirmed"));
+  assert.ok(statuses.includes("active"));
+});
+
+test("manager occupancy still ignores pending and pending_approval", () => {
+  const { statuses, minGapMinutes } = overlapConfigForMode("manager");
+  assert.equal(minGapMinutes, 0);
+  assert.deepEqual([...statuses], ["confirmed", "active"]);
 });

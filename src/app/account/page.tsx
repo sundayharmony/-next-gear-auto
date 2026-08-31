@@ -159,7 +159,9 @@ export default function AccountPage() {
 
   // Derived data — all hooks are above this line
   const upcomingBookings = useMemo(() =>
-    bookings.filter((b) => ["pending", "confirmed", "active"].includes(b.status)),
+    bookings.filter((b) =>
+      ["pending_approval", "pending", "confirmed", "active"].includes(b.status),
+    ),
     [bookings]
   );
   const pastBookings = useMemo(() =>

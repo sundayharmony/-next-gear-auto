@@ -50,6 +50,7 @@ export function getVehicleDisplayName(v: { year?: number | string; make?: string
 
 // Booking Types
 export type BookingStatus =
+  | "pending_approval"
   | "pending"
   | "confirmed"
   | "active"
@@ -367,7 +368,15 @@ export const PAYMENT_METHODS = [
 ] as const;
 
 /** Booking status progression steps */
-export const STATUS_STEPS = ["pending", "confirmed", "active", "completed", "cancelled", "no-show"] as const;
+export const STATUS_STEPS = [
+  "pending_approval",
+  "pending",
+  "confirmed",
+  "active",
+  "completed",
+  "cancelled",
+  "no-show",
+] as const;
 
 // ─── Owner Portal (Arbitrage Panel) Types ───────────────────────────
 

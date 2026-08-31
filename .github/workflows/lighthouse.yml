@@ -36,6 +36,7 @@ jobs:
           SUPABASE_SERVICE_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSJ9.placeholder
           STRIPE_SECRET_KEY: sk_test_placeholder_for_ci_build_only
           STRIPE_WEBHOOK_SECRET: whsec_placeholder_for_ci_build_only
+          JWT_SECRET: ci-lighthouse-jwt-secret-must-be-32-chars
       - name: Wait for server
         run: npx --yes wait-on http://127.0.0.1:3000 --timeout 120000
       # Phase B hard-fail thresholds (enable when lab variance is understood):

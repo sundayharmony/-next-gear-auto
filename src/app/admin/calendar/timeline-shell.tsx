@@ -30,7 +30,8 @@ export interface TimelineShellProps {
   bookings: CalendarBookingRow[];
   vehicles: Vehicle[];
   blockedDates: BlockedDateEntry[];
-  timelineStart: Date;
+  desktopTimelineStart: Date;
+  mobileTimelineStart: Date;
   timelineWindowDays: number;
   onPreviousWeek: () => void;
   onNextWeek: () => void;
@@ -45,7 +46,8 @@ export function TimelineShell({
   bookings,
   vehicles,
   blockedDates,
-  timelineStart,
+  desktopTimelineStart,
+  mobileTimelineStart,
   timelineWindowDays,
   onPreviousWeek,
   onNextWeek,
@@ -62,7 +64,7 @@ export function TimelineShell({
           bookings={bookings}
           vehicles={vehicles}
           blockedDates={blockedDates}
-          start={timelineStart}
+          start={mobileTimelineStart}
           onPrevious={onPreviousWeek}
           onNext={onNextWeek}
           onToday={onToday}
@@ -75,7 +77,7 @@ export function TimelineShell({
           bookings={bookings as BookingDbRow[]}
           vehicles={vehicles}
           blockedDates={blockedDates}
-          start={timelineStart}
+          start={desktopTimelineStart}
           days={timelineWindowDays}
           onToday={onToday}
           onPrevious={onPreviousFortnight}

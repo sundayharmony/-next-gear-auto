@@ -180,6 +180,7 @@ export function MonthGrid({
                           {dayBookings.length <= 3 ? (
                             dayBookings.map((b) => (
                               <div key={b.id} className={`w-1.5 h-1.5 rounded-full ${
+                                b.status === "pending_approval" ? "bg-amber-500" :
                                 b.status === "pending" ? "bg-yellow-400" :
                                 b.status === "confirmed" ? "bg-green-400" :
                                 b.status === "active" ? "bg-blue-400" :

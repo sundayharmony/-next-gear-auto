@@ -1,6 +1,11 @@
 /** Booking rows that block marking a vehicle as sold. */
 
-export const SALE_BLOCKING_STATUSES = ["pending", "confirmed", "active"] as const;
+export const SALE_BLOCKING_STATUSES = [
+  "pending_approval",
+  "pending",
+  "confirmed",
+  "active",
+] as const;
 
 export type SaleBlockingBooking = {
   id: string;

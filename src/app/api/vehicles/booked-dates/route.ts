@@ -5,6 +5,7 @@ import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
 import { getBookingOccupancyEndDate } from "@/lib/utils/recurring-booking";
 import { isActiveCalendarBlock } from "@/lib/utils/blocked-dates";
+import { DEFAULT_OCCUPANCY_STATUSES } from "@/lib/utils/booking-overlap";
 
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -47,7 +48,7 @@ async function fetchRangesForVehicles(
       "vehicle_id, pickup_date, return_date, pickup_time, return_time, status, admin_notes"
     )
     .in("vehicle_id", vehicleIds)
-    .in("status", ["confirmed", "active", "pending"])
+    .in("status", [...DEFAULT_OCCUPANCY_STATUSES])
     .order("pickup_date", { ascending: true })
     .limit(5000);
 

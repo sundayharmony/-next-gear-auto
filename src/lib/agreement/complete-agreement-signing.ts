@@ -11,7 +11,7 @@ import {
 
 const PNG_MAGIC = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
 
-const VALID_SIGNING_STATUSES = ["pending", "confirmed", "active"] as const;
+const VALID_SIGNING_STATUSES = ["pending_approval", "pending", "confirmed", "active"] as const;
 
 export type AgreementSigningChannel = "customer" | "in_person";
 
