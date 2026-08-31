@@ -6,10 +6,7 @@ import {
   getCanonicalSiteOrigin,
   getOAuthCookieOptions,
 } from "@/lib/integrations/google-calendar/oauth-site";
-import {
-  reconcileFleetCalendar,
-  saveGoogleCalendarConnection,
-} from "@/lib/integrations/google-calendar/sync";
+import { saveGoogleCalendarConnection } from "@/lib/integrations/google-calendar/sync";
 import { logger } from "@/lib/utils/logger";
 
 const STATE_COOKIE = "gcal_oauth_state";
@@ -104,11 +101,9 @@ export async function GET(req: NextRequest) {
       adminId,
     });
 
-    void reconcileFleetCalendar().catch(() => {});
-
     return redirectWithFlash(
       siteOrigin,
-      { type: "success", message: "Google Calendar connected." },
+      { type: "success", message: "Google Calendar connected. Click Sync now to copy bookings." },
       { connected: "1" }
     );
   } catch (err) {

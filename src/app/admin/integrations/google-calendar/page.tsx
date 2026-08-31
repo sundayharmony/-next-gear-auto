@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Calendar, Loader2, Plug, RefreshCw, Unplug } from "lucide-react";
 import {
@@ -34,7 +34,7 @@ type CalendarOption = {
   primary?: boolean;
 };
 
-export default function GoogleCalendarIntegrationPage() {
+function GoogleCalendarSettings() {
   const searchParams = useSearchParams();
   const { error, setError, success, setSuccess } = useAutoToast();
   const [status, setStatus] = useState<Status | null>(null);
@@ -51,8 +51,34 @@ export default function GoogleCalendarIntegrationPage() {
     return null;
   }, [searchParams]);
 
+  const loadCalendars = useCallback(async () => {
+    try {
+      const calRes = await adminFetch("/api/admin/integrations/google-calendar/calendars", {
+        timeoutMs: 30_000,
+      });
+      const calJson = await calRes.json();
+      if (calRes.ok && calJson.success) {
+        setCalendars(calJson.data as CalendarOption[]);
+        return;
+      }
+      setCalendars([]);
+      const calMessage =
+        typeof calJson.message === "string"
+          ? calJson.message
+          : "Failed to list Google calendars";
+      if (calJson.reconnectRequired) {
+        setStatus((prev) =>
+          prev ? { ...prev, needsReconnect: true, lastError: calMessage } : prev
+        );
+      }
+    } catch {
+      setCalendars([]);
+    }
+  }, []);
+
   const loadStatus = useCallback(async () => {
     setLoading(true);
+    const skipCalendarList = searchParams.get("connected") === "1";
     try {
       const res = await adminFetch("/api/admin/integrations/google-calendar");
       const json = await res.json();
@@ -66,23 +92,8 @@ export default function GoogleCalendarIntegrationPage() {
       if (data.flash?.type === "error") setError(data.flash.message);
       if (data.flash?.type === "success") setSuccess(data.flash.message);
       setSelectedCalendarId(data.calendarId || "");
-      if (data.connected && !data.needsReconnect) {
-        const calRes = await adminFetch("/api/admin/integrations/google-calendar/calendars");
-        const calJson = await calRes.json();
-        if (calRes.ok && calJson.success) {
-          setCalendars(calJson.data as CalendarOption[]);
-        } else {
-          setCalendars([]);
-          const calMessage =
-            typeof calJson.message === "string"
-              ? calJson.message
-              : "Failed to list Google calendars";
-          if (calJson.reconnectRequired) {
-            setStatus({ ...data, needsReconnect: true, lastError: calMessage });
-          } else {
-            setError(displayGoogleCalendarError(calMessage) || calMessage);
-          }
-        }
+      if (data.connected && !data.needsReconnect && !skipCalendarList) {
+        await loadCalendars();
       } else {
         setCalendars([]);
       }
@@ -92,7 +103,7 @@ export default function GoogleCalendarIntegrationPage() {
     } finally {
       setLoading(false);
     }
-  }, [setError, setSuccess]);
+  }, [loadCalendars, searchParams, setError, setSuccess]);
 
   useEffect(() => {
     void loadStatus();
@@ -341,6 +352,16 @@ export default function GoogleCalendarIntegrationPage() {
                   </div>
                 )}
 
+                {status?.connected && !status.needsReconnect && calendars.length === 0 && (
+                  <button
+                    type="button"
+                    className="text-sm text-purple-700 underline underline-offset-2"
+                    onClick={() => void loadCalendars()}
+                  >
+                    Change fleet calendar
+                  </button>
+                )}
+
                 <div className="flex flex-wrap gap-3 pt-2">
                   {!status?.connected ? (
                     <Button onClick={handleConnect} disabled={!status?.configured}>
@@ -382,5 +403,20 @@ export default function GoogleCalendarIntegrationPage() {
         </Card>
       </AdminPageBody>
     </>
+  );
+}
+
+export default function GoogleCalendarIntegrationPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex items-center gap-2 text-gray-500 p-6">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Loading connection status…
+        </div>
+      }
+    >
+      <GoogleCalendarSettings />
+    </Suspense>
   );
 }

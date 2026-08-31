@@ -20,10 +20,11 @@ export async function GET(req: NextRequest) {
   try {
     const connection = await getGoogleCalendarConnection();
     if (!connection) {
-      return NextResponse.json(
-        { success: false, message: "Google Calendar is not connected" },
-        { status: 400 }
-      );
+      return NextResponse.json({
+        success: false,
+        message: "Google Calendar is not connected",
+        reconnectRequired: false,
+      });
     }
 
     const refreshToken = decryptRefreshToken(connection.refresh_token_enc);
@@ -37,13 +38,11 @@ export async function GET(req: NextRequest) {
     if (reconnectRequired) {
       await recordGoogleCalendarError(message);
     }
-    return NextResponse.json(
-      {
-        success: false,
-        message,
-        reconnectRequired,
-      },
-      { status: reconnectRequired ? 409 : 502 }
-    );
+    // 200 so Chrome does not log a failed network request; the page handles reconnectRequired.
+    return NextResponse.json({
+      success: false,
+      message,
+      reconnectRequired,
+    });
   }
 }

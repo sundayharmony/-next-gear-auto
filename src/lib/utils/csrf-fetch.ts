@@ -32,7 +32,7 @@ export async function csrfFetch(url: string, options: RequestInit = {}): Promise
   let csrf = getCsrfToken();
   if (csrf) {
     headers.set("x-csrf-token", csrf);
-  } else {
+  } else if (process.env.NODE_ENV === "development") {
     console.warn("CSRF token not found in cookies");
   }
 
