@@ -26,6 +26,7 @@ export interface Vehicle {
   mileage: number;
   licensePlate?: string;
   vin?: string;
+  insuranceCardUrls?: string[];
   maintenanceStatus: "good" | "needs-service" | "in-maintenance";
   isPublished?: boolean;
   purchasePrice?: number;

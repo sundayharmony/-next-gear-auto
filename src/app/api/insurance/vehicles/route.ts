@@ -10,10 +10,11 @@ export interface InsuranceVehicle {
   category: string;
   color: string;
   mileage: number;
+  insuranceCardUrls: string[];
 }
 
 const INSURANCE_VEHICLE_SELECT =
-  "id, year, make, model, vin, category, color, mileage";
+  "id, year, make, model, vin, category, color, mileage, insurance_card_urls";
 
 export async function GET() {
   try {
@@ -44,6 +45,7 @@ export async function GET() {
       category: String(v.category || ""),
       color: String(v.color || ""),
       mileage: Number(v.mileage ?? 0),
+      insuranceCardUrls: (v.insurance_card_urls as string[]) || [],
     }));
 
     return NextResponse.json({ vehicles });

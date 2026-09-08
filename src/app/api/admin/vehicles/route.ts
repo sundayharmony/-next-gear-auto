@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
     const managerSelect =
       "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, maintenance_status, description, color, is_published, created_at";
     const adminSelect =
-      "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at";
+      "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, insurance_card_urls, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at";
     const vehiclesQuery = isManager
       ? supabase.from("vehicles").select(managerSelect)
       : supabase.from("vehicles").select(adminSelect);
@@ -54,6 +54,7 @@ export async function GET(req: NextRequest) {
       mileage: v.mileage ?? 0,
       licensePlate: isManager ? undefined : String(v.license_plate || ""),
       vin: isManager ? undefined : String(v.vin || ""),
+      insuranceCardUrls: isManager ? undefined : ((v.insurance_card_urls as string[]) || []),
       maintenanceStatus: v.maintenance_status || "good",
       purchasePrice: isManager ? undefined : (Number(v.purchase_price) || 0),
       isFinanced: isManager ? undefined : Boolean(v.is_financed),
@@ -143,6 +144,7 @@ export async function POST(request: NextRequest) {
         mileage: body.mileage ?? 0,
         license_plate: body.licensePlate || "",
         vin: body.vin || "",
+        insurance_card_urls: body.insuranceCardUrls || [],
         maintenance_status: body.maintenanceStatus || "good",
         purchase_price: body.purchasePrice ?? 0,
         is_financed: body.isFinanced ?? false,
@@ -232,6 +234,7 @@ export async function PUT(request: NextRequest) {
     if (updates.mileage !== undefined) dbUpdates.mileage = updates.mileage;
     if (updates.licensePlate !== undefined) dbUpdates.license_plate = updates.licensePlate;
     if (updates.vin !== undefined) dbUpdates.vin = updates.vin;
+    if (updates.insuranceCardUrls !== undefined) dbUpdates.insurance_card_urls = updates.insuranceCardUrls;
     if (updates.maintenanceStatus !== undefined) dbUpdates.maintenance_status = updates.maintenanceStatus;
     if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;
     if (updates.isFinanced !== undefined) dbUpdates.is_financed = updates.isFinanced;

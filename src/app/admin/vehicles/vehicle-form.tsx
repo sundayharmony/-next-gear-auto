@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { VehicleImageManager } from "@/components/admin/vehicle-image-manager";
+import { InsuranceCardManager } from "@/components/admin/insurance-card-manager";
 import { Vehicle, VehicleCategory } from "@/lib/types";
 
 export const CATEGORIES: VehicleCategory[] = [
@@ -49,6 +50,7 @@ export const emptyVehicle: Omit<Vehicle, "id"> = {
   mileage: 0,
   licensePlate: "",
   vin: "",
+  insuranceCardUrls: [],
   maintenanceStatus: "good",
   isFinanced: false,
   monthlyPayment: 0,
@@ -384,6 +386,14 @@ export function VehicleForm({
                 ? (images) => onSyncImages(formKey, images)
                 : undefined
             }
+            onError={onError}
+            disabled={isSaving}
+          />
+
+          <InsuranceCardManager
+            vehicleId={formKey}
+            images={form.insuranceCardUrls || []}
+            onImagesChange={(insuranceCardUrls) => setForm({ ...form, insuranceCardUrls })}
             onError={onError}
             disabled={isSaving}
           />

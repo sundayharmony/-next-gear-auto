@@ -1,6 +1,7 @@
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { SITE_NAME, CONTACT_INFO } from "@/lib/constants";
 import type { Metadata } from "next";
+import { InsuranceCardGallery } from "./insurance-card-gallery";
 
 export const metadata: Metadata = {
   title: `Fleet Insurance Information | ${SITE_NAME}`,
@@ -17,6 +18,7 @@ interface InsuranceVehicle {
   category: string;
   color: string;
   mileage: number;
+  insuranceCardUrls: string[];
 }
 
 async function fetchInsuranceVehicles(): Promise<InsuranceVehicle[]> {
@@ -24,7 +26,7 @@ async function fetchInsuranceVehicles(): Promise<InsuranceVehicle[]> {
 
   const { data, error } = await supabase
     .from("vehicles")
-    .select("id, year, make, model, vin, category, color, mileage")
+    .select("id, year, make, model, vin, category, color, mileage, insurance_card_urls")
     .eq("is_available", true)
     .order("year", { ascending: false })
     .order("make", { ascending: true })
@@ -44,6 +46,7 @@ async function fetchInsuranceVehicles(): Promise<InsuranceVehicle[]> {
     category: String(v.category || ""),
     color: String(v.color || ""),
     mileage: Number(v.mileage ?? 0),
+    insuranceCardUrls: (v.insurance_card_urls as string[]) || [],
   }));
 }
 
@@ -101,9 +104,9 @@ export default async function InsurancePage() {
           </div>
         </div>
 
-        {/* Vehicle Table */}
-        <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-          <div className="px-6 py-4 border-b border-gray-200">
+        {/* Vehicle Cards */}
+        <div className="space-y-4">
+          <div className="bg-white rounded-lg shadow-sm px-6 py-4">
             <h2 className="text-lg font-semibold text-gray-900">
               Vehicle Inventory
             </h2>
@@ -113,58 +116,70 @@ export default async function InsurancePage() {
           </div>
 
           {vehicles.length === 0 ? (
-            <div className="p-8 text-center text-gray-500">
+            <div className="bg-white rounded-lg shadow-sm p-8 text-center text-gray-500">
               No vehicles currently available.
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Vehicle
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      VIN
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Category
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Color
-                    </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Mileage
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {vehicles.map((vehicle) => (
-                    <tr key={vehicle.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="font-medium text-gray-900">
-                          {vehicle.year} {vehicle.make} {vehicle.model}
+            vehicles.map((vehicle) => (
+              <div
+                key={vehicle.id}
+                className="bg-white rounded-lg shadow-sm overflow-hidden"
+              >
+                <div className="p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-4">
+                    {/* Vehicle Info */}
+                    <div className="flex-1">
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {vehicle.year} {vehicle.make} {vehicle.model}
+                      </h3>
+                      <div className="mt-3 grid grid-cols-2 sm:grid-cols-4 gap-4 text-sm">
+                        <div>
+                          <span className="text-gray-500 block">VIN</span>
+                          <code className="font-mono text-gray-900 bg-gray-100 px-2 py-0.5 rounded text-xs">
+                            {vehicle.vin || "N/A"}
+                          </code>
                         </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <code className="text-sm font-mono text-gray-700 bg-gray-100 px-2 py-1 rounded">
-                          {vehicle.vin || "N/A"}
-                        </code>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                        {formatCategory(vehicle.category)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 capitalize">
-                        {vehicle.color || "—"}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600 text-right">
-                        {formatMileage(vehicle.mileage)} mi
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                        <div>
+                          <span className="text-gray-500 block">Category</span>
+                          <span className="text-gray-900">
+                            {formatCategory(vehicle.category)}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 block">Color</span>
+                          <span className="text-gray-900 capitalize">
+                            {vehicle.color || "—"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-gray-500 block">Mileage</span>
+                          <span className="text-gray-900">
+                            {formatMileage(vehicle.mileage)} mi
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Insurance Card */}
+                    <div className="lg:w-64">
+                      <span className="text-xs font-medium text-gray-500 uppercase tracking-wide block mb-2">
+                        Insurance Card
+                      </span>
+                      {vehicle.insuranceCardUrls.length > 0 ? (
+                        <InsuranceCardGallery
+                          images={vehicle.insuranceCardUrls}
+                          vehicleName={`${vehicle.year} ${vehicle.make} ${vehicle.model}`}
+                        />
+                      ) : (
+                        <div className="text-sm text-gray-400 italic">
+                          No insurance card uploaded
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))
           )}
         </div>
 
