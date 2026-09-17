@@ -186,6 +186,7 @@ export default function CreateBookingForm({
 
   // Handle customer search with debounce
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [searchingCustomers, setSearchingCustomers] = useState(false);
 
   // Cleanup timeout on component unmount
   useEffect(() => {
@@ -204,14 +205,54 @@ export default function CreateBookingForm({
       clearTimeout(searchTimeoutRef.current);
     }
 
-    searchTimeoutRef.current = setTimeout(() => {
+    searchTimeoutRef.current = setTimeout(async () => {
       if (value.trim()) {
-        const filtered = allCustomers.filter(
+        // First check local customers for quick results
+        const localFiltered = allCustomers.filter(
           (c) =>
             (c.name || "").toLowerCase().includes(value.toLowerCase()) ||
             (c.email || "").toLowerCase().includes(value.toLowerCase())
         );
-        setFilteredCustomers(filtered.slice(0, 8));
+
+        // If we have local matches, show them immediately
+        if (localFiltered.length > 0) {
+          setFilteredCustomers(localFiltered.slice(0, 8));
+          setShowDropdown(true);
+        }
+
+        // Also do server-side search to find customers not in the initial load
+        // This ensures older customers can be found by searching their email/name
+        if (value.trim().length >= 2) {
+          setSearchingCustomers(true);
+          try {
+            const res = await adminFetch(`/api/admin/customers?search=${encodeURIComponent(value.trim())}&limit=20`);
+            if (res.ok) {
+              const data = await res.json();
+              if (data.success && data.data) {
+                const serverResults: CustomerOption[] = data.data.map((c: { id: string; name: string; email: string; phone?: string }) => ({
+                  id: c.id,
+                  name: c.name,
+                  email: c.email,
+                  phone: c.phone || "",
+                }));
+                // Merge with local results, avoiding duplicates
+                const seen = new Set(localFiltered.map((c) => c.id));
+                const merged = [...localFiltered];
+                for (const c of serverResults) {
+                  if (!seen.has(c.id)) {
+                    seen.add(c.id);
+                    merged.push(c);
+                  }
+                }
+                setFilteredCustomers(merged.slice(0, 8));
+              }
+            }
+          } catch {
+            // Server search failed, fall back to local results only
+          } finally {
+            setSearchingCustomers(false);
+          }
+        }
         setShowDropdown(true);
       } else {
         setFilteredCustomers([]);
@@ -518,8 +559,18 @@ export default function CreateBookingForm({
               />
               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
             </div>
-            {showDropdown && filteredCustomers.length > 0 && (
+            {showDropdown && (
               <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+                {searchingCustomers && filteredCustomers.length === 0 && (
+                  <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                    Searching customers...
+                  </div>
+                )}
+                {!searchingCustomers && filteredCustomers.length === 0 && searchValue.trim().length >= 2 && (
+                  <div className="px-4 py-3 text-sm text-gray-500 text-center">
+                    No customers found for &ldquo;{searchValue}&rdquo;
+                  </div>
+                )}
                 {filteredCustomers.map((customer) => (
                   <button
                     key={customer.id}
@@ -538,7 +589,7 @@ export default function CreateBookingForm({
                 ))}
                 {filteredCustomers.length >= 8 && (
                   <div className="px-4 py-2 text-xs text-gray-400 bg-gray-50 border-t text-center">
-                    Type more to narrow results...
+                    {searchingCustomers ? "Searching for more..." : "Type more to narrow results..."}
                   </div>
                 )}
               </div>
