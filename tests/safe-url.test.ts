@@ -36,6 +36,11 @@ test("sanitizePostgrestSearch strips filter metacharacters without regex", () =>
   assert.equal(sanitizePostgrestSearch("a".repeat(200), 10).length, 10);
 });
 
+test("sanitizePostgrestSearch preserves dots for email searches", () => {
+  assert.equal(sanitizePostgrestSearch("user@example.com"), "user@example.com");
+  assert.equal(sanitizePostgrestSearch("john.doe@gmail.com"), "john.doe@gmail.com");
+});
+
 test("isAllowedExternalHref requires https and blocks javascript", () => {
   assert.equal(isAllowedExternalHref("https://example.com/doc.pdf"), "https://example.com/doc.pdf");
   assert.equal(isAllowedExternalHref("javascript:alert(1)"), undefined);

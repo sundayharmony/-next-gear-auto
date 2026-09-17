@@ -1,7 +1,7 @@
 const INSTAGRAM_HOSTS = new Set(["instagram.com", "www.instagram.com"]);
 
 const POSTGREST_SEARCH_FORBIDDEN = new Set(
-  "%_*(),.<>!=&|,_".split("")
+  "%_*(),<>!=&|".split("")
 );
 
 /** Strip characters that break PostgREST filters (no regex on user input). */
