@@ -225,28 +225,58 @@ export default function CreateBookingForm({
         if (value.trim().length >= 2) {
           setSearchingCustomers(true);
           try {
-            const res = await adminFetch(`/api/admin/customers?search=${encodeURIComponent(value.trim())}&limit=20`);
-            if (res.ok) {
-              const data = await res.json();
+            // Search both customers table AND bookings (for past customers without records)
+            const [customersRes, bookingsRes] = await Promise.all([
+              adminFetch(`/api/admin/customers?search=${encodeURIComponent(value.trim())}&limit=20`),
+              adminFetch(`/api/bookings?search=${encodeURIComponent(value.trim())}&limit=30`),
+            ]);
+
+            const seen = new Set(localFiltered.map((c) => c.id));
+            const seenEmails = new Set(localFiltered.map((c) => c.email?.toLowerCase()));
+            const merged = [...localFiltered];
+
+            // Add customers from customer table
+            if (customersRes.ok) {
+              const data = await customersRes.json();
               if (data.success && data.data) {
-                const serverResults: CustomerOption[] = data.data.map((c: { id: string; name: string; email: string; phone?: string }) => ({
-                  id: c.id,
-                  name: c.name,
-                  email: c.email,
-                  phone: c.phone || "",
-                }));
-                // Merge with local results, avoiding duplicates
-                const seen = new Set(localFiltered.map((c) => c.id));
-                const merged = [...localFiltered];
-                for (const c of serverResults) {
+                for (const c of data.data) {
                   if (!seen.has(c.id)) {
                     seen.add(c.id);
-                    merged.push(c);
+                    seenEmails.add(c.email?.toLowerCase());
+                    merged.push({
+                      id: c.id,
+                      name: c.name,
+                      email: c.email,
+                      phone: c.phone || "",
+                    });
                   }
                 }
-                setFilteredCustomers(merged.slice(0, 8));
               }
             }
+
+            // Also search bookings to find past customers who may not have a customer record
+            // This catches cases where bookings exist but customer wasn't created in customers table
+            if (bookingsRes.ok) {
+              const bookingsData = await bookingsRes.json();
+              if (bookingsData.success && bookingsData.data) {
+                for (const b of bookingsData.data) {
+                  const email = b.customerEmail || b.customer_email;
+                  const name = b.customerName || b.customer_name;
+                  const phone = b.customerPhone || b.customer_phone || "";
+                  if (email && !seenEmails.has(email.toLowerCase())) {
+                    seenEmails.add(email.toLowerCase());
+                    merged.push({
+                      id: `booking:${b.id}`,
+                      name: name || "Unknown",
+                      email: email,
+                      phone: phone,
+                    });
+                  }
+                }
+              }
+            }
+
+            setFilteredCustomers(merged.slice(0, 8));
           } catch {
             // Server search failed, fall back to local results only
           } finally {
@@ -571,22 +601,28 @@ export default function CreateBookingForm({
                     No customers found for &ldquo;{searchValue}&rdquo;
                   </div>
                 )}
-                {filteredCustomers.map((customer) => (
-                  <button
-                    key={customer.id}
-                    type="button"
-                    onClick={() => selectCustomer(customer)}
-                    className="w-full text-left px-4 py-2.5 hover:bg-purple-50 transition-colors flex items-center gap-3 border-b border-gray-50 last:border-0"
-                  >
-                    <div className="w-8 h-8 rounded-full bg-purple-100 flex items-center justify-center text-purple-600 text-xs font-bold shrink-0">
-                      {customer.name?.charAt(0)?.toUpperCase() || "?"}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="font-medium text-sm text-gray-900 truncate">{customer.name}</div>
-                      <div className="text-xs text-gray-500 truncate">{customer.email}</div>
-                    </div>
-                  </button>
-                ))}
+                {filteredCustomers.map((customer) => {
+                  const isFromBooking = customer.id.startsWith("booking:");
+                  return (
+                    <button
+                      key={customer.id}
+                      type="button"
+                      onClick={() => selectCustomer(customer)}
+                      className="w-full text-left px-4 py-2.5 hover:bg-purple-50 transition-colors flex items-center gap-3 border-b border-gray-50 last:border-0"
+                    >
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isFromBooking ? "bg-amber-100 text-amber-600" : "bg-purple-100 text-purple-600"}`}>
+                        {customer.name?.charAt(0)?.toUpperCase() || "?"}
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="font-medium text-sm text-gray-900 truncate">{customer.name}</div>
+                        <div className="text-xs text-gray-500 truncate">{customer.email}</div>
+                      </div>
+                      {isFromBooking && (
+                        <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">Past booking</span>
+                      )}
+                    </button>
+                  );
+                })}
                 {filteredCustomers.length >= 8 && (
                   <div className="px-4 py-2 text-xs text-gray-400 bg-gray-50 border-t text-center">
                     {searchingCustomers ? "Searching for more..." : "Type more to narrow results..."}
