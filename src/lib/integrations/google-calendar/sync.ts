@@ -2,7 +2,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { getBusinessTodayYyyyMmDd } from "@/lib/utils/booking-dates";
 import { isBlockedDateCancelled, TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
 import { logger } from "@/lib/utils/logger";
-import { calendarClientFromRefreshToken } from "./client";
+import { calendarClientFromRefreshToken, findCalendarEventsBySource } from "./client";
 import { decryptRefreshToken, encryptRefreshToken } from "./crypto";
 import {
   buildBookingCalendarEvent,
@@ -14,6 +14,7 @@ import {
   type VehicleLookup,
   toGoogleEventBody,
 } from "./event-builder";
+import { GCAL_RECONNECT_MESSAGE, isGoogleCalendarAuthError } from "./oauth-errors";
 import { revokeRefreshToken } from "./oauth";
 import { type ReconcileResult } from "./reconcile-result";
 import {
@@ -88,6 +89,7 @@ export async function getGoogleCalendarStatus(): Promise<GoogleCalendarPublicSta
   if (!connection) {
     return {
       connected: false,
+      needsReconnect: false,
       calendarId: null,
       calendarSummary: null,
       connectedAt: null,
@@ -95,13 +97,17 @@ export async function getGoogleCalendarStatus(): Promise<GoogleCalendarPublicSta
       lastError: null,
     };
   }
+  const needsReconnect = Boolean(
+    connection.last_error && isGoogleCalendarAuthError(connection.last_error)
+  );
   return {
     connected: true,
+    needsReconnect,
     calendarId: connection.calendar_id,
     calendarSummary: connection.calendar_summary,
     connectedAt: connection.connected_at,
     lastSyncAt: connection.last_sync_at,
-    lastError: connection.last_error,
+    lastError: needsReconnect ? GCAL_RECONNECT_MESSAGE : connection.last_error,
   };
 }
 
@@ -141,6 +147,12 @@ export async function updateGoogleCalendarSelection(calendarId: string, calendar
   const connection = await getGoogleCalendarConnection();
   if (!connection) throw new Error("Google Calendar is not connected");
   const supabase = getServiceSupabase();
+  if (connection.calendar_id !== calendarId) {
+    await supabase
+      .from("google_calendar_event_links")
+      .delete()
+      .eq("google_calendar_id", connection.calendar_id);
+  }
   const { error } = await supabase
     .from("google_calendar_connections")
     .update({
@@ -163,7 +175,8 @@ export async function disconnectGoogleCalendar() {
     logger.warn("Google Calendar revoke failed:", err);
   }
   const supabase = getServiceSupabase();
-  await supabase.from("google_calendar_event_links").delete().eq("google_calendar_id", connection.calendar_id);
+  // Keep event links so reconnecting to the same fleet calendar can resume updates
+  // instead of creating duplicate events on Google Calendar.
   const { error } = await supabase.from("google_calendar_connections").delete().eq("id", connection.id);
   if (error) throw new Error(error.message);
 }
@@ -227,6 +240,53 @@ async function deleteEventLink(sourceKind: GoogleCalendarSourceKind, sourceId: s
     .eq("source_id", sourceId);
 }
 
+function linkForCalendar(
+  link: GoogleCalendarEventLinkRow | null,
+  calendarId: string
+): GoogleCalendarEventLinkRow | null {
+  if (!link || link.google_calendar_id !== calendarId) return null;
+  return link;
+}
+
+/** Remove duplicate Google events for one source; return the event id to keep. */
+async function dedupeGoogleEvents(
+  ctx: SyncContext,
+  sourceKind: GoogleCalendarSourceKind,
+  sourceId: string,
+  preferredEventId?: string | null
+): Promise<string | null> {
+  const found = await findCalendarEventsBySource(
+    ctx.calendar,
+    ctx.calendarId,
+    sourceKind,
+    sourceId
+  );
+  if (found.length === 0) return preferredEventId || null;
+
+  const keepId =
+    (preferredEventId && found.includes(preferredEventId) ? preferredEventId : null) ||
+    found[0];
+
+  for (const eventId of found) {
+    if (eventId === keepId) continue;
+    try {
+      await ctx.calendar.events.delete({
+        calendarId: ctx.calendarId,
+        eventId,
+      });
+    } catch (err) {
+      logger.warn("Google Calendar duplicate delete failed", {
+        eventId,
+        sourceKind,
+        sourceId,
+        message: err instanceof Error ? err.message : String(err),
+      });
+    }
+  }
+
+  return keepId;
+}
+
 async function syncBuiltEventWithContext(
   built: BuiltGoogleCalendarEvent,
   ctx: SyncContext,
@@ -234,35 +294,55 @@ async function syncBuiltEventWithContext(
 ): Promise<SyncItemResult> {
   const updateMeta = opts?.updateConnectionMeta ?? true;
   try {
-    const existing = await getEventLink(built.sourceKind, built.sourceId);
+    const storedLink = await getEventLink(built.sourceKind, built.sourceId);
+    const existing = linkForCalendar(storedLink, ctx.calendarId);
 
     if (built.shouldDelete) {
-      if (existing) {
+      const eventIds = await findCalendarEventsBySource(
+        ctx.calendar,
+        ctx.calendarId,
+        built.sourceKind,
+        built.sourceId
+      );
+      const toDelete = eventIds.length
+        ? eventIds
+        : existing
+          ? [existing.google_event_id]
+          : [];
+      for (const eventId of toDelete) {
         await ctx.calendar.events.delete({
           calendarId: ctx.calendarId,
-          eventId: existing.google_event_id,
+          eventId,
         });
-        await deleteEventLink(built.sourceKind, built.sourceId);
       }
+      await deleteEventLink(built.sourceKind, built.sourceId);
       if (updateMeta) await setConnectionSyncMeta({ touched: true, lastError: null });
       return { ok: true };
     }
 
     if (existing?.sync_hash === built.syncHash) {
+      await dedupeGoogleEvents(ctx, built.sourceKind, built.sourceId, existing.google_event_id);
       return { ok: true };
     }
 
     const body = toGoogleEventBody(built);
-    if (existing) {
+    const recoveredEventId = await dedupeGoogleEvents(
+      ctx,
+      built.sourceKind,
+      built.sourceId,
+      existing?.google_event_id
+    );
+
+    if (recoveredEventId) {
       await ctx.calendar.events.update({
         calendarId: ctx.calendarId,
-        eventId: existing.google_event_id,
+        eventId: recoveredEventId,
         requestBody: body,
       });
       await upsertEventLink({
         sourceKind: built.sourceKind,
         sourceId: built.sourceId,
-        googleEventId: existing.google_event_id,
+        googleEventId: recoveredEventId,
         googleCalendarId: ctx.calendarId,
         syncHash: built.syncHash,
       });
@@ -290,7 +370,8 @@ async function syncBuiltEventWithContext(
       sourceKind: built.sourceKind,
       sourceId: built.sourceId,
     });
-    if (updateMeta) await setConnectionSyncMeta({ lastError: message });
+    const lastError = isGoogleCalendarAuthError(message) ? GCAL_RECONNECT_MESSAGE : message;
+    if (updateMeta) await setConnectionSyncMeta({ lastError });
     return { ok: false, error: message };
   }
 }

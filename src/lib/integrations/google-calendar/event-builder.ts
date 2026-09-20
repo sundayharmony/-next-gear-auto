@@ -123,7 +123,7 @@ export function buildBookingCalendarEvent(
   const vehicleName = vehicleLabel(vehicle, booking.vehicle_id);
   const customer = booking.customer_name?.trim() || "Guest";
   const descriptionLines = [
-    `Booking ID: ${booking.id}`,
+    sourceDescriptionMarker("booking", booking.id),
     `Status: ${booking.status}`,
     booking.customer_phone ? `Phone: ${booking.customer_phone}` : null,
     booking.customer_email ? `Email: ${booking.customer_email}` : null,
@@ -165,7 +165,7 @@ export function buildTuroCalendarEvent(
   const location = displayBlockedDateLocation(row.location);
   const hasTimes = Boolean(row.pickup_time || row.return_time);
   const descriptionLines = [
-    `Turo trip ID: ${row.id}`,
+    sourceDescriptionMarker("turo", row.id),
     row.reason ? `Reason: ${row.reason}` : null,
     row.earnings != null ? `Earnings: $${Number(row.earnings).toFixed(2)}` : null,
     location ? null : "Location: not available",
@@ -201,7 +201,7 @@ export function buildManualBlockCalendarEvent(
   const hasTimes = Boolean(row.pickup_time || row.return_time);
   const summary = `Blocked — ${vehicleName} (${reason})`;
   const descriptionLines = [
-    `Blocked date ID: ${row.id}`,
+    sourceDescriptionMarker("blocked", row.id),
     `Reason: ${reason}`,
     location ? null : "Location: not available",
   ].filter(Boolean) as string[];
@@ -244,4 +244,19 @@ export function toGoogleEventBody(
 
 export function sourceKey(kind: GoogleCalendarSourceKind, id: string): string {
   return `${kind}:${id}`;
+}
+
+/** Stable text marker embedded in event descriptions for orphan recovery / dedupe. */
+export function sourceDescriptionMarker(
+  sourceKind: GoogleCalendarSourceKind,
+  sourceId: string
+): string {
+  switch (sourceKind) {
+    case "booking":
+      return `Booking ID: ${sourceId}`;
+    case "turo":
+      return `Turo trip ID: ${sourceId}`;
+    case "blocked":
+      return `Blocked date ID: ${sourceId}`;
+  }
 }

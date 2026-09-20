@@ -48,6 +48,7 @@ export type BuiltGoogleCalendarEvent = {
 
 export type GoogleCalendarPublicStatus = {
   connected: boolean;
+  needsReconnect: boolean;
   calendarId: string | null;
   calendarSummary: string | null;
   connectedAt: string | null;

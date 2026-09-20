@@ -13,6 +13,7 @@ import { logger } from "@/lib/utils/logger";
 
 type Status = {
   connected: boolean;
+  needsReconnect?: boolean;
   configured: boolean;
   calendarId: string | null;
   calendarSummary: string | null;
@@ -66,6 +67,11 @@ export default function GoogleCalendarIntegrationPage() {
         const calJson = await calRes.json();
         if (calRes.ok && calJson.success) {
           setCalendars(calJson.data as CalendarOption[]);
+        } else if (calJson.needsReconnect) {
+          setStatus((prev) =>
+            prev ? { ...prev, needsReconnect: true, lastError: calJson.message || prev.lastError } : prev
+          );
+          setError(calJson.message || "Google Calendar needs to be reconnected");
         }
       } else {
         setCalendars([]);
@@ -254,7 +260,11 @@ export default function GoogleCalendarIntegrationPage() {
                       ? status.calendarSummary || status.calendarId
                       : "Not connected"}
                   </div>
-                  {status?.connected ? (
+                  {status?.connected && status.needsReconnect ? (
+                    <span className="text-xs px-2 py-1 rounded-full bg-amber-100 text-amber-900">
+                      Reconnect required
+                    </span>
+                  ) : status?.connected ? (
                     <span className="text-xs px-2 py-1 rounded-full bg-green-100 text-green-800">
                       Connected
                     </span>
@@ -264,6 +274,17 @@ export default function GoogleCalendarIntegrationPage() {
                     </span>
                   )}
                 </div>
+
+                {status?.connected && status.needsReconnect && (
+                  <div className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md p-4 space-y-2">
+                    <p className="font-medium">Google authorization expired</p>
+                    <p>
+                      Sync cannot add or update trips until you reconnect. Click{" "}
+                      <strong>Disconnect</strong>, then <strong>Connect Google Calendar</strong> again.
+                      Publishing your Google OAuth app to Production stops tokens from expiring every 7 days.
+                    </p>
+                  </div>
+                )}
 
                 {status?.connected && (
                   <div className="text-sm text-gray-600 space-y-1">
