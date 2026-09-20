@@ -233,7 +233,13 @@ export function useVehicleActions({
   const deleteVehicle = async (id: string) => {
     const vehicle = vehicles.find((v) => v.id === id);
     const name = vehicle ? getVehicleDisplayName(vehicle) : "this vehicle";
-    if (!confirm(`Are you sure you want to delete ${name}? This action cannot be undone.`)) return;
+    if (
+      !confirm(
+        `Delete ${name} permanently?\n\nThis will also remove its bookings, blocked dates, and maintenance records. Expenses and tickets will be kept but unlinked from this vehicle.\n\nThis cannot be undone.`
+      )
+    ) {
+      return;
+    }
     setDeletingId(id);
     try {
       const res = await adminFetch(`/api/admin/vehicles?id=${id}`, {
