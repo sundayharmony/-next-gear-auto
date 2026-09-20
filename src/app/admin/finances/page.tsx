@@ -88,10 +88,18 @@ export default function AdminFinancesPage() {
       selectedVehicleId,
       vehicles,
       computed.revenueBookings,
+      computed.turoRevenueEntries,
       computed.allExpenses,
       dateRange
     );
-  }, [selectedVehicleId, vehicles, computed.revenueBookings, computed.allExpenses, dateRange]);
+  }, [
+    selectedVehicleId,
+    vehicles,
+    computed.revenueBookings,
+    computed.turoRevenueEntries,
+    computed.allExpenses,
+    dateRange,
+  ]);
 
   const tabProps: FinancesTabProps = {
     dateRange,

@@ -398,6 +398,7 @@ export function useFinancesComputed({
     return vehicles
       .map((vehicle) => {
         const vBookings = bookingsByVehicle.get(vehicle.id) ?? [];
+        const vTuroTrips = turoRevenueEntries.filter((t) => t.vehicle_id === vehicle.id);
         const vExpenses = expensesByVehicle.get(vehicle.id) ?? [];
         const bookingRevenue = vBookings.reduce(
           (s, b) =>
@@ -426,11 +427,19 @@ export function useFinancesComputed({
             dateRange.to
           );
         });
+        vTuroTrips.forEach((t) => {
+          bookedDays += countBookedDaysInRange(
+            t.start_date,
+            t.end_date,
+            dateRange.from,
+            dateRange.to
+          );
+        });
 
         return {
           id: vehicle.id,
           name: getVehicleDisplayName(vehicle),
-          bookings: vBookings.length,
+          bookings: vBookings.length + vTuroTrips.length,
           revenue,
           expenses: expenseTotal + vehicleCost,
           profit: revenue - expenseTotal - vehicleCost,

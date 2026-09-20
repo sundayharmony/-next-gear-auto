@@ -19,7 +19,6 @@ import {
   adminListItemClass,
 } from "@/components/admin/admin-shell";
 import { formatDate } from "@/lib/utils/date-helpers";
-import { prorateBookingRevenueInRange } from "@/lib/finance/booking-proration";
 import {
   StatCard,
   CATEGORY_COLORS,
@@ -38,7 +37,8 @@ interface FinancesVehicleDetailProps {
 export function FinancesVehicleDetail({ detail, dateRange, onBack }: FinancesVehicleDetailProps) {
   const {
     vehicle,
-    bookings: vBookings,
+    trips,
+    turoTrips,
     expenses: vExpenses,
     revenue,
     expenseTotal,
@@ -103,19 +103,22 @@ export function FinancesVehicleDetail({ detail, dateRange, onBack }: FinancesVeh
           <StatCard label="Profit" value={`$${profit.toLocaleString()}`} icon={<TrendingUp className="h-4 w-4" />} accent={profit >= 0 ? "green" : "red"} />
           <StatCard label="Occupancy" value={`${occupancy.toFixed(0)}%`} icon={<Target className="h-4 w-4" />} accent="blue" />
           <StatCard label="Booked Days" value={`${bookedDays}`} icon={<Calendar className="h-4 w-4" />} accent="purple" />
-          <StatCard label="Bookings" value={`${vBookings.length}`} icon={<Car className="h-4 w-4" />} accent="amber" />
+          <StatCard label="Trips" value={`${trips.length}`} icon={<Car className="h-4 w-4" />} accent="amber" />
         </div>
 
-        <AdminSection title="Booking History" description={`${vBookings.length} total bookings`}>
+        <AdminSection
+          title="Trip History"
+          description={`${trips.length} trips in date range (${turoTrips.length} Turo, ${trips.length - turoTrips.length} website)`}
+        >
           <AdminCard>
-            {vBookings.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-6">No bookings found</p>
+            {trips.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-6">No trips found in this date range</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b text-left text-gray-500">
-                      <th scope="col" className="pb-2 font-medium">Booking ID</th>
+                      <th scope="col" className="pb-2 font-medium">Trip</th>
                       <th scope="col" className="pb-2 font-medium">Pickup</th>
                       <th scope="col" className="pb-2 font-medium">Return</th>
                       <th scope="col" className="pb-2 font-medium text-right">Amount</th>
@@ -123,30 +126,36 @@ export function FinancesVehicleDetail({ detail, dateRange, onBack }: FinancesVeh
                     </tr>
                   </thead>
                   <tbody className="divide-y">
-                    {vBookings
+                    {trips
                       .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
-                      .map((b) => {
-                        const rangeRevenue = prorateBookingRevenueInRange(
-                          b.total_price ?? 0,
-                          b.pickup_date,
-                          b.return_date,
-                          dateRange.from,
-                          dateRange.to
-                        );
-                        return (
-                          <tr key={b.id} className="text-gray-700">
-                            <td className="py-2.5 font-mono text-xs">{b.id.slice(0, 16)}...</td>
-                            <td className="py-2.5">{formatDate(b.pickup_date)}</td>
-                            <td className="py-2.5">{formatDate(b.return_date)}</td>
-                            <td className="py-2.5 text-right font-semibold">
-                              ${rangeRevenue.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                            </td>
-                            <td className="py-2.5 text-right">
-                              <Badge variant="secondary" className="text-xs capitalize">{b.status}</Badge>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      .map((trip) => (
+                        <tr key={`${trip.kind}:${trip.id}`} className="text-gray-700">
+                          <td className="py-2.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <Badge
+                                className={
+                                  trip.kind === "turo"
+                                    ? "bg-teal-100 text-teal-800 shrink-0"
+                                    : "bg-gray-100 text-gray-700 shrink-0"
+                                }
+                              >
+                                {trip.kind === "turo" ? "Turo" : "Website"}
+                              </Badge>
+                              <span className="truncate text-xs">
+                                {trip.kind === "booking" ? `${trip.id.slice(0, 16)}...` : trip.label}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-2.5">{formatDate(trip.pickup_date)}</td>
+                          <td className="py-2.5">{formatDate(trip.return_date)}</td>
+                          <td className="py-2.5 text-right font-semibold">
+                            ${trip.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                          </td>
+                          <td className="py-2.5 text-right">
+                            <Badge variant="secondary" className="text-xs capitalize">{trip.status}</Badge>
+                          </td>
+                        </tr>
+                      ))}
                   </tbody>
                 </table>
               </div>

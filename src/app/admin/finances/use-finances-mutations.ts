@@ -14,8 +14,20 @@ import { logger } from "@/lib/utils/logger";
 import { staffKeys, useStaffMutation } from "@/lib/hooks/use-staff-query";
 import type { EditingExpense } from "./finances-shared";
 import type { FinanceBooking } from "./use-finances-data";
-import type { NewExpenseForm } from "./finances-tab-types";
+import { getTuroDriverFromReason } from "@/lib/utils/turo-blocked-date";
+import type { NewExpenseForm, TuroRevenueEntry } from "./finances-tab-types";
 import type { UnifiedExpense, Vehicle } from "./finances-shared";
+
+export type VehicleFinanceTrip = {
+  id: string;
+  kind: "booking" | "turo";
+  label: string;
+  pickup_date: string;
+  return_date: string;
+  amount: number;
+  status: string;
+  created_at: string;
+};
 
 const defaultNewExpense = (): NewExpenseForm => ({
   vehicleId: "",
@@ -193,14 +205,15 @@ export function getVehicleDetail(
   vehicleId: string,
   vehicles: Vehicle[],
   revenueBookings: FinanceBooking[],
+  turoRevenueEntries: TuroRevenueEntry[],
   allExpenses: UnifiedExpense[],
   dateRange: { from: string; to: string }
 ) {
   const vehicle = vehicles.find((v) => v.id === vehicleId);
   if (!vehicle) return null;
   const vBookings = revenueBookings.filter((b) => b.vehicle_id === vehicleId);
-  const vExpenses = allExpenses.filter((e) => e.vehicle_id === vehicleId);
-  const revenue = vBookings.reduce(
+  const vTuroTrips = turoRevenueEntries.filter((t) => t.vehicle_id === vehicleId);
+  const bookingRevenue = vBookings.reduce(
     (s, b) =>
       s +
       prorateBookingRevenueInRange(
@@ -212,6 +225,9 @@ export function getVehicleDetail(
       ),
     0
   );
+  const turoRevenue = vTuroTrips.reduce((s, t) => s + t.revenue, 0);
+  const revenue = bookingRevenue + turoRevenue;
+  const vExpenses = allExpenses.filter((e) => e.vehicle_id === vehicleId);
   const expenseTotal = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
   const effectiveCost = vehicle.isFinanced ? 0 : (vehicle.purchasePrice ?? 0);
   const financingInfo = vehicle.isFinanced ? calculateFinancing(vehicle) : null;
@@ -228,10 +244,50 @@ export function getVehicleDetail(
       dateRange.to
     );
   });
+  vTuroTrips.forEach((t) => {
+    bookedDays += countBookedDaysInRange(
+      t.start_date,
+      t.end_date,
+      dateRange.from,
+      dateRange.to
+    );
+  });
   const occupancy = Math.min(100, (bookedDays / totalDays) * 100);
+
+  const trips: VehicleFinanceTrip[] = [
+    ...vBookings.map((b) => ({
+      id: b.id,
+      kind: "booking" as const,
+      label: b.id,
+      pickup_date: b.pickup_date,
+      return_date: b.return_date,
+      amount: prorateBookingRevenueInRange(
+        b.total_price ?? 0,
+        b.pickup_date,
+        b.return_date,
+        dateRange.from,
+        dateRange.to
+      ),
+      status: b.status,
+      created_at: b.created_at,
+    })),
+    ...vTuroTrips.map((t) => ({
+      id: t.id,
+      kind: "turo" as const,
+      label: getTuroDriverFromReason(t.reason) || `Turo ${t.id.slice(0, 8)}`,
+      pickup_date: t.start_date,
+      return_date: t.end_date,
+      amount: t.revenue,
+      status: "turo",
+      created_at: t.start_date,
+    })),
+  ];
+
   return {
     vehicle,
     bookings: vBookings,
+    turoTrips: vTuroTrips,
+    trips,
     expenses: vExpenses,
     revenue,
     expenseTotal,
