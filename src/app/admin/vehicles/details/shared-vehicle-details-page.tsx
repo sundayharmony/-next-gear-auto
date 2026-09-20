@@ -263,7 +263,11 @@ export function SharedVehicleDetailsPage({
         </AdminCard>
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-5">
-          <AdminStatCard label="Bookings" value={summary?.counts.bookingsAndTuro ?? bookings?.total ?? 0} icon={CalendarDays} />
+          <AdminStatCard
+            label="Trips"
+            value={bookings?.total ?? summary?.counts.bookingsAndTuro ?? 0}
+            icon={CalendarDays}
+          />
           <AdminStatCard label="Manual blocks" value={summary?.counts.manualBlocks ?? 0} icon={Car} />
           <AdminStatCard label="Maintenance" value={summary?.counts.maintenance ?? 0} icon={Wrench} />
           <AdminStatCard label="Tickets" value={summary?.counts.tickets ?? 0} icon={Ticket} />

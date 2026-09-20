@@ -1,3 +1,4 @@
+import { fetchActiveTuroBlockedRows } from "@/lib/admin/turo-blocked-fetch";
 import { getVehicleDisplayName } from "@/lib/types";
 import {
   canManageBooking,
@@ -154,17 +155,13 @@ export async function fetchVehicleSummary(
   vehicleId: string,
   role: StaffRole
 ) {
-  const [bookingsRes, turoRes, manualRes, manualLatest, turoLatest, maintenance, tickets, expenses, reviews] =
+  const [bookingsRes, activeTuroRows, manualRes, manualLatest, turoLatest, maintenance, tickets, expenses, reviews] =
     await Promise.all([
       supabase
         .from("bookings")
         .select("id", { count: "exact", head: true })
         .eq("vehicle_id", vehicleId),
-      supabase
-        .from("blocked_dates")
-        .select("id", { count: "exact", head: true })
-        .eq("vehicle_id", vehicleId)
-        .eq("source", "turo-email"),
+      fetchActiveTuroBlockedRows(supabase, { vehicleId }),
       supabase
         .from("blocked_dates")
         .select("id", { count: "exact", head: true })
@@ -219,12 +216,13 @@ export async function fetchVehicleSummary(
   const reviewsCount = reviews.count || 0;
 
   const bookingCount = bookingsRes.count || 0;
-  const turoCount = turoRes.count || 0;
+  /** Match Booking History list: active Turo rows only, deduped by guest + dates. */
+  const turoCount = activeTuroRows.length;
   const manualCount = manualRes.count || 0;
 
   return {
     counts: {
-      /** Website/manager bookings + Turo trips (occupancy). */
+      /** Website bookings + active Turo trips (same basis as vehicle Booking History). */
       bookingsAndTuro: bookingCount + turoCount,
       /** Manual blocked date ranges only. */
       manualBlocks: manualCount,
