@@ -1,9 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
+import { canManageBooking } from "@/lib/bookings/financial-access";
 import { sendBookingSignAgreement } from "@/lib/email/mailer";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
+import { isManagerRole } from "@/lib/auth/roles";
 
 export async function POST(req: NextRequest) {
   const auth = await verifyAdminOrManager(req);
@@ -22,19 +24,16 @@ export async function POST(req: NextRequest) {
 
     const supabase = getServiceSupabase();
 
-    // Managers can only send emails for their own bookings
-    if (auth.role === "manager") {
+    if (isManagerRole(auth.role)) {
       const { data: bookingCheck } = await supabase
         .from("bookings")
-        .select("created_by_user_id, origin_channel")
+        .select("created_by_user_id, manager_financial_access")
         .eq("id", bookingId)
         .maybeSingle();
 
-      if (!bookingCheck || 
-          bookingCheck.origin_channel !== "manager_panel" || 
-          bookingCheck.created_by_user_id !== auth.userId) {
+      if (!bookingCheck || !canManageBooking(auth.role, bookingCheck, auth.userId)) {
         return NextResponse.json(
-          { success: false, message: "You can only send emails for your own bookings" },
+          { success: false, message: "You do not have permission to send emails for this booking" },
           { status: 403 }
         );
       }

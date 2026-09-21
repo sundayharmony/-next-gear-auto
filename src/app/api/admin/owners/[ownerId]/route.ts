@@ -5,6 +5,8 @@ import { enrichOwnerRow } from "@/lib/admin/owner-enrichment";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import { logger } from "@/lib/utils/logger";
 import { hasOwnerPortalAccess } from "@/lib/auth/customer-capabilities";
+import { auditLog } from "@/lib/security/audit-log";
+import { isManagerRole } from "@/lib/auth/roles";
 
 type Params = { params: Promise<{ ownerId: string }> };
 
@@ -144,5 +146,82 @@ export async function PATCH(req: NextRequest, { params }: Params) {
   } catch (err) {
     logger.error("Owner PATCH error:", err);
     return NextResponse.json({ success: false, message: "Invalid request" }, { status: 400 });
+  }
+}
+
+/**
+ * DELETE /api/admin/owners/[ownerId]
+ * Revoke owner portal access and unassign their vehicles.
+ */
+export async function DELETE(req: NextRequest, { params }: Params) {
+  const auth = await verifyAdmin(req);
+  if (!auth.authorized) return auth.response;
+
+  const { ownerId } = await params;
+  if (!ownerId?.trim()) {
+    return NextResponse.json({ success: false, message: "Invalid owner id" }, { status: 400 });
+  }
+
+  try {
+    const supabase = getServiceSupabase();
+    const { data: existing, error: loadError } = await supabase
+      .from("customers")
+      .select("id, name, email, role, owner_portal_enabled")
+      .eq("id", ownerId)
+      .maybeSingle();
+
+    if (loadError) {
+      logger.error("Owner DELETE load failed:", loadError);
+      return NextResponse.json({ success: false, message: "Failed to load owner" }, { status: 500 });
+    }
+    if (!existing || !hasOwnerPortalAccess(existing)) {
+      return NextResponse.json({ success: false, message: "Owner not found" }, { status: 404 });
+    }
+
+    const { error: vehicleError } = await supabase
+      .from("vehicles")
+      .update({ owner_id: null })
+      .eq("owner_id", ownerId);
+
+    if (vehicleError) {
+      logger.error("Owner DELETE vehicle unassign failed:", vehicleError);
+      return NextResponse.json({ success: false, message: "Failed to unassign vehicles" }, { status: 500 });
+    }
+
+    const updates: Record<string, string | boolean | null> = {
+      owner_portal_enabled: false,
+    };
+    if (!isManagerRole(existing.role)) {
+      updates.role = "customer";
+    }
+
+    const { error: updateError } = await supabase
+      .from("customers")
+      .update(updates)
+      .eq("id", ownerId);
+
+    if (updateError) {
+      logger.error("Owner DELETE update failed:", updateError);
+      return NextResponse.json({ success: false, message: "Failed to remove owner" }, { status: 500 });
+    }
+
+    auditLog("ADMIN_ACTION", {
+      userId: auth.adminId,
+      details: {
+        action: "owner_removed",
+        targetUserId: ownerId,
+        targetEmail: existing.email,
+        targetName: existing.name,
+      },
+    });
+
+    const message = isManagerRole(existing.role)
+      ? "Owner portal access revoked. Manager account is unchanged."
+      : "Owner removed. Account is now a customer and vehicles were unassigned.";
+
+    return NextResponse.json({ success: true, message });
+  } catch (err) {
+    logger.error("Owner DELETE error:", err);
+    return NextResponse.json({ success: false, message: "Failed to remove owner" }, { status: 500 });
   }
 }
