@@ -34,20 +34,18 @@ const ModalContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 flex w-full flex-col bg-white shadow-xl outline-none",
-        "inset-x-0 bottom-0 max-h-[min(92dvh,100%)] overflow-hidden rounded-t-2xl border border-gray-200",
-        "pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in slide-in-from-bottom-2",
+        "fixed z-50 grid w-full gap-4 bg-white shadow-xl outline-none",
+        "nga-overlay-scroll inset-x-0 bottom-0 max-h-[min(92dvh,100%)] overflow-y-auto overscroll-contain rounded-t-2xl border border-gray-200",
+        "p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in slide-in-from-bottom-2",
         "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-lg",
-        "sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:pb-0",
+        "sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:p-6 sm:pb-6",
         className
       )}
       role="dialog"
       aria-modal="true"
       {...props}
     >
-      <div className="nga-overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
-        {children}
-      </div>
+      {children}
       <DialogPrimitive.Close className="nga-overlay-close absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 sm:right-3 sm:top-3">
         <X className="h-5 w-5" />
         <span className="sr-only">Close</span>

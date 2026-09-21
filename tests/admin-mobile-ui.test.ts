@@ -26,11 +26,13 @@ test("staff shell uses a dedicated mobile scroll owner", () => {
 test("mobile overlays scroll internally and lock the page", () => {
   const overlay = read("src/components/staff/staff-overlay.tsx");
   assert.match(overlay, /useLockBodyScroll/);
+  assert.match(read("src/app/admin/bookings/hooks/use-booking-detail-panel.ts"), /useLockBodyScroll/);
   assert.match(overlay, /max-h-\[min\(92dvh,100%\)\]/);
   assert.match(overlay, /rounded-t-2xl/);
 
   const modal = read("src/components/ui/modal.tsx");
   assert.match(modal, /nga-overlay-scroll/);
+  assert.match(modal, /overflow-y-auto overscroll-contain/);
   assert.match(modal, /nga-overlay-close/);
   assert.match(modal, /role="dialog"/);
 

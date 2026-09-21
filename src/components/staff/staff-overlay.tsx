@@ -132,7 +132,7 @@ export function StaffCenterModal({
       <div
         ref={dialogRef}
         className={cn(
-          "nga-overlay-scroll flex w-full max-h-[min(92dvh,100%)] min-h-0 flex-col overflow-y-auto overscroll-contain bg-white shadow-xl outline-none",
+          "flex w-full max-h-[min(92dvh,100%)] min-h-0 flex-col overflow-hidden bg-white shadow-xl outline-none",
           "rounded-t-2xl pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:rounded-xl sm:pb-0",
           className
         )}
