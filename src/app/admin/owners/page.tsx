@@ -9,6 +9,8 @@ import {
   Loader2,
   Save,
   ChevronRight,
+  Pencil,
+  Trash2,
 } from "lucide-react";
 import {
   AdminPageHeader,
@@ -33,6 +35,7 @@ import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-pol
 import { formatCurrency } from "@/lib/utils/date-helpers";
 import type { OwnerVehicle } from "@/lib/types";
 import { COMPANY_OWNED_OWNER_ID } from "@/lib/owner/ownership";
+import { EditOwnerModal } from "./components/EditOwnerModal";
 import { ManagePayoutsModal } from "./components/ManagePayoutsModal";
 import { SendPasswordEmailButton } from "./components/SendPasswordEmailButton";
 
@@ -64,6 +67,8 @@ export default function AdminOwnersPage() {
   >({});
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
+  const [editingOwner, setEditingOwner] = useState<AdminOwner | null>(null);
+  const [removingId, setRemovingId] = useState<string | null>(null);
   const [payoutsOwner, setPayoutsOwner] = useState<AdminOwner | null>(null);
   const [supportsCompanyOwned, setSupportsCompanyOwned] = useState(true);
 
@@ -90,6 +95,34 @@ export default function AdminOwnersPage() {
   }, [showToast]);
 
   useEffect(() => { load(); }, [load]);
+
+  const removeOwner = async (owner: AdminOwner) => {
+    if (
+      !window.confirm(
+        `Remove owner access for ${owner.name}? Their vehicles will be unassigned and they will lose owner portal access.`
+      )
+    ) {
+      return;
+    }
+    setRemovingId(owner.id);
+    try {
+      const res = await adminFetch(`/api/admin/owners/${encodeURIComponent(owner.id)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast("success", "Owner removed", json.message || "Owner access revoked.");
+        if (editingOwner?.id === owner.id) setEditingOwner(null);
+        await load();
+      } else {
+        showToast("error", "Remove failed", json.message || "Try again.");
+      }
+    } catch {
+      showToast("error", "Remove failed", "Network error.");
+    } finally {
+      setRemovingId(null);
+    }
+  };
 
   const assignment = useMemo(() => {
     const map = new Map<string, { ownerId: string; isCompanyOwned: boolean; pct: number }>();
@@ -161,22 +194,44 @@ export default function AdminOwnersPage() {
                           </div>
                         </div>
                       </Link>
-                      <div className="border-t border-gray-100 px-4 py-2 flex gap-2">
+                      <div className="border-t border-gray-100 px-4 py-2 flex flex-wrap gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="flex-1 min-w-[5.5rem]"
+                          onClick={() => setEditingOwner(o)}
+                        >
+                          <Pencil className="h-4 w-4" /> Edit
+                        </Button>
                         <SendPasswordEmailButton
                           userId={o.id}
                           userEmail={o.email}
                           apiPath={`/api/admin/owners/${encodeURIComponent(o.id)}/send-password-email`}
                           accountActivated={o.accountActivated}
                           fullWidth
-                          className="flex-1"
+                          className="flex-1 min-w-[5.5rem]"
                         />
                         <Button
                           variant="secondary"
                           size="sm"
-                          className="flex-1"
+                          className="flex-1 min-w-[5.5rem]"
                           onClick={() => setPayoutsOwner(o)}
                         >
                           <Wallet className="h-4 w-4" /> Payouts
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="flex-1 min-w-[5.5rem] text-red-600 hover:bg-red-50 hover:text-red-700"
+                          onClick={() => removeOwner(o)}
+                          disabled={removingId === o.id}
+                        >
+                          {removingId === o.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Trash2 className="h-4 w-4" />
+                          )}
+                          Remove
                         </Button>
                       </div>
                     </AdminCard>
@@ -208,6 +263,11 @@ export default function AdminOwnersPage() {
       </AdminPageBody>
 
       <AddOwnerModal open={addOpen} onClose={() => setAddOpen(false)} onCreated={load} />
+      <EditOwnerModal
+        owner={editingOwner}
+        onClose={() => setEditingOwner(null)}
+        onSaved={load}
+      />
       <ManagePayoutsModal owner={payoutsOwner} onClose={() => setPayoutsOwner(null)} onChanged={load} />
     </>
   );

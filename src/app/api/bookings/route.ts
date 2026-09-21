@@ -30,6 +30,7 @@ import {
 import { validateBookingStatusPatch } from "@/lib/bookings";
 import { queueGoogleCalendarBookingSync } from "@/lib/integrations/google-calendar/hooks";
 import {
+  canManageBooking,
   canViewBookingFinancials,
   redactBookingFinancials,
 } from "@/lib/bookings/financial-access";
@@ -846,13 +847,11 @@ export async function PATCH(request: NextRequest) {
     }
 
     const isManagerEditor = auth.role === "manager";
-    if (isManagerEditor) {
-      if (booking.origin_channel !== "manager_panel" || booking.created_by_user_id !== auth.sub) {
-        return NextResponse.json(
-          { success: false, message: "Managers can only update their own manager-panel bookings" },
-          { status: 403 }
-        );
-      }
+    if (isManagerEditor && !canManageBooking(auth.role, booking, auth.sub)) {
+      return NextResponse.json(
+        { success: false, message: "You do not have permission to update this booking" },
+        { status: 403 }
+      );
     }
 
     // Build update object — only include fields that were actually sent

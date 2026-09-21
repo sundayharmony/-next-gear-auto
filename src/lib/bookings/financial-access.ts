@@ -37,18 +37,16 @@ export function canViewBookingFinancials(
 
 /**
  * Whether a staff member may manage (edit) this booking. This is independent
- * of financial visibility: managers keep operational control of the bookings
- * they created, but that does NOT grant them financial visibility.
+ * of financial visibility: managers can operationally manage any fleet trip,
+ * but that does NOT grant them financial visibility.
  */
 export function canManageBooking(
   role: string | null | undefined,
-  booking: BookingFinancialAccessInput | null | undefined,
-  userId: string | null | undefined
+  _booking: BookingFinancialAccessInput | null | undefined,
+  _userId: string | null | undefined
 ): boolean {
   if (role === "admin") return true;
-  if (role === "manager") {
-    return !!booking?.created_by_user_id && booking.created_by_user_id === userId;
-  }
+  if (role === "manager") return true;
   return false;
 }
 

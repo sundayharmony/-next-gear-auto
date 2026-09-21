@@ -5,6 +5,7 @@ import {
   fetchCustomerManagerAccessRow,
   isManagerPanelAccessEnabled,
 } from "@/lib/auth/manager-access";
+import { canManageBooking } from "@/lib/bookings/financial-access";
 import { isAdminRole, isManagerRole } from "@/lib/auth/roles";
 import {
   AgreementSigningError,
@@ -82,12 +83,9 @@ export async function POST(req: NextRequest) {
           { status: 403 },
         );
       }
-      if (
-        booking.origin_channel !== "manager_panel" ||
-        booking.created_by_user_id !== auth.userId
-      ) {
+      if (!canManageBooking(auth.role, booking, auth.userId)) {
         return NextResponse.json(
-          { success: false, message: "Managers can only sign agreements for their own bookings" },
+          { success: false, message: "You do not have permission to sign agreements for this booking" },
           { status: 403 },
         );
       }

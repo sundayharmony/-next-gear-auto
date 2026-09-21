@@ -83,7 +83,7 @@ test("manager_access_enabled revocation blocks panel access", () => {
 test("canManageBooking is independent of financial visibility", () => {
   const booking = { created_by_user_id: "mgr-1", manager_financial_access: false };
   assert.equal(canManageBooking("manager", booking, "mgr-1"), true);
-  assert.equal(canManageBooking("manager", booking, "other"), false);
+  assert.equal(canManageBooking("manager", booking, "other"), true);
   assert.equal(canViewBookingFinancials("manager", booking), false);
 });
 

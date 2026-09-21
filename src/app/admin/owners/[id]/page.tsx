@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import {
   Car,
   Wallet,
@@ -19,6 +19,7 @@ import {
   ExternalLink,
   CheckCircle2,
   Clock,
+  Trash2,
 } from "lucide-react";
 import {
   AdminPageHeader,
@@ -46,6 +47,7 @@ import { Badge } from "@/components/ui/badge";
 
 export default function AdminOwnerDetailPage() {
   const params = useParams();
+  const router = useRouter();
   const ownerId = typeof params.id === "string" ? params.id : "";
   const { showToast } = useNotification();
 
@@ -57,6 +59,7 @@ export default function AdminOwnerDetailPage() {
   const [editEmail, setEditEmail] = useState("");
   const [editPhone, setEditPhone] = useState("");
   const [saving, setSaving] = useState(false);
+  const [removing, setRemoving] = useState(false);
 
   const load = useCallback(async () => {
     if (!ownerId) return;
@@ -91,6 +94,34 @@ export default function AdminOwnerDetailPage() {
   };
 
   const cancelEdit = () => setEditing(false);
+
+  const removeOwner = async () => {
+    if (!owner) return;
+    if (
+      !window.confirm(
+        `Remove owner access for ${owner.name}? Their vehicles will be unassigned and they will lose owner portal access.`
+      )
+    ) {
+      return;
+    }
+    setRemoving(true);
+    try {
+      const res = await adminFetch(`/api/admin/owners/${encodeURIComponent(owner.id)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (json.success) {
+        showToast("success", "Owner removed", json.message || "Owner access revoked.");
+        router.push("/admin/owners");
+      } else {
+        showToast("error", "Remove failed", json.message || "Try again.");
+      }
+    } catch {
+      showToast("error", "Remove failed", "Network error.");
+    } finally {
+      setRemoving(false);
+    }
+  };
 
   const saveProfile = async () => {
     if (!ownerId || !editName.trim() || !editEmail.trim()) {
@@ -160,6 +191,16 @@ export default function AdminOwnerDetailPage() {
                   <Pencil className="h-4 w-4" /> Edit
                 </Button>
               ) : null}
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                onClick={removeOwner}
+                disabled={removing}
+              >
+                {removing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                Remove
+              </Button>
             </>
           ) : null
         }
