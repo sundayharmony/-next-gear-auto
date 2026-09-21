@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/context/auth-context";
+import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
 function LoginFormInner() {
   const router = useRouter();
@@ -18,6 +19,7 @@ function LoginFormInner() {
   const [showPassword, setShowPassword] = useState(false);
   const [localError, setLocalError] = useState("");
   const [forgotPasswordMsg, setForgotPasswordMsg] = useState("");
+  const [forgotPasswordSending, setForgotPasswordSending] = useState(false);
 
   const staffOnly = searchParams.get("staff") === "1";
   const redirectAfter = searchParams.get("redirect");
@@ -49,6 +51,36 @@ function LoginFormInner() {
       return redirectAfter;
     }
     return "/account";
+  };
+
+  const handleForgotPassword = async () => {
+    setLocalError("");
+    setForgotPasswordMsg("");
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail) {
+      setLocalError("Enter your email address first, then tap Forgot password.");
+      return;
+    }
+
+    setForgotPasswordSending(true);
+    try {
+      const res = await csrfFetch("/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalizedEmail }),
+      });
+      const json = await res.json();
+      if (json.success) {
+        setForgotPasswordMsg(json.message || "If an account exists for that email, password reset instructions have been sent.");
+      } else {
+        setLocalError(json.message || "Could not send password reset email. Please try again.");
+      }
+    } catch {
+      setLocalError("Could not send password reset email. Please try again.");
+    } finally {
+      setForgotPasswordSending(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -153,8 +185,13 @@ function LoginFormInner() {
                   <input type="checkbox" className="rounded border-gray-300 text-purple-600 focus:ring-purple-500 focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2" />
                   <span className="text-gray-600">Remember me</span>
                 </label>
-                <button type="button" onClick={() => setForgotPasswordMsg("Check your email for password reset instructions.")} className="text-sm text-purple-600 hover:text-purple-700 font-medium">
-                  Forgot password?
+                <button
+                  type="button"
+                  onClick={handleForgotPassword}
+                  disabled={forgotPasswordSending}
+                  className="text-sm text-purple-600 hover:text-purple-700 font-medium disabled:opacity-50"
+                >
+                  {forgotPasswordSending ? "Sending..." : "Forgot password?"}
                 </button>
               </div>
 

@@ -48,6 +48,7 @@ const PUBLIC_ROUTES = new Set([
   "src/app/api/auth/refresh/route.ts",
   "src/app/api/auth/set-password/route.ts",
   "src/app/api/auth/reset-password/route.ts",
+  "src/app/api/auth/forgot-password/route.ts",
 ]);
 
 const PUBLIC_GATED_ROUTES = new Set([

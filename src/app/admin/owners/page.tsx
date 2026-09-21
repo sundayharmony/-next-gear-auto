@@ -163,8 +163,9 @@ export default function AdminOwnersPage() {
                       </Link>
                       <div className="border-t border-gray-100 px-4 py-2 flex gap-2">
                         <SendPasswordEmailButton
-                          ownerId={o.id}
-                          ownerEmail={o.email}
+                          userId={o.id}
+                          userEmail={o.email}
+                          apiPath={`/api/admin/owners/${encodeURIComponent(o.id)}/send-password-email`}
                           accountActivated={o.accountActivated}
                           fullWidth
                           className="flex-1"

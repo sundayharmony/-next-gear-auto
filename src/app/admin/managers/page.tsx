@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import { Shield, Plus, RefreshCw, Pencil, Trash2, CheckCircle2, Clock } from "lucide-react";
+import { SendPasswordEmailButton } from "@/app/admin/owners/components/SendPasswordEmailButton";
 import {
   AdminPageHeader,
   AdminPageBody,
@@ -313,7 +314,7 @@ export default function AdminManagersPage() {
                           <p className={`${adminMutedClass} truncate`}>{manager.email}</p>
                           {!manager.account_activated ? (
                             <p className="text-xs text-amber-700 mt-1">
-                              Has not set a password yet — resend the setup email from Customers if needed.
+                              Has not set a password yet — send a setup email below.
                             </p>
                           ) : null}
                           {manager.phone ? (
@@ -323,6 +324,12 @@ export default function AdminManagersPage() {
                           )}
                         </div>
                         <div className="flex shrink-0 flex-wrap gap-2">
+                          <SendPasswordEmailButton
+                            userId={manager.id}
+                            userEmail={manager.email}
+                            apiPath={`/api/admin/managers/${encodeURIComponent(manager.id)}/send-password-email`}
+                            accountActivated={manager.account_activated}
+                          />
                           <Button
                             size="sm"
                             variant="outline"
