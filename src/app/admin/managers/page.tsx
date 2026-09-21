@@ -11,6 +11,11 @@ import {
   adminMutedClass,
   adminListItemClass,
 } from "@/components/admin/admin-shell";
+import {
+  AdminListActionBar,
+  AdminListActionButton,
+} from "@/components/admin/admin-list-action-bar";
+import { AdminIconActionButton } from "@/components/admin/admin-card-action-bar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -323,26 +328,24 @@ export default function AdminManagersPage() {
                             <p className="text-xs text-gray-500 mt-0.5">No phone on file</p>
                           )}
                         </div>
-                        <div className="flex shrink-0 flex-wrap gap-2">
+                        <AdminListActionBar>
                           <SendPasswordEmailButton
                             userId={manager.id}
                             userEmail={manager.email}
                             apiPath={`/api/admin/managers/${encodeURIComponent(manager.id)}/send-password-email`}
                             accountActivated={manager.account_activated}
+                            iconOnly
                           />
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="border-gray-300 text-gray-700 hover:bg-gray-100"
+                          <AdminIconActionButton
+                            label={`Edit ${manager.name}`}
+                            className="border-gray-300 text-gray-700 hover:bg-gray-100 sm:w-auto"
                             onClick={() => startEdit(manager)}
                           >
-                            <Pencil className="h-3.5 w-3.5 mr-1" aria-hidden />
-                            Edit
-                          </Button>
-                          <Button
-                            size="sm"
+                            <Pencil className="h-4 w-4" aria-hidden />
+                          </AdminIconActionButton>
+                          <AdminListActionButton
                             variant="outline"
-                            className="text-red-700 border-red-300 hover:bg-red-50"
+                            className="col-span-2 text-red-700 border-red-300 hover:bg-red-50 sm:col-span-1"
                             onClick={() => removeManager(manager.id, manager.email)}
                             disabled={removingId === manager.id}
                           >
@@ -350,12 +353,12 @@ export default function AdminManagersPage() {
                               "Removing…"
                             ) : (
                               <>
-                                <Trash2 className="h-3.5 w-3.5 mr-1" aria-hidden />
-                                Remove
+                                <Trash2 className="h-4 w-4 shrink-0" aria-hidden />
+                                <span className="truncate">Remove</span>
                               </>
                             )}
-                          </Button>
-                        </div>
+                          </AdminListActionButton>
+                        </AdminListActionBar>
                       </div>
                     )}
                   </div>

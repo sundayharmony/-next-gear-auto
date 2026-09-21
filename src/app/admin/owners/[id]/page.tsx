@@ -43,6 +43,7 @@ import type { EnrichedAdminOwner } from "@/lib/admin/owner-enrichment";
 import { isOwnerTuroBooking } from "@/lib/owner/finance";
 import { ManagePayoutsModal } from "../components/ManagePayoutsModal";
 import { SendPasswordEmailButton } from "../components/SendPasswordEmailButton";
+import { AdminIconActionButton } from "@/components/admin/admin-card-action-bar";
 import { Badge } from "@/components/ui/badge";
 
 export default function AdminOwnerDetailPage() {
@@ -187,9 +188,13 @@ export default function AdminOwnerDetailPage() {
                 <Wallet className="h-4 w-4" /> Manage payouts
               </Button>
               {!editing ? (
-                <Button variant="outline" size="sm" onClick={startEdit} className="page-hero-btn-outline">
-                  <Pencil className="h-4 w-4" /> Edit
-                </Button>
+                <AdminIconActionButton
+                  label="Edit owner profile"
+                  onClick={startEdit}
+                  className="page-hero-btn-outline"
+                >
+                  <Pencil className="h-4 w-4" aria-hidden />
+                </AdminIconActionButton>
               ) : null}
               <Button
                 variant="ghost"

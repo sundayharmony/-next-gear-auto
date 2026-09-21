@@ -20,6 +20,11 @@ import {
   AdminTableWrap,
 } from "@/components/admin/admin-shell";
 import {
+  AdminCardActionBar,
+  AdminCardActionButton,
+  AdminIconActionButton,
+} from "@/components/admin/admin-card-action-bar";
+import {
   Modal,
   ModalContent,
   ModalDescription,
@@ -194,46 +199,41 @@ export default function AdminOwnersPage() {
                           </div>
                         </div>
                       </Link>
-                      <div className="border-t border-gray-100 px-4 py-2 flex flex-wrap gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          className="flex-1 min-w-[5.5rem]"
+                      <AdminCardActionBar>
+                        <AdminIconActionButton
+                          label={`Edit ${o.name}`}
                           onClick={() => setEditingOwner(o)}
                         >
-                          <Pencil className="h-4 w-4" /> Edit
-                        </Button>
+                          <Pencil className="h-4 w-4" aria-hidden />
+                        </AdminIconActionButton>
                         <SendPasswordEmailButton
                           userId={o.id}
                           userEmail={o.email}
                           apiPath={`/api/admin/owners/${encodeURIComponent(o.id)}/send-password-email`}
                           accountActivated={o.accountActivated}
-                          fullWidth
-                          className="flex-1 min-w-[5.5rem]"
+                          iconOnly
                         />
-                        <Button
+                        <AdminCardActionButton
                           variant="secondary"
-                          size="sm"
-                          className="flex-1 min-w-[5.5rem]"
                           onClick={() => setPayoutsOwner(o)}
                         >
-                          <Wallet className="h-4 w-4" /> Payouts
-                        </Button>
-                        <Button
+                          <Wallet className="h-4 w-4 shrink-0" aria-hidden />
+                          <span className="truncate">Payouts</span>
+                        </AdminCardActionButton>
+                        <AdminIconActionButton
+                          label={`Remove ${o.name}`}
                           variant="ghost"
-                          size="sm"
-                          className="flex-1 min-w-[5.5rem] text-red-600 hover:bg-red-50 hover:text-red-700"
+                          className="text-red-600 hover:bg-red-50 hover:text-red-700"
                           onClick={() => removeOwner(o)}
                           disabled={removingId === o.id}
                         >
                           {removingId === o.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
+                            <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
                           ) : (
-                            <Trash2 className="h-4 w-4" />
+                            <Trash2 className="h-4 w-4" aria-hidden />
                           )}
-                          Remove
-                        </Button>
-                      </div>
+                        </AdminIconActionButton>
+                      </AdminCardActionBar>
                     </AdminCard>
                   ))}
                 </div>

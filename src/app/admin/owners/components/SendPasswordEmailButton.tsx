@@ -5,6 +5,7 @@ import { KeyRound, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useNotification } from "@/lib/context/notification-context";
+import { cn } from "@/lib/utils/cn";
 
 interface SendPasswordEmailButtonProps {
   userId: string;
@@ -14,7 +15,8 @@ interface SendPasswordEmailButtonProps {
   variant?: "default" | "secondary" | "outline" | "ghost";
   size?: "default" | "sm" | "lg";
   className?: string;
-  fullWidth?: boolean;
+  /** Icon-only for compact card/list footers (label becomes aria-label + title). */
+  iconOnly?: boolean;
 }
 
 export function SendPasswordEmailButton({
@@ -25,7 +27,7 @@ export function SendPasswordEmailButton({
   variant = "outline",
   size = "sm",
   className,
-  fullWidth,
+  iconOnly = false,
 }: SendPasswordEmailButtonProps) {
   const { showToast } = useNotification();
   const [sending, setSending] = useState(false);
@@ -56,21 +58,29 @@ export function SendPasswordEmailButton({
     }
   };
 
+  const activeLabel = sending ? sendingLabel : label;
+
   return (
     <Button
       type="button"
       variant={variant}
       size={size}
-      className={`${fullWidth ? "w-full" : ""} border-blue-300 text-blue-600 hover:bg-blue-50 ${className ?? ""}`}
+      className={cn(
+        "border-blue-300 text-blue-600 hover:bg-blue-50",
+        iconOnly ? "w-full min-w-0 justify-center px-2" : "w-full min-w-0 justify-center sm:w-auto",
+        className
+      )}
       onClick={send}
       disabled={sending}
+      aria-label={activeLabel}
+      title={activeLabel}
     >
       {sending ? (
-        <Loader2 className="h-4 w-4 animate-spin" />
+        <Loader2 className="h-4 w-4 animate-spin" aria-hidden />
       ) : (
-        <KeyRound className="h-4 w-4" />
+        <KeyRound className="h-4 w-4" aria-hidden />
       )}
-      {sending ? sendingLabel : label}
+      {!iconOnly ? <span className="truncate">{activeLabel}</span> : null}
     </Button>
   );
 }
