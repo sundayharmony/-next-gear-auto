@@ -39,9 +39,9 @@ async function deleteInBatches(
 
 async function runOptional(
   label: string,
-  fn: () => Promise<{ error: { message: string; code?: string } | null }>
+  query: PromiseLike<{ error: { message: string; code?: string } | null }>
 ): Promise<void> {
-  const { error } = await fn();
+  const { error } = await query;
   if (!error) return;
   if (isMissingRelationError(error)) return;
   throw new Error(`${label} failed: ${error.message}`);
@@ -102,7 +102,8 @@ export async function deleteVehicleWithDependencies(
       true
     );
 
-    await runOptional("tickets booking unlink", () =>
+    await runOptional(
+      "tickets booking unlink",
       supabase.from("tickets").update({ booking_id: null }).in("booking_id", bookingIds)
     );
 
@@ -113,29 +114,36 @@ export async function deleteVehicleWithDependencies(
     if (bookingsErr) throw new Error(`bookings cleanup failed: ${bookingsErr.message}`);
   }
 
-  await runOptional("reviews by vehicle", () =>
+  await runOptional(
+    "reviews by vehicle",
     supabase.from("reviews").delete().eq("vehicle_id", vehicleId)
   );
-  await runOptional("owner_payouts by vehicle", () =>
+  await runOptional(
+    "owner_payouts by vehicle",
     supabase.from("owner_payouts").delete().eq("vehicle_id", vehicleId)
   );
-  await runOptional("owner_notifications by vehicle", () =>
+  await runOptional(
+    "owner_notifications by vehicle",
     supabase.from("owner_notifications").delete().eq("vehicle_id", vehicleId)
   );
-  await runOptional("vehicle_sales", () =>
+  await runOptional(
+    "vehicle_sales",
     supabase.from("vehicle_sales").delete().eq("vehicle_id", vehicleId)
   );
 
   if (blockedIds.length > 0) {
-    await runOptional("expenses blocked_date unlink", () =>
+    await runOptional(
+      "expenses blocked_date unlink",
       supabase.from("expenses").update({ blocked_date_id: null }).in("blocked_date_id", blockedIds)
     );
   }
 
-  await runOptional("expenses vehicle unlink", () =>
+  await runOptional(
+    "expenses vehicle unlink",
     supabase.from("expenses").update({ vehicle_id: null }).eq("vehicle_id", vehicleId)
   );
-  await runOptional("tickets vehicle unlink", () =>
+  await runOptional(
+    "tickets vehicle unlink",
     supabase.from("tickets").update({ vehicle_id: null }).eq("vehicle_id", vehicleId)
   );
 

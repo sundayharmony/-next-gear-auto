@@ -29,6 +29,8 @@ import {
 import { calculatePricing } from "@/lib/utils/price-calculator";
 import { useCreateBookingPricing } from "../hooks/use-create-booking-pricing";
 import { useCreateBookingOverlap } from "../hooks/use-create-booking-overlap";
+import { useCreateBookingCustomerSearch } from "../hooks/use-create-booking-customer-search";
+import { CreateBookingCustomerSearch } from "./CreateBookingCustomerSearch";
 import { BookingFormSectionHeader } from "@/components/forms/booking-form-section-header";
 import { FormField } from "@/components/ui/form-field";
 import { LocationCombobox } from "@/components/location-combobox";
@@ -85,9 +87,6 @@ export default function CreateBookingForm({
 }: CreateBookingFormProps) {
   const isOwnerVariant = variant === "owner";
   const [form, setForm] = useState(emptyForm);
-  const [filteredCustomers, setFilteredCustomers] = useState<CustomerOption[]>([]);
-  const [showDropdown, setShowDropdown] = useState(false);
-  const [searchValue, setSearchValue] = useState("");
   const [loading, setLoading] = useState(false);
   const [locations, setLocationsState] = useState<Location[]>([]);
   const [locationsLoading, setLocationsLoading] = useState(true);
@@ -95,8 +94,6 @@ export default function CreateBookingForm({
   const [pickupLocationId, setPickupLocationId] = useState("");
   const [returnLocationId, setReturnLocationId] = useState("");
   const [differentDropoff, setDifferentDropoff] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-  const searchInputRef = useRef<HTMLInputElement>(null);
   const [idDocument, setIdDocument] = useState<File | null>(null);
   const [idDocumentPreview, setIdDocumentPreview] = useState<string | null>(null);
   const idInputRef = useRef<HTMLInputElement>(null);
@@ -104,6 +101,7 @@ export default function CreateBookingForm({
   const { manualPriceOverride, setManualPriceOverride, calculateHours, restoreAutoPrice } =
     useCreateBookingPricing({ form, setForm, vehicles, onError });
   const { hasOverlappingBookings } = useCreateBookingOverlap(form);
+  const customerSearch = useCreateBookingCustomerSearch(allCustomers);
 
   // Prefill data if provided
   useEffect(() => {
@@ -142,17 +140,6 @@ export default function CreateBookingForm({
     form.pickupDate,
   ]);
 
-  // Click-outside detection for dropdown
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setShowDropdown(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
   // Fetch locations
   useEffect(() => {
     let cancelled = false;
@@ -184,114 +171,6 @@ export default function CreateBookingForm({
     };
   }, [onError]);
 
-  // Handle customer search with debounce
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const [searchingCustomers, setSearchingCustomers] = useState(false);
-
-  // Cleanup timeout on component unmount
-  useEffect(() => {
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value;
-    setSearchValue(value);
-
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-    }
-
-    searchTimeoutRef.current = setTimeout(async () => {
-      if (value.trim()) {
-        // First check local customers for quick results
-        const localFiltered = allCustomers.filter(
-          (c) =>
-            (c.name || "").toLowerCase().includes(value.toLowerCase()) ||
-            (c.email || "").toLowerCase().includes(value.toLowerCase())
-        );
-
-        // If we have local matches, show them immediately
-        if (localFiltered.length > 0) {
-          setFilteredCustomers(localFiltered.slice(0, 8));
-          setShowDropdown(true);
-        }
-
-        // Also do server-side search to find customers not in the initial load
-        // This ensures older customers can be found by searching their email/name
-        if (value.trim().length >= 2) {
-          setSearchingCustomers(true);
-          try {
-            // Search both customers table AND bookings (for past customers without records)
-            const [customersRes, bookingsRes] = await Promise.all([
-              adminFetch(`/api/admin/customers?search=${encodeURIComponent(value.trim())}&limit=20`),
-              adminFetch(`/api/bookings?search=${encodeURIComponent(value.trim())}&limit=30`),
-            ]);
-
-            const seen = new Set(localFiltered.map((c) => c.id));
-            const seenEmails = new Set(localFiltered.map((c) => c.email?.toLowerCase()));
-            const merged = [...localFiltered];
-
-            // Add customers from customer table
-            if (customersRes.ok) {
-              const data = await customersRes.json();
-              if (data.success && data.data) {
-                for (const c of data.data) {
-                  if (!seen.has(c.id)) {
-                    seen.add(c.id);
-                    seenEmails.add(c.email?.toLowerCase());
-                    merged.push({
-                      id: c.id,
-                      name: c.name,
-                      email: c.email,
-                      phone: c.phone || "",
-                    });
-                  }
-                }
-              }
-            }
-
-            // Also search bookings to find past customers who may not have a customer record
-            // This catches cases where bookings exist but customer wasn't created in customers table
-            if (bookingsRes.ok) {
-              const bookingsData = await bookingsRes.json();
-              if (bookingsData.success && bookingsData.data) {
-                for (const b of bookingsData.data) {
-                  const email = b.customerEmail || b.customer_email;
-                  const name = b.customerName || b.customer_name;
-                  const phone = b.customerPhone || b.customer_phone || "";
-                  if (email && !seenEmails.has(email.toLowerCase())) {
-                    seenEmails.add(email.toLowerCase());
-                    merged.push({
-                      id: `booking:${b.id}`,
-                      name: name || "Unknown",
-                      email: email,
-                      phone: phone,
-                    });
-                  }
-                }
-              }
-            }
-
-            setFilteredCustomers(merged.slice(0, 8));
-          } catch {
-            // Server search failed, fall back to local results only
-          } finally {
-            setSearchingCustomers(false);
-          }
-        }
-        setShowDropdown(true);
-      } else {
-        setFilteredCustomers([]);
-        setShowDropdown(false);
-      }
-    }, 300);
-  };
-
-  // Select customer from dropdown
   const selectCustomer = (customer: CustomerOption) => {
     setForm((prev) => ({
       ...prev,
@@ -299,8 +178,8 @@ export default function CreateBookingForm({
       customerEmail: customer.email,
       customerPhone: customer.phone,
     }));
-    setShowDropdown(false);
-    setSearchValue("");
+    customerSearch.setShowDropdown(false);
+    customerSearch.setSearchValue("");
   };
 
   // Handle ID document file change
@@ -475,7 +354,7 @@ export default function CreateBookingForm({
 
       onSuccess("Booking created successfully");
       setForm(emptyForm);
-      setSearchValue("");
+      customerSearch.setSearchValue("");
       setManualPriceOverride(false);
       setIdDocument(null);
       setIdDocumentPreview(null);
@@ -576,61 +455,17 @@ export default function CreateBookingForm({
 
           {/* Search dropdown — staff only */}
           {!isOwnerVariant && (
-          <div ref={dropdownRef} className="relative">
-            <div className="relative">
-              <Input
-                ref={searchInputRef}
-                type="text"
-                placeholder="Search existing customers by name or email..."
-                value={searchValue}
-                onChange={handleSearchChange}
-                onFocus={() => searchValue && setShowDropdown(true)}
-                className="pl-9 focus-visible:outline-2 focus-visible:outline-purple-600"
-              />
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            </div>
-            {showDropdown && (
-              <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
-                {searchingCustomers && filteredCustomers.length === 0 && (
-                  <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                    Searching customers...
-                  </div>
-                )}
-                {!searchingCustomers && filteredCustomers.length === 0 && searchValue.trim().length >= 2 && (
-                  <div className="px-4 py-3 text-sm text-gray-500 text-center">
-                    No customers found for &ldquo;{searchValue}&rdquo;
-                  </div>
-                )}
-                {filteredCustomers.map((customer) => {
-                  const isFromBooking = customer.id.startsWith("booking:");
-                  return (
-                    <button
-                      key={customer.id}
-                      type="button"
-                      onClick={() => selectCustomer(customer)}
-                      className="w-full text-left px-4 py-2.5 hover:bg-purple-50 transition-colors flex items-center gap-3 border-b border-gray-50 last:border-0"
-                    >
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isFromBooking ? "bg-amber-100 text-amber-600" : "bg-purple-100 text-purple-600"}`}>
-                        {customer.name?.charAt(0)?.toUpperCase() || "?"}
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="font-medium text-sm text-gray-900 truncate">{customer.name}</div>
-                        <div className="text-xs text-gray-500 truncate">{customer.email}</div>
-                      </div>
-                      {isFromBooking && (
-                        <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded shrink-0">Past booking</span>
-                      )}
-                    </button>
-                  );
-                })}
-                {filteredCustomers.length >= 8 && (
-                  <div className="px-4 py-2 text-xs text-gray-400 bg-gray-50 border-t text-center">
-                    {searchingCustomers ? "Searching for more..." : "Type more to narrow results..."}
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
+            <CreateBookingCustomerSearch
+              searchValue={customerSearch.searchValue}
+              searchingCustomers={customerSearch.searchingCustomers}
+              filteredCustomers={customerSearch.filteredCustomers}
+              showDropdown={customerSearch.showDropdown}
+              dropdownRef={customerSearch.dropdownRef}
+              searchInputRef={customerSearch.searchInputRef}
+              onSearchChange={customerSearch.handleSearchChange}
+              onFocus={() => customerSearch.searchValue && customerSearch.setShowDropdown(true)}
+              onSelect={selectCustomer}
+            />
           )}
 
           {!isOwnerVariant && (

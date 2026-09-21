@@ -10,57 +10,22 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { VehicleImageManager } from "@/components/admin/vehicle-image-manager";
 import { InsuranceCardManager } from "@/components/admin/insurance-card-manager";
-import { Vehicle, VehicleCategory } from "@/lib/types";
+import type { VehicleCategory } from "@/lib/types";
+import {
+  CATEGORIES,
+  emptyVehicle,
+  FUEL_TYPE_OPTIONS,
+  MAX_VEHICLE_YEAR,
+  TRANSMISSION_OPTIONS,
+  type VehicleFormState,
+} from "./vehicle-form-defaults";
 
-export const CATEGORIES: VehicleCategory[] = [
-  "compact",
-  "sedan",
-  "suv",
-  "truck",
-  "luxury",
-  "van",
-];
-
-const CURRENT_YEAR = new Date().getFullYear();
-export const MAX_VEHICLE_YEAR = CURRENT_YEAR + 1;
-const TRANSMISSION_OPTIONS = ["Automatic", "Manual"] as const;
-const FUEL_TYPE_OPTIONS = ["Gasoline", "Diesel", "Hybrid", "Electric"] as const;
-
-export const emptyVehicle: Omit<Vehicle, "id"> = {
-  year: CURRENT_YEAR,
-  make: "",
-  model: "",
-  category: "sedan",
-  images: [],
-  specs: {
-    passengers: 5,
-    luggage: 2,
-    transmission: "Automatic",
-    fuelType: "Gasoline",
-    mpg: 30,
-    doors: 4,
-  },
-  dailyRate: 0,
-  purchasePrice: 0,
-  features: [],
-  isAvailable: true,
-  isPublished: true,
-  description: "",
-  color: "White",
-  mileage: 0,
-  licensePlate: "",
-  vin: "",
-  insuranceCardUrls: [],
-  maintenanceStatus: "good",
-  isFinanced: false,
-  monthlyPayment: 0,
-  paymentDayOfMonth: 1,
-  financingStartDate: "",
-};
-
-export interface VehicleFormState extends Omit<Vehicle, "id"> {
-  featureInput?: string;
-}
+export {
+  CATEGORIES,
+  emptyVehicle,
+  MAX_VEHICLE_YEAR,
+  type VehicleFormState,
+} from "./vehicle-form-defaults";
 
 export interface VehicleFormProps {
   form: VehicleFormState;
@@ -107,7 +72,7 @@ export function VehicleForm({
                 value={form.year ?? ""}
                 onChange={(e) => {
                   const val = e.target.value;
-                  setForm({ ...form, year: val === "" ? CURRENT_YEAR : Number(val) });
+                  setForm({ ...form, year: val === "" ? MAX_VEHICLE_YEAR - 1 : Number(val) });
                 }}
                 min="1990"
                 max={MAX_VEHICLE_YEAR}
