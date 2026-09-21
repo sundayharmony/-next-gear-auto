@@ -846,7 +846,8 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (auth.role === "manager" && !canManageBooking(auth.role, booking, auth.sub)) {
+    const isManagerEditor = auth.role === "manager";
+    if (isManagerEditor && !canManageBooking(auth.role, booking, auth.sub)) {
       return NextResponse.json(
         { success: false, message: "You do not have permission to update this booking" },
         { status: 403 }
