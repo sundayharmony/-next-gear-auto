@@ -37,6 +37,19 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [theme, mounted]);
 
+  // Put theme + staff-panel flags on <html> so portaled modals, sheets,
+  // and dropdowns inherit dark-mode styles and the single-scroll layout.
+  useEffect(() => {
+    const root = document.documentElement;
+    root.classList.add("nga-staff-panel");
+    root.classList.toggle("admin-dark", theme === "dark");
+    root.style.colorScheme = theme === "dark" ? "dark" : "light";
+    return () => {
+      root.classList.remove("nga-staff-panel", "admin-dark");
+      root.style.colorScheme = "";
+    };
+  }, [theme]);
+
   const toggleTheme = () => setTheme((prev) => (prev === "light" ? "dark" : "light"));
 
   return (

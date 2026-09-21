@@ -26,7 +26,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
   if (isPanelRoute) {
     // In standalone PWA mode, admin gets no site header/footer at all
     return (
-      <div className={isStandalone ? "pwa-safe-top" : ""}>
+      <div className={isStandalone ? "h-full min-h-0 pwa-safe-top" : "h-full min-h-0"}>
         <StaffServiceWorkerBootstrap />
         {children}
       </div>

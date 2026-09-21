@@ -87,7 +87,7 @@ function StaffPanelShellInner({
 
   if (authLoading) {
     return (
-      <PageContainer className="py-16 text-center">
+      <PageContainer as="main" className="py-16 text-center">
         <Loader2 className="mx-auto h-10 w-10 animate-spin text-purple-600 mb-4" />
         <p className="text-gray-500">Verifying access…</p>
       </PageContainer>
@@ -96,7 +96,7 @@ function StaffPanelShellInner({
 
   if (!hasAccess) {
     return (
-      <PageContainer className="py-16 text-center">
+      <PageContainer as="main" className="py-16 text-center">
         <h1 className="text-2xl font-bold text-gray-900 mb-2">Access Denied</h1>
         <p className="text-gray-500 mb-4">You need {requiredRole} access to view this page.</p>
         <Link href="/login">
@@ -108,15 +108,32 @@ function StaffPanelShellInner({
 
   return (
     <StaffPanelConfigProvider config={panelConfig}>
-      <div className={cn("flex flex-col h-dvh lg:flex-row lg:h-auto lg:min-h-screen", isDark && "admin-dark")}>
+      <div
+        className={cn(
+          "nga-staff-panel-root flex flex-col h-dvh overflow-hidden lg:flex-row lg:h-auto lg:min-h-screen lg:overflow-visible",
+          isDark && "admin-dark"
+        )}
+      >
         {/* Mobile header */}
         <div className="relative z-[45] shrink-0 lg:hidden">
           <div className="nga-panel-header pwa-safe-top">
-            <div className="flex items-center justify-between px-4 h-14">
-              <h1 className="text-[17px] font-semibold text-gray-900 truncate tracking-tight">
+            <div className="flex items-center justify-between px-3 h-12">
+              <h1 className="text-base font-semibold text-gray-900 truncate tracking-tight pr-2">
                 {currentTitle}
               </h1>
-              <div className="flex items-center gap-1">
+              <div className="flex items-center gap-0.5">
+                <button
+                  type="button"
+                  onClick={toggleTheme}
+                  className="p-2.5 rounded-full hover:bg-gray-100 active:bg-gray-200 active:scale-90 transition-all"
+                  aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                >
+                  {isDark ? (
+                    <Sun className="h-5 w-5 text-gray-500" />
+                  ) : (
+                    <Moon className="h-5 w-5 text-gray-500" />
+                  )}
+                </button>
                 {pendingBookingsNotifications ? (
                   <AdminPendingBookingsPlugin enabled={hasAccess} isDark={isDark} variant="mobile" />
                 ) : null}
@@ -239,7 +256,7 @@ function StaffPanelShellInner({
           </div>
         </aside>
 
-        <main className="flex-1 min-w-0 min-h-0 overflow-y-auto pb-[calc(env(safe-area-inset-bottom,0px)+76px)] lg:pb-0">
+        <main className="nga-staff-scroll flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] lg:overflow-visible lg:overscroll-auto lg:pb-0">
           <SwipeBack>{children}</SwipeBack>
         </main>
 

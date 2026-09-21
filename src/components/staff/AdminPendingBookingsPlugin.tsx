@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Bell, X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { useStaffNotifications } from "@/lib/hooks/use-staff-notifications";
+import { useLockBodyScroll } from "@/lib/hooks/use-lock-body-scroll";
 
 interface AdminPendingBookingsPluginProps {
   enabled: boolean;
@@ -34,6 +35,7 @@ export function AdminPendingBookingsPlugin({
   const wasOpenRef = useRef(false);
 
   const closeNotifications = () => setShowNotifications(false);
+  useLockBodyScroll(showNotifications && variant === "mobile");
 
   useEffect(() => {
     const handleEscapeKey = (e: KeyboardEvent) => {
@@ -152,14 +154,19 @@ export function AdminPendingBookingsPlugin({
 
   const dropdown = showNotifications ? (
     <>
-      <div className="fixed inset-0 z-[55]" onClick={closeNotifications} aria-hidden="true" />
+      <div className="fixed inset-0 z-[55] bg-black/30 lg:bg-transparent" onClick={closeNotifications} aria-hidden="true" />
       <div
         ref={dropdownRef}
         role="dialog"
         aria-modal="true"
         aria-labelledby="admin-notifications-title"
-        className="fixed w-80 max-w-[calc(100vw-2rem)] bg-white/95 backdrop-blur-xl rounded-2xl shadow-2xl border border-gray-200/50 z-[60] overflow-hidden"
-        style={notificationPosition}
+        className={cn(
+          "fixed z-[60] overflow-hidden border border-gray-200/50 bg-white/95 shadow-2xl backdrop-blur-xl",
+          variant === "mobile"
+            ? "inset-x-3 bottom-[calc(env(safe-area-inset-bottom,0px)+5.25rem)] max-h-[min(70dvh,28rem)] rounded-2xl"
+            : "w-80 max-w-[calc(100vw-2rem)] rounded-2xl"
+        )}
+        style={variant === "mobile" ? undefined : notificationPosition}
       >
         <div className="px-4 py-3 bg-gray-50/80 border-b border-gray-100 flex items-center justify-between">
           <h3 id="admin-notifications-title" className="text-sm font-semibold text-gray-900">
@@ -174,10 +181,10 @@ export function AdminPendingBookingsPlugin({
             ref={notificationsCloseRef}
             type="button"
             onClick={closeNotifications}
-            className="p-1.5 rounded-full hover:bg-gray-200 active:bg-gray-300 text-gray-400 hover:text-gray-600 transition-colors"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-200 hover:text-gray-800 active:bg-gray-300 transition-colors"
             aria-label="Close notifications"
           >
-            <X className="h-4 w-4" />
+            <X className="h-5 w-5" />
           </button>
         </div>
         {recentBookings.length === 0 ? (
@@ -186,7 +193,7 @@ export function AdminPendingBookingsPlugin({
             <p className="text-sm text-gray-500">No pending bookings</p>
           </div>
         ) : (
-          <div className="max-h-72 overflow-y-auto divide-y divide-gray-100">
+          <div className="nga-overlay-scroll max-h-[min(50dvh,18rem)] overflow-y-auto overscroll-contain divide-y divide-gray-100">
             {recentBookings.map((b) => (
               <Link
                 key={b.id}

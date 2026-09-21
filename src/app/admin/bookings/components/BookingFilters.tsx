@@ -106,7 +106,7 @@ export default function BookingFilters({
   return (
     <div className="space-y-4">
       {/* Status filter pills — horizontal scroll on mobile, wrap on desktop */}
-      <div className="flex gap-2 overflow-x-auto sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 scrollbar-hide" role="group" aria-label="Filter bookings by status">
+      <div className="flex gap-2 overflow-x-auto overscroll-x-contain sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 scrollbar-hide" role="group" aria-label="Filter bookings by status">
         {statusPills.map((status) => (
           <button
             key={status}
@@ -186,8 +186,8 @@ export default function BookingFilters({
               size="sm"
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
-              <Plus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">New Booking</span>
+              <Plus className="w-4 h-4 mr-1.5" />
+              New Booking
             </Button>
           )}
         </div>

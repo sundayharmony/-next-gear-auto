@@ -325,7 +325,7 @@ export default function AdminDashboardPage() {
           </div>
         ) : data ? (
           <>
-            <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 mb-8">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 mb-4 sm:mb-8">
               {[
                 { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/bookings?status=active" },
                 { label: "Confirmed", value: data.confirmedBookings, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50", href: "/admin/bookings?status=confirmed" },

@@ -192,11 +192,18 @@ body {
 }
 
 .page-hero--compact {
-  padding-top: 1.5rem;
-  padding-bottom: 1.5rem;
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
 }
 
 @media (min-width: 640px) {
+  .page-hero--compact {
+    padding-top: 1.5rem;
+    padding-bottom: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
   .page-hero--compact {
     padding-top: 2rem;
     padding-bottom: 2rem;
@@ -502,7 +509,9 @@ body {
 
 /* ═══ Admin Dark Mode ═══ */
 
-/* Propagate black background to all ancestors so no white peeks through */
+/* Propagate black background so no white peeks through (html class covers portals) */
+html.admin-dark,
+html.admin-dark body,
 body:has(.admin-dark) {
   background-color: #000000 !important;
 }
@@ -524,8 +533,8 @@ body:has(.admin-dark) {
 .admin-dark .text-gray-800 { color: #e2e8f0 !important; }
 .admin-dark .text-gray-700 { color: #cbd5e1 !important; }
 .admin-dark .text-gray-600 { color: #94a3b8 !important; }
-.admin-dark .text-gray-500 { color: #64748b !important; }
-.admin-dark .text-gray-400 { color: #64748b !important; }
+.admin-dark .text-gray-500 { color: #94a3b8 !important; }
+.admin-dark .text-gray-400 { color: #94a3b8 !important; }
 
 /* Borders */
 .admin-dark .border-gray-200 { border-color: #222222 !important; }
@@ -574,7 +583,7 @@ body:has(.admin-dark) {
 /* Labels */
 .admin-dark label,
 .admin-dark .nga-label {
-  color: #888888 !important;
+  color: #94a3b8 !important;
 }
 /* Select chevron */
 .admin-dark .nga-select-chevron,
@@ -681,7 +690,7 @@ body:has(.admin-dark) {
 .admin-dark .bg-gray-50\/60 { background-color: #141414 !important; }
 .admin-dark .hover\:bg-purple-50\/25:hover { background-color: rgba(124, 58, 237, 0.12) !important; }
 .admin-dark .hover\:bg-purple-50\/50:hover { background-color: rgba(124, 58, 237, 0.1) !important; }
-.admin-dark .text-gray-300 { color: #64748b !important; }
+.admin-dark .text-gray-300 { color: #cbd5e1 !important; }
 
 /* Status badge text (light-mode greens/ambers on dark cards) */
 .admin-dark .text-green-800,
@@ -944,3 +953,74 @@ body:has(.admin-dark) {
 .admin-dark .bg-green-100.text-green-700 { background-color: rgba(34, 197, 94, 0.15) !important; color: #4ade80 !important; }
 .admin-dark .bg-blue-100.text-blue-700 { background-color: rgba(59, 130, 246, 0.15) !important; color: #60a5fa !important; }
 .admin-dark .bg-orange-100.text-orange-700 { background-color: rgba(249, 115, 22, 0.15) !important; color: #fb923c !important; }
+
+/* ═══ Staff panel mobile shell ═══
+   One scroll owner on phones (the panel <main>), so wheel/touch
+   does not fight the document, tab bar, or nested cards. */
+
+html.nga-staff-panel {
+  scroll-behavior: auto;
+}
+
+@media (max-width: 1023px) {
+  html.nga-staff-panel,
+  html.nga-staff-panel body {
+    height: 100%;
+    max-height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+
+  html.nga-staff-panel .nga-staff-scroll {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    touch-action: pan-y;
+  }
+
+  html.nga-staff-panel .admin-table-wrap {
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior-x: contain;
+  }
+
+  html.nga-staff-panel .page-hero--compact h1 {
+    font-size: 1.25rem;
+    line-height: 1.3;
+  }
+}
+
+.nga-overlay-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+.nga-overlay-close {
+  color: #4b5563;
+}
+
+.admin-dark .nga-overlay-close {
+  color: #cbd5e1;
+}
+
+.admin-dark .nga-overlay-close:hover {
+  background-color: #1a1a1a !important;
+  color: #f8fafc;
+}
+
+/* Portaled overlays inherit html.admin-dark; keep surfaces readable. */
+html.admin-dark [role="dialog"],
+html.admin-dark [data-radix-popper-content-wrapper] {
+  color: #e2e8f0;
+}
+
+html.admin-dark [data-radix-popper-content-wrapper] .bg-white,
+html.admin-dark [role="dialog"].bg-white,
+html.admin-dark [role="dialog"] .bg-white {
+  background-color: #111111 !important;
+}
+
+/* Native form controls in dark admin (including portaled pickers) */
+html.admin-dark input[type="date"],
+html.admin-dark input[type="time"],
+html.admin-dark input[type="datetime-local"] {
+  color-scheme: dark;
+}

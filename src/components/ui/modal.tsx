@@ -34,19 +34,22 @@ const ModalContent = React.forwardRef<
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        // Mobile-first: full-width bottom sheet anchored to the bottom of the screen
-        "fixed inset-x-0 bottom-0 z-50 grid w-full max-h-[92vh] gap-4 overflow-y-auto rounded-t-2xl border border-gray-200 bg-white p-4 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-xl animate-in fade-in slide-in-from-bottom-2",
-        // sm+: revert to a centered dialog card
-        "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-lg sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:p-6 sm:pb-6",
+        "fixed z-50 flex w-full flex-col bg-white shadow-xl outline-none",
+        "inset-x-0 bottom-0 max-h-[min(92dvh,100%)] overflow-hidden rounded-t-2xl border border-gray-200",
+        "pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in slide-in-from-bottom-2",
+        "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-lg",
+        "sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:pb-0",
         className
       )}
       role="dialog"
       aria-modal="true"
       {...props}
     >
-      {children}
-      <DialogPrimitive.Close className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2">
-        <X className="h-4 w-4" />
+      <div className="nga-overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
+        {children}
+      </div>
+      <DialogPrimitive.Close className="nga-overlay-close absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 sm:right-3 sm:top-3">
+        <X className="h-5 w-5" />
         <span className="sr-only">Close</span>
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
@@ -55,7 +58,7 @@ const ModalContent = React.forwardRef<
 ModalContent.displayName = "ModalContent";
 
 const ModalHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 text-center sm:text-left", className)} {...props} />
+  <div className={cn("flex flex-col space-y-1.5 pr-10 text-left", className)} {...props} />
 );
 
 const ModalTitle = React.forwardRef<

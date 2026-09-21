@@ -6,11 +6,11 @@ import { cn } from "@/lib/utils/cn";
 
 /**
  * Admin panel UI conventions:
- * - Page body: `AdminPageBody` → py-6 sm:py-8, space-y-6
- * - Page title: text-2xl sm:text-3xl font-bold (hero)
+ * - Page body: `AdminPageBody` → py-4 sm:py-8, space-y-4 sm:space-y-6
+ * - Page title: text-xl sm:text-3xl font-bold (hero)
  * - Section title: text-base font-semibold text-gray-900
  * - Muted copy: text-sm text-gray-500
- * - Cards: rounded-xl border border-gray-200/80 bg-white shadow-sm, p-5
+ * - Cards: rounded-xl border border-gray-200/80 bg-white shadow-sm, p-4 sm:p-5
  */
 
 export const adminCardClass =
@@ -66,14 +66,16 @@ export function AdminPageHeader({
             {backLabel}
           </button>
         ) : null}
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold sm:text-3xl">{title}</h1>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+          <div className="min-w-0">
+            <h1 className="text-xl font-bold leading-tight sm:text-3xl">{title}</h1>
             {subtitle ? (
-              <p className="mt-1 text-sm sm:text-base page-hero-subtitle">{subtitle}</p>
+              <p className="mt-1 text-sm page-hero-subtitle sm:text-base">{subtitle}</p>
             ) : null}
           </div>
-          {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+          {actions ? (
+            <div className="flex shrink-0 flex-wrap items-center gap-2">{actions}</div>
+          ) : null}
         </div>
         {children}
       </div>
@@ -89,7 +91,7 @@ interface AdminPageBodyProps {
 
 export function AdminPageBody({ children, className, narrow }: AdminPageBodyProps) {
   return (
-    <PageContainer className={cn("space-y-6 py-6 sm:py-8", className)} narrow={narrow}>
+    <PageContainer className={cn("space-y-4 py-4 sm:space-y-6 sm:py-8", className)} narrow={narrow}>
       {children}
     </PageContainer>
   );
@@ -111,7 +113,7 @@ export function AdminCard({
   as: Tag = "div",
 }: AdminCardProps) {
   const paddingClass =
-    padding === "none" ? "" : padding === "sm" ? "p-4" : "p-5";
+    padding === "none" ? "" : padding === "sm" ? "p-3.5 sm:p-4" : "p-4 sm:p-5";
 
   return (
     <Tag
@@ -181,7 +183,7 @@ interface AdminTableWrapProps {
 export function AdminTableWrap({ children, className }: AdminTableWrapProps) {
   return (
     <div className={cn(adminCardClass, "overflow-hidden", className)}>
-      <div className="admin-table-wrap overflow-x-auto">{children}</div>
+      <div className="admin-table-wrap overflow-x-auto overscroll-x-contain">{children}</div>
     </div>
   );
 }
@@ -209,8 +211,8 @@ export function AdminStatCard({
         <Icon className="h-5 w-5" aria-hidden />
       </div>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-xl font-bold text-gray-900 tabular-nums">{value}</p>
-        <p className="truncate text-xs text-gray-500">{label}</p>
+        <p className="truncate text-lg font-bold text-gray-900 tabular-nums sm:text-xl">{value}</p>
+        <p className="truncate text-[11px] text-gray-500 sm:text-xs">{label}</p>
       </div>
     </div>
   );

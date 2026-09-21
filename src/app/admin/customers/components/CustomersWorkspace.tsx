@@ -57,7 +57,7 @@ export function CustomersWorkspace({
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[minmax(280px,320px)_1fr] xl:items-stretch">
       <div
         className={cn(
-          "flex min-h-[min(70vh,640px)] flex-col rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden",
+          "flex flex-col rounded-xl border border-gray-200 bg-white shadow-sm overflow-hidden xl:min-h-[min(70vh,640px)]",
           !showListOnMobile && "max-xl:hidden"
         )}
       >

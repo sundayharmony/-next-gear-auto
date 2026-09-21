@@ -41,7 +41,7 @@ export function CreateBookingCustomerSearch({
         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
       </div>
       {showDropdown ? (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-white border rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
+        <div className="nga-overlay-scroll absolute top-full left-0 right-0 mt-1 max-h-64 overflow-y-auto overscroll-contain rounded-lg border bg-white shadow-xl z-50">
           {searchingCustomers && filteredCustomers.length === 0 ? (
             <div className="px-4 py-3 text-sm text-gray-500 text-center">Searching customers...</div>
           ) : null}

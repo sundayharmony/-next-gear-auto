@@ -60,7 +60,7 @@ export function CustomerListPanel({
   }, [paginatedCustomers, sortBy]);
 
   return (
-    <div className="flex h-full min-h-[min(70vh,640px)] flex-col">
+    <div className="flex flex-col xl:h-full xl:min-h-[min(70vh,640px)]">
       <div className="shrink-0 border-b border-gray-200 p-3 space-y-3">
         <div className="flex gap-2">
           <div className="relative flex-1 min-w-0">
@@ -120,7 +120,7 @@ export function CustomerListPanel({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div className="xl:min-h-0 xl:flex-1 xl:overflow-y-auto">
         {loading ? (
           <div className="p-3">
             <ListSkeleton rows={8} />
