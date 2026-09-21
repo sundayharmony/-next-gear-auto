@@ -1,5 +1,6 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { logger } from "@/lib/utils/logger";
+import { isSkippableSchemaError } from "@/lib/utils/supabase-column-errors";
 import { TURO_BLOCKED_SOURCE } from "@/lib/utils/blocked-dates";
 
 type ServiceSupabase = SupabaseClient;
@@ -9,15 +10,6 @@ export type VehicleDeleteSummary = {
   blockedDates: number;
   maintenanceRecords: number;
 };
-
-function isMissingRelationError(error: unknown): boolean {
-  if (!error || typeof error !== "object") return false;
-  const anyErr = error as { code?: string; message?: string };
-  return (
-    anyErr.code === "42P01" ||
-    /relation\s+.+\s+does\s+not\s+exist/i.test(anyErr.message || "")
-  );
-}
 
 async function deleteInBatches(
   supabase: ServiceSupabase,
@@ -32,7 +24,7 @@ async function deleteInBatches(
     const chunk = ids.slice(i, i + chunkSize);
     const { error } = await supabase.from(table).delete().in(column, chunk);
     if (!error) continue;
-    if (optional && isMissingRelationError(error)) return;
+    if (optional && isSkippableSchemaError(error)) return;
     throw new Error(`${table} cleanup failed: ${error.message}`);
   }
 }
@@ -43,7 +35,7 @@ async function runOptional(
 ): Promise<void> {
   const { error } = await query;
   if (!error) return;
-  if (isMissingRelationError(error)) return;
+  if (isSkippableSchemaError(error)) return;
   throw new Error(`${label} failed: ${error.message}`);
 }
 
