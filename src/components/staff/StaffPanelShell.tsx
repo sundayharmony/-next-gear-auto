@@ -114,18 +114,17 @@ function StaffPanelShellInner({
           isDark && "admin-dark"
         )}
       >
-        {/* Mobile header */}
-        <div className="relative z-50 shrink-0 border-b border-purple-500/10 lg:hidden">
-          <div className="nga-panel-header pwa-safe-top">
-            <div className="flex items-center justify-between px-3 h-12">
-              <h1 className="text-base font-semibold text-gray-900 truncate tracking-tight pr-2">
+        {/* Mobile header — safe-area inset is on this bar so the background fills the notch zone */}
+        <div className="nga-panel-header relative z-50 shrink-0 border-b border-purple-500/10 pt-[env(safe-area-inset-top,0px)] lg:hidden">
+            <div className="flex h-11 items-center justify-between px-3">
+              <h1 className="min-w-0 flex-1 truncate pr-2 text-[15px] font-semibold leading-tight text-gray-900 tracking-tight">
                 {currentTitle}
               </h1>
-              <div className="flex items-center gap-0.5">
+              <div className="flex shrink-0 items-center gap-0">
                 <button
                   type="button"
                   onClick={toggleTheme}
-                  className="p-2.5 rounded-full hover:bg-gray-100 active:bg-gray-200 active:scale-90 transition-all"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 active:scale-90 transition-all"
                   aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
                 >
                   {isDark ? (
@@ -145,18 +144,17 @@ function StaffPanelShellInner({
                     await logout();
                     router.push("/");
                   }}
-                  className="p-2.5 rounded-full hover:bg-gray-100 active:bg-gray-200 active:scale-90 transition-all disabled:opacity-50"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full hover:bg-gray-100 active:bg-gray-200 active:scale-90 transition-all disabled:opacity-50"
                   aria-label="Sign out"
                 >
                   {loggingOut ? (
-                    <Loader2 className="h-[22px] w-[22px] text-gray-400 animate-spin" />
+                    <Loader2 className="h-5 w-5 text-gray-400 animate-spin" />
                   ) : (
-                    <LogOut className="h-[22px] w-[22px] text-gray-500" />
+                    <LogOut className="h-5 w-5 text-gray-500" />
                   )}
                 </button>
               </div>
             </div>
-          </div>
         </div>
 
         {/* Desktop sidebar */}

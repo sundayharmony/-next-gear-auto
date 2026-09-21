@@ -21,6 +21,13 @@ test("staff shell uses a dedicated mobile scroll owner", () => {
   assert.match(src, /nga-staff-panel-root/);
   assert.match(src, /nga-staff-scroll/);
   assert.match(src, /overscroll-y-contain/);
+  assert.match(src, /pt-\[env\(safe-area-inset-top,0px\)\]/);
+  assert.doesNotMatch(src, /pwa-safe-top/);
+});
+
+test("panel layout shell does not double-apply safe-area top padding", () => {
+  const src = read("src/components/layout/layout-shell.tsx");
+  assert.doesNotMatch(src, /pwa-safe-top/);
 });
 
 test("mobile overlays scroll internally and lock the page", () => {

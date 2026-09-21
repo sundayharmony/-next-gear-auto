@@ -1011,6 +1011,10 @@ html.nga-staff-panel {
     background: #111111 !important;
   }
 
+  html.admin-dark .nga-staff-panel-root {
+    background: #000000;
+  }
+
   html.nga-staff-panel .page-hero--compact h1 {
     font-size: 1.25rem;
     line-height: 1.3;
