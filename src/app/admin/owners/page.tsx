@@ -452,7 +452,7 @@ function AddOwnerModal({ open, onClose, onCreated }: { open: boolean; onClose: (
 
   return (
     <Modal open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <ModalContent>
+      <ModalContent tier="staff">
         <ModalHeader>
           <ModalTitle>Add Owner</ModalTitle>
           <ModalDescription className="sr-only">

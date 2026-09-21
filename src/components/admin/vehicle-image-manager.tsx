@@ -32,6 +32,7 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { compressImage } from "@/lib/utils/compress-image";
 import { dedupeVehicleImageUrls, MAX_VEHICLE_IMAGES } from "@/lib/admin/vehicle-images";
 import { logger } from "@/lib/utils/logger";
+import { StaffInlineOverlay } from "@/components/staff/staff-overlay";
 
 type VehicleImageManagerProps = {
   vehicleId: string | "new";
@@ -488,94 +489,81 @@ export function VehicleImageManager({
         />
       </label>
 
-      {confirmRemoveUrl && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="remove-image-title"
-        >
-          <div className="bg-white rounded-xl shadow-lg max-w-sm w-full p-4 space-y-3">
-            <h4 id="remove-image-title" className="font-semibold text-gray-900">
-              Remove this image?
-            </h4>
-            <p className="text-sm text-gray-600">
-              The file will be deleted from storage. This cannot be undone.
-            </p>
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
-                onClick={() => setConfirmRemoveUrl(null)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
-                onClick={() => void handleRemoveConfirmed()}
-              >
-                Remove
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {previewIndex !== null && images[previewIndex] && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          role="dialog"
-          aria-modal="true"
-          onClick={() => setPreviewIndex(null)}
-        >
+      <StaffInlineOverlay
+        open={!!confirmRemoveUrl}
+        onClose={() => setConfirmRemoveUrl(null)}
+        ariaLabel="Remove image confirmation"
+        className="w-full max-w-sm rounded-xl bg-white p-4 shadow-lg space-y-3"
+      >
+        <h4 className="font-semibold text-gray-900">Remove this image?</h4>
+        <p className="text-sm text-gray-600">The file will be deleted from storage. This cannot be undone.</p>
+        <div className="flex justify-end gap-2">
           <button
             type="button"
-            className="absolute top-4 right-4 text-white rounded-full bg-black/50 p-2 hover:bg-black/70"
-            onClick={() => setPreviewIndex(null)}
-            aria-label="Close preview"
+            className="px-3 py-1.5 text-sm rounded-lg border border-gray-300 hover:bg-gray-50"
+            onClick={() => setConfirmRemoveUrl(null)}
           >
-            <X className="h-5 w-5" />
+            Cancel
           </button>
-          {images.length > 1 && (
-            <>
-              <button
-                type="button"
-                className="absolute left-4 text-white rounded-full bg-black/50 p-2 hover:bg-black/70"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPreviewIndex(
-                    (previewIndex - 1 + images.length) % images.length
-                  );
-                }}
-                aria-label="Previous image"
-              >
-                <ChevronLeft className="h-6 w-6" />
-              </button>
-              <button
-                type="button"
-                className="absolute right-4 text-white rounded-full bg-black/50 p-2 hover:bg-black/70"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPreviewIndex((previewIndex + 1) % images.length);
-                }}
-                aria-label="Next image"
-              >
-                <ChevronRight className="h-6 w-6" />
-              </button>
-            </>
-          )}
+          <button
+            type="button"
+            className="px-3 py-1.5 text-sm rounded-lg bg-red-600 text-white hover:bg-red-700"
+            onClick={() => void handleRemoveConfirmed()}
+          >
+            Remove
+          </button>
+        </div>
+      </StaffInlineOverlay>
+
+      <StaffInlineOverlay
+        open={previewIndex !== null && !!images[previewIndex]}
+        onClose={() => setPreviewIndex(null)}
+        backdropClassName="bg-black/80"
+        elevated
+        ariaLabel="Image preview"
+        className="relative flex w-full max-w-full items-center justify-center"
+      >
+        <button
+          type="button"
+          className="absolute right-2 top-2 text-white rounded-full bg-black/50 p-2 hover:bg-black/70 sm:right-4 sm:top-4"
+          onClick={() => setPreviewIndex(null)}
+          aria-label="Close preview"
+        >
+          <X className="h-5 w-5" />
+        </button>
+        {previewIndex !== null && images.length > 1 && (
+          <>
+            <button
+              type="button"
+              className="absolute left-2 text-white rounded-full bg-black/50 p-2 hover:bg-black/70 sm:left-4"
+              onClick={() => setPreviewIndex((previewIndex - 1 + images.length) % images.length)}
+              aria-label="Previous image"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <button
+              type="button"
+              className="absolute right-2 text-white rounded-full bg-black/50 p-2 hover:bg-black/70 sm:right-4"
+              onClick={() => setPreviewIndex((previewIndex + 1) % images.length)}
+              aria-label="Next image"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+          </>
+        )}
+        {previewIndex !== null && images[previewIndex] ? (
           <img
             src={images[previewIndex]}
             alt=""
             className="max-h-[85vh] max-w-full object-contain rounded-lg"
-            onClick={(e) => e.stopPropagation()}
           />
+        ) : null}
+        {previewIndex !== null ? (
           <p className="absolute bottom-4 text-white text-sm">
             {previewIndex + 1} / {images.length}
           </p>
-        </div>
-      )}
+        ) : null}
+      </StaffInlineOverlay>
     </div>
   );
 }

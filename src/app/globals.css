@@ -179,6 +179,10 @@ body {
   box-shadow: 0 4px 24px -12px rgba(0, 0, 0, 0.5) !important;
 }
 
+.admin-dark .nga-panel-header h1 {
+  color: #f1f5f9 !important;
+}
+
 /* ═══ Page heroes (solid brand headers — no gradients) ═══ */
 
 .page-hero {
@@ -670,6 +674,8 @@ body:has(.admin-dark) {
 /* Bottom tab bar & header glass effect */
 .admin-dark .bg-white\/80,
 .admin-dark [class*="bg-white/80"] { background-color: rgba(0, 0, 0, 0.85) !important; }
+.admin-dark .bg-white\/85,
+.admin-dark [class*="bg-white/85"] { background-color: rgba(0, 0, 0, 0.88) !important; }
 
 /* Border opacity variants */
 .admin-dark .border-gray-200\/50 { border-color: rgba(34, 34, 34, 0.7) !important; }

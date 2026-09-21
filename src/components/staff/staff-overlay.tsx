@@ -69,7 +69,7 @@ export function StaffSidePanel({
       <div
         ref={panelRef}
         className={cn(
-          "nga-overlay-scroll relative z-10 w-full max-h-[min(92dvh,100%)] overflow-y-auto overscroll-contain bg-white shadow-xl outline-none",
+          "relative z-10 flex w-full max-h-[min(92dvh,100%)] flex-col overflow-hidden bg-white shadow-xl outline-none",
           "rounded-t-2xl sm:h-full sm:max-h-none sm:rounded-none",
           maxWidthClassName,
           panelClassName
@@ -79,7 +79,9 @@ export function StaffSidePanel({
         aria-label={ariaLabel}
         tabIndex={-1}
       >
-        {children}
+        <div className="nga-overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -96,6 +98,52 @@ export interface StaffCenterModalProps {
 }
 
 /** Centered staff modal above bottom tab bar (z-[100]). Bottom sheet on phones. */
+export interface StaffInlineOverlayProps {
+  open: boolean;
+  onClose?: () => void;
+  children: React.ReactNode;
+  className?: string;
+  backdropClassName?: string;
+  elevated?: boolean;
+  ariaLabel?: string;
+}
+
+/** Lightweight confirm/lightbox layer above the staff tab bar. */
+export function StaffInlineOverlay({
+  open,
+  onClose,
+  children,
+  className,
+  backdropClassName = "bg-black/50",
+  elevated = false,
+  ariaLabel,
+}: StaffInlineOverlayProps) {
+  useLockBodyScroll(open);
+  if (!open) return null;
+
+  return (
+    <div
+      className={cn(
+        "fixed inset-0 flex items-center justify-center p-4",
+        elevated ? "z-[120]" : STAFF_OVERLAY_Z,
+        backdropClassName
+      )}
+      role="presentation"
+      onClick={onClose}
+    >
+      <div
+        className={cn("outline-none", className)}
+        role="dialog"
+        aria-modal="true"
+        aria-label={ariaLabel}
+        onClick={(e) => e.stopPropagation()}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function StaffCenterModal({
   onClose,
   ariaLabel,

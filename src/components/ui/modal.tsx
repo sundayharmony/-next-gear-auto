@@ -4,6 +4,8 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
+import { STAFF_OVERLAY_Z } from "@/components/staff/staff-overlay-z";
+import { useLockBodyScroll } from "@/lib/hooks/use-lock-body-scroll";
 
 const Modal = DialogPrimitive.Root;
 const ModalTrigger = DialogPrimitive.Trigger;
@@ -25,16 +27,25 @@ const ModalOverlay = React.forwardRef<
 ));
 ModalOverlay.displayName = "ModalOverlay";
 
+interface ModalContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+  /** Staff tier sits above bottom tab bar (z-91). */
+  tier?: "default" | "staff";
+}
+
 const ModalContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
-  React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
->(({ className, children, ...props }, ref) => (
+  ModalContentProps
+>(({ className, children, tier = "default", ...props }, ref) => {
+  useLockBodyScroll(true);
+
+  return (
   <ModalPortal>
-    <ModalOverlay />
+    <ModalOverlay className={tier === "staff" ? STAFF_OVERLAY_Z : undefined} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 grid w-full gap-4 bg-white shadow-xl outline-none",
+        "fixed grid w-full gap-4 bg-white shadow-xl outline-none",
+        tier === "staff" ? STAFF_OVERLAY_Z : "z-50",
         "nga-overlay-scroll inset-x-0 bottom-0 max-h-[min(92dvh,100%)] overflow-y-auto overscroll-contain rounded-t-2xl border border-gray-200",
         "p-4 pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in fade-in slide-in-from-bottom-2",
         "sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:max-h-[90vh] sm:w-[calc(100%-2rem)] sm:max-w-lg",
@@ -52,7 +63,8 @@ const ModalContent = React.forwardRef<
       </DialogPrimitive.Close>
     </DialogPrimitive.Content>
   </ModalPortal>
-));
+  );
+});
 ModalContent.displayName = "ModalContent";
 
 const ModalHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

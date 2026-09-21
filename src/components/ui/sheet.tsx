@@ -5,6 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { STAFF_OVERLAY_Z } from "@/components/staff/staff-overlay-z";
+import { useLockBodyScroll } from "@/lib/hooks/use-lock-body-scroll";
 
 const Sheet = DialogPrimitive.Root;
 const SheetTrigger = DialogPrimitive.Trigger;
@@ -38,7 +39,10 @@ interface SheetContentProps extends React.ComponentPropsWithoutRef<typeof Dialog
 const SheetContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   SheetContentProps
->(({ className, children, side = "bottom", showClose = true, tier = "default", ...props }, ref) => (
+>(({ className, children, side = "bottom", showClose = true, tier = "default", ...props }, ref) => {
+  useLockBodyScroll(tier === "staff");
+
+  return (
   <SheetPortal>
     <SheetOverlay className={tier === "staff" ? STAFF_OVERLAY_Z : undefined} />
     <DialogPrimitive.Content
@@ -68,7 +72,8 @@ const SheetContent = React.forwardRef<
       ) : null}
     </DialogPrimitive.Content>
   </SheetPortal>
-));
+  );
+});
 SheetContent.displayName = "SheetContent";
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
