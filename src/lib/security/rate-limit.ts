@@ -28,12 +28,18 @@ export interface RateLimiter {
   check(identifier: string): Promise<RateLimitResult>;
 }
 
+/** Login limiters that only count failed attempts (peek before try, record on failure). */
+export interface AuthFailureLimiter extends RateLimiter {
+  peek(identifier: string): Promise<RateLimitResult>;
+  recordFailure(identifier: string): Promise<RateLimitResult>;
+}
+
 interface WindowEntry {
   count: number;
   resetAt: number;
 }
 
-function createInMemoryRateLimiter(options: RateLimiterOptions): RateLimiter {
+function createInMemoryRateLimiterStore(options: RateLimiterOptions) {
   const store = new Map<string, WindowEntry>();
   const CLEANUP_INTERVAL = 60_000;
   let lastCleanup = Date.now();
@@ -47,36 +53,73 @@ function createInMemoryRateLimiter(options: RateLimiterOptions): RateLimiter {
     }
   }
 
+  function trimIfNeeded() {
+    if (store.size <= 10000) return;
+    const entries = Array.from(store.entries());
+    entries.sort((a, b) => a[1].resetAt - b[1].resetAt);
+    for (const [key] of entries.slice(0, Math.floor(entries.length / 2))) {
+      store.delete(key);
+    }
+  }
+
+  function storageKey(identifier: string) {
+    return `${options.prefix}:${identifier}`;
+  }
+
+  function peek(identifier: string): RateLimitResult {
+    cleanup();
+    trimIfNeeded();
+
+    const now = Date.now();
+    const entry = store.get(storageKey(identifier));
+    if (!entry || entry.resetAt <= now) {
+      return {
+        allowed: true,
+        remaining: options.max,
+        resetAt: now + options.windowMs,
+      };
+    }
+
+    return {
+      allowed: entry.count < options.max,
+      remaining: Math.max(0, options.max - entry.count),
+      resetAt: entry.resetAt,
+    };
+  }
+
+  function recordFailure(identifier: string): RateLimitResult {
+    cleanup();
+    trimIfNeeded();
+
+    const now = Date.now();
+    const key = storageKey(identifier);
+    const entry = store.get(key);
+
+    if (!entry || entry.resetAt <= now) {
+      store.set(key, { count: 1, resetAt: now + options.windowMs });
+      return {
+        allowed: true,
+        remaining: options.max - 1,
+        resetAt: now + options.windowMs,
+      };
+    }
+
+    entry.count++;
+    return {
+      allowed: entry.count <= options.max,
+      remaining: Math.max(0, options.max - entry.count),
+      resetAt: entry.resetAt,
+    };
+  }
+
+  return { peek, recordFailure };
+}
+
+function createInMemoryRateLimiter(options: RateLimiterOptions): RateLimiter {
+  const { recordFailure } = createInMemoryRateLimiterStore(options);
   return {
     check(identifier: string): Promise<RateLimitResult> {
-      cleanup();
-      if (store.size > 10000) {
-        const entries = Array.from(store.entries());
-        entries.sort((a, b) => a[1].resetAt - b[1].resetAt);
-        for (const [key] of entries.slice(0, Math.floor(entries.length / 2))) {
-          store.delete(key);
-        }
-      }
-
-      const now = Date.now();
-      const key = `${options.prefix}:${identifier}`;
-      const entry = store.get(key);
-
-      if (!entry || entry.resetAt <= now) {
-        store.set(key, { count: 1, resetAt: now + options.windowMs });
-        return Promise.resolve({
-          allowed: true,
-          remaining: options.max - 1,
-          resetAt: now + options.windowMs,
-        });
-      }
-
-      entry.count++;
-      return Promise.resolve({
-        allowed: entry.count <= options.max,
-        remaining: Math.max(0, options.max - entry.count),
-        resetAt: entry.resetAt,
-      });
+      return Promise.resolve(recordFailure(identifier));
     },
   };
 }
@@ -106,20 +149,24 @@ function getRedis(): Redis | null {
   return sharedRedis;
 }
 
+function createUpstashLimiter(options: RateLimiterOptions): Ratelimit | null {
+  const redis = getRedis();
+  if (!redis) return null;
+  return new Ratelimit({
+    redis,
+    limiter: Ratelimit.slidingWindow(options.max, windowToDuration(options.windowMs)),
+    prefix: `nga:${options.prefix}`,
+    analytics: false,
+  });
+}
+
 function createDistributedRateLimiter(options: RateLimiterOptions): RateLimiter {
   const memory = createInMemoryRateLimiter(options);
   let upstash: Ratelimit | null = null;
 
   function getUpstash(): Ratelimit | null {
-    const redis = getRedis();
-    if (!redis) return null;
     if (!upstash) {
-      upstash = new Ratelimit({
-        redis,
-        limiter: Ratelimit.slidingWindow(options.max, windowToDuration(options.windowMs)),
-        prefix: `nga:${options.prefix}`,
-        analytics: false,
-      });
+      upstash = createUpstashLimiter(options);
     }
     return upstash;
   }
@@ -129,6 +176,50 @@ function createDistributedRateLimiter(options: RateLimiterOptions): RateLimiter 
       const limiter = getUpstash();
       if (!limiter) {
         return memory.check(identifier);
+      }
+
+      const result = await limiter.limit(identifier);
+      return {
+        allowed: result.success,
+        remaining: result.remaining,
+        resetAt: result.reset,
+      };
+    },
+  };
+}
+
+function createAuthFailureRateLimiter(options: RateLimiterOptions): AuthFailureLimiter {
+  const memory = createInMemoryRateLimiterStore(options);
+  let upstash: Ratelimit | null = null;
+
+  function getUpstash(): Ratelimit | null {
+    if (!upstash) {
+      upstash = createUpstashLimiter(options);
+    }
+    return upstash;
+  }
+
+  return {
+    check(identifier: string) {
+      return this.recordFailure(identifier);
+    },
+    async peek(identifier: string): Promise<RateLimitResult> {
+      const limiter = getUpstash();
+      if (!limiter) {
+        return memory.peek(identifier);
+      }
+
+      const result = await limiter.getRemaining(identifier);
+      return {
+        allowed: result.remaining > 0,
+        remaining: result.remaining,
+        resetAt: result.reset,
+      };
+    },
+    async recordFailure(identifier: string): Promise<RateLimitResult> {
+      const limiter = getUpstash();
+      if (!limiter) {
+        return memory.recordFailure(identifier);
       }
 
       const result = await limiter.limit(identifier);
@@ -156,36 +247,49 @@ export function createRateLimiter(options: Omit<RateLimiterOptions, "prefix"> & 
 
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 
-/** Login: 12 attempts per 15 minutes per IP (shared across emails on same network) */
-export const loginIpLimiter = createDistributedRateLimiter({
+/** Failed login attempts per IP (v2 keys reset legacy lockouts on deploy) */
+export const loginIpLimiter = createAuthFailureRateLimiter({
   windowMs: LOGIN_WINDOW_MS,
   max: 12,
-  prefix: "login-ip",
+  prefix: "login-fail-ip-v2",
 });
 
-/** Login: 8 attempts per 15 minutes per email (separate bucket per account) */
-export const loginEmailLimiter = createDistributedRateLimiter({
+/** Failed login attempts per email */
+export const loginEmailLimiter = createAuthFailureRateLimiter({
   windowMs: LOGIN_WINDOW_MS,
   max: 8,
-  prefix: "login-email",
+  prefix: "login-fail-email-v2",
 });
 
-/** Staff login: 30 attempts per 15 minutes per IP */
-export const staffLoginIpLimiter = createDistributedRateLimiter({
+/** Failed staff login attempts per IP */
+export const staffLoginIpLimiter = createAuthFailureRateLimiter({
   windowMs: LOGIN_WINDOW_MS,
   max: 30,
-  prefix: "staff-login-ip",
+  prefix: "staff-login-fail-ip-v2",
 });
 
-/** Staff login: 15 attempts per 15 minutes per email */
-export const staffLoginEmailLimiter = createDistributedRateLimiter({
+/** Failed staff login attempts per email */
+export const staffLoginEmailLimiter = createAuthFailureRateLimiter({
   windowMs: LOGIN_WINDOW_MS,
   max: 15,
-  prefix: "staff-login-email",
+  prefix: "staff-login-fail-email-v2",
 });
 
-/** @deprecated Use checkAuthRateLimit — kept for tests */
-export const loginLimiter = loginIpLimiter;
+/** Signup / password flows still count every attempt */
+export const signupIpLimiter = createDistributedRateLimiter({
+  windowMs: LOGIN_WINDOW_MS,
+  max: 12,
+  prefix: "signup-ip-v2",
+});
+
+export const signupEmailLimiter = createDistributedRateLimiter({
+  windowMs: LOGIN_WINDOW_MS,
+  max: 8,
+  prefix: "signup-email-v2",
+});
+
+/** @deprecated Use peekAuthRateLimit / recordAuthFailure — kept for tests */
+export const loginLimiter = signupIpLimiter;
 
 function mergeRateLimitResults(
   a: RateLimitResult,
@@ -200,23 +304,62 @@ function mergeRateLimitResults(
   };
 }
 
-/** Auth routes: IP + per-email limits; staff sign-in uses higher caps. */
-export async function checkAuthRateLimit(options: {
-  ip: string;
-  email?: string;
-  staffOnly?: boolean;
-}): Promise<RateLimitResult> {
-  const ipLimiter = options.staffOnly ? staffLoginIpLimiter : loginIpLimiter;
-  const emailLimiter = options.staffOnly ? staffLoginEmailLimiter : loginEmailLimiter;
+function authLimiters(staffOnly?: boolean) {
+  return {
+    ipLimiter: staffOnly ? staffLoginIpLimiter : loginIpLimiter,
+    emailLimiter: staffOnly ? staffLoginEmailLimiter : loginEmailLimiter,
+  };
+}
 
-  const ipCheck = await ipLimiter.check(options.ip);
+async function runAuthLimitCheck(
+  ipLimiter: AuthFailureLimiter | RateLimiter,
+  emailLimiter: AuthFailureLimiter | RateLimiter,
+  options: { ip: string; email?: string },
+  mode: "peek" | "record" | "check"
+): Promise<RateLimitResult> {
+  const run = async (limiter: AuthFailureLimiter | RateLimiter, id: string) => {
+    if (mode === "peek" && "peek" in limiter) return limiter.peek(id);
+    if (mode === "record" && "recordFailure" in limiter) return limiter.recordFailure(id);
+    return limiter.check(id);
+  };
+
+  const ipCheck = await run(ipLimiter, options.ip);
   if (!ipCheck.allowed) return ipCheck;
 
   const normalizedEmail = options.email?.toLowerCase().trim();
   if (!normalizedEmail) return ipCheck;
 
-  const emailCheck = await emailLimiter.check(normalizedEmail);
+  const emailCheck = await run(emailLimiter, normalizedEmail);
   return mergeRateLimitResults(ipCheck, emailCheck);
+}
+
+/** Check whether login is currently locked (does not consume an attempt). */
+export async function peekAuthRateLimit(options: {
+  ip: string;
+  email?: string;
+  staffOnly?: boolean;
+}): Promise<RateLimitResult> {
+  const { ipLimiter, emailLimiter } = authLimiters(options.staffOnly);
+  return runAuthLimitCheck(ipLimiter, emailLimiter, options, "peek");
+}
+
+/** Count a failed login toward IP + email limits. */
+export async function recordAuthFailure(options: {
+  ip: string;
+  email?: string;
+  staffOnly?: boolean;
+}): Promise<RateLimitResult> {
+  const { ipLimiter, emailLimiter } = authLimiters(options.staffOnly);
+  return runAuthLimitCheck(ipLimiter, emailLimiter, options, "record");
+}
+
+/** Signup / password routes: count every attempt. */
+export async function checkAuthRateLimit(options: {
+  ip: string;
+  email?: string;
+  staffOnly?: boolean;
+}): Promise<RateLimitResult> {
+  return runAuthLimitCheck(signupIpLimiter, signupEmailLimiter, options, "check");
 }
 
 /** Checkout: 3 bookings per hour per IP */

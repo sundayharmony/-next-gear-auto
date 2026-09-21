@@ -15,8 +15,9 @@ Implementation: [`src/lib/security/rate-limit.ts`](../src/lib/security/rate-limi
 
 | Limiter | Window | Max | Routes |
 |---------|--------|-----|--------|
-| `checkAuthRateLimit` (customer) | 15 min | 12 / IP + 8 / email | `POST /api/auth` (login), set-password, reset-password |
-| `checkAuthRateLimit` (staff) | 15 min | 30 / IP + 15 / email | Staff sign-in (`?staff=1`) |
+| `peekAuthRateLimit` / `recordAuthFailure` (customer) | 15 min | 12 failed / IP + 8 failed / email | `POST /api/auth` (login) — only wrong passwords count |
+| `peekAuthRateLimit` / `recordAuthFailure` (staff) | 15 min | 30 failed / IP + 15 failed / email | Staff sign-in (`?staff=1`) |
+| `checkAuthRateLimit` | 15 min | 12 / IP + 8 / email | Signup, set-password, reset-password |
 | `checkoutLimiter` | 1 hour | 3 / IP | `POST /api/checkout` |
 | `contactLimiter` | 1 hour | 2 / IP | `POST /api/contact` |
 | `promoLimiter` | 1 hour | 10 / IP | `POST /api/promo-codes/validate` |

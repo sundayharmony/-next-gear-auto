@@ -3,7 +3,13 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
 import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
 import { createAccessToken, createRefreshToken, setAuthCookies, clearAuthCookies, getAuthFromRequest } from "@/lib/auth/jwt";
-import { checkAuthRateLimit, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
+import {
+  checkAuthRateLimit,
+  getClientIp,
+  peekAuthRateLimit,
+  recordAuthFailure,
+  rateLimitResponse,
+} from "@/lib/security/rate-limit";
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
 import { isAppRole, isManagerRole, type AppRole } from "@/lib/auth/roles";
@@ -115,17 +121,7 @@ export async function POST(request: Request) {
     const { email, password } = body;
     const staffOnly = body.staffOnly === true;
     const action = body.action;
-
-    // Rate limit login/signup attempts (per IP + per email; staff sign-in is more generous)
     const ip = getClientIp(request);
-    const rateCheck = await checkAuthRateLimit({
-      ip,
-      email: typeof email === "string" ? email : undefined,
-      staffOnly,
-    });
-    if (!rateCheck.allowed) {
-      return rateLimitResponse(rateCheck.resetAt);
-    }
 
     // Use service role for server-side operations (bypasses RLS)
     const adminDb = getServiceSupabase();
@@ -139,6 +135,14 @@ export async function POST(request: Request) {
       }
 
       const normalizedEmail = email.toLowerCase().trim();
+      const lockCheck = await peekAuthRateLimit({
+        ip,
+        email: normalizedEmail,
+        staffOnly,
+      });
+      if (!lockCheck.allowed) {
+        return rateLimitResponse(lockCheck.resetAt);
+      }
 
       // Check admins table first
       const { data: admin } = await adminDb
@@ -151,6 +155,7 @@ export async function POST(request: Request) {
         const passwordMatch = await bcrypt.compare(password, admin.password_hash);
         if (!passwordMatch) {
           auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Invalid password", role: "admin" } });
+          await recordAuthFailure({ ip, email: normalizedEmail, staffOnly });
           return NextResponse.json(
             { success: false, message: "Invalid email or password." },
             { status: 401 }
@@ -179,9 +184,8 @@ export async function POST(request: Request) {
           },
         });
 
-        // Add rate limit info to response headers (reuse initial check)
-        response.headers.set("X-RateLimit-Remaining", String(rateCheck.remaining));
-        response.headers.set("X-RateLimit-Reset", new Date(rateCheck.resetAt).toISOString());
+        response.headers.set("X-RateLimit-Remaining", String(lockCheck.remaining));
+        response.headers.set("X-RateLimit-Reset", new Date(lockCheck.resetAt).toISOString());
 
         return setAuthCookies(response, accessToken, refreshToken);
       }
@@ -195,6 +199,7 @@ export async function POST(request: Request) {
 
       if (error || !customer) {
         auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Account not found" } });
+        await recordAuthFailure({ ip, email: normalizedEmail, staffOnly });
         return NextResponse.json(
           { success: false, message: "Invalid email or password." },
           { status: 401 }
@@ -212,6 +217,7 @@ export async function POST(request: Request) {
       const passwordMatch = await bcrypt.compare(password, customer.password_hash);
       if (!passwordMatch) {
         auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Invalid password", role: "customer" } });
+        await recordAuthFailure({ ip, email: normalizedEmail, staffOnly });
         return NextResponse.json(
           { success: false, message: "Invalid email or password." },
           { status: 401 }
@@ -227,6 +233,7 @@ export async function POST(request: Request) {
 
       if (staffOnly && !roles.includes("manager")) {
         auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Staff-only login rejected", roles } });
+        await recordAuthFailure({ ip, email: normalizedEmail, staffOnly });
         return NextResponse.json(
           { success: false, message: "This sign-in is for staff only. Use the main site to access your account." },
           { status: 403 }
@@ -239,6 +246,7 @@ export async function POST(request: Request) {
         !hasOwnerPortalAccess(customer)
       ) {
         auditLog("LOGIN_FAILED", { ip, email: normalizedEmail, details: { reason: "Manager access disabled", role: "manager" } });
+        await recordAuthFailure({ ip, email: normalizedEmail, staffOnly });
         return NextResponse.json(
           { success: false, message: "Manager access is not enabled for this account." },
           { status: 403 }
@@ -265,14 +273,22 @@ export async function POST(request: Request) {
 
       const response = NextResponse.json({ success: true, data: mapped });
 
-      // Add rate limit info to response headers (reuse initial check)
-      response.headers.set("X-RateLimit-Remaining", String(rateCheck.remaining));
-      response.headers.set("X-RateLimit-Reset", new Date(rateCheck.resetAt).toISOString());
+      response.headers.set("X-RateLimit-Remaining", String(lockCheck.remaining));
+      response.headers.set("X-RateLimit-Reset", new Date(lockCheck.resetAt).toISOString());
 
       return setAuthCookies(response, accessToken, refreshToken);
     }
 
     if (action === "signup") {
+      const rateCheck = await checkAuthRateLimit({
+        ip,
+        email: typeof body.email === "string" ? body.email : undefined,
+        staffOnly,
+      });
+      if (!rateCheck.allowed) {
+        return rateLimitResponse(rateCheck.resetAt);
+      }
+
       if (!body.name || !body.email || !body.password) {
         return NextResponse.json(
           { success: false, message: "Name, email, and password are required." },

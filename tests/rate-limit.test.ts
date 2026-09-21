@@ -6,6 +6,8 @@ import {
   isDistributedRateLimitEnabled,
   loginIpLimiter,
   loginLimiter,
+  peekAuthRateLimit,
+  recordAuthFailure,
 } from "@/lib/security/rate-limit";
 
 test("in-memory rate limiter blocks after max requests", async () => {
@@ -30,7 +32,7 @@ test("loginLimiter uses memory fallback when Upstash unset", async () => {
   assert.equal(typeof result.resetAt, "number");
 });
 
-test("checkAuthRateLimit tracks IP and email separately", async () => {
+test("recordAuthFailure tracks IP and email separately", async () => {
   delete process.env.UPSTASH_REDIS_REST_URL;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -39,18 +41,18 @@ test("checkAuthRateLimit tracks IP and email separately", async () => {
   const emailB = `b-${Date.now()}@example.com`;
 
   for (let i = 0; i < 8; i++) {
-    const result = await checkAuthRateLimit({ ip, email: emailA });
+    const result = await recordAuthFailure({ ip, email: emailA });
     assert.equal(result.allowed, true, `attempt ${i + 1} for email A should pass`);
   }
 
-  const blockedOnA = await checkAuthRateLimit({ ip, email: emailA });
+  const blockedOnA = await peekAuthRateLimit({ ip, email: emailA });
   assert.equal(blockedOnA.allowed, false, "email A should hit per-email cap");
 
-  const stillAllowedOnB = await checkAuthRateLimit({ ip, email: emailB });
+  const stillAllowedOnB = await peekAuthRateLimit({ ip, email: emailB });
   assert.equal(stillAllowedOnB.allowed, true, "email B should have its own bucket");
 });
 
-test("staff login allows more attempts than customer login", async () => {
+test("staff login allows more failed attempts than customer login", async () => {
   delete process.env.UPSTASH_REDIS_REST_URL;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
 
@@ -58,26 +60,57 @@ test("staff login allows more attempts than customer login", async () => {
   const email = `staff-${Date.now()}@example.com`;
 
   for (let i = 0; i < 15; i++) {
-    const result = await checkAuthRateLimit({ ip, email, staffOnly: true });
+    const result = await recordAuthFailure({ ip, email, staffOnly: true });
     assert.equal(result.allowed, true, `staff attempt ${i + 1} should pass`);
   }
 
-  const blocked = await checkAuthRateLimit({ ip, email, staffOnly: true });
+  const blocked = await peekAuthRateLimit({ ip, email, staffOnly: true });
   assert.equal(blocked.allowed, false, "staff email cap should eventually block");
 });
 
-test("login email limiter has higher cap than legacy 5-per-ip-only behavior", async () => {
+test("peekAuthRateLimit does not consume failed-login attempts", async () => {
+  delete process.env.UPSTASH_REDIS_REST_URL;
+  delete process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  const ip = `peek-ip-${Date.now()}`;
+  const email = `peek-${Date.now()}@example.com`;
+
+  for (let i = 0; i < 20; i++) {
+    const result = await peekAuthRateLimit({ ip, email });
+    assert.equal(result.allowed, true);
+  }
+
+  const afterPeek = await peekAuthRateLimit({ ip, email });
+  assert.equal(afterPeek.allowed, true);
+  assert.equal(afterPeek.remaining, 8);
+});
+
+test("login ip limiter blocks after max failed attempts", async () => {
   delete process.env.UPSTASH_REDIS_REST_URL;
   delete process.env.UPSTASH_REDIS_REST_TOKEN;
 
   const ip = `legacy-ip-${Date.now()}`;
   for (let i = 0; i < 12; i++) {
-    const result = await loginIpLimiter.check(ip);
+    const result = await loginIpLimiter.recordFailure(ip);
     assert.equal(result.allowed, true, `ip attempt ${i + 1} should pass`);
   }
 
-  const blocked = await loginIpLimiter.check(ip);
-  assert.equal(blocked.allowed, false, "ip cap should block after 12 attempts");
+  const blocked = await peekAuthRateLimit({ ip });
+  assert.equal(blocked.allowed, false, "ip cap should block after 12 failed attempts");
+});
+
+test("checkAuthRateLimit still applies to signup attempts", async () => {
+  delete process.env.UPSTASH_REDIS_REST_URL;
+  delete process.env.UPSTASH_REDIS_REST_TOKEN;
+
+  const ip = `signup-ip-${Date.now()}`;
+  for (let i = 0; i < 12; i++) {
+    const result = await checkAuthRateLimit({ ip });
+    assert.equal(result.allowed, true);
+  }
+
+  const blocked = await checkAuthRateLimit({ ip });
+  assert.equal(blocked.allowed, false);
 });
 
 test("isDistributedRateLimitEnabled reflects env", () => {

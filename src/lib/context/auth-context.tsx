@@ -152,7 +152,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       if (!res.ok) {
         const errData = await res.json().catch(() => null);
-        dispatch({ type: "LOGIN_FAILURE", payload: errData?.message || `Server error (${res.status})` });
+        let message = errData?.message || `Server error (${res.status})`;
+        if (res.status === 429) {
+          const retryAfter = res.headers.get("Retry-After");
+          const seconds = retryAfter ? Number.parseInt(retryAfter, 10) : NaN;
+          if (Number.isFinite(seconds) && seconds > 0) {
+            const minutes = Math.max(1, Math.ceil(seconds / 60));
+            message = `Too many failed sign-in attempts. Please wait about ${minutes} minute${minutes === 1 ? "" : "s"} and try again.`;
+          }
+        }
+        dispatch({ type: "LOGIN_FAILURE", payload: message });
         return null;
       }
       const data = await res.json();
