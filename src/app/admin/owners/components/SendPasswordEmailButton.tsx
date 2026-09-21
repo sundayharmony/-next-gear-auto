@@ -7,8 +7,9 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useNotification } from "@/lib/context/notification-context";
 
 interface SendPasswordEmailButtonProps {
-  ownerId: string;
-  ownerEmail: string;
+  userId: string;
+  userEmail: string;
+  apiPath: string;
   accountActivated?: boolean;
   variant?: "default" | "secondary" | "outline" | "ghost";
   size?: "default" | "sm" | "lg";
@@ -17,8 +18,9 @@ interface SendPasswordEmailButtonProps {
 }
 
 export function SendPasswordEmailButton({
-  ownerId,
-  ownerEmail,
+  userId,
+  userEmail,
+  apiPath,
   accountActivated,
   variant = "outline",
   size = "sm",
@@ -36,16 +38,13 @@ export function SendPasswordEmailButton({
     e.stopPropagation();
     setSending(true);
     try {
-      const res = await adminFetch(
-        `/api/admin/owners/${encodeURIComponent(ownerId)}/send-password-email`,
-        { method: "POST" }
-      );
+      const res = await adminFetch(apiPath, { method: "POST" });
       const json = await res.json();
       if (json.success) {
         showToast(
           "success",
           accountActivated ? "Reset email sent" : "Setup email sent",
-          json.message || `Email sent to ${ownerEmail}`
+          json.message || `Email sent to ${userEmail}`
         );
       } else {
         showToast("error", "Send failed", json.message || "Could not send password email.");

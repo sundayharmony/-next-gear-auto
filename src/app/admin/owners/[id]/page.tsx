@@ -147,8 +147,9 @@ export default function AdminOwnerDetailPage() {
           owner ? (
             <>
               <SendPasswordEmailButton
-                ownerId={owner.id}
-                ownerEmail={owner.email}
+                userId={owner.id}
+                userEmail={owner.email}
+                apiPath={`/api/admin/owners/${encodeURIComponent(owner.id)}/send-password-email`}
                 accountActivated={owner.accountActivated}
               />
               <Button variant="secondary" size="sm" onClick={() => setPayoutsOpen(true)}>
