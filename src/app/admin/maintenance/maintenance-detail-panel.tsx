@@ -68,7 +68,7 @@ export function MaintenanceDetailPanel({
     <StaffSidePanel
       onClose={onClose}
       ariaLabel={`Maintenance record: ${selectedRecord.title}`}
-      maxWidthClassName="sm:max-w-2xl"
+      maxWidthClassName="lg:max-w-2xl"
     >
         <div className="sticky top-0 bg-white border-b p-4 flex items-center justify-between z-10">
           <div className="min-w-0">

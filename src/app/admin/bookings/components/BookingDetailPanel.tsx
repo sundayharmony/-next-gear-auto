@@ -150,7 +150,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
   return (
     <div className="fixed inset-0 z-[100] flex overflow-hidden">
       <div
-        className="hidden md:block flex-1 bg-black/50 cursor-pointer"
+        className="hidden lg:block flex-1 bg-black/50 cursor-pointer"
         onClick={onClose}
       />
 
@@ -158,7 +158,7 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
         ref={panelState.panelRef}
         tabIndex={0}
         autoFocus
-        className="w-full md:max-w-lg bg-white shadow-xl overflow-hidden flex flex-col outline-none"
+        className="w-full lg:max-w-lg bg-white shadow-xl overflow-hidden flex flex-col outline-none"
       >
         <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] lg:pt-3">
           <div className="flex items-center justify-between">

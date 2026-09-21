@@ -988,6 +988,22 @@ html.nga-staff-panel {
     overscroll-behavior-x: contain;
   }
 
+  /* Shell header already shows the page title — hide duplicate purple heroes. */
+  html.nga-staff-panel .nga-staff-scroll .page-hero {
+    display: none;
+  }
+
+  /* Solid mobile chrome so scrolled content does not bleed through the header. */
+  .nga-panel-header {
+    background: #faf5ff;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  .admin-dark .nga-panel-header {
+    background: #111111 !important;
+  }
+
   html.nga-staff-panel .page-hero--compact h1 {
     font-size: 1.25rem;
     line-height: 1.3;

@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef } from "react";
+import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { STAFF_OVERLAY_Z } from "@/components/staff/staff-overlay-z";
 import { useLockBodyScroll } from "@/lib/hooks/use-lock-body-scroll";
@@ -27,7 +28,7 @@ export function StaffSidePanel({
   ariaLabel,
   children,
   panelClassName,
-  maxWidthClassName = "sm:max-w-lg",
+  maxWidthClassName = "lg:max-w-lg",
 }: StaffSidePanelProps) {
   const panelRef = useRef<HTMLDivElement>(null);
   useLockBodyScroll(true);
@@ -58,10 +59,10 @@ export function StaffSidePanel({
   }, [onClose]);
 
   return (
-    <div className={cn("fixed inset-0 flex flex-col justify-end sm:flex-row sm:justify-end", STAFF_OVERLAY_Z)} role="presentation">
+    <div className={cn("fixed inset-0 flex overflow-hidden", STAFF_OVERLAY_Z)} role="presentation">
       <button
         type="button"
-        className="absolute inset-0 cursor-default bg-black/50 sm:static sm:flex-1"
+        className="hidden lg:block flex-1 cursor-default border-0 bg-black/50 p-0"
         onClick={onClose}
         aria-label="Close panel"
         tabIndex={-1}
@@ -69,8 +70,7 @@ export function StaffSidePanel({
       <div
         ref={panelRef}
         className={cn(
-          "relative z-10 flex w-full max-h-[min(92dvh,100%)] flex-col overflow-hidden bg-white shadow-xl outline-none",
-          "rounded-t-2xl sm:h-full sm:max-h-none sm:rounded-none",
+          "flex h-full w-full min-w-0 flex-col overflow-hidden bg-white shadow-xl outline-none",
           maxWidthClassName,
           panelClassName
         )}
@@ -82,6 +82,36 @@ export function StaffSidePanel({
         <div className="nga-overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
           {children}
         </div>
+      </div>
+    </div>
+  );
+}
+
+export interface StaffPanelHeaderProps {
+  title: React.ReactNode;
+  onClose: () => void;
+  leading?: React.ReactNode;
+}
+
+/** Fixed panel header with safe-area padding for full-screen mobile drawers. */
+export function StaffPanelHeader({ title, onClose, leading }: StaffPanelHeaderProps) {
+  return (
+    <div
+      className="sticky top-0 z-10 shrink-0 border-b border-gray-200 bg-white px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top,0px))] lg:pt-3"
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-2">
+          {leading}
+          <h2 className="truncate text-lg font-semibold text-gray-900">{title}</h2>
+        </div>
+        <button
+          type="button"
+          onClick={onClose}
+          className="nga-overlay-close -mr-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full hover:bg-gray-100"
+          aria-label="Close"
+        >
+          <X className="h-5 w-5" />
+        </button>
       </div>
     </div>
   );
@@ -171,7 +201,7 @@ export function StaffCenterModal({
   return (
     <div
       className={cn(
-        "fixed inset-0 flex items-end justify-center bg-black/50 sm:items-center sm:p-4",
+        "fixed inset-0 flex items-end justify-center bg-black/50 lg:items-center lg:p-4",
         elevated ? "z-[120]" : STAFF_OVERLAY_Z
       )}
       onClick={backdropClose}
@@ -181,7 +211,7 @@ export function StaffCenterModal({
         ref={dialogRef}
         className={cn(
           "flex w-full max-h-[min(92dvh,100%)] min-h-0 flex-col overflow-hidden bg-white shadow-xl outline-none",
-          "rounded-t-2xl pb-[max(0.5rem,env(safe-area-inset-bottom))] sm:max-w-lg sm:rounded-xl sm:pb-0",
+          "rounded-t-2xl pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:max-w-lg lg:rounded-xl lg:pb-0",
           className
         )}
         role="dialog"

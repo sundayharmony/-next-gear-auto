@@ -115,7 +115,7 @@ function StaffPanelShellInner({
         )}
       >
         {/* Mobile header */}
-        <div className="relative z-[45] shrink-0 lg:hidden">
+        <div className="relative z-50 shrink-0 border-b border-purple-500/10 lg:hidden">
           <div className="nga-panel-header pwa-safe-top">
             <div className="flex items-center justify-between px-3 h-12">
               <h1 className="text-base font-semibold text-gray-900 truncate tracking-tight pr-2">

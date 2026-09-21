@@ -400,7 +400,7 @@ export function BlockedDatesEditDrawer({
   if (!block) return null;
 
   return (
-    <StaffSidePanel onClose={onCancel} ariaLabel="Edit blocked date" maxWidthClassName="sm:max-w-xl">
+    <StaffSidePanel onClose={onCancel} ariaLabel="Edit blocked date" maxWidthClassName="lg:max-w-xl">
         <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-900">Edit Blocked Date</h2>
           <button

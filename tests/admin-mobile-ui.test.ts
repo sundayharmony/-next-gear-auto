@@ -27,8 +27,9 @@ test("mobile overlays scroll internally and lock the page", () => {
   const overlay = read("src/components/staff/staff-overlay.tsx");
   assert.match(overlay, /useLockBodyScroll/);
   assert.match(read("src/app/admin/bookings/hooks/use-booking-detail-panel.ts"), /useLockBodyScroll/);
-  assert.match(overlay, /max-h-\[min\(92dvh,100%\)\]/);
-  assert.match(overlay, /rounded-t-2xl/);
+  assert.match(overlay, /fixed inset-0 flex overflow-hidden/);
+  assert.match(overlay, /hidden lg:block flex-1/);
+  assert.match(overlay, /StaffPanelHeader/);
 
   const modal = read("src/components/ui/modal.tsx");
   assert.match(modal, /nga-overlay-scroll/);
@@ -61,6 +62,7 @@ test("globals keep staff-panel scroll and dark-mode contrast tokens", () => {
   assert.match(css, /\.admin-dark \.text-gray-300 \{ color: #cbd5e1/);
   assert.match(css, /\.admin-dark \.bg-white\\\/85/);
   assert.match(css, /\.admin-dark \.nga-panel-header h1/);
+  assert.match(css, /html\.nga-staff-panel \.nga-staff-scroll \.page-hero/);
 });
 
 test("mobile messages conversation avoids forced min-height", () => {
