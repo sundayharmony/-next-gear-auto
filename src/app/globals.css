@@ -981,6 +981,13 @@ html.nga-staff-panel {
     -webkit-overflow-scrolling: touch;
     overscroll-behavior-y: contain;
     touch-action: pan-y;
+    scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6rem);
+  }
+
+  html.nga-staff-panel .nga-staff-scroll .max-w-7xl,
+  html.nga-staff-panel .nga-staff-scroll .max-w-4xl {
+    padding-top: 0.75rem;
+    padding-bottom: 0.5rem;
   }
 
   html.nga-staff-panel .admin-table-wrap {

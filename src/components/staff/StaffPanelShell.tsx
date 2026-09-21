@@ -256,7 +256,7 @@ function StaffPanelShellInner({
           </div>
         </aside>
 
-        <main className="nga-staff-scroll flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-[calc(env(safe-area-inset-bottom,0px)+4.75rem)] lg:overflow-visible lg:overscroll-auto lg:pb-0">
+        <main className="nga-staff-scroll flex-1 min-w-0 min-h-0 overflow-y-auto overflow-x-hidden overscroll-y-contain pb-[calc(env(safe-area-inset-bottom,0px)+6rem)] lg:overflow-visible lg:overscroll-auto lg:pb-0">
           <SwipeBack>{children}</SwipeBack>
         </main>
 

@@ -91,8 +91,9 @@ interface AdminPageBodyProps {
 
 export function AdminPageBody({ children, className, narrow }: AdminPageBodyProps) {
   return (
-    <PageContainer className={cn("space-y-4 py-4 sm:space-y-6 sm:py-8", className)} narrow={narrow}>
+    <PageContainer className={cn("space-y-3 py-2 sm:space-y-6 sm:py-8", className)} narrow={narrow}>
       {children}
+      <div className="h-2 shrink-0 lg:hidden" aria-hidden />
     </PageContainer>
   );
 }
@@ -136,6 +137,8 @@ interface AdminSectionProps {
   actions?: React.ReactNode;
   children: React.ReactNode;
   className?: string;
+  /** Hide long descriptions on phones to save vertical space. */
+  compactOnMobile?: boolean;
 }
 
 export function AdminSection({
@@ -145,16 +148,18 @@ export function AdminSection({
   actions,
   children,
   className,
+  compactOnMobile = false,
 }: AdminSectionProps) {
   return (
-    <section className={cn("space-y-4", className)}>
+    <section className={cn("space-y-3 sm:space-y-4", className)}>
       {(title || actions) && (
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div className="min-w-0">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
+          <div className="min-w-0 flex-1">
             {title ? (
               <h2
                 className={cn(
                   adminSectionTitleClass,
+                  "text-sm sm:text-base",
                   Icon && "flex items-center gap-2"
                 )}
               >
@@ -163,7 +168,9 @@ export function AdminSection({
               </h2>
             ) : null}
             {description ? (
-              <p className={cn(adminMutedClass, "mt-0.5")}>{description}</p>
+              <p className={cn(adminMutedClass, "mt-0.5 text-xs sm:text-sm", compactOnMobile && "max-lg:hidden")}>
+                {description}
+              </p>
             ) : null}
           </div>
           {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}

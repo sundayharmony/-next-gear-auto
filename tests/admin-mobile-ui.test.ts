@@ -63,6 +63,7 @@ test("globals keep staff-panel scroll and dark-mode contrast tokens", () => {
   assert.match(css, /\.admin-dark \.bg-white\\\/85/);
   assert.match(css, /\.admin-dark \.nga-panel-header h1/);
   assert.match(css, /html\.nga-staff-panel \.nga-staff-scroll \.page-hero/);
+  assert.match(css, /scroll-padding-bottom: calc\(env\(safe-area-inset-bottom, 0px\) \+ 6rem\)/);
 });
 
 test("mobile messages conversation avoids forced min-height", () => {

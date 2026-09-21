@@ -325,7 +325,7 @@ export default function AdminDashboardPage() {
           </div>
         ) : data ? (
           <>
-            <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 mb-4 sm:mb-8">
+            <div className="grid grid-cols-2 gap-2 sm:gap-4 md:grid-cols-3 lg:grid-cols-5 mb-3 sm:mb-8">
               {[
                 { label: "Active Rentals", value: data.activeBookings, icon: Car, color: "text-blue-600", bg: "bg-blue-50", href: "/admin/bookings?status=active" },
                 { label: "Confirmed", value: data.confirmedBookings, icon: CheckCircle2, color: "text-green-600", bg: "bg-green-50", href: "/admin/bookings?status=confirmed" },
@@ -345,7 +345,7 @@ export default function AdminDashboardPage() {
               ))}
             </div>
 
-            <AdminSection title="Today's highlights" icon={Sparkles}>
+            <AdminSection title="Today's highlights" icon={Sparkles} className="max-lg:hidden">
               {highlights && (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 mb-4">
                   <HighlightColumn
@@ -387,24 +387,13 @@ export default function AdminDashboardPage() {
             </AdminSection>
 
             <AdminSection
-              title="Week-to-Week Contracts"
-              icon={FileText}
-              description="Open a booking and mark it as Recurring Long-Term to generate the week-to-week contract from that booking."
-            >
-              <Link href="/admin/bookings">
-                <Button variant="outline" className="text-xs sm:text-sm">
-                  Go to Bookings
-                </Button>
-              </Link>
-            </AdminSection>
-
-            <AdminSection
               title="Recent bookings"
+              compactOnMobile
               description="Pending & active only, up to 10, newest first"
               actions={
                 <Link href="/admin/bookings">
-                  <Button variant="outline" size="sm" className="gap-1.5 text-purple-700 border-purple-200 hover:bg-purple-50 hover:border-purple-300">
-                    View All <ArrowRight className="h-3.5 w-3.5" />
+                  <Button variant="outline" size="sm" className="gap-1 text-purple-700 border-purple-200 hover:bg-purple-50 hover:border-purple-300 max-lg:h-8 max-lg:px-2.5 max-lg:text-xs">
+                    View all <ArrowRight className="h-3.5 w-3.5" />
                   </Button>
                 </Link>
               }
@@ -451,12 +440,12 @@ export default function AdminDashboardPage() {
                       <div className="px-4 py-3.5 sm:px-5">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0 flex-1">
-                            <div className="flex items-center gap-2">
-                              <h3 className="text-sm font-semibold text-gray-900 truncate group-hover:text-purple-700 transition-colors">
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                              <h3 className="text-sm font-semibold text-gray-900 truncate group-hover:text-purple-700 transition-colors normal-case">
                                 {booking.customer_name || "Unknown Customer"}
                               </h3>
-                              <div className="flex items-center gap-1.5 flex-shrink-0">
-                                <span className={`inline-block w-1.5 h-1.5 rounded-full ${dot} ${isActive ? "animate-pulse" : ""}`} />
+                              <div className="flex w-fit items-center gap-1.5 shrink-0">
+                                <span className={`inline-block h-1.5 w-1.5 rounded-full ${dot} ${isActive ? "animate-pulse" : ""}`} />
                                 <span className={`text-[11px] font-semibold uppercase tracking-wide ${
                                   booking.status === "pending" ? "text-yellow-600" :
                                   booking.status === "confirmed" ? "text-green-600" :
@@ -465,8 +454,8 @@ export default function AdminDashboardPage() {
                                 }`}>{booking.status}</span>
                               </div>
                             </div>
-                            <p className="text-xs text-gray-500 mt-0.5 flex items-center gap-1.5">
-                              <Car className="h-3 w-3 text-gray-400 flex-shrink-0" />
+                            <p className="mt-0.5 flex items-center gap-1.5 text-xs text-gray-500">
+                              <Car className="h-3 w-3 shrink-0 text-gray-400" />
                               <span className="truncate">{booking.vehicleName || "—"}</span>
                             </p>
                           </div>
@@ -503,6 +492,30 @@ export default function AdminDashboardPage() {
                 })}
               </div>
             )}
+            </AdminSection>
+
+            <Link
+              href="/admin/bookings"
+              className="lg:hidden flex items-center justify-between gap-3 rounded-xl border border-gray-200/80 bg-white px-3.5 py-2.5 text-sm font-medium text-gray-900 shadow-sm transition-colors hover:border-purple-200 hover:bg-purple-50/40"
+            >
+              <span className="inline-flex items-center gap-2 min-w-0">
+                <FileText className="h-4 w-4 shrink-0 text-purple-600" aria-hidden />
+                <span className="truncate">Week-to-week contracts</span>
+              </span>
+              <ArrowRight className="h-4 w-4 shrink-0 text-purple-500" aria-hidden />
+            </Link>
+
+            <AdminSection
+              title="Week-to-Week Contracts"
+              icon={FileText}
+              className="hidden lg:block"
+              description="Open a booking and mark it as Recurring Long-Term to generate the week-to-week contract from that booking."
+            >
+              <Link href="/admin/bookings">
+                <Button variant="outline" className="text-xs sm:text-sm">
+                  Go to Bookings
+                </Button>
+              </Link>
             </AdminSection>
           </>
         ) : null}
