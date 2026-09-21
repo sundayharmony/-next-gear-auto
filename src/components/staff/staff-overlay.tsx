@@ -4,6 +4,7 @@ import React, { useEffect, useRef } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { STAFF_OVERLAY_Z } from "@/components/staff/staff-overlay-z";
+import { StaffPortal } from "@/components/staff/staff-portal";
 import { useLockBodyScroll } from "@/lib/hooks/use-lock-body-scroll";
 
 function getFocusable(container: HTMLElement): HTMLElement[] {
@@ -59,31 +60,33 @@ export function StaffSidePanel({
   }, [onClose]);
 
   return (
-    <div className={cn("fixed inset-0 flex overflow-hidden", STAFF_OVERLAY_Z)} role="presentation">
-      <button
-        type="button"
-        className="hidden lg:block flex-1 cursor-default border-0 bg-black/50 p-0"
-        onClick={onClose}
-        aria-label="Close panel"
-        tabIndex={-1}
-      />
-      <div
-        ref={panelRef}
-        className={cn(
-          "flex h-full w-full min-w-0 flex-col overflow-hidden bg-white shadow-xl outline-none",
-          maxWidthClassName,
-          panelClassName
-        )}
-        role="dialog"
-        aria-modal="true"
-        aria-label={ariaLabel}
-        tabIndex={-1}
-      >
-        <div className="nga-overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
-          {children}
+    <StaffPortal>
+      <div className={cn("fixed inset-0 flex overflow-hidden", STAFF_OVERLAY_Z)} role="presentation">
+        <button
+          type="button"
+          className="hidden lg:block flex-1 cursor-default border-0 bg-black/50 p-0"
+          onClick={onClose}
+          aria-label="Close panel"
+          tabIndex={-1}
+        />
+        <div
+          ref={panelRef}
+          className={cn(
+            "flex h-[100dvh] w-full min-w-0 flex-col overflow-hidden bg-white shadow-xl outline-none lg:h-full",
+            maxWidthClassName,
+            panelClassName
+          )}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel}
+          tabIndex={-1}
+        >
+          <div className="nga-overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
+            {children}
+          </div>
         </div>
       </div>
-    </div>
+    </StaffPortal>
   );
 }
 
@@ -152,25 +155,27 @@ export function StaffInlineOverlay({
   if (!open) return null;
 
   return (
-    <div
-      className={cn(
-        "fixed inset-0 flex items-center justify-center p-4",
-        elevated ? "z-[120]" : STAFF_OVERLAY_Z,
-        backdropClassName
-      )}
-      role="presentation"
-      onClick={onClose}
-    >
+    <StaffPortal>
       <div
-        className={cn("outline-none", className)}
-        role="dialog"
-        aria-modal="true"
-        aria-label={ariaLabel}
-        onClick={(e) => e.stopPropagation()}
+        className={cn(
+          "fixed inset-0 flex items-center justify-center p-4",
+          elevated ? "z-[120]" : STAFF_OVERLAY_Z,
+          backdropClassName
+        )}
+        role="presentation"
+        onClick={onClose}
       >
-        {children}
+        <div
+          className={cn("outline-none", className)}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </StaffPortal>
   );
 }
 
@@ -199,29 +204,31 @@ export function StaffCenterModal({
   }, [onClose]);
 
   return (
-    <div
-      className={cn(
-        "fixed inset-0 flex items-end justify-center bg-black/50 lg:items-center lg:p-4",
-        elevated ? "z-[120]" : STAFF_OVERLAY_Z
-      )}
-      onClick={backdropClose}
-      role="presentation"
-    >
+    <StaffPortal>
       <div
-        ref={dialogRef}
         className={cn(
-          "flex w-full max-h-[min(92dvh,100%)] min-h-0 flex-col overflow-hidden bg-white shadow-xl outline-none",
-          "rounded-t-2xl pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:max-w-lg lg:rounded-xl lg:pb-0",
-          className
+          "fixed inset-0 flex items-end justify-center bg-black/50 lg:items-center lg:p-4",
+          elevated ? "z-[120]" : STAFF_OVERLAY_Z
         )}
-        role="dialog"
-        aria-modal="true"
-        aria-label={ariaLabel}
-        tabIndex={-1}
-        onClick={(e) => e.stopPropagation()}
+        onClick={backdropClose}
+        role="presentation"
       >
-        {children}
+        <div
+          ref={dialogRef}
+          className={cn(
+            "flex w-full max-h-[min(92dvh,100%)] min-h-0 flex-col overflow-hidden bg-white shadow-xl outline-none",
+            "rounded-t-2xl pb-[max(0.5rem,env(safe-area-inset-bottom))] lg:max-w-lg lg:rounded-xl lg:pb-0",
+            className
+          )}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ariaLabel}
+          tabIndex={-1}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {children}
+        </div>
       </div>
-    </div>
+    </StaffPortal>
   );
 }

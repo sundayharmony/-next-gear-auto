@@ -54,6 +54,8 @@ test("mobile overlays scroll internally and lock the page", () => {
   assert.match(read("src/components/admin/vehicle-image-manager.tsx"), /StaffInlineOverlay/);
   assert.match(read("src/components/admin/insurance-card-manager.tsx"), /StaffInlineOverlay/);
   assert.match(read("src/app/admin/bookings/components/InPersonAgreementSign.tsx"), /useLockBodyScroll\(true\)/);
+  assert.match(read("src/app/admin/bookings/components/BookingDetailPanel.tsx"), /StaffPortal/);
+  assert.match(read("src/components/staff/staff-portal.tsx"), /createPortal/);
 
   const tabs = read("src/components/staff/staff-bottom-tab-bar.tsx");
   assert.match(tabs, /useLockBodyScroll/);

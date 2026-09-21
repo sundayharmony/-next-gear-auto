@@ -114,8 +114,14 @@ export function DetailStatusSection({ ctx }: DetailStatusSectionProps) {
                         <span className="text-xs">{idx + 1}</span>
                       )}
                     </div>
-                    <span className="text-[10px] sm:text-xs font-medium capitalize text-center leading-tight">
-                      {isLocked ? "Awaiting signature" : step}
+                    <span className="text-[10px] sm:text-xs font-medium text-center leading-tight">
+                      {isLocked
+                        ? "Awaiting signature"
+                        : step === "pending_approval"
+                          ? "Pending approval"
+                          : step === "no-show"
+                            ? "No show"
+                            : step.charAt(0).toUpperCase() + step.slice(1)}
                     </span>
                   </div>
 

@@ -4,8 +4,8 @@ import React from "react";
 import dynamic from "next/dynamic";
 import { useStaffPanelConfig } from "@/lib/hooks/use-staff-panel-config";
 import { staffInvoicesHref } from "@/lib/admin/staff-panel-config";
-import { X, Pencil } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { StaffPortal } from "@/components/staff/staff-portal";
+import { BookingDetailPanelHeader } from "./booking-detail-panel-header";
 import { BookingRow, Vehicle } from "../types";
 import { useBookingDetailPanel } from "../hooks/use-booking-detail-panel";
 import { useBookingDetailActions } from "../hooks/use-booking-detail-actions";
@@ -147,72 +147,55 @@ export function BookingDetailPanel(props: BookingDetailPanelProps) {
     onUpdateBooking,
   };
 
+  const title = panelState.editMode ? "Edit Booking" : "Booking Details";
+
   return (
-    <div className="fixed inset-0 z-[100] flex overflow-hidden">
-      <div
-        className="hidden lg:block flex-1 bg-black/50 cursor-pointer"
-        onClick={onClose}
-      />
-
-      <div
-        ref={panelState.panelRef}
-        tabIndex={0}
-        autoFocus
-        className="w-full lg:max-w-lg bg-white shadow-xl overflow-hidden flex flex-col outline-none"
-      >
-        <div className="sticky top-0 z-40 bg-white border-b border-gray-200 px-4 sm:px-6 py-3 sm:py-4 pt-[calc(0.75rem+env(safe-area-inset-top,0px))] lg:pt-3">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-semibold">
-              {panelState.editMode ? "Edit Booking" : "Booking Details"}
-            </h2>
-            <div className="flex items-center gap-2">
-              {!panelState.editMode &&
-                actions.canManageRow &&
-                booking.status !== "cancelled" && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={actions.toggleEditMode}
-                    title="Edit booking"
-                    aria-label="Edit booking"
-                  >
-                    <Pencil className="w-4 h-4" />
-                  </Button>
-                )}
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={onClose}
-                title="Close"
-                aria-label="Close booking details"
-              >
-                <X className="w-4 h-4" />
-              </Button>
-            </div>
-          </div>
-        </div>
-
-        <div className="nga-overlay-scroll flex-1 overflow-y-auto overscroll-contain px-4 sm:px-6 py-4 space-y-5 sm:space-y-6">
-          <DetailStatusSection ctx={detailCtx} />
-          <DetailPaymentsSection ctx={detailCtx} />
-          <DetailAgreementSection ctx={detailCtx} />
-          <DetailTuroSection ctx={detailCtx} />
-          <DetailNotesSection ctx={detailCtx} />
-        </div>
-
-        <DetailActionsBar ctx={detailCtx} />
-      </div>
-
-      {panelState.showSendInvoiceModal && actions.canShowSendInvoice && (
-        <SendInvoiceModal
-          bookingId={booking.id}
-          onClose={() => panelState.setShowSendInvoiceModal(false)}
-          onSuccess={onSuccess}
-          onError={onError}
-          onSent={panelState.refreshInvoiceSummary}
+    <StaffPortal>
+      <div className="fixed inset-0 z-[100] flex overflow-hidden" role="presentation">
+        <button
+          type="button"
+          className="hidden lg:block flex-1 cursor-default border-0 bg-black/50 p-0"
+          onClick={onClose}
+          aria-label="Close panel"
         />
-      )}
-    </div>
+
+        <div
+          ref={panelState.panelRef}
+          tabIndex={-1}
+          className="flex h-[100dvh] w-full min-w-0 flex-col overflow-hidden bg-white shadow-xl outline-none lg:ml-auto lg:h-full lg:max-w-lg"
+          role="dialog"
+          aria-modal="true"
+          aria-label={title}
+        >
+          <BookingDetailPanelHeader
+            title={title}
+            showEdit={!panelState.editMode && actions.canManageRow && booking.status !== "cancelled"}
+            onEdit={actions.toggleEditMode}
+            onClose={onClose}
+          />
+
+          <div className="nga-overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6 sm:py-5 space-y-5 sm:space-y-6">
+            <DetailStatusSection ctx={detailCtx} />
+            <DetailPaymentsSection ctx={detailCtx} />
+            <DetailAgreementSection ctx={detailCtx} />
+            <DetailTuroSection ctx={detailCtx} />
+            <DetailNotesSection ctx={detailCtx} />
+          </div>
+
+          <DetailActionsBar ctx={detailCtx} />
+        </div>
+
+        {panelState.showSendInvoiceModal && actions.canShowSendInvoice && (
+          <SendInvoiceModal
+            bookingId={booking.id}
+            onClose={() => panelState.setShowSendInvoiceModal(false)}
+            onSuccess={onSuccess}
+            onError={onError}
+            onSent={panelState.refreshInvoiceSummary}
+          />
+        )}
+      </div>
+    </StaffPortal>
   );
 }
 
