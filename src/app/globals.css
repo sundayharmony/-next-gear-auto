@@ -963,8 +963,8 @@ html.nga-staff-panel {
 }
 
 @media (max-width: 1023px) {
-  html.nga-staff-panel,
-  html.nga-staff-panel body {
+  html.nga-staff-panel:has(.nga-staff-panel-root),
+  html.nga-staff-panel:has(.nga-staff-panel-root) body {
     height: 100%;
     max-height: 100%;
     overflow: hidden;

@@ -42,7 +42,7 @@ test("mobile overlays scroll internally and lock the page", () => {
 
 test("globals keep staff-panel scroll and dark-mode contrast tokens", () => {
   const css = read("src/app/globals.css");
-  assert.match(css, /html\.nga-staff-panel/);
+  assert.match(css, /html\.nga-staff-panel:has\(\.nga-staff-panel-root\)/);
   assert.match(css, /html\.admin-dark/);
   assert.match(css, /\.nga-overlay-scroll/);
   assert.match(css, /\.admin-dark \.text-gray-300 \{ color: #cbd5e1/);
