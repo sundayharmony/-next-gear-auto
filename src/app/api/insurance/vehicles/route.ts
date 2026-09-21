@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getServiceSupabase } from "@/lib/db/supabase";
 
 export interface InsuranceVehicle {
@@ -16,7 +17,10 @@ export interface InsuranceVehicle {
 const INSURANCE_VEHICLE_SELECT =
   "id, year, make, model, vin, category, color, mileage, insurance_card_urls";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const auth = await verifyAdminOrManager(req);
+  if (!auth.authorized) return auth.response;
+
   try {
     const supabase = getServiceSupabase();
 

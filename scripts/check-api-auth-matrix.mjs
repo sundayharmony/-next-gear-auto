@@ -71,6 +71,7 @@ const STAFF_AUTH_ROUTES = new Set([
 /** Staff routes outside /api/admin and /api/manager */
 const STAFF_ROUTES = new Set([
   "src/app/api/bookings/override-signature/route.ts",
+  "src/app/api/insurance/vehicles/route.ts",
 ]);
 
 /** Per-route method overrides: category → expected verifier keys */
