@@ -15,7 +15,8 @@ Implementation: [`src/lib/security/rate-limit.ts`](../src/lib/security/rate-limi
 
 | Limiter | Window | Max | Routes |
 |---------|--------|-----|--------|
-| `loginLimiter` | 15 min | 5 / IP | `POST /api/auth` (login), set-password, reset-password |
+| `checkAuthRateLimit` (customer) | 15 min | 12 / IP + 8 / email | `POST /api/auth` (login), set-password, reset-password |
+| `checkAuthRateLimit` (staff) | 15 min | 30 / IP + 15 / email | Staff sign-in (`?staff=1`) |
 | `checkoutLimiter` | 1 hour | 3 / IP | `POST /api/checkout` |
 | `contactLimiter` | 1 hour | 2 / IP | `POST /api/contact` |
 | `promoLimiter` | 1 hour | 10 / IP | `POST /api/promo-codes/validate` |

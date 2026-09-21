@@ -3,7 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
 import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
 import { createAccessToken, createRefreshToken, setAuthCookies, clearAuthCookies, getAuthFromRequest } from "@/lib/auth/jwt";
-import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
+import { checkAuthRateLimit, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { auditLog } from "@/lib/security/audit-log";
 import { logger } from "@/lib/utils/logger";
 import { isAppRole, isManagerRole, type AppRole } from "@/lib/auth/roles";
@@ -105,22 +105,27 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: Request) {
   try {
-    // Rate limit login/signup attempts
-    const ip = getClientIp(request);
-    const rateCheck = await loginLimiter.check(ip);
-    if (!rateCheck.allowed) {
-      return rateLimitResponse(rateCheck.resetAt);
-    }
-
     let body;
     try {
       body = await request.json();
     } catch {
       return NextResponse.json({ success: false, message: "Invalid request body" }, { status: 400 });
     }
+
     const { email, password } = body;
     const staffOnly = body.staffOnly === true;
     const action = body.action;
+
+    // Rate limit login/signup attempts (per IP + per email; staff sign-in is more generous)
+    const ip = getClientIp(request);
+    const rateCheck = await checkAuthRateLimit({
+      ip,
+      email: typeof email === "string" ? email : undefined,
+      staffOnly,
+    });
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(rateCheck.resetAt);
+    }
 
     // Use service role for server-side operations (bypasses RLS)
     const adminDb = getServiceSupabase();

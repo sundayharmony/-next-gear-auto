@@ -154,12 +154,70 @@ export function createRateLimiter(options: Omit<RateLimiterOptions, "prefix"> & 
 
 // ─── Pre-configured limiters ─────────────────────────────────────────
 
-/** Login: 5 attempts per 15 minutes per IP */
-export const loginLimiter = createDistributedRateLimiter({
-  windowMs: 15 * 60 * 1000,
-  max: 5,
-  prefix: "login",
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+
+/** Login: 12 attempts per 15 minutes per IP (shared across emails on same network) */
+export const loginIpLimiter = createDistributedRateLimiter({
+  windowMs: LOGIN_WINDOW_MS,
+  max: 12,
+  prefix: "login-ip",
 });
+
+/** Login: 8 attempts per 15 minutes per email (separate bucket per account) */
+export const loginEmailLimiter = createDistributedRateLimiter({
+  windowMs: LOGIN_WINDOW_MS,
+  max: 8,
+  prefix: "login-email",
+});
+
+/** Staff login: 30 attempts per 15 minutes per IP */
+export const staffLoginIpLimiter = createDistributedRateLimiter({
+  windowMs: LOGIN_WINDOW_MS,
+  max: 30,
+  prefix: "staff-login-ip",
+});
+
+/** Staff login: 15 attempts per 15 minutes per email */
+export const staffLoginEmailLimiter = createDistributedRateLimiter({
+  windowMs: LOGIN_WINDOW_MS,
+  max: 15,
+  prefix: "staff-login-email",
+});
+
+/** @deprecated Use checkAuthRateLimit — kept for tests */
+export const loginLimiter = loginIpLimiter;
+
+function mergeRateLimitResults(
+  a: RateLimitResult,
+  b: RateLimitResult
+): RateLimitResult {
+  if (!a.allowed) return a;
+  if (!b.allowed) return b;
+  return {
+    allowed: true,
+    remaining: Math.min(a.remaining, b.remaining),
+    resetAt: Math.max(a.resetAt, b.resetAt),
+  };
+}
+
+/** Auth routes: IP + per-email limits; staff sign-in uses higher caps. */
+export async function checkAuthRateLimit(options: {
+  ip: string;
+  email?: string;
+  staffOnly?: boolean;
+}): Promise<RateLimitResult> {
+  const ipLimiter = options.staffOnly ? staffLoginIpLimiter : loginIpLimiter;
+  const emailLimiter = options.staffOnly ? staffLoginEmailLimiter : loginEmailLimiter;
+
+  const ipCheck = await ipLimiter.check(options.ip);
+  if (!ipCheck.allowed) return ipCheck;
+
+  const normalizedEmail = options.email?.toLowerCase().trim();
+  if (!normalizedEmail) return ipCheck;
+
+  const emailCheck = await emailLimiter.check(normalizedEmail);
+  return mergeRateLimitResults(ipCheck, emailCheck);
+}
 
 /** Checkout: 3 bookings per hour per IP */
 export const checkoutLimiter = createDistributedRateLimiter({

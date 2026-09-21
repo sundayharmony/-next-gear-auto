@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import bcrypt from "bcryptjs";
 import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
-import { loginLimiter, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
+import { checkAuthRateLimit, getClientIp, rateLimitResponse } from "@/lib/security/rate-limit";
 import { logger } from "@/lib/utils/logger";
 import { validatePasswordToken } from "@/lib/auth/password-token";
 import { setAuthCookies } from "@/lib/auth/jwt";
@@ -12,13 +12,6 @@ import { ensureReferralCodeForCustomer } from "@/lib/referrals/referral-codes";
 
 export async function POST(request: Request) {
   try {
-    // Rate limit password set attempts (uses login limiter)
-    const ip = getClientIp(request);
-    const rateCheck = await loginLimiter.check(ip);
-    if (!rateCheck.allowed) {
-      return rateLimitResponse(rateCheck.resetAt);
-    }
-
     let body;
     try {
       body = await request.json();
@@ -26,6 +19,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, message: "Invalid request body" }, { status: 400 });
     }
     const { email, password, token } = body;
+
+    const ip = getClientIp(request);
+    const rateCheck = await checkAuthRateLimit({
+      ip,
+      email: typeof email === "string" ? email : undefined,
+    });
+    if (!rateCheck.allowed) {
+      return rateLimitResponse(rateCheck.resetAt);
+    }
 
     if (!email || !password) {
       return NextResponse.json(
