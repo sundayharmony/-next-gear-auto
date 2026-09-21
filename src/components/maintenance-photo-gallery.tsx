@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { Image as ImageIcon, X, ChevronLeft, ChevronRight, FileText, Download } from "lucide-react";
+import { useLockBodyScroll } from "@/lib/hooks/use-lock-body-scroll";
 
 interface MaintenancePhotoGalleryProps {
   photos: string[];
@@ -22,6 +23,7 @@ export function MaintenancePhotoGallery({
 }: MaintenancePhotoGalleryProps) {
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  useLockBodyScroll(lightboxOpen);
 
   const openLightbox = (index: number) => {
     if (isPdf(photos[index])) {

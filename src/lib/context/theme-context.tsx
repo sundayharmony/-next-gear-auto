@@ -37,6 +37,24 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     } catch {}
   }, [theme, mounted]);
 
+  // Staff-panel flag on <html> enables mobile scroll rules for portaled overlays.
+  useEffect(() => {
+    document.documentElement.classList.add("nga-staff-panel");
+    return () => {
+      const root = document.documentElement;
+      root.classList.remove("nga-staff-panel", "admin-dark");
+      root.style.colorScheme = "";
+    };
+  }, []);
+
+  // Dark mode on <html> so Radix portals inherit admin-dark styles.
+  useEffect(() => {
+    if (!mounted) return;
+    const root = document.documentElement;
+    root.classList.toggle("admin-dark", theme === "dark");
+    root.style.colorScheme = theme === "dark" ? "dark" : "light";
+  }, [theme, mounted]);
+
   const toggleTheme = () => setTheme((prev) => (prev === "light" ? "dark" : "light"));
 
   return (

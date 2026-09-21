@@ -51,7 +51,7 @@ export function AddCustomerModal({
 
   return (
     <Modal open onOpenChange={(next) => { if (!next) onClose(); }}>
-      <ModalContent className="sm:max-w-md">
+      <ModalContent tier="staff" className="sm:max-w-md">
         <ModalHeader>
           <ModalTitle>Add New Customer</ModalTitle>
           <ModalDescription>Creates a customer account for bookings and the owner portal.</ModalDescription>

@@ -57,6 +57,17 @@ interface BookingFiltersProps {
 const STATUSES_ADMIN = ["all", "pending_approval", "pending", "confirmed", "active", "completed", "cancelled"] as const;
 const STATUSES_MANAGER = ["all", "pending_approval", "pending", "confirmed", "active"] as const;
 
+function formatStatusFilterLabel(status: string): string {
+  switch (status) {
+    case "all":
+      return "All";
+    case "pending_approval":
+      return "Pending approval";
+    default:
+      return status.charAt(0).toUpperCase() + status.slice(1);
+  }
+}
+
 export default function BookingFilters({
   statusFilter,
   onStatusChange,
@@ -106,20 +117,20 @@ export default function BookingFilters({
   return (
     <div className="space-y-4">
       {/* Status filter pills — horizontal scroll on mobile, wrap on desktop */}
-      <div className="flex gap-2 overflow-x-auto sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 scrollbar-hide" role="group" aria-label="Filter bookings by status">
+      <div className="flex gap-2 overflow-x-auto overscroll-x-contain sm:flex-wrap pb-1 sm:pb-0 -mx-1 px-1 scrollbar-hide" role="group" aria-label="Filter bookings by status">
         {statusPills.map((status) => (
           <button
             key={status}
             onClick={() => onStatusChange(status)}
             aria-pressed={statusFilter === status}
-            aria-label={`Filter by ${status} status${statusFilter === status ? " (current)" : ""}`}
+            aria-label={`Filter by ${formatStatusFilterLabel(status)}${statusFilter === status ? " (current)" : ""}`}
             className={`px-4 py-2 rounded-full font-medium text-sm transition-colors whitespace-nowrap focus-visible:outline-2 focus-visible:outline-offset-2 outline-none ${
               statusFilter === status
                 ? "bg-purple-600 text-white focus-visible:outline-purple-700"
                 : "bg-gray-200 text-gray-700 hover:bg-gray-300 focus-visible:outline-purple-600"
             }`}
           >
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+            {formatStatusFilterLabel(status)}
           </button>
         ))}
       </div>
@@ -186,8 +197,8 @@ export default function BookingFilters({
               size="sm"
               className="bg-purple-600 hover:bg-purple-700 text-white"
             >
-              <Plus className="w-4 h-4 sm:mr-2" />
-              <span className="hidden sm:inline">New Booking</span>
+              <Plus className="w-4 h-4 mr-1.5" />
+              New Booking
             </Button>
           )}
         </div>

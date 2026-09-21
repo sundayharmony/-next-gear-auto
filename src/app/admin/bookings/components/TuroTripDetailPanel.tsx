@@ -3,14 +3,14 @@
 import React from "react";
 import Link from "next/link";
 import { useStaffPanelConfig } from "@/lib/hooks/use-staff-panel-config";
-import { X, Car, MapPin, DollarSign } from "lucide-react";
+import { Car, MapPin, DollarSign } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { getTuroDriverFromReason, formatTuroReasonForDisplay, resolveTuroTripRevenue } from "@/lib/utils/turo-blocked-date";
 import type { BookingRow } from "../types";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
-import { StaffSidePanel } from "@/components/staff/staff-overlay";
+import { StaffPanelHeader, StaffSidePanel } from "@/components/staff/staff-overlay";
 
 function isTuroRow(b: BookingRow): boolean {
   return b.occupancy_kind === "turo" || (typeof b.id === "string" && b.id.startsWith("turo:"));
@@ -36,17 +36,13 @@ export function TuroTripDetailPanel({ booking, onClose }: TuroTripDetailPanelPro
 
   return (
     <StaffSidePanel onClose={onClose} ariaLabel="Turo trip details">
-        <div className="sticky top-0 bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Badge className="bg-teal-100 text-teal-800">Turo trip</Badge>
-            <h2 className="text-lg font-semibold text-gray-900">Trip details</h2>
-          </div>
-          <button type="button" onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 -mr-2" aria-label="Close">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
+        <StaffPanelHeader
+          title="Trip details"
+          onClose={onClose}
+          leading={<Badge className="bg-teal-100 text-teal-800 shrink-0">Turo trip</Badge>}
+        />
 
-        <div className="p-5 space-y-4">
+        <div className="p-5 space-y-4 pb-[max(1rem,env(safe-area-inset-bottom,0px))]">
           <div>
             <p className="text-xs text-gray-500">Vehicle</p>
             <Link

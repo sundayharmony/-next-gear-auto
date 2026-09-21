@@ -563,7 +563,7 @@ export function SharedMessagesPage({ panelPath, panelTitle }: { panelPath: "/adm
 
           <div
             className={cn(
-              "flex min-h-[min(70vh,520px)] flex-col rounded-lg border border-gray-200 bg-white lg:min-h-[420px]",
+              "flex flex-col rounded-lg border border-gray-200 bg-white max-lg:min-h-0 lg:min-h-[420px]",
               !showConversation && "hidden",
               "lg:flex"
             )}

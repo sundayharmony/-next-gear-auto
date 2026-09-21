@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
+import { useLockBodyScroll } from "@/lib/hooks/use-lock-body-scroll";
 import { CheckCircle2, PenLine, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -72,6 +73,8 @@ export function InPersonAgreementSign({
     if (signedFields) onSigned(signedFields);
     onClose();
   };
+
+  useLockBodyScroll(true);
 
   return (
     <div className="fixed inset-0 z-[110] flex flex-col bg-white">

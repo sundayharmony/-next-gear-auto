@@ -308,7 +308,7 @@ export function LocationCombobox({
         <div
           id={listId}
           role="listbox"
-          className="absolute z-50 mt-1 max-h-72 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-lg"
+          className="nga-overlay-scroll absolute z-50 mt-1 max-h-72 w-full overflow-y-auto overscroll-contain rounded-lg border border-gray-200 bg-white shadow-lg"
         >
           {filteredLocations.length > 0 && (
             <div className="border-b border-gray-100 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wide text-gray-400">

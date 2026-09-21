@@ -204,16 +204,17 @@ export function DatePicker({
 
         <Popover.Portal>
           <Popover.Content
-            className="z-[9999] w-[280px] rounded-xl border border-gray-200 bg-white p-3 shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
+            className="z-[9999] w-[min(20rem,calc(100vw-2rem))] rounded-xl border border-gray-200 bg-white p-3 shadow-lg animate-in fade-in-0 zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95"
             sideOffset={4}
             align="start"
+            collisionPadding={16}
           >
             {/* Month/Year header */}
             <div className="mb-2 flex items-center justify-between">
               <button
                 type="button"
                 onClick={prevMonth}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 sm:h-8 sm:w-8"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -223,7 +224,7 @@ export function DatePicker({
               <button
                 type="button"
                 onClick={nextMonth}
-                className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 sm:h-8 sm:w-8"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -259,7 +260,7 @@ export function DatePicker({
                     disabled={off}
                     onClick={() => selectDate(date)}
                     className={cn(
-                      "flex h-8 w-full items-center justify-center rounded-lg text-sm transition-colors",
+                      "flex h-10 w-full items-center justify-center rounded-lg text-sm transition-colors sm:h-8",
                       sel
                         ? "bg-purple-600 font-semibold text-white"
                         : today

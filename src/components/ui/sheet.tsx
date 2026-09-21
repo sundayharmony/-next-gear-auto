@@ -5,6 +5,7 @@ import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { STAFF_OVERLAY_Z } from "@/components/staff/staff-overlay-z";
+import { useLockBodyScroll } from "@/lib/hooks/use-lock-body-scroll";
 
 const Sheet = DialogPrimitive.Root;
 const SheetTrigger = DialogPrimitive.Trigger;
@@ -38,16 +39,19 @@ interface SheetContentProps extends React.ComponentPropsWithoutRef<typeof Dialog
 const SheetContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   SheetContentProps
->(({ className, children, side = "bottom", showClose = true, tier = "default", ...props }, ref) => (
+>(({ className, children, side = "bottom", showClose = true, tier = "default", ...props }, ref) => {
+  useLockBodyScroll(tier === "staff");
+
+  return (
   <SheetPortal>
     <SheetOverlay className={tier === "staff" ? STAFF_OVERLAY_Z : undefined} />
     <DialogPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed flex flex-col bg-white shadow-xl outline-none",
+        "fixed flex flex-col overflow-hidden bg-white shadow-xl outline-none",
         tier === "staff" ? STAFF_OVERLAY_Z : "z-50",
         side === "bottom" &&
-          "inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl border border-gray-200 pb-[max(1rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom",
+          "inset-x-0 bottom-0 max-h-[min(92dvh,100%)] rounded-t-2xl border border-gray-200 pb-[max(0.75rem,env(safe-area-inset-bottom))] animate-in slide-in-from-bottom",
         side === "right" &&
           "inset-y-0 right-0 h-full w-full max-w-lg border-l border-gray-200 animate-in slide-in-from-right",
         "sm:max-h-[90vh]",
@@ -60,19 +64,20 @@ const SheetContent = React.forwardRef<
       {children}
       {showClose ? (
         <DialogPrimitive.Close
-          className="absolute right-4 top-4 rounded-sm opacity-70 ring-offset-white transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+          className="nga-overlay-close absolute right-2 top-2 inline-flex h-11 w-11 items-center justify-center rounded-full text-gray-500 hover:bg-gray-100 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-purple-500 sm:right-3 sm:top-3"
           aria-label="Close"
         >
-          <X className="h-4 w-4" />
+          <X className="h-5 w-5" />
         </DialogPrimitive.Close>
       ) : null}
     </DialogPrimitive.Content>
   </SheetPortal>
-));
+  );
+});
 SheetContent.displayName = "SheetContent";
 
 const SheetHeader = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex flex-col space-y-1.5 px-4 pt-4 sm:px-6 sm:pt-6", className)} {...props} />
+  <div className={cn("flex flex-col space-y-1.5 px-4 pt-4 pr-14 sm:px-6 sm:pt-6", className)} {...props} />
 );
 
 const SheetTitle = React.forwardRef<
@@ -100,7 +105,7 @@ const SheetDescription = React.forwardRef<
 SheetDescription.displayName = "SheetDescription";
 
 const SheetBody = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (
-  <div className={cn("flex-1 overflow-y-auto px-4 py-4 sm:px-6", className)} {...props} />
+  <div className={cn("nga-overlay-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-6", className)} {...props} />
 );
 
 const SheetFooter = ({ className, ...props }: React.HTMLAttributes<HTMLDivElement>) => (

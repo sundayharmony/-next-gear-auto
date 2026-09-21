@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLockBodyScroll } from "@/lib/hooks/use-lock-body-scroll";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
 import type { Location } from "@/lib/types";
@@ -29,6 +30,8 @@ export function useBookingDetailPanel({
   canViewActivityTimeline,
   canManagePayments,
 }: UseBookingDetailPanelOptions) {
+  useLockBodyScroll(true);
+
   const [editMode, setEditMode] = useState(false);
   const [editData, setEditData] = useState<Partial<BookingRow>>(JSON.parse(JSON.stringify(booking)));
   const [saving, setSaving] = useState(false);
