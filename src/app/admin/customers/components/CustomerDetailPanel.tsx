@@ -54,7 +54,7 @@ export function CustomerDetailPanel({
         detail={detail}
       />
 
-      <div className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-6">
+      <div className="nga-overlay-scroll min-h-0 flex-1 space-y-6 overflow-y-auto overscroll-contain p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-5">
         {detail.loadingBookings ? (
           <div className="flex flex-col items-center justify-center py-16 text-gray-500">
             <Loader2 className="h-8 w-8 animate-spin text-purple-600 mb-3" />
