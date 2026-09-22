@@ -18,6 +18,10 @@ import { managerBookingsConfig } from "../src/app/admin/bookings/config";
 
 const root = process.cwd();
 
+function read(rel: string) {
+  return fs.readFileSync(path.join(root, rel), "utf8");
+}
+
 test("staff panel configs expose distinct panel bases", () => {
   assert.equal(adminPanelConfig.panelBase, "/admin");
   assert.equal(managerPanelConfig.panelBase, "/manager");
@@ -99,6 +103,20 @@ test("owner_portal_enabled revocation blocks owner portal access", () => {
   assert.equal(hasOwnerPortalAccess({ role: "owner", owner_portal_enabled: false }), true);
   assert.equal(hasOwnerPortalAccess({ role: "customer", owner_portal_enabled: true }), true);
   assert.equal(hasOwnerPortalAccess({ role: "customer", owner_portal_enabled: false }), false);
+  assert.equal(hasOwnerPortalAccess({ role: "manager", owner_portal_enabled: true }), true);
+  assert.equal(hasOwnerPortalAccess({ role: "manager", owner_portal_enabled: false }), false);
+});
+
+test("managers page can grant owner portal access", () => {
+  const page = read("src/app/admin/managers/page.tsx");
+  assert.match(page, /grant-owner-access/);
+  assert.match(page, /Make owner/);
+});
+
+test("grant owner portal access route is admin-only", () => {
+  const route = read("src/app/api/admin/managers/[managerId]/grant-owner-access/route.ts");
+  assert.match(route, /verifyAdmin/);
+  assert.match(route, /grantOwnerPortalAccess/);
 });
 
 test("blocked-dates GET requires admin auth only", () => {

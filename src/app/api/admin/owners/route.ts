@@ -14,6 +14,11 @@ import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import { validatePassword, PASSWORD_REQUIREMENTS } from "@/lib/auth/password-policy";
 import { logger } from "@/lib/utils/logger";
+import {
+  grantOwnerPortalAccess,
+  grantOwnerPortalSuccessMessage,
+} from "@/lib/admin/grant-owner-portal-access";
+import { isManagerRole } from "@/lib/auth/roles";
 import bcrypt from "bcryptjs";
 
 /**
@@ -133,21 +138,38 @@ export async function POST(req: NextRequest) {
       .maybeSingle();
 
     if (existing) {
-      const updates: Record<string, string | boolean> = {
-        name,
-        owner_portal_enabled: true,
-      };
-      if (existing.role !== "manager") {
-        updates.role = "owner";
+      const grant = await grantOwnerPortalAccess(supabase, existing.id);
+      if (!grant.ok) {
+        logger.error("Promote owner grant failed:", grant.message);
+        return NextResponse.json({ success: false, message: grant.message }, { status: grant.status });
       }
-      if (phone) updates.phone = phone;
-      if (passwordHash) updates.password_hash = passwordHash;
-      const { error } = await supabase.from("customers").update(updates).eq("id", existing.id);
-      if (error) {
-        logger.error("Promote owner error:", error);
-        return NextResponse.json({ success: false, message: "Failed to update owner" }, { status: 500 });
+
+      const profileUpdates: Record<string, string> = { name };
+      if (phone) profileUpdates.phone = phone;
+      if (passwordHash) profileUpdates.password_hash = passwordHash;
+
+      if (Object.keys(profileUpdates).length > 0) {
+        const { error: profileError } = await supabase
+          .from("customers")
+          .update(profileUpdates)
+          .eq("id", existing.id);
+        if (profileError) {
+          logger.error("Promote owner profile update failed:", profileError);
+          return NextResponse.json({ success: false, message: "Failed to update owner profile" }, { status: 500 });
+        }
       }
-      return NextResponse.json({ success: true, data: { id: existing.id }, message: "Existing account promoted to owner" });
+
+      const message = grantOwnerPortalSuccessMessage(grant);
+      const suffix = isManagerRole(existing.role)
+        ? ""
+        : grant.alreadyHadAccess
+          ? " Profile updated."
+          : " Existing account promoted to owner.";
+      return NextResponse.json({
+        success: true,
+        data: { id: existing.id },
+        message: `${message}${suffix}`,
+      });
     }
 
     const id = "c_" + crypto.randomUUID();
