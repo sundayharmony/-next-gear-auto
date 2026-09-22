@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { shouldOpenHighlightedCustomer } from "../src/app/admin/customers/highlight-selection";
 
 const root = process.cwd();
 
@@ -81,6 +82,36 @@ test("globals keep staff-panel scroll and dark-mode contrast tokens", () => {
   assert.match(css, /\.admin-dark \.nga-panel-header h1/);
   assert.match(css, /html\.nga-staff-panel \.nga-staff-scroll \.page-hero/);
   assert.match(css, /scroll-padding-bottom: calc\(env\(safe-area-inset-bottom, 0px\) \+ 6rem\)/);
+});
+
+test("closing a highlighted customer does not immediately reopen them", () => {
+  assert.equal(
+    shouldOpenHighlightedCustomer({
+      highlightId: "c1",
+      dismissedHighlightId: null,
+      hasCustomers: true,
+      hasSelection: false,
+    }),
+    true
+  );
+  assert.equal(
+    shouldOpenHighlightedCustomer({
+      highlightId: "c1",
+      dismissedHighlightId: "c1",
+      hasCustomers: true,
+      hasSelection: false,
+    }),
+    false
+  );
+  assert.equal(
+    shouldOpenHighlightedCustomer({
+      highlightId: "c2",
+      dismissedHighlightId: "c1",
+      hasCustomers: true,
+      hasSelection: false,
+    }),
+    true
+  );
 });
 
 test("customer detail sheet scrolls and does not truncate the profile header", () => {
