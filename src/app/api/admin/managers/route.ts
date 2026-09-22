@@ -6,6 +6,11 @@ import { logger } from "@/lib/utils/logger";
 import { sendPasswordResetLink } from "@/lib/email/mailer";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import { MANAGER_DB_SELECT, toManagerPublic, toManagerPublicList } from "@/lib/admin/manager-api";
+import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
+import { DUAL_ROLE_MIGRATION_HINT } from "@/lib/admin/grant-owner-portal-access";
+
+const MANAGER_DB_SELECT_LEGACY =
+  "id, name, email, phone, role, manager_access_enabled, manager_access_granted_at, manager_access_revoked_at, created_at, password_hash";
 
 function isRoleConstraintError(error: unknown): boolean {
   if (!error || typeof error !== "object") return false;
@@ -29,18 +34,39 @@ export async function GET(req: NextRequest) {
   if (!auth.authorized) return auth.response;
 
   const supabase = getServiceSupabase();
-  const { data, error } = await supabase
+  let data: Parameters<typeof toManagerPublicList>[0] | null = null;
+  let supportsDualRole = true;
+
+  const primary = await supabase
     .from("customers")
     .select(MANAGER_DB_SELECT)
     .eq("role", "manager")
     .order("created_at", { ascending: false });
 
-  if (error) {
-    logger.error("Failed to list managers:", error);
+  if (primary.error && isMissingColumnError(primary.error)) {
+    supportsDualRole = false;
+    const fallback = await supabase
+      .from("customers")
+      .select(MANAGER_DB_SELECT_LEGACY)
+      .eq("role", "manager")
+      .order("created_at", { ascending: false });
+    if (fallback.error) {
+      logger.error("Failed to list managers:", fallback.error);
+      return NextResponse.json({ success: false, message: "Failed to list managers" }, { status: 500 });
+    }
+    data = (fallback.data || []).map((row) => ({ ...row, owner_portal_enabled: null }));
+  } else if (primary.error) {
+    logger.error("Failed to list managers:", primary.error);
     return NextResponse.json({ success: false, message: "Failed to list managers" }, { status: 500 });
+  } else {
+    data = primary.data;
   }
 
-  return NextResponse.json({ success: true, data: toManagerPublicList(data) });
+  return NextResponse.json({
+    success: true,
+    data: toManagerPublicList(data),
+    meta: { supportsDualRole, dualRoleMigrationHint: supportsDualRole ? null : DUAL_ROLE_MIGRATION_HINT },
+  });
 }
 
 export async function POST(req: NextRequest) {

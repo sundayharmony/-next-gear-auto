@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useCallback, useEffect, useState } from "react";
-import { Shield, Plus, RefreshCw, Pencil, Trash2, CheckCircle2, Clock } from "lucide-react";
+import { Shield, Plus, RefreshCw, Pencil, Trash2, CheckCircle2, Clock, Car } from "lucide-react";
 import { SendPasswordEmailButton } from "@/app/admin/owners/components/SendPasswordEmailButton";
 import {
   AdminPageHeader,
@@ -34,6 +34,7 @@ interface ManagerRow {
   manager_access_granted_at?: string | null;
   manager_access_revoked_at?: string | null;
   account_activated: boolean;
+  has_owner_access?: boolean;
 }
 
 function apiMessage(data: Record<string, unknown>, fallback: string): string {
@@ -45,6 +46,9 @@ export default function AdminManagersPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
+  const [grantingOwnerId, setGrantingOwnerId] = useState<string | null>(null);
+  const [supportsDualRole, setSupportsDualRole] = useState(true);
+  const [dualRoleMigrationHint, setDualRoleMigrationHint] = useState<string | null>(null);
   const { error, setError, success, setSuccess } = useAutoToast();
   const [form, setForm] = useState({ name: "", email: "", phone: "" });
 
@@ -63,6 +67,9 @@ export default function AdminManagersPage() {
       const json = parsed.data;
       if (res.ok && json.success) {
         setManagers((json.data as ManagerRow[]) || []);
+        const meta = json.meta as { supportsDualRole?: boolean; dualRoleMigrationHint?: string | null } | undefined;
+        setSupportsDualRole(meta?.supportsDualRole !== false);
+        setDualRoleMigrationHint(meta?.dualRoleMigrationHint ?? null);
       } else {
         setError(apiMessage(json, "Failed to load managers."));
       }
@@ -168,6 +175,38 @@ export default function AdminManagersPage() {
     }
   }, [fetchManagers, form, setError, setSuccess]);
 
+  const grantOwnerAccess = useCallback(
+    async (managerId: string, name: string) => {
+      setGrantingOwnerId(managerId);
+      setError(null);
+      setSuccess(null);
+      try {
+        const res = await adminFetch(
+          `/api/admin/managers/${encodeURIComponent(managerId)}/grant-owner-access`,
+          { method: "POST" }
+        );
+        const parsed = await parseApiJsonResponse(res);
+        if (!parsed.ok) {
+          setError(parsed.message);
+          return;
+        }
+        const json = parsed.data;
+        if (res.ok && json.success) {
+          setSuccess(apiMessage(json, `${name} can now access the owner panel.`));
+          await fetchManagers();
+        } else {
+          setError(apiMessage(json, "Failed to grant owner access."));
+        }
+      } catch (err) {
+        logger.error("Failed to grant owner access:", err);
+        setError("Failed to grant owner access.");
+      } finally {
+        setGrantingOwnerId(null);
+      }
+    },
+    [fetchManagers, setError, setSuccess]
+  );
+
   const removeManager = useCallback(
     async (managerId: string, email: string) => {
       if (
@@ -225,6 +264,13 @@ export default function AdminManagersPage() {
       <AdminPageBody>
         {error ? <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} /> : null}
         {success ? <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} /> : null}
+        {!supportsDualRole && dualRoleMigrationHint ? (
+          <AdminCard className="mb-4 border-amber-200 bg-amber-50">
+            <p className="text-sm text-amber-900">
+              <strong>Database update needed:</strong> {dualRoleMigrationHint}
+            </p>
+          </AdminCard>
+        ) : null}
 
         <AdminCard>
             <h2 className={`${adminSectionTitleClass} mb-4 flex items-center gap-2`}>
@@ -315,6 +361,12 @@ export default function AdminManagersPage() {
                                 Pending activation
                               </Badge>
                             )}
+                            {manager.has_owner_access ? (
+                              <Badge className="bg-purple-100 text-purple-900 border-purple-200">
+                                <Car className="h-3 w-3 mr-1" aria-hidden />
+                                Also owner
+                              </Badge>
+                            ) : null}
                           </div>
                           <p className={`${adminMutedClass} truncate`}>{manager.email}</p>
                           {!manager.account_activated ? (
@@ -343,6 +395,23 @@ export default function AdminManagersPage() {
                           >
                             <Pencil className="h-4 w-4" aria-hidden />
                           </AdminIconActionButton>
+                          {!manager.has_owner_access ? (
+                            <AdminListActionButton
+                              variant="secondary"
+                              className="col-span-2 sm:col-span-1"
+                              onClick={() => grantOwnerAccess(manager.id, manager.name)}
+                              disabled={!supportsDualRole || grantingOwnerId === manager.id}
+                            >
+                              {grantingOwnerId === manager.id ? (
+                                "Granting…"
+                              ) : (
+                                <>
+                                  <Car className="h-4 w-4 shrink-0" aria-hidden />
+                                  <span className="truncate">Make owner</span>
+                                </>
+                              )}
+                            </AdminListActionButton>
+                          ) : null}
                           <AdminListActionButton
                             variant="outline"
                             className="col-span-2 text-red-700 border-red-300 hover:bg-red-50 sm:col-span-1"

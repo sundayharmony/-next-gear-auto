@@ -531,7 +531,9 @@ function AddOwnerModal({ open, onClose, onCreated }: { open: boolean; onClose: (
             onChange={(e) => setPassword(e.target.value)}
             hint={`Leave blank to let them set it via password reset. If set: ${PASSWORD_REQUIREMENTS}`}
           />
-          <p className="text-xs text-gray-500">If the email already exists, that account is promoted to an owner.</p>
+          <p className="text-xs text-gray-500">
+            If the email already exists (including managers), that account is granted owner portal access.
+          </p>
         </div>
         <div className="mt-4 flex justify-end gap-2">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
