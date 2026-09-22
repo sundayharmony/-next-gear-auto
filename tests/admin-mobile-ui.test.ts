@@ -16,13 +16,21 @@ test("staff theme applies admin-dark on the document for portaled overlays", () 
   assert.match(src, /classList\.toggle\("admin-dark"/);
 });
 
-test("staff shell uses a dedicated mobile scroll owner", () => {
+test("staff shell uses a dedicated scroll owner on mobile and desktop", () => {
   const src = read("src/components/staff/StaffPanelShell.tsx");
   assert.match(src, /nga-staff-panel-root/);
   assert.match(src, /nga-staff-scroll/);
   assert.match(src, /overscroll-y-contain/);
+  assert.match(src, /overflow-y-auto/);
+  assert.match(src, /lg:h-screen/);
+  assert.doesNotMatch(src, /lg:overflow-visible/);
   assert.match(src, /pt-\[env\(safe-area-inset-top,0px\)\]/);
   assert.doesNotMatch(src, /pwa-safe-top/);
+});
+
+test("panel layout shell matches staff viewport height on desktop", () => {
+  const src = read("src/components/layout/layout-shell.tsx");
+  assert.match(src, /lg:h-screen/);
 });
 
 test("panel layout shell does not double-apply safe-area top padding", () => {

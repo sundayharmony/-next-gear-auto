@@ -16,7 +16,7 @@ export function LayoutShell({ children }: { children: React.ReactNode }) {
     // Panel chrome (StaffPanelShell) owns top safe-area padding — do not add it here
     // or standalone PWA shows a black band above the header bar.
     return (
-      <div className="h-full min-h-0">
+      <div className="h-dvh min-h-0 overflow-hidden lg:h-screen">
         <StaffServiceWorkerBootstrap />
         {children}
       </div>
