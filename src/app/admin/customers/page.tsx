@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { AdminPageHeader, AdminPageBody } from "@/components/admin/admin-shell";
 import { useNotification } from "@/lib/context/notification-context";
 import { usePagination } from "@/components/ui/pagination";
@@ -15,6 +15,7 @@ import { useCustomersData } from "./use-customers-data";
 import { CustomersWorkspace } from "./components/CustomersWorkspace";
 import { CustomerDetailSheet } from "./customer-detail-sheet";
 import { AddCustomerModal } from "./components/AddCustomerModal";
+import { shouldOpenHighlightedCustomer } from "./highlight-selection";
 
 export default function AdminCustomersPage({
   panelConfig = adminPanelConfig,
@@ -35,15 +36,36 @@ export default function AdminCustomersPage({
   const { currentPage, pageSize, handlePageChange, handlePageSizeChange, resetPage, paginateArray } =
     usePagination(12);
 
+  const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const highlightId = searchParams.get("highlight");
+  const dismissedHighlightId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (highlightId && customers.length > 0 && !selectedCustomer) {
-      const found = customers.find((c) => c.id === highlightId);
-      if (found) setSelectedCustomer(found);
+    if (
+      !shouldOpenHighlightedCustomer({
+        highlightId,
+        dismissedHighlightId: dismissedHighlightId.current,
+        hasCustomers: customers.length > 0,
+        hasSelection: !!selectedCustomer,
+      })
+    ) {
+      return;
     }
+    const found = customers.find((c) => c.id === highlightId);
+    if (found) setSelectedCustomer(found);
   }, [highlightId, customers, selectedCustomer]);
+
+  const closeCustomer = () => {
+    if (highlightId) dismissedHighlightId.current = highlightId;
+    setSelectedCustomer(null);
+    if (!highlightId) return;
+    const params = new URLSearchParams(searchParams.toString());
+    params.delete("highlight");
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  };
 
   const handleSearch = () => {
     fetchCustomers(searchInput.trim());
@@ -69,7 +91,13 @@ export default function AdminCustomersPage({
             fetchCustomers();
           }}
           selectedCustomer={selectedCustomer}
-          onSelectCustomer={setSelectedCustomer}
+          onSelectCustomer={(customer) => {
+            if (!customer) {
+              closeCustomer();
+              return;
+            }
+            setSelectedCustomer(customer);
+          }}
           onAddCustomer={() => setShowAddCustomerModal(true)}
           canAddCustomer={canMutateCustomers}
           currentPage={currentPage}
@@ -89,7 +117,7 @@ export default function AdminCustomersPage({
         <CustomerDetailSheet
           customer={selectedCustomer}
           open={!!selectedCustomer}
-          onClose={() => setSelectedCustomer(null)}
+          onClose={closeCustomer}
           panelBase={panelBase}
           canMutateCustomers={canMutateCustomers}
           setCustomers={setCustomers}
