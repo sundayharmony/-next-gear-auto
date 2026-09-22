@@ -118,9 +118,10 @@ export function isOwnerActiveBooking(booking: { status: OwnerBookingStatus }): b
 }
 
 /**
- * Owner portal visibility: only Turo trips. Website / staff / owner-panel
- * bookings are intentionally hidden from the owner portal (admin payout views
- * load the dataset without this filter).
+ * Owner portal visibility. Callers already limit rows to vehicles this owner
+ * owns. Owners see Turo trips and any booking created on those vehicles
+ * (website, admin, manager, or owner panel). Other owners' vehicles never
+ * reach this check.
  */
 export function isOwnerVisibleBooking(
   row: {
@@ -132,5 +133,6 @@ export function isOwnerVisibleBooking(
   },
   _todayYmd?: string
 ): boolean {
-  return isOwnerTuroBooking(row);
+  if (isOwnerTuroBooking(row)) return true;
+  return row.kind === "booking" || Boolean(row.origin_channel);
 }

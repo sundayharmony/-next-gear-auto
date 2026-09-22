@@ -39,6 +39,7 @@ function LoginFormInner() {
       return "/admin";
     }
     if (role === "manager") {
+      if (nextPath?.startsWith("/owner") && roles.includes("owner")) return nextPath;
       if (nextPath?.startsWith("/manager")) return nextPath;
       return "/manager";
     }

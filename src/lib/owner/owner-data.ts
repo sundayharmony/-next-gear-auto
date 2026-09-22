@@ -47,8 +47,9 @@ export interface OwnerDataset {
 
 export interface LoadOwnerDatasetOptions {
   /**
-   * When true (owner portal), only Turo trips are returned — website bookings
-   * are hidden. Admin views should omit this (or pass false) for full history.
+   * When true (owner portal), keep Turo trips and bookings created on this
+   * owner's vehicles, and drop anything outside that scope. Admin views should
+   * omit this (or pass false) for full history.
    */
   ownerPortalOnly?: boolean;
 }

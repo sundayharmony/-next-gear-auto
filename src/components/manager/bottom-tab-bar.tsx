@@ -1,9 +1,11 @@
 "use client";
 
-import { LayoutDashboard } from "lucide-react";
+import { DollarSign, LayoutDashboard } from "lucide-react";
 import { getManagerNavItems } from "@/lib/admin/panel-navigation";
 import { staffPanelIconMap } from "@/lib/admin/staff-panel-icons";
 import { StaffBottomTabBar } from "@/components/staff/staff-bottom-tab-bar";
+import { useAuth } from "@/lib/context/auth-context";
+import { userHasRole } from "@/lib/auth/user-roles";
 
 const managerNavItems = getManagerNavItems();
 const PRIMARY_TAB_KEYS = new Set(["dashboard", "bookings", "calendar", "messages"]);
@@ -25,12 +27,17 @@ const moreItems = managerNavItems
   }));
 
 export function ManagerBottomTabBar() {
+  const { user } = useAuth();
+  const more = userHasRole(user, "owner")
+    ? [...moreItems, { href: "/owner/finance", label: "Owner finance", icon: DollarSign }]
+    : moreItems;
+
   return (
     <StaffBottomTabBar
       ariaLabel="Manager navigation"
       homeHref="/manager"
       primaryTabs={primaryTabs}
-      moreItems={moreItems}
+      moreItems={more}
       moreGridCols={3}
     />
   );

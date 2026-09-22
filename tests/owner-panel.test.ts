@@ -72,12 +72,14 @@ test("loadOwnerDataset excludes cancelled bookings from owner portal", () => {
   assert.equal(isOwnerActiveBooking({ status: "cancelled" }), false);
 });
 
-test("owner portal visibility is Turo-only", () => {
+test("owner portal shows Turo trips and bookings created on the owner's vehicles", () => {
   assert.equal(isOwnerVisibleBooking({ kind: "turo" }), true);
   assert.equal(isOwnerVisibleBooking({ id: "turo:abc" }), true);
-  assert.equal(isOwnerVisibleBooking({ kind: "booking", origin_channel: "public_checkout" }), false);
-  assert.equal(isOwnerVisibleBooking({ kind: "booking", origin_channel: "admin_panel" }), false);
-  assert.equal(isOwnerVisibleBooking({ kind: "booking", origin_channel: "owner_panel" }), false);
+  assert.equal(isOwnerVisibleBooking({ kind: "booking", origin_channel: "public_checkout" }), true);
+  assert.equal(isOwnerVisibleBooking({ kind: "booking", origin_channel: "admin_panel" }), true);
+  assert.equal(isOwnerVisibleBooking({ kind: "booking", origin_channel: "manager_panel" }), true);
+  assert.equal(isOwnerVisibleBooking({ kind: "booking", origin_channel: "owner_panel" }), true);
+  assert.equal(isOwnerVisibleBooking({}), false);
 });
 
 test("owner availability API marks Turo trips as booked and omits website bookings", () => {
