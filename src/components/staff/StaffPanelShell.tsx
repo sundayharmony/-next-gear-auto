@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { ChevronRight, LogOut, Loader2, Moon, Sun } from "lucide-react";
+import { ChevronRight, DollarSign, LogOut, Loader2, Moon, Sun } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/context/auth-context";
 import { ThemeProvider, useTheme } from "@/lib/context/theme-context";
@@ -210,6 +210,30 @@ function StaffPanelShellInner({
           </nav>
 
           <div className={cn("px-3 py-4 border-t space-y-1 shrink-0", isDark ? "border-[#222222]" : "border-gray-800")}>
+            {requiredRole === "manager" && userHasRole(user, "owner") ? (
+              <Link
+                href="/owner/finance"
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  isDark ? "text-gray-300 hover:bg-[#1a1a1a] hover:text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                )}
+              >
+                <DollarSign className="h-4.5 w-4.5" />
+                Owner finance
+              </Link>
+            ) : null}
+            {requiredRole === "owner" && userHasRole(user, "manager") ? (
+              <Link
+                href="/manager"
+                className={cn(
+                  "flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors",
+                  isDark ? "text-gray-300 hover:bg-[#1a1a1a] hover:text-white" : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                )}
+              >
+                <ChevronRight className="h-4.5 w-4.5" />
+                Manager panel
+              </Link>
+            ) : null}
             <button
               type="button"
               onClick={toggleTheme}

@@ -81,7 +81,7 @@ export default function OwnerFinancePage() {
 
   return (
     <>
-      <AdminPageHeader title="Finance & Earnings" subtitle="Revenue and payout history across your vehicles" />
+      <AdminPageHeader title="Finance & Earnings" subtitle="Revenue and payouts for your vehicles and the bookings created on them" />
       <AdminPageBody>
         {loading && bookings.length === 0 ? (
           <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading finance" /></div>
