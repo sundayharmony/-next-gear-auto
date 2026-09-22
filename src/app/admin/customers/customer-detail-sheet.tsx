@@ -46,7 +46,12 @@ export function CustomerDetailSheet({
 
   return (
     <Sheet open={sheetOpen} onOpenChange={(next) => !next && onClose()}>
-      <SheetContent side="right" tier="staff" showClose={false} className="p-0 gap-0 w-full max-w-none sm:max-w-lg">
+      <SheetContent
+        side="right"
+        tier="staff"
+        showClose={false}
+        className="h-[100dvh] max-h-[100dvh] w-full max-w-none gap-0 p-0 sm:max-h-[100dvh] sm:max-w-lg"
+      >
         <SheetTitle className="sr-only">{customer.name} — customer details</SheetTitle>
         <SheetDescription className="sr-only">
           Customer profile, documents, tickets, and booking history.

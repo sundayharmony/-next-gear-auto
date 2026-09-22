@@ -83,6 +83,15 @@ test("globals keep staff-panel scroll and dark-mode contrast tokens", () => {
   assert.match(css, /scroll-padding-bottom: calc\(env\(safe-area-inset-bottom, 0px\) \+ 6rem\)/);
 });
 
+test("customer detail sheet scrolls and does not truncate the profile header", () => {
+  const panel = read("src/app/admin/customers/components/CustomerDetailPanel.tsx");
+  const header = read("src/app/admin/customers/components/CustomerProfileHeader.tsx");
+  assert.match(panel, /min-h-0 flex-1/);
+  assert.match(header, /break-words/);
+  assert.match(header, /grid grid-cols-2/);
+  assert.doesNotMatch(header, /truncate/);
+});
+
 test("mobile messages conversation avoids forced min-height", () => {
   const messages = read("src/app/admin/messages/shared-messages-page.tsx");
   assert.match(messages, /max-lg:min-h-0/);
