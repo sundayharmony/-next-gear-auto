@@ -968,6 +968,11 @@ html.nga-staff-panel {
   scroll-behavior: auto;
 }
 
+html.nga-staff-panel:has(.nga-staff-panel-root) .nga-staff-scroll {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+}
+
 @media (max-width: 1023px) {
   html.nga-staff-panel:has(.nga-staff-panel-root),
   html.nga-staff-panel:has(.nga-staff-panel-root) body {
@@ -978,8 +983,6 @@ html.nga-staff-panel {
   }
 
   html.nga-staff-panel .nga-staff-scroll {
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-y: contain;
     touch-action: pan-y;
     scroll-padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 6rem);
   }
