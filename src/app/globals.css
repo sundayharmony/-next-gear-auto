@@ -260,16 +260,28 @@ body {
 }
 
 .page-hero-btn-outline {
-  border-color: rgba(196, 181, 253, 0.45) !important;
-  color: #ede9fe !important;
-  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(237, 233, 254, 0.8) !important;
+  color: #ffffff !important;
+  background: rgba(255, 255, 255, 0.14) !important;
   transition: background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
 .page-hero-btn-outline:hover {
-  background: rgba(255, 255, 255, 0.14) !important;
-  border-color: rgba(216, 180, 254, 0.65) !important;
-  box-shadow: 0 0 20px -4px rgba(167, 139, 250, 0.45);
+  background: rgba(255, 255, 255, 0.24) !important;
+  border-color: #ede9fe !important;
+  box-shadow: 0 0 20px -4px rgba(167, 139, 250, 0.55);
+}
+
+.page-hero-btn-danger {
+  color: #fecaca !important;
+  border-color: rgba(252, 165, 165, 0.7) !important;
+}
+
+.page-hero-btn-danger:hover {
+  color: #ffffff !important;
+  background: rgba(239, 68, 68, 0.28) !important;
+  border-color: rgba(252, 165, 165, 0.95) !important;
+  box-shadow: 0 0 20px -4px rgba(248, 113, 113, 0.45);
 }
 
 /* Inline / card-sized hero blocks */

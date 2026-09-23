@@ -175,6 +175,7 @@ export default function AdminOwnerDetailPage() {
                 userEmail={owner.email}
                 apiPath={`/api/admin/owners/${encodeURIComponent(owner.id)}/send-password-email`}
                 accountActivated={owner.accountActivated}
+                tone="hero"
               />
               {!editing ? (
                 <AdminIconActionButton
@@ -186,9 +187,9 @@ export default function AdminOwnerDetailPage() {
                 </AdminIconActionButton>
               ) : null}
               <Button
-                variant="ghost"
+                variant="outline"
                 size="sm"
-                className="text-red-600 hover:bg-red-50 hover:text-red-700"
+                className="page-hero-btn-outline page-hero-btn-danger"
                 onClick={removeOwner}
                 disabled={removing}
               >
