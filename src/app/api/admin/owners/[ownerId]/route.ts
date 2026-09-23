@@ -39,7 +39,7 @@ export async function GET(_req: NextRequest, { params }: Params) {
       return NextResponse.json({ success: false, message: "Owner not found" }, { status: 404 });
     }
 
-    const enriched = await enrichOwnerRow(owner, { recentBookingsLimit: 20 });
+    const enriched = await enrichOwnerRow(owner, { includeFinancialBreakdown: true });
     return NextResponse.json(
       { success: true, data: enriched },
       { headers: { "Cache-Control": "no-store" } }
