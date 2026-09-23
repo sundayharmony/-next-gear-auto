@@ -1,5 +1,5 @@
 import { loadOwnerDataset } from "@/lib/owner/owner-data";
-import { isRevenueBooking } from "@/lib/owner/finance";
+import { computeOwnerFinanceSummary } from "@/lib/owner/owner-metrics";
 import type { OwnerBooking, OwnerVehicle } from "@/lib/types";
 
 export interface EnrichedAdminOwner {
@@ -14,6 +14,7 @@ export interface EnrichedAdminOwner {
   lifetimeRevenue: number;
   lifetimePayouts: number;
   pendingPayouts: number;
+  financingLifetime: number;
   recentBookings: OwnerBooking[];
 }
 
@@ -33,16 +34,7 @@ export async function enrichOwnerRow(
 ): Promise<EnrichedAdminOwner> {
   const limit = options?.recentBookingsLimit ?? 15;
   const { vehicles, bookings } = await loadOwnerDataset(o.id);
-
-  let lifetimeRevenue = 0;
-  let lifetimePayouts = 0;
-  let pendingPayouts = 0;
-  for (const b of bookings) {
-    if (b.status === "cancelled" || !isRevenueBooking(b.rawStatus)) continue;
-    lifetimeRevenue += b.grossRevenue;
-    if (b.payoutStatus === "paid") lifetimePayouts += b.ownerPayout;
-    else if (b.status === "completed") pendingPayouts += b.ownerPayout;
-  }
+  const summary = computeOwnerFinanceSummary(bookings, vehicles);
 
   return {
     id: o.id,
@@ -53,9 +45,10 @@ export async function enrichOwnerRow(
     accountActivated: Boolean(o.password_hash),
     vehicleCount: vehicles.length,
     vehicles,
-    lifetimeRevenue: Math.round(lifetimeRevenue * 100) / 100,
-    lifetimePayouts: Math.round(lifetimePayouts * 100) / 100,
-    pendingPayouts: Math.round(pendingPayouts * 100) / 100,
+    lifetimeRevenue: summary.lifetimeRevenue,
+    lifetimePayouts: summary.lifetimePayouts,
+    pendingPayouts: summary.pendingPayouts,
+    financingLifetime: summary.financingLifetime,
     recentBookings: bookings.slice(0, limit),
   };
 }

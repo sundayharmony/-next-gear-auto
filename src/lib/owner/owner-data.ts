@@ -36,6 +36,11 @@ interface VehicleRow {
   daily_rate: number | null;
   is_available: boolean | null;
   owner_percentage: number | null;
+  is_financed?: boolean | null;
+  monthly_payment?: number | null;
+  payment_day_of_month?: number | null;
+  financing_start_date?: string | null;
+  purchase_price?: number | null;
 }
 
 export interface OwnerDataset {
@@ -65,12 +70,7 @@ export async function loadOwnerDataset(
 ): Promise<OwnerDataset> {
   const supabase = getServiceSupabase();
 
-  const { data: vehicleRows } = await supabase
-    .from("vehicles")
-    .select("id, year, make, model, category, images, daily_rate, is_available, owner_percentage")
-    .eq("owner_id", ownerId);
-
-  const vehicleList = (vehicleRows || []) as VehicleRow[];
+  const vehicleList = await loadOwnerVehicles(supabase, ownerId);
   const vehicleMap = new Map<string, VehicleRow>(vehicleList.map((v) => [v.id, v]));
   const vehicleIds = vehicleList.map((v) => v.id);
 
@@ -84,6 +84,11 @@ export async function loadOwnerDataset(
     dailyRate: v.daily_rate ?? 0,
     ownerPercentage: clampPercentage(v.owner_percentage ?? DEFAULT_OWNER_PERCENTAGE),
     isAvailable: v.is_available !== false,
+    isFinanced: Boolean(v.is_financed),
+    monthlyPayment: Number(v.monthly_payment) || 0,
+    paymentDayOfMonth: Number(v.payment_day_of_month) || 1,
+    financingStartDate: v.financing_start_date || null,
+    purchasePrice: Number(v.purchase_price) || 0,
   }));
 
   if (vehicleIds.length === 0) {
@@ -164,7 +169,7 @@ export async function loadOwnerDataset(
       rentalDays: rentalDays(b.pickup_date, b.return_date),
       status,
       rawStatus: b.status,
-      payoutStatus: payout?.status ?? "pending",
+      payoutStatus: "paid",
       payoutDate: payout?.payout_date ?? null,
       createdAt: b.created_at,
       originChannel: (b.origin_channel as OwnerBooking["originChannel"]) ?? undefined,
@@ -221,7 +226,7 @@ export async function loadOwnerDataset(
       rentalDays: rentalDays(pickupDate, returnDate),
       status,
       rawStatus: "turo",
-      payoutStatus: "pending",
+      payoutStatus: "paid",
       payoutDate: null,
       createdAt: String(row.created_at || ""),
       ...breakdown,
@@ -236,6 +241,37 @@ export async function loadOwnerDataset(
   });
 
   return { vehicles, vehicleMap, bookings: visibleBookings, blockedDates };
+}
+
+const OWNER_VEHICLE_SELECT =
+  "id, year, make, model, category, images, daily_rate, is_available, owner_percentage, is_financed, monthly_payment, payment_day_of_month, financing_start_date, purchase_price";
+const OWNER_VEHICLE_SELECT_BASE =
+  "id, year, make, model, category, images, daily_rate, is_available, owner_percentage";
+
+async function loadOwnerVehicles(
+  supabase: ReturnType<typeof getServiceSupabase>,
+  ownerId: string
+): Promise<VehicleRow[]> {
+  const full = await supabase
+    .from("vehicles")
+    .select(OWNER_VEHICLE_SELECT)
+    .eq("owner_id", ownerId);
+
+  if (!full.error) return (full.data || []) as VehicleRow[];
+  if (!isMissingColumnError(full.error)) {
+    logger.error("Owner vehicles query failed", full.error);
+    return [];
+  }
+
+  const fallback = await supabase
+    .from("vehicles")
+    .select(OWNER_VEHICLE_SELECT_BASE)
+    .eq("owner_id", ownerId);
+  if (fallback.error) {
+    logger.error("Owner vehicles query failed", fallback.error);
+    return [];
+  }
+  return (fallback.data || []) as VehicleRow[];
 }
 
 async function fetchOwnerTuroBlocks(

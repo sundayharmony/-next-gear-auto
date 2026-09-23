@@ -9,7 +9,6 @@ import {
   Plus,
   CheckCircle2,
   Wallet,
-  Clock,
   TrendingUp,
   Gauge,
 } from "lucide-react";
@@ -70,8 +69,8 @@ export default function OwnerDashboardPage() {
           <>
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
               <AdminStatCard label="Total Revenue" value={formatCurrency(metrics?.totalRevenue ?? 0)} icon={DollarSign} />
-              <AdminStatCard label="Estimated Payout" value={formatCurrency(metrics?.estimatedPayout ?? 0)} icon={Wallet} iconClassName="text-blue-600" iconBgClassName="bg-blue-50" />
-              <AdminStatCard label="Pending Payouts" value={formatCurrency(metrics?.pendingPayouts ?? 0)} icon={Clock} iconClassName="text-amber-600" iconBgClassName="bg-amber-50" />
+              <AdminStatCard label="Upcoming earnings" value={formatCurrency(metrics?.estimatedPayout ?? 0)} icon={Wallet} iconClassName="text-blue-600" iconBgClassName="bg-blue-50" />
+              <AdminStatCard label="Vehicle financing" value={formatCurrency(metrics?.vehicleFinancing ?? 0)} icon={DollarSign} iconClassName="text-amber-600" iconBgClassName="bg-amber-50" />
               <AdminStatCard label="Lifetime Earnings" value={formatCurrency(metrics?.lifetimeEarnings ?? 0)} icon={TrendingUp} iconClassName="text-emerald-600" iconBgClassName="bg-emerald-50" />
               <AdminStatCard label="Upcoming Bookings" value={metrics?.upcomingBookings ?? 0} icon={CalendarClock} iconClassName="text-indigo-600" iconBgClassName="bg-indigo-50" />
               <AdminStatCard label="Active Rentals" value={metrics?.activeRentals ?? 0} icon={Car} iconClassName="text-green-600" iconBgClassName="bg-green-50" />
@@ -79,7 +78,7 @@ export default function OwnerDashboardPage() {
               <AdminStatCard label="Utilization Rate" value={`${metrics?.utilizationRate ?? 0}%`} icon={Gauge} iconClassName="text-purple-600" iconBgClassName="bg-purple-50" />
             </div>
 
-            <AdminSection title="Monthly Revenue & Payouts" description="Last 6 months">
+            <AdminSection title="Monthly revenue" description="Last 6 months, after each financed vehicle's monthly payment">
               <AdminCard>
                 <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -90,14 +89,14 @@ export default function OwnerDashboardPage() {
                       <Tooltip formatter={(v) => formatCurrency(Number(v) || 0)} />
                       <Legend />
                       <Bar dataKey="revenue" name="Revenue" fill="#c4b5fd" radius={[4, 4, 0, 0]} />
-                      <Line type="monotone" dataKey="payout" name="Owner Payout" stroke="#7c3aed" strokeWidth={2} dot={{ r: 3 }} />
+                      <Line type="monotone" dataKey="payout" name="Earnings" stroke="#7c3aed" strokeWidth={2} dot={{ r: 3 }} />
                     </ComposedChart>
                   </ResponsiveContainer>
                 </div>
               </AdminCard>
             </AdminSection>
 
-            <AdminSection title="Recent Bookings" description="Tap a booking to see the payout breakdown">
+            <AdminSection title="Recent Bookings" description="Tap a booking to see the earnings breakdown">
               {recentBookings.length === 0 ? (
                 <AdminEmptyState title="No bookings yet." />
               ) : (
