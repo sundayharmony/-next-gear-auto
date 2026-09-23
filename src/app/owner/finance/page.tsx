@@ -71,17 +71,17 @@ export default function OwnerFinancePage() {
       "Other Expenses": b.otherExpenses.toFixed(2),
       "Net Revenue": b.netRevenue.toFixed(2),
       "Owner %": b.ownerPercentage,
-      Earnings: b.ownerPayout.toFixed(2),
+      Profit: b.ownerPayout.toFixed(2),
       "Payout Status": b.payoutStatus,
       "Payout Date": b.payoutDate ?? "",
     }));
     const stamp = new Date().toISOString().slice(0, 10);
-    exportToCSV(rows, `owner-earnings-${stamp}`);
+    exportToCSV(rows, `owner-revenue-profit-${stamp}`);
   };
 
   return (
     <>
-      <AdminPageHeader title="Finance & Earnings" subtitle="Vehicle revenue after financing. Earnings are already paid out." />
+      <AdminPageHeader title="Revenue & Profit" subtitle="Vehicle revenue after financing. Profit is your share after fees." />
       <AdminPageBody>
         {loading && bookings.length === 0 ? (
           <div className="flex justify-center py-16"><Loader2 className="h-8 w-8 animate-spin text-purple-600" role="status" aria-label="Loading finance" /></div>
@@ -89,15 +89,15 @@ export default function OwnerFinancePage() {
           <>
             <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
               <AdminStatCard label="This Month Revenue" value={formatCurrency(summary.currentMonthRevenue)} icon={DollarSign} />
-              <AdminStatCard label="This Month Earnings" value={formatCurrency(summary.currentMonthPayout)} icon={Wallet} iconClassName="text-blue-600" iconBgClassName="bg-blue-50" />
+              <AdminStatCard label="This Month Profit" value={formatCurrency(summary.currentMonthPayout)} icon={Wallet} iconClassName="text-blue-600" iconBgClassName="bg-blue-50" />
               <AdminStatCard label="Lifetime Revenue" value={formatCurrency(summary.lifetimeRevenue)} icon={TrendingUp} iconClassName="text-emerald-600" iconBgClassName="bg-emerald-50" />
-              <AdminStatCard label="Lifetime Earnings" value={formatCurrency(summary.lifetimePayouts)} icon={Banknote} iconClassName="text-indigo-600" iconBgClassName="bg-indigo-50" />
+              <AdminStatCard label="Lifetime Profit" value={formatCurrency(summary.lifetimePayouts)} icon={Banknote} iconClassName="text-indigo-600" iconBgClassName="bg-indigo-50" />
               <AdminStatCard label="Financing this month" value={formatCurrency(summary.financingThisMonth)} icon={DollarSign} iconClassName="text-amber-600" iconBgClassName="bg-amber-50" />
             </div>
 
             <AdminSection
-              title="Earnings"
-              description={`${filtered.length} booking(s) · ${formatCurrency(filteredTotals.payout)} earned`}
+              title="Bookings"
+              description={`${filtered.length} booking(s) · ${formatCurrency(filteredTotals.payout)} profit`}
               actions={
                 <Button variant="secondary" size="sm" onClick={exportCsv} disabled={filtered.length === 0}>
                   <Download className="h-4 w-4" /> Export CSV
@@ -167,7 +167,7 @@ export default function OwnerFinancePage() {
                           <span className="tabular-nums text-gray-900">{b.ownerPercentage}%</span>
                         </div>
                         <div className="col-span-2 flex items-center justify-between pt-1">
-                          <span className="font-medium text-gray-700">Earnings</span>
+                          <span className="font-medium text-gray-700">Profit</span>
                           <span className="text-base font-bold tabular-nums text-purple-700">{formatCurrency(b.ownerPayout)}</span>
                         </div>
                       </div>
@@ -189,7 +189,7 @@ export default function OwnerFinancePage() {
                       <th className="px-4 py-3 text-right font-semibold">Fees/Exp.</th>
                       <th className="px-4 py-3 text-right font-semibold">Net</th>
                       <th className="px-4 py-3 text-right font-semibold">Owner %</th>
-                      <th className="px-4 py-3 text-right font-semibold">Earnings</th>
+                      <th className="px-4 py-3 text-right font-semibold">Profit</th>
                       <th className="px-4 py-3 font-semibold">Status</th>
                       <th className="px-4 py-3 font-semibold">Date</th>
                     </tr>

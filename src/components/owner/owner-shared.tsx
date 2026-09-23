@@ -112,7 +112,7 @@ export function OwnerBookingDetailModal({
           {booking.grossRevenue > 0 && (
             <div className="rounded-lg border border-gray-200 px-3">
               <p className="pt-3 text-xs font-semibold uppercase tracking-wide text-gray-400">
-                {isTuro ? "Estimated share (Turo trip)" : "Payout Breakdown"}
+                {isTuro ? "Estimated share (Turo trip)" : "Revenue & Profit"}
               </p>
               <Row label="Trip Revenue" value={formatCurrency(booking.grossRevenue)} />
               {!isTuro && (
@@ -126,7 +126,7 @@ export function OwnerBookingDetailModal({
               </div>
               <Row label={`Platform Fees (${100 - booking.ownerPercentage}%)`} value={`− ${formatCurrency(booking.platformFees)}`} negative />
               <div className="border-t border-gray-100">
-                <Row label={`Owner Share (${booking.ownerPercentage}%)`} value={formatCurrency(booking.ownerPayout)} strong />
+                <Row label={`Your Profit (${booking.ownerPercentage}%)`} value={formatCurrency(booking.ownerPayout)} strong />
               </div>
             </div>
           )}

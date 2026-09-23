@@ -223,7 +223,7 @@ export default function AdminOwnerDetailPage() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <AdminStatCard label="Lifetime revenue" value={formatCurrency(owner.lifetimeRevenue)} icon={DollarSign} />
               <AdminStatCard
-                label="Lifetime earnings"
+                label="Lifetime profit"
                 value={formatCurrency(owner.lifetimePayouts)}
                 icon={TrendingUp}
                 iconClassName="text-emerald-600"
@@ -358,7 +358,7 @@ export default function AdminOwnerDetailPage() {
 
             <AdminSection
               title="Recent bookings"
-              description="Website reservations and Turo trips on this owner's vehicles. Earnings are treated as already paid out."
+              description="Website reservations and Turo trips on this owner's vehicles."
             >
               {owner.recentBookings.length === 0 ? (
                 <AdminCard>

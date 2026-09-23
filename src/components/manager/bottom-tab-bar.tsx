@@ -29,7 +29,7 @@ const moreItems = managerNavItems
 export function ManagerBottomTabBar() {
   const { user } = useAuth();
   const more = userHasRole(user, "owner")
-    ? [...moreItems, { href: "/owner/finance", label: "Owner finance", icon: DollarSign }]
+    ? [...moreItems, { href: "/owner/finance", label: "Revenue & profit", icon: DollarSign }]
     : moreItems;
 
   return (
