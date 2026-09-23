@@ -17,6 +17,8 @@ interface SendPasswordEmailButtonProps {
   className?: string;
   /** Icon-only for compact card/list footers (label becomes aria-label + title). */
   iconOnly?: boolean;
+  /** Use high-contrast styling for purple page heroes. */
+  tone?: "default" | "hero";
 }
 
 export function SendPasswordEmailButton({
@@ -28,6 +30,7 @@ export function SendPasswordEmailButton({
   size = "sm",
   className,
   iconOnly = false,
+  tone = "default",
 }: SendPasswordEmailButtonProps) {
   const { showToast } = useNotification();
   const [sending, setSending] = useState(false);
@@ -66,7 +69,9 @@ export function SendPasswordEmailButton({
       variant={variant}
       size={size}
       className={cn(
-        "border-blue-300 text-blue-600 hover:bg-blue-50",
+        tone === "hero"
+          ? "page-hero-btn-outline"
+          : "border-blue-300 text-blue-600 hover:bg-blue-50",
         iconOnly ? "w-full min-w-0 justify-center px-2" : "w-full min-w-0 justify-center sm:w-auto",
         className
       )}
