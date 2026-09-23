@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { calculateFinancing } from "@/lib/utils/financing";
+import { listFinancingPayments } from "@/lib/utils/financing";
 import { getLocalYmd } from "@/lib/utils/date-helpers";
 import {
   countInclusiveTripDays,
@@ -130,41 +130,25 @@ export function useFinancesComputed({
     const entries: UnifiedExpense[] = [];
 
     vehicles.forEach((vehicle) => {
-      if (!vehicle.isFinanced || !vehicle.monthlyPayment || !vehicle.financingStartDate) return;
-
-      const financing = calculateFinancing(vehicle);
-      if (!financing || financing.paymentsProcessed === 0) return;
-
-      const startDate = new Date(vehicle.financingStartDate);
-      if (isNaN(startDate.getTime())) return;
-
-      const paymentDay = Math.min(Math.max(vehicle.paymentDayOfMonth || 1, 1), 31);
-
-      for (let i = 0; i < financing.paymentsProcessed; i++) {
-        try {
-          const payMonth = new Date(startDate.getFullYear(), startDate.getMonth() + i, 1);
-          const daysInMonth = new Date(payMonth.getFullYear(), payMonth.getMonth() + 1, 0).getDate();
-          const actualDay = Math.min(paymentDay, daysInMonth);
-          const actualDate = new Date(payMonth.getFullYear(), payMonth.getMonth(), actualDay);
-          if (isNaN(actualDate.getTime())) continue;
-          const dateStr = getLocalYmd(actualDate);
-
-          if (dateStr >= dateRange.from && dateStr <= dateRange.to) {
-            entries.push({
-              id: `financing-${vehicle.id}-${i}`,
-              vehicle_id: vehicle.id,
-              category: "financing",
-              amount: financing.monthlyPayment,
-              description: `Monthly payment — ${getVehicleDisplayName(vehicle)}`,
-              date: dateStr,
-              created_at: dateStr,
-              source: "financing" as const,
-            });
-          }
-        } catch {
-          continue;
-        }
+      let payments;
+      try {
+        payments = listFinancingPayments(vehicle);
+      } catch {
+        return;
       }
+      payments.forEach((payment, index) => {
+        if (payment.date < dateRange.from || payment.date > dateRange.to) return;
+        entries.push({
+          id: `financing-${vehicle.id}-${index}`,
+          vehicle_id: vehicle.id,
+          category: "financing",
+          amount: payment.amount,
+          description: `Monthly payment — ${getVehicleDisplayName(vehicle)}`,
+          date: payment.date,
+          created_at: payment.date,
+          source: "financing" as const,
+        });
+      });
     });
 
     return entries;
@@ -413,8 +397,18 @@ export function useFinancesComputed({
           0
         );
         const turoRevenue = turoRevenueByVehicle.get(vehicle.id) || 0;
-        const revenue = bookingRevenue + turoRevenue;
-        const expenseTotal = vExpenses.reduce((s, e) => s + (e.amount ?? 0), 0);
+        let financingInRange = 0;
+        try {
+          financingInRange = listFinancingPayments(vehicle)
+            .filter((payment) => payment.date >= dateRange.from && payment.date <= dateRange.to)
+            .reduce((sum, payment) => sum + payment.amount, 0);
+        } catch {
+          financingInRange = 0;
+        }
+        const revenue = bookingRevenue + turoRevenue - financingInRange;
+        const expenseTotal = vExpenses
+          .filter((expense) => expense.source !== "financing")
+          .reduce((sum, expense) => sum + (expense.amount ?? 0), 0);
         const vehicleCost = vehicle.isFinanced ? 0 : (vehicle.purchasePrice ?? 0);
 
         const totalDaysInRange = Math.max(1, countInclusiveTripDays(dateRange.from, dateRange.to));

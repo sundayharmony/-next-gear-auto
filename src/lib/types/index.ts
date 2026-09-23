@@ -436,6 +436,8 @@ export interface OwnerDashboardMetrics {
   completedRentals: number;
   estimatedPayout: number;
   pendingPayouts: number;
+  /** Financing payments already due, subtracted from vehicle revenue. */
+  vehicleFinancing: number;
   lifetimeEarnings: number;
   utilizationRate: number;
   vehicleCount: number;
@@ -449,6 +451,10 @@ export interface OwnerFinanceSummary {
   lifetimeRevenue: number;
   lifetimePayouts: number;
   pendingPayouts: number;
+  /** This calendar month's financing payments, already removed from current-month revenue. */
+  financingThisMonth: number;
+  /** All financing payments already due, already removed from lifetime revenue. */
+  financingLifetime: number;
 }
 
 /** A vehicle owned by an owner (subset for the portal). */
@@ -462,6 +468,11 @@ export interface OwnerVehicle {
   dailyRate: number;
   ownerPercentage: number;
   isAvailable: boolean;
+  isFinanced?: boolean;
+  monthlyPayment?: number;
+  paymentDayOfMonth?: number;
+  financingStartDate?: string | null;
+  purchasePrice?: number;
 }
 
 export interface OwnerNotification {

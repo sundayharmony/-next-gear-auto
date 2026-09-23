@@ -5,7 +5,6 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
   Car,
-  Wallet,
   Loader2,
   Mail,
   Phone,
@@ -41,7 +40,6 @@ import {
 import { getVehicleDisplayName } from "@/lib/types";
 import type { EnrichedAdminOwner } from "@/lib/admin/owner-enrichment";
 import { isOwnerTuroBooking } from "@/lib/owner/finance";
-import { ManagePayoutsModal } from "../components/ManagePayoutsModal";
 import { SendPasswordEmailButton } from "../components/SendPasswordEmailButton";
 import { AdminIconActionButton } from "@/components/admin/admin-card-action-bar";
 import { Badge } from "@/components/ui/badge";
@@ -54,7 +52,6 @@ export default function AdminOwnerDetailPage() {
 
   const [owner, setOwner] = useState<EnrichedAdminOwner | null>(null);
   const [loading, setLoading] = useState(true);
-  const [payoutsOpen, setPayoutsOpen] = useState(false);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState("");
   const [editEmail, setEditEmail] = useState("");
@@ -184,9 +181,6 @@ export default function AdminOwnerDetailPage() {
                 apiPath={`/api/admin/owners/${encodeURIComponent(owner.id)}/send-password-email`}
                 accountActivated={owner.accountActivated}
               />
-              <Button variant="secondary" size="sm" onClick={() => setPayoutsOpen(true)}>
-                <Wallet className="h-4 w-4" /> Manage payouts
-              </Button>
               {!editing ? (
                 <AdminIconActionButton
                   label="Edit owner profile"
@@ -229,16 +223,16 @@ export default function AdminOwnerDetailPage() {
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
               <AdminStatCard label="Lifetime revenue" value={formatCurrency(owner.lifetimeRevenue)} icon={DollarSign} />
               <AdminStatCard
-                label="Lifetime payouts"
+                label="Lifetime earnings"
                 value={formatCurrency(owner.lifetimePayouts)}
                 icon={TrendingUp}
                 iconClassName="text-emerald-600"
                 iconBgClassName="bg-emerald-50"
               />
               <AdminStatCard
-                label="Pending payouts"
-                value={formatCurrency(owner.pendingPayouts)}
-                icon={Wallet}
+                label="Vehicle financing"
+                value={formatCurrency(owner.financingLifetime)}
+                icon={DollarSign}
                 iconClassName="text-amber-600"
                 iconBgClassName="bg-amber-50"
               />
@@ -364,7 +358,7 @@ export default function AdminOwnerDetailPage() {
 
             <AdminSection
               title="Recent bookings"
-              description="Website reservations and Turo trips on this owner's vehicles. Only website bookings can be managed via payouts."
+              description="Website reservations and Turo trips on this owner's vehicles. Earnings are treated as already paid out."
             >
               {owner.recentBookings.length === 0 ? (
                 <AdminCard>
@@ -415,11 +409,6 @@ export default function AdminOwnerDetailPage() {
         )}
       </AdminPageBody>
 
-      <ManagePayoutsModal
-        owner={payoutsOpen && owner ? { id: owner.id, name: owner.name } : null}
-        onClose={() => setPayoutsOpen(false)}
-        onChanged={load}
-      />
     </>
   );
 }

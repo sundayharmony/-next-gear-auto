@@ -1,24 +1,62 @@
 import { isRevenueBooking } from "@/lib/owner/finance";
 import { formatYyyyMmDdLocal } from "@/lib/utils/booking-dates";
+import {
+  listFinancingPayments,
+  sumFinancingPaymentsToDate,
+  type FinancedVehicle,
+} from "@/lib/utils/financing";
 import type { OwnerBooking, OwnerDashboardMetrics, OwnerFinanceSummary, OwnerVehicle } from "@/lib/types";
 
-export function computeOwnerFinanceSummary(bookings: OwnerBooking[]): OwnerFinanceSummary {
-  const now = new Date();
+function roundMoney(n: number): number {
+  return Math.round(n * 100) / 100;
+}
+
+function asFinancedVehicle(vehicle: OwnerVehicle): FinancedVehicle {
+  return {
+    isFinanced: vehicle.isFinanced,
+    monthlyPayment: vehicle.monthlyPayment,
+    paymentDayOfMonth: vehicle.paymentDayOfMonth,
+    financingStartDate: vehicle.financingStartDate || undefined,
+    purchasePrice: vehicle.purchasePrice,
+  };
+}
+
+/** Financing already due in one YYYY-MM, across the owner's vehicles. */
+export function financingForMonth(
+  vehicles: OwnerVehicle[],
+  monthKey: string,
+  asOf: Date = new Date()
+): number {
+  let total = 0;
+  for (const vehicle of vehicles) {
+    for (const payment of listFinancingPayments(asFinancedVehicle(vehicle), asOf)) {
+      if (payment.date.slice(0, 7) === monthKey) total += payment.amount;
+    }
+  }
+  return roundMoney(total);
+}
+
+export function computeOwnerFinanceSummary(
+  bookings: OwnerBooking[],
+  vehicles: OwnerVehicle[] = [],
+  now: Date = new Date()
+): OwnerFinanceSummary {
   const currentMonthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+  const financingThisMonth = financingForMonth(vehicles, currentMonthKey, now);
+  const financingLifetime = sumFinancingPaymentsToDate(vehicles.map(asFinancedVehicle), now);
 
   let currentMonthRevenue = 0;
   let currentMonthPayout = 0;
   let lifetimeRevenue = 0;
   let lifetimePayouts = 0;
-  let pendingPayouts = 0;
 
   for (const b of bookings) {
     if (b.status === "cancelled") continue;
     if (!isRevenueBooking(b.rawStatus)) continue;
 
     lifetimeRevenue += b.grossRevenue;
-    if (b.payoutStatus === "paid") lifetimePayouts += b.ownerPayout;
-    else if (b.status === "completed") pendingPayouts += b.ownerPayout;
+    // Payouts are no longer tracked. Every earning is treated as already paid.
+    lifetimePayouts += b.ownerPayout;
 
     if ((b.pickupDate || "").slice(0, 7) === currentMonthKey) {
       currentMonthRevenue += b.grossRevenue;
@@ -26,13 +64,14 @@ export function computeOwnerFinanceSummary(bookings: OwnerBooking[]): OwnerFinan
     }
   }
 
-  const round = (n: number) => Math.round(n * 100) / 100;
   return {
-    currentMonthRevenue: round(currentMonthRevenue),
-    currentMonthPayout: round(currentMonthPayout),
-    lifetimeRevenue: round(lifetimeRevenue),
-    lifetimePayouts: round(lifetimePayouts),
-    pendingPayouts: round(pendingPayouts),
+    currentMonthRevenue: roundMoney(currentMonthRevenue - financingThisMonth),
+    currentMonthPayout: roundMoney(currentMonthPayout),
+    lifetimeRevenue: roundMoney(lifetimeRevenue - financingLifetime),
+    lifetimePayouts: roundMoney(lifetimePayouts),
+    pendingPayouts: 0,
+    financingThisMonth,
+    financingLifetime,
   };
 }
 
@@ -48,17 +87,16 @@ function overlapDays(aStart: string, aEnd: string, bStart: string, bEnd: string)
 
 export function computeOwnerDashboardMetrics(
   vehicles: OwnerVehicle[],
-  bookings: OwnerBooking[]
+  bookings: OwnerBooking[],
+  now: Date = new Date()
 ): OwnerDashboardMetrics {
   let totalRevenue = 0;
   let upcomingBookings = 0;
   let activeRentals = 0;
   let completedRentals = 0;
   let estimatedPayout = 0;
-  let pendingPayouts = 0;
   let lifetimeEarnings = 0;
 
-  const now = new Date();
   const months: { key: string; month: string; revenue: number; payout: number }[] = [];
   for (let i = 5; i >= 0; i--) {
     const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -82,10 +120,8 @@ export function computeOwnerDashboardMetrics(
     if (b.status === "upcoming" || b.status === "active") {
       estimatedPayout += b.ownerPayout;
     }
-    if (b.payoutStatus === "paid") {
+    if (isRevenueBooking(b.rawStatus)) {
       lifetimeEarnings += b.ownerPayout;
-    } else if (b.status === "completed") {
-      pendingPayouts += b.ownerPayout;
     }
 
     const mk = (b.pickupDate || "").slice(0, 7);
@@ -94,6 +130,12 @@ export function computeOwnerDashboardMetrics(
       months[idx].revenue += b.grossRevenue;
       months[idx].payout += b.ownerPayout;
     }
+  }
+
+  const vehicleFinancing = sumFinancingPaymentsToDate(vehicles.map(asFinancedVehicle), now);
+  totalRevenue -= vehicleFinancing;
+  for (const month of months) {
+    month.revenue -= financingForMonth(vehicles, month.key, now);
   }
 
   const windowEnd = formatYyyyMmDdLocal(now);
@@ -115,7 +157,8 @@ export function computeOwnerDashboardMetrics(
     activeRentals,
     completedRentals,
     estimatedPayout: Math.round(estimatedPayout * 100) / 100,
-    pendingPayouts: Math.round(pendingPayouts * 100) / 100,
+    pendingPayouts: 0,
+    vehicleFinancing,
     lifetimeEarnings: Math.round(lifetimeEarnings * 100) / 100,
     utilizationRate,
     vehicleCount: vehicles.length,

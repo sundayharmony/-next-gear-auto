@@ -8,9 +8,101 @@
  * processed monthly payments for financed vehicles.
  */
 
+import { getLocalYmd } from "@/lib/utils/date-helpers";
+
 /** Helper to round to 2 decimal places (cents) */
 function roundCents(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+export interface FinancingPayment {
+  /** Local calendar date the payment is counted (YYYY-MM-DD). */
+  date: string;
+  amount: number;
+}
+
+/**
+ * Monthly payments that have already come due.
+ * Each entry is one full monthly payment. Counting stops once the purchase
+ * price has been covered, matching `calculateFinancing`.
+ */
+export function listFinancingPayments(
+  vehicle: FinancedVehicle,
+  asOfDate: Date = new Date()
+): FinancingPayment[] {
+  if (
+    !vehicle.isFinanced ||
+    !vehicle.monthlyPayment ||
+    vehicle.monthlyPayment <= 0 ||
+    !vehicle.financingStartDate
+  ) {
+    return [];
+  }
+
+  const monthlyPayment = vehicle.monthlyPayment;
+  const rawDay = Number(vehicle.paymentDayOfMonth) || 1;
+  if (rawDay < 1 || rawDay > 31) {
+    throw new Error(`Invalid payment day: ${rawDay}. Must be between 1 and 31.`);
+  }
+  const paymentDay = rawDay;
+  const purchasePrice = vehicle.purchasePrice ?? 0;
+  if (purchasePrice < 0) return [];
+
+  const startDate = new Date(vehicle.financingStartDate);
+  if (isNaN(startDate.getTime())) return [];
+
+  const payments: FinancingPayment[] = [];
+  let totalPaid = 0;
+  const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
+  const today = new Date(asOfDate.getFullYear(), asOfDate.getMonth(), asOfDate.getDate());
+
+  while (current <= today) {
+    const year = current.getFullYear();
+    const month = current.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const actualPaymentDay = Math.min(paymentDay, daysInMonth);
+    const paymentDate = new Date(year, month, actualPaymentDay);
+
+    if (paymentDate >= startDate && paymentDate <= today) {
+      payments.push({ date: getLocalYmd(paymentDate), amount: monthlyPayment });
+      totalPaid = roundCents(totalPaid + monthlyPayment);
+      if (purchasePrice > 0 && totalPaid >= purchasePrice) break;
+    }
+
+    current.setMonth(current.getMonth() + 1);
+  }
+
+  return payments;
+}
+
+/** Sum of financing payments whose dates fall in an inclusive YYYY-MM-DD range. */
+export function sumFinancingPaymentsInRange(
+  vehicles: FinancedVehicle[],
+  from: string,
+  to: string,
+  asOfDate: Date = new Date()
+): number {
+  let total = 0;
+  for (const vehicle of vehicles) {
+    for (const payment of listFinancingPayments(vehicle, asOfDate)) {
+      if (payment.date >= from && payment.date <= to) total += payment.amount;
+    }
+  }
+  return roundCents(total);
+}
+
+/** Sum of every financing payment already due, across the given vehicles. */
+export function sumFinancingPaymentsToDate(
+  vehicles: FinancedVehicle[],
+  asOfDate: Date = new Date()
+): number {
+  let total = 0;
+  for (const vehicle of vehicles) {
+    for (const payment of listFinancingPayments(vehicle, asOfDate)) {
+      total += payment.amount;
+    }
+  }
+  return roundCents(total);
 }
 
 export interface FinancingInfo {
@@ -36,7 +128,7 @@ export interface FinancedVehicle {
   isFinanced?: boolean;
   monthlyPayment?: number;
   paymentDayOfMonth?: number;
-  financingStartDate?: string;
+  financingStartDate?: string | null;
   purchasePrice?: number;
 }
 
@@ -64,7 +156,6 @@ export function calculateFinancing(
 
   const monthlyPayment = vehicle.monthlyPayment;
   const rawDay = Number(vehicle.paymentDayOfMonth) || 1;
-  // Validate rawDay is between 1-31, throw error if outside range
   if (rawDay < 1 || rawDay > 31) {
     throw new Error(`Invalid payment day: ${rawDay}. Must be between 1 and 31.`);
   }
@@ -75,38 +166,12 @@ export function calculateFinancing(
   const startDate = new Date(vehicle.financingStartDate);
   if (isNaN(startDate.getTime())) return null;
 
-  let paymentsProcessed = 0;
-  let totalPaid = 0;
+  const payments = listFinancingPayments(vehicle, asOfDate);
+  const paymentsProcessed = payments.length;
+  let totalPaid = roundCents(payments.reduce((sum, payment) => sum + payment.amount, 0));
+  if (purchasePrice > 0 && totalPaid > purchasePrice) totalPaid = purchasePrice;
 
-  // Iterate month by month from financing start date
-  const current = new Date(startDate.getFullYear(), startDate.getMonth(), 1);
   const today = new Date(asOfDate.getFullYear(), asOfDate.getMonth(), asOfDate.getDate());
-
-  while (current <= today) {
-    const year = current.getFullYear();
-    const month = current.getMonth();
-
-    // Get the actual payment day for this month (handle months with fewer days)
-    const daysInMonth = new Date(year, month + 1, 0).getDate();
-    const actualPaymentDay = Math.min(paymentDay, daysInMonth);
-
-    const paymentDate = new Date(year, month, actualPaymentDay);
-
-    // Only count if the payment date has passed and is on or after the financing start
-    if (paymentDate >= startDate && paymentDate <= today) {
-      paymentsProcessed++;
-      totalPaid = roundCents(totalPaid + monthlyPayment);
-
-      // Stop if vehicle is paid off
-      if (purchasePrice > 0 && totalPaid >= purchasePrice) {
-        totalPaid = purchasePrice;
-        break;
-      }
-    }
-
-    // Move to next month
-    current.setMonth(current.getMonth() + 1);
-  }
 
   const remainingBalance = Math.max(0, purchasePrice - totalPaid);
   const isPaidOff = purchasePrice > 0 && totalPaid >= purchasePrice;

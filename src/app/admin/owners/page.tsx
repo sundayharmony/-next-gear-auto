@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
   UserPlus,
   Car,
-  Wallet,
   Loader2,
   Save,
   ChevronRight,
@@ -21,7 +20,6 @@ import {
 } from "@/components/admin/admin-shell";
 import {
   AdminCardActionBar,
-  AdminCardActionButton,
   AdminIconActionButton,
 } from "@/components/admin/admin-card-action-bar";
 import {
@@ -41,7 +39,6 @@ import { formatCurrency } from "@/lib/utils/date-helpers";
 import type { OwnerVehicle } from "@/lib/types";
 import { COMPANY_OWNED_OWNER_ID } from "@/lib/owner/ownership";
 import { EditOwnerModal } from "./components/EditOwnerModal";
-import { ManagePayoutsModal } from "./components/ManagePayoutsModal";
 import { SendPasswordEmailButton } from "./components/SendPasswordEmailButton";
 
 interface AdminOwner {
@@ -54,7 +51,6 @@ interface AdminOwner {
   vehicles: OwnerVehicle[];
   lifetimeRevenue: number;
   lifetimePayouts: number;
-  pendingPayouts: number;
 }
 interface AdminVehicle {
   id: string;
@@ -74,7 +70,6 @@ export default function AdminOwnersPage() {
   const [addOpen, setAddOpen] = useState(false);
   const [editingOwner, setEditingOwner] = useState<AdminOwner | null>(null);
   const [removingId, setRemovingId] = useState<string | null>(null);
-  const [payoutsOwner, setPayoutsOwner] = useState<AdminOwner | null>(null);
   const [supportsCompanyOwned, setSupportsCompanyOwned] = useState(true);
 
   const load = useCallback(async () => {
@@ -145,7 +140,7 @@ export default function AdminOwnersPage() {
     <>
       <AdminPageHeader
         title="Owners"
-        subtitle="Manage vehicle owners, assignments, revenue shares and payouts"
+        subtitle="Manage vehicle owners, assignments, and revenue shares"
         backHref="/admin"
         actions={
           <Button size="sm" onClick={() => setAddOpen(true)}>
@@ -193,9 +188,9 @@ export default function AdminOwnersPage() {
                             <p className="text-sm font-bold text-gray-900">{formatCurrency(o.lifetimeRevenue)}</p>
                             <p className="text-[11px] text-gray-500">Revenue</p>
                           </div>
-                          <div className="rounded-lg bg-amber-50 p-2">
-                            <p className="text-sm font-bold text-amber-700">{formatCurrency(o.pendingPayouts)}</p>
-                            <p className="text-[11px] text-gray-500">Pending</p>
+                          <div className="rounded-lg bg-emerald-50 p-2">
+                            <p className="text-sm font-bold text-emerald-700">{formatCurrency(o.lifetimePayouts)}</p>
+                            <p className="text-[11px] text-gray-500">Paid out</p>
                           </div>
                         </div>
                       </Link>
@@ -213,13 +208,6 @@ export default function AdminOwnersPage() {
                           accountActivated={o.accountActivated}
                           iconOnly
                         />
-                        <AdminCardActionButton
-                          variant="secondary"
-                          onClick={() => setPayoutsOwner(o)}
-                        >
-                          <Wallet className="h-4 w-4 shrink-0" aria-hidden />
-                          <span className="truncate">Payouts</span>
-                        </AdminCardActionButton>
                         <AdminIconActionButton
                           label={`Remove ${o.name}`}
                           variant="ghost"
@@ -268,7 +256,6 @@ export default function AdminOwnersPage() {
         onClose={() => setEditingOwner(null)}
         onSaved={load}
       />
-      <ManagePayoutsModal owner={payoutsOwner} onClose={() => setPayoutsOwner(null)} onChanged={load} />
     </>
   );
 }
