@@ -1,4 +1,6 @@
 import { loadOwnerDataset } from "@/lib/owner/owner-data";
+import { computeOwnerFinancialBreakdown } from "@/lib/owner/owner-financial-breakdown";
+import type { OwnerFinancialBreakdown } from "@/lib/owner/owner-financial-breakdown";
 import { computeOwnerFinanceSummary } from "@/lib/owner/owner-metrics";
 import type { OwnerBooking, OwnerVehicle } from "@/lib/types";
 
@@ -16,6 +18,8 @@ export interface EnrichedAdminOwner {
   pendingPayouts: number;
   financingLifetime: number;
   recentBookings: OwnerBooking[];
+  financialBreakdown?: OwnerFinancialBreakdown;
+  allBookings?: OwnerBooking[];
 }
 
 interface OwnerRow {
@@ -30,11 +34,15 @@ interface OwnerRow {
 /** Load vehicles, bookings, and financial rollups for one owner account. */
 export async function enrichOwnerRow(
   o: OwnerRow,
-  options?: { recentBookingsLimit?: number }
+  options?: { recentBookingsLimit?: number; includeFinancialBreakdown?: boolean }
 ): Promise<EnrichedAdminOwner> {
   const limit = options?.recentBookingsLimit ?? 15;
+  const includeFinancialBreakdown = options?.includeFinancialBreakdown === true;
   const { vehicles, bookings } = await loadOwnerDataset(o.id);
   const summary = computeOwnerFinanceSummary(bookings, vehicles);
+  const financialBreakdown = includeFinancialBreakdown
+    ? computeOwnerFinancialBreakdown(bookings, vehicles)
+    : undefined;
 
   return {
     id: o.id,
@@ -49,6 +57,8 @@ export async function enrichOwnerRow(
     lifetimePayouts: summary.lifetimePayouts,
     pendingPayouts: summary.pendingPayouts,
     financingLifetime: summary.financingLifetime,
-    recentBookings: bookings.slice(0, limit),
+    recentBookings: includeFinancialBreakdown ? [] : bookings.slice(0, limit),
+    financialBreakdown,
+    allBookings: includeFinancialBreakdown ? bookings : undefined,
   };
 }
