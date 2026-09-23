@@ -190,7 +190,7 @@ export default function AdminOwnersPage() {
                           </div>
                           <div className="rounded-lg bg-emerald-50 p-2">
                             <p className="text-sm font-bold text-emerald-700">{formatCurrency(o.lifetimePayouts)}</p>
-                            <p className="text-[11px] text-gray-500">Paid out</p>
+                            <p className="text-[11px] text-gray-500">Profit</p>
                           </div>
                         </div>
                       </Link>

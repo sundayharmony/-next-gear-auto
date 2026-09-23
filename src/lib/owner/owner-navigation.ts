@@ -22,7 +22,7 @@ export const OWNER_NAV_ITEMS: OwnerNavItem[] = [
   { key: "dashboard", href: "/owner", label: "Dashboard", icon: LayoutDashboard, primary: true },
   { key: "calendar", href: "/owner/calendar", label: "Calendar", icon: CalendarDays, primary: true },
   { key: "createBooking", href: "/owner/bookings/create", label: "Create booking", icon: CalendarPlus, primary: true },
-  { key: "finance", href: "/owner/finance", label: "Finance", icon: DollarSign, primary: true },
+  { key: "finance", href: "/owner/finance", label: "Revenue & Profit", icon: DollarSign, primary: true },
   { key: "availability", href: "/owner/availability", label: "Availability", icon: ShieldBan, primary: false },
   { key: "notifications", href: "/owner/notifications", label: "Notifications", icon: Bell, primary: false },
 ];
