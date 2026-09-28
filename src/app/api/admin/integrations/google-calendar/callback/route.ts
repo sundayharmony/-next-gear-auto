@@ -6,7 +6,9 @@ import {
   getCanonicalSiteOrigin,
   getOAuthCookieOptions,
 } from "@/lib/integrations/google-calendar/oauth-site";
+import { decryptRefreshToken } from "@/lib/integrations/google-calendar/crypto";
 import {
+  getGoogleCalendarConnection,
   reconcileFleetCalendar,
   saveGoogleCalendarConnection,
 } from "@/lib/integrations/google-calendar/sync";
@@ -91,7 +93,18 @@ export async function GET(req: NextRequest) {
 
   try {
     const tokens = await exchangeAuthCode(code, siteOrigin);
-    const refreshToken = tokens.refresh_token!;
+    let refreshToken = tokens.refresh_token ?? undefined;
+    if (!refreshToken) {
+      const existing = await getGoogleCalendarConnection();
+      if (existing) {
+        refreshToken = decryptRefreshToken(existing.refresh_token_enc);
+      }
+    }
+    if (!refreshToken) {
+      throw new Error(
+        "Google did not return a refresh token. Revoke this app at myaccount.google.com/permissions, then connect again."
+      );
+    }
     const authClient = oauthClientWithRefreshToken(refreshToken);
     const calendarId = (await getPrimaryCalendarId(authClient)) || "primary";
     const calendars = await listWritableCalendars(authClient);
