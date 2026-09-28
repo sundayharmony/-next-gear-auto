@@ -23,13 +23,21 @@ import {
 import { formatDate } from "@/lib/utils/date-helpers";
 import { InvoicePreviewPanel } from "./invoice-preview-panel";
 import { fmt, type InvoiceDetail, type InvoiceListRow } from "./invoice-types";
+import { RecordsHubTabs } from "@/app/admin/tickets/records-hub-tabs";
 
 interface InvoicesPageClientProps {
   bookingsHref: string;
   isAdmin?: boolean;
+  embeddedInRecordsHub?: boolean;
+  recordsHubPanelBase?: string;
 }
 
-export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPageClientProps) {
+export function InvoicesPageClient({
+  bookingsHref,
+  isAdmin = false,
+  embeddedInRecordsHub = false,
+  recordsHubPanelBase = "/admin",
+}: InvoicesPageClientProps) {
   const searchParams = useSearchParams();
   const { error, setError, success, setSuccess } = useAutoToast();
   const [invoices, setInvoices] = useState<InvoiceListRow[]>([]);
@@ -123,7 +131,7 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
   return (
     <>
       <AdminPageHeader
-        title="Invoices"
+        title={embeddedInRecordsHub ? "Tickets & billing" : "Invoices"}
         subtitle="View sent invoices, edit line items, and track payment status from live booking balances."
         actions={
           <div className="flex gap-2">
@@ -151,7 +159,11 @@ export function InvoicesPageClient({ bookingsHref, isAdmin = false }: InvoicesPa
             )}
           </div>
         }
-      />
+      >
+        {embeddedInRecordsHub ? (
+          <RecordsHubTabs panelBase={recordsHubPanelBase} className="mt-4" />
+        ) : null}
+      </AdminPageHeader>
       <AdminPageBody>
         {error && (
           <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} />

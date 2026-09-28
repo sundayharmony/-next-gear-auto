@@ -3,6 +3,8 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
 import { getVehicleDisplayName } from "@/lib/types";
+import { validateDocumentLineItems } from "@/lib/documents/document-line-items";
+import { parseTripAssociation } from "@/lib/documents/trip-association";
 
 // GET: List tickets with optional filters
 export async function GET(req: NextRequest) {
@@ -24,6 +26,8 @@ export async function GET(req: NextRequest) {
         `
         id,
         booking_id,
+        blocked_date_id,
+        line_items,
         customer_id,
         vehicle_id,
         license_plate,
@@ -77,6 +81,8 @@ export async function GET(req: NextRequest) {
       return {
         id: t.id,
         bookingId: t.booking_id,
+        blockedDateId: t.blocked_date_id ?? null,
+        lineItems: (t.line_items as unknown) ?? [],
         customerId: t.customer_id,
         vehicleId: t.vehicle_id,
         licensePlate: t.license_plate || "",
@@ -122,8 +128,8 @@ export async function POST(req: NextRequest) {
 
   try {
     const body = await req.json();
+    const trip = parseTripAssociation(body);
     const {
-      bookingId,
       customerId,
       vehicleId,
       licensePlate,
@@ -147,11 +153,11 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate booking_id exists if provided
-    if (bookingId) {
+    if (trip.bookingId) {
       const { data: booking, error: bookingErr } = await supabase
         .from("bookings")
         .select("id")
-        .eq("id", bookingId)
+        .eq("id", trip.bookingId)
         .maybeSingle();
 
       if (bookingErr || !booking) {
@@ -162,13 +168,17 @@ export async function POST(req: NextRequest) {
       }
     }
 
+    const lineParsed = validateDocumentLineItems(body.lineItems);
+    if (!lineParsed.ok) {
+      return NextResponse.json({ success: false, message: lineParsed.message }, { status: 400 });
+    }
+
     const id = "tkt_" + crypto.randomUUID();
 
-    const { data, error } = await supabase
-      .from("tickets")
-      .insert({
+    const insertRow: Record<string, unknown> = {
         id,
-        booking_id: bookingId || null,
+        booking_id: trip.bookingId,
+        blocked_date_id: trip.blockedDateId,
         customer_id: customerId || null,
         vehicle_id: vehicleId || null,
         license_plate: licensePlate || null,
@@ -182,9 +192,16 @@ export async function POST(req: NextRequest) {
         amount_due: amountDue ? parseFloat(amountDue) : 0,
         status: status || "unpaid",
         notes: notes || null,
-      })
-      .select()
-      .maybeSingle();
+        line_items: lineParsed.items,
+    };
+    let { data, error } = await supabase.from("tickets").insert(insertRow).select().maybeSingle();
+    if (error && /column/i.test(error.message)) {
+      delete insertRow.blocked_date_id;
+      delete insertRow.line_items;
+      const retry = await supabase.from("tickets").insert(insertRow).select().maybeSingle();
+      data = retry.data;
+      error = retry.error;
+    }
 
     if (error) {
       logger.error("Ticket create error:", error);
@@ -230,7 +247,18 @@ export async function PUT(req: NextRequest) {
     }
 
     const dbUpdates: Record<string, unknown> = {};
-    if (updates.bookingId !== undefined) dbUpdates.booking_id = updates.bookingId;
+    if (updates.bookingId !== undefined || updates.blockedDateId !== undefined) {
+      const trip = parseTripAssociation(updates);
+      dbUpdates.booking_id = trip.bookingId;
+      dbUpdates.blocked_date_id = trip.blockedDateId;
+    }
+    if (updates.lineItems !== undefined) {
+      const lineParsed = validateDocumentLineItems(updates.lineItems);
+      if (!lineParsed.ok) {
+        return NextResponse.json({ success: false, message: lineParsed.message }, { status: 400 });
+      }
+      dbUpdates.line_items = lineParsed.items;
+    }
     if (updates.customerId !== undefined) dbUpdates.customer_id = updates.customerId;
     if (updates.vehicleId !== undefined) dbUpdates.vehicle_id = updates.vehicleId;
     if (updates.licensePlate !== undefined) dbUpdates.license_plate = updates.licensePlate;

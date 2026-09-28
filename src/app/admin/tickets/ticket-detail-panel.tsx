@@ -21,12 +21,19 @@ import {
 import { formatDate } from "@/lib/utils/date-helpers";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { STATUS_COLORS, type TicketRecord } from "./tickets-shared";
+import { TripAssociationSelect, type TuroTripOption } from "@/components/admin/trip-association-select";
+import type { TripAssociation } from "@/lib/documents/trip-association";
+import {
+  DocumentLineItemsEditor,
+  type DocumentLineItemDraft,
+} from "@/components/admin/document-line-items-editor";
 
 type Vehicle = VehicleListItem;
 type Booking = BookingDbRow;
 
 export interface TicketFormState {
   bookingId: string;
+  blockedDateId: string;
   vehicleId: string;
   licensePlate: string;
   ticketType: string;
@@ -46,7 +53,10 @@ export interface TicketFormProps {
   setForm: React.Dispatch<React.SetStateAction<TicketFormState>>;
   bookings: Booking[];
   vehicles: Vehicle[];
-  onBookingSelect: (bookingId: string) => void;
+  turoTrips: TuroTripOption[];
+  lineDrafts: DocumentLineItemDraft[];
+  onLineDraftsChange: (drafts: DocumentLineItemDraft[]) => void;
+  onTripChange: (trip: TripAssociation) => void;
   onSubmit: () => void;
   onCancel: () => void;
   isEdit: boolean;
@@ -58,7 +68,10 @@ export function TicketForm({
   setForm,
   bookings,
   vehicles,
-  onBookingSelect,
+  turoTrips,
+  lineDrafts,
+  onLineDraftsChange,
+  onTripChange,
   onSubmit,
   onCancel,
   isEdit,
@@ -154,22 +167,17 @@ export function TicketForm({
               <option value="dismissed">Dismissed</option>
             </Select>
           </div>
-          <div>
-            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Linked Booking</label>
-            <Select
-              value={form.bookingId}
-              onChange={(e) => onBookingSelect(e.target.value)}
-            >
-              <option value="">No booking</option>
-              {bookings
-                .filter((b) => ["confirmed", "active", "completed"].includes(b.status))
-                .sort((a, b) => new Date(b.pickup_date + "T00:00:00").getTime() - new Date(a.pickup_date + "T00:00:00").getTime())
-                .map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.customer_name} — {b.vehicleName || "Vehicle"} ({b.pickup_date})
-                  </option>
-                ))}
-            </Select>
+          <div className="sm:col-span-2">
+            <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Associated trip</label>
+            <TripAssociationSelect
+              value={{
+                bookingId: form.bookingId || null,
+                blockedDateId: form.blockedDateId || null,
+              }}
+              onChange={onTripChange}
+              bookings={bookings}
+              turoTrips={turoTrips}
+            />
           </div>
           <div>
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Vehicle</label>
@@ -186,6 +194,7 @@ export function TicketForm({
             </Select>
           </div>
         </div>
+        <DocumentLineItemsEditor drafts={lineDrafts} onChange={onLineDraftsChange} />
         <div>
           <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 block mb-1">Notes</label>
           <Textarea
@@ -411,7 +420,10 @@ interface TicketEditPanelProps {
   setForm: React.Dispatch<React.SetStateAction<TicketFormState>>;
   bookings: Booking[];
   vehicles: Vehicle[];
-  onBookingSelect: (bookingId: string) => void;
+  turoTrips: TuroTripOption[];
+  lineDrafts: DocumentLineItemDraft[];
+  onLineDraftsChange: (drafts: DocumentLineItemDraft[]) => void;
+  onTripChange: (trip: TripAssociation) => void;
   onSubmit: () => void;
   onCancel: () => void;
   isSubmitting: boolean;
@@ -422,7 +434,10 @@ export function TicketEditPanel({
   setForm,
   bookings,
   vehicles,
-  onBookingSelect,
+  turoTrips,
+  lineDrafts,
+  onLineDraftsChange,
+  onTripChange,
   onSubmit,
   onCancel,
   isSubmitting,
@@ -436,7 +451,10 @@ export function TicketEditPanel({
           setForm={setForm}
           bookings={bookings}
           vehicles={vehicles}
-          onBookingSelect={onBookingSelect}
+          turoTrips={turoTrips}
+          lineDrafts={lineDrafts}
+          onLineDraftsChange={onLineDraftsChange}
+          onTripChange={onTripChange}
           onSubmit={onSubmit}
           onCancel={onCancel}
           isEdit
