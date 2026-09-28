@@ -4,7 +4,6 @@ import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { validateDocumentLineItems } from "@/lib/documents/document-line-items";
 import { parseTripAssociation } from "@/lib/documents/trip-association";
 import { logger } from "@/lib/utils/logger";
-import { getVehicleDisplayName } from "@/lib/types";
 
 export async function GET(req: NextRequest) {
   const auth = await verifyAdminOrManager(req);
@@ -20,21 +19,7 @@ export async function GET(req: NextRequest) {
   let query = supabase
     .from("incident_reports")
     .select(
-      `
-      id,
-      booking_id,
-      blocked_date_id,
-      vehicle_id,
-      title,
-      description,
-      occurred_at,
-      status,
-      line_items,
-      notes,
-      created_at,
-      vehicles(id, year, make, model),
-      bookings(id, customer_name, pickup_date, return_date)
-    `
+      "id, booking_id, blocked_date_id, vehicle_id, title, description, occurred_at, status, line_items, notes, created_at"
     )
     .order("occurred_at", { ascending: false })
     .limit(1000);
@@ -57,31 +42,22 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }
 
-  const records = (data || []).map((row) => {
-    const v = row.vehicles as { year: number; make: string; model: string } | null;
-    const b = row.bookings as {
-      id: string;
-      customer_name: string;
-      pickup_date: string;
-      return_date: string;
-    } | null;
-    return {
-      id: row.id,
-      bookingId: row.booking_id,
-      blockedDateId: row.blocked_date_id,
-      vehicleId: row.vehicle_id,
-      title: row.title,
-      description: row.description || "",
-      occurredAt: row.occurred_at,
-      status: row.status,
-      lineItems: row.line_items ?? [],
-      notes: row.notes || "",
-      createdAt: row.created_at,
-      vehicleName: v ? getVehicleDisplayName(v) : "",
-      customerName: b?.customer_name || "",
-      bookingDates: b ? `${b.pickup_date} → ${b.return_date}` : "",
-    };
-  });
+  const records = (data || []).map((row) => ({
+    id: row.id,
+    bookingId: row.booking_id,
+    blockedDateId: row.blocked_date_id,
+    vehicleId: row.vehicle_id,
+    title: row.title,
+    description: row.description || "",
+    occurredAt: row.occurred_at,
+    status: row.status,
+    lineItems: row.line_items ?? [],
+    notes: row.notes || "",
+    createdAt: row.created_at,
+    vehicleName: "",
+    customerName: "",
+    bookingDates: "",
+  }));
 
   return NextResponse.json({ success: true, data: records });
 }

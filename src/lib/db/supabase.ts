@@ -53,6 +53,7 @@ type Database = {
       vehicle_sales: GenericTable;
       google_calendar_connections: GenericTable;
       google_calendar_event_links: GenericTable;
+      incident_reports: GenericTable;
     };
     Views: Record<string, never>;
     Functions: {
