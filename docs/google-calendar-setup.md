@@ -8,9 +8,9 @@ One-way sync from Next Gear Auto to a single Google Calendar for website booking
 2. Enable **Google Calendar API**.
 3. Configure the **OAuth consent screen**:
    - User type: **External** (fine for a single business account).
-   - Publishing status: leave as **Testing** — you do not need Google verification for one fleet calendar.
+   - **Publishing status: In production** — required for refresh tokens that last months or years. While the app stays in **Testing**, Google expires refresh tokens after about **7 days**, which forces reconnects.
    - Under **Data access** / **Scopes**, add `.../auth/calendar.events` and `.../auth/calendar.readonly` (or the app will request them on connect).
-   - Under **Test users**, add every Google account that will click **Connect Google Calendar** in admin (exact email match).
+   - Under **Test users**, add the fleet Google account if Google still requires it after publishing.
 4. Create **OAuth 2.0 Client ID** (Web application).
 5. Add **both** production redirect URIs (www and non-www — OAuth uses whichever host you open admin on):
    - `https://www.rentnextgearauto.com/api/admin/integrations/google-calendar/callback`
@@ -22,6 +22,8 @@ One-way sync from Next Gear Auto to a single Google Calendar for website booking
 GOOGLE_CALENDAR_CLIENT_ID=
 GOOGLE_CALENDAR_CLIENT_SECRET=
 GOOGLE_CALENDAR_ENCRYPTION_KEY=
+# Optional: fleet Google account email — pre-selects account on reconnect
+GOOGLE_CALENDAR_LOGIN_HINT=
 ```
 
 Generate a 32-byte encryption key (hex):
@@ -32,7 +34,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 
 ## Database
 
-Run [`supabase-google-calendar.sql`](../supabase-google-calendar.sql) in the Supabase SQL editor.
+Run [`supabase-google-calendar.sql`](../supabase-google-calendar.sql) in the Supabase SQL editor. On existing installs, also run [`supabase-google-calendar-long-lived.sql`](../supabase-google-calendar-long-lived.sql).
 
 ## Connect in admin
 
@@ -53,7 +55,7 @@ Run [`supabase-google-calendar.sql`](../supabase-google-calendar.sql) in the Sup
 
 Cancelled bookings, cancelled Turo trips, and deleted blocks remove the matching Google event.
 
-Past-ended Turo trips are not pushed (finance-safe). Real-time hooks sync on booking/block changes. Vercel cron reconciles once daily (`0 10 * * *` on Hobby); on Pro you can use `*/15 * * * *` in `vercel.json` for 15-minute reconcile.
+Past-ended Turo trips are not pushed (finance-safe). Real-time hooks sync on booking/block changes. Vercel cron reconciles once daily (`0 10 * * *`) and refreshes the OAuth token twice daily (`0 4,16 * * *`); on Pro you can use `*/15 * * * *` in `vercel.json` for 15-minute reconcile.
 
 ## Unverified app warning
 
@@ -92,5 +94,6 @@ The admin **Google Calendar** page shows the redirect URI for your current host 
 - **redirect_uri_mismatch** — add the exact callback URL for the host you use (see table above).
 - **Request had insufficient authentication scopes** — the app needs both `calendar.events` and `calendar.readonly`. In Cloud Console → **OAuth consent screen** → **Data access**, add those scopes if missing. Then revoke **NGA Fleet Calendar** (or your app name) under [Google Account → Third-party access](https://myaccount.google.com/permissions) and reconnect so Google issues a new refresh token with the full scope set.
 - **No refresh token** — revoke app access in Google Account → Security → Third-party access, then reconnect.
+- **Reconnect every ~7 days** — OAuth consent screen is still in **Testing**. Set **Publishing status** to **In production**, revoke the app once, then reconnect.
 - **Events missing location** — run Turo location backfill; bookings need `pickup_location_name` or a linked `locations` row.
 

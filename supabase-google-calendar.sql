@@ -10,6 +10,8 @@ CREATE TABLE IF NOT EXISTS google_calendar_connections (
   connected_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   last_sync_at TIMESTAMPTZ,
   last_error TEXT,
+  last_token_refresh_at TIMESTAMPTZ,
+  needs_reauth BOOLEAN NOT NULL DEFAULT false,
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 

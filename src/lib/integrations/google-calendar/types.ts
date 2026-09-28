@@ -21,6 +21,8 @@ export type GoogleCalendarConnectionRow = {
   connected_at: string;
   last_sync_at: string | null;
   last_error: string | null;
+  last_token_refresh_at?: string | null;
+  needs_reauth?: boolean | null;
   updated_at: string;
 };
 
@@ -53,6 +55,7 @@ export type GoogleCalendarPublicStatus = {
   calendarSummary: string | null;
   connectedAt: string | null;
   lastSyncAt: string | null;
+  lastTokenRefreshAt: string | null;
   lastError: string | null;
 };
 

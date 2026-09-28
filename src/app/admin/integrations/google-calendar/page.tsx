@@ -19,6 +19,7 @@ type Status = {
   calendarSummary: string | null;
   connectedAt: string | null;
   lastSyncAt: string | null;
+  lastTokenRefreshAt?: string | null;
   lastError: string | null;
   oauthRedirectUri?: string;
   flash?: { type: "success" | "error"; message: string };
@@ -232,8 +233,11 @@ export default function GoogleCalendarIntegrationPage() {
                         >
                           Google Cloud Console
                         </a>
-                        , open <strong>OAuth consent screen</strong> and add your Google account
-                        under <strong>Test users</strong> (required while the app is in Testing).
+                        , open <strong>OAuth consent screen</strong> and set{" "}
+                        <strong>Publishing status</strong> to <strong>In production</strong> (required
+                        for connections lasting more than about a week — Testing mode expires refresh
+                        tokens in ~7 days). Add your fleet Google account under <strong>Test users</strong>{" "}
+                        if Google still requires it.
                       </li>
                       <li>
                         Click <strong>Connect Google Calendar</strong> below. If Google shows
@@ -279,9 +283,17 @@ export default function GoogleCalendarIntegrationPage() {
                   <div className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-md p-4 space-y-2">
                     <p className="font-medium">Google authorization expired</p>
                     <p>
-                      Sync cannot add or update trips until you reconnect. Click{" "}
-                      <strong>Disconnect</strong>, then <strong>Connect Google Calendar</strong> again.
-                      Publishing your Google OAuth app to Production stops tokens from expiring every 7 days.
+                      Sync cannot add or update trips until you reconnect. Set OAuth consent to{" "}
+                      <strong>In production</strong> in Google Cloud, revoke this app at{" "}
+                      <a
+                        className="underline font-medium"
+                        href="https://myaccount.google.com/permissions"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        Google Account permissions
+                      </a>
+                      , then click <strong>Reconnect Google Calendar</strong> below.
                     </p>
                   </div>
                 )}
@@ -293,6 +305,9 @@ export default function GoogleCalendarIntegrationPage() {
                     )}
                     {status.lastSyncAt && (
                       <p>Last sync: {new Date(status.lastSyncAt).toLocaleString()}</p>
+                    )}
+                    {status.lastTokenRefreshAt && (
+                      <p>Token checked: {new Date(status.lastTokenRefreshAt).toLocaleString()}</p>
                     )}
                     {status.lastError && (
                       <p className="text-red-600">Last error: {status.lastError}</p>
@@ -329,7 +344,13 @@ export default function GoogleCalendarIntegrationPage() {
                     </Button>
                   ) : (
                     <>
-                      <Button onClick={handleSync} disabled={syncing}>
+                      {status.needsReconnect ? (
+                        <Button onClick={handleConnect}>
+                          <Plug className="h-4 w-4 mr-2" />
+                          Reconnect Google Calendar
+                        </Button>
+                      ) : null}
+                      <Button onClick={handleSync} disabled={syncing || status.needsReconnect}>
                         {syncing ? (
                           <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                         ) : (

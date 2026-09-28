@@ -23,21 +23,20 @@ export function createOAuthClient(siteOrigin?: string): GoogleOAuth2Client {
 
 export function buildGoogleAuthUrl(state: string, siteOrigin?: string): string {
   const client = createOAuthClient(siteOrigin);
+  const loginHint = process.env.GOOGLE_CALENDAR_LOGIN_HINT?.trim();
   return client.generateAuthUrl({
     access_type: "offline",
     prompt: "consent",
     scope: GCAL_SCOPES,
     state,
     include_granted_scopes: true,
+    ...(loginHint ? { login_hint: loginHint } : {}),
   });
 }
 
 export async function exchangeAuthCode(code: string, siteOrigin?: string) {
   const client = createOAuthClient(siteOrigin);
   const { tokens } = await client.getToken(code);
-  if (!tokens.refresh_token) {
-    throw new Error("Google did not return a refresh token; revoke app access and reconnect");
-  }
   return tokens;
 }
 

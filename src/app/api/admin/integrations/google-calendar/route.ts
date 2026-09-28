@@ -7,6 +7,7 @@ import {
 import {
   getGoogleCalendarStatus,
   isGoogleCalendarConfigured,
+  maintainGoogleCalendarTokenHealth,
   reconcileFleetCalendar,
   updateGoogleCalendarSelection,
 } from "@/lib/integrations/google-calendar/sync";
@@ -15,6 +16,9 @@ export async function GET(req: NextRequest) {
   const auth = await verifyAdmin(req);
   if (!auth.authorized) return auth.response;
 
+  if (isGoogleCalendarConfigured()) {
+    await maintainGoogleCalendarTokenHealth({ force: false });
+  }
   const status = await getGoogleCalendarStatus();
   const flashRaw = req.cookies.get(GCAL_OAUTH_FLASH_COOKIE)?.value;
   let flash: { type: "success" | "error"; message: string } | undefined;

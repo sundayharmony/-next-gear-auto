@@ -14,7 +14,11 @@ import {
   type VehicleLookup,
   toGoogleEventBody,
 } from "./event-builder";
-import { GCAL_RECONNECT_MESSAGE, isGoogleCalendarAuthError } from "./oauth-errors";
+import {
+  GCAL_RECONNECT_MESSAGE,
+  isGoogleCalendarAuthError,
+  refreshGoogleCalendarAccessToken,
+} from "./oauth-errors";
 import { revokeRefreshToken } from "./oauth";
 import { type ReconcileResult } from "./reconcile-result";
 import {
@@ -27,6 +31,9 @@ import {
 } from "./types";
 
 const ACTIVE_BOOKING_STATUSES = ["pending_approval", "pending", "confirmed", "active", "completed"];
+
+/** Avoid hammering Google on every booking hook; cron also refreshes daily. */
+const TOKEN_REFRESH_MIN_INTERVAL_MS = 3 * 60 * 60 * 1000;
 
 export type SyncItemResult = { ok: true } | { ok: false; error: string };
 
@@ -49,6 +56,9 @@ async function createSyncContext(): Promise<SyncContext | null> {
   if (!isGoogleCalendarConfigured()) return null;
   const connection = await getGoogleCalendarConnection();
   if (!connection) return null;
+  if (connection.needs_reauth) return null;
+  const tokenOk = await maintainGoogleCalendarTokenHealth({ force: false });
+  if (!tokenOk.ok && tokenOk.needsReauth) return null;
   const refreshToken = decryptRefreshToken(connection.refresh_token_enc);
   return {
     calendar: calendarClientFromRefreshToken(refreshToken),
@@ -84,6 +94,83 @@ export async function getGoogleCalendarConnection(): Promise<GoogleCalendarConne
   return (data as GoogleCalendarConnectionRow | null) ?? null;
 }
 
+function connectionNeedsReconnect(connection: GoogleCalendarConnectionRow): boolean {
+  return Boolean(
+    connection.needs_reauth ||
+      (connection.last_error && isGoogleCalendarAuthError(connection.last_error))
+  );
+}
+
+export type TokenHealthResult =
+  | { ok: true; skipped?: boolean }
+  | { ok: false; needsReauth: boolean; error: string };
+
+/**
+ * Proactively refresh the stored OAuth access token so Google keeps the refresh token active.
+ * Call from cron, admin status, and before sync batches.
+ */
+export async function maintainGoogleCalendarTokenHealth(opts?: {
+  force?: boolean;
+}): Promise<TokenHealthResult> {
+  const connection = await getGoogleCalendarConnection();
+  if (!connection) return { ok: true, skipped: true };
+
+  const lastRefreshMs = connection.last_token_refresh_at
+    ? new Date(connection.last_token_refresh_at).getTime()
+    : 0;
+  if (!opts?.force && lastRefreshMs && Date.now() - lastRefreshMs < TOKEN_REFRESH_MIN_INTERVAL_MS) {
+    if (connection.needs_reauth) {
+      return { ok: false, needsReauth: true, error: GCAL_RECONNECT_MESSAGE };
+    }
+    return { ok: true, skipped: true };
+  }
+
+  const refreshToken = decryptRefreshToken(connection.refresh_token_enc);
+  const result = await refreshGoogleCalendarAccessToken(refreshToken);
+  const supabase = getServiceSupabase();
+  const now = new Date().toISOString();
+
+  if (result.ok) {
+    const { error } = await supabase
+      .from("google_calendar_connections")
+      .update({
+        last_token_refresh_at: now,
+        needs_reauth: false,
+        last_error:
+          connection.last_error && isGoogleCalendarAuthError(connection.last_error)
+            ? null
+            : connection.last_error,
+        updated_at: now,
+      })
+      .eq("id", connection.id);
+    if (error && !isMissingColumnError(error)) {
+      logger.warn("Google Calendar token refresh meta update failed", { message: error.message });
+    }
+    return { ok: true };
+  }
+
+  const updates: Record<string, string | boolean | null> = {
+    updated_at: now,
+    last_error: result.needsReauth ? GCAL_RECONNECT_MESSAGE : result.error,
+  };
+  if (result.needsReauth) updates.needs_reauth = true;
+
+  const { error } = await supabase
+    .from("google_calendar_connections")
+    .update(updates)
+    .eq("id", connection.id);
+  if (error && !isMissingColumnError(error)) {
+    logger.warn("Google Calendar token failure meta update failed", { message: error.message });
+  }
+
+  return { ok: false, needsReauth: result.needsReauth, error: result.error };
+}
+
+function isMissingColumnError(error: { message?: string }): boolean {
+  const msg = error.message?.toLowerCase() || "";
+  return msg.includes("column") && (msg.includes("needs_reauth") || msg.includes("last_token_refresh"));
+}
+
 export async function getGoogleCalendarStatus(): Promise<GoogleCalendarPublicStatus> {
   const connection = await getGoogleCalendarConnection();
   if (!connection) {
@@ -94,12 +181,11 @@ export async function getGoogleCalendarStatus(): Promise<GoogleCalendarPublicSta
       calendarSummary: null,
       connectedAt: null,
       lastSyncAt: null,
+      lastTokenRefreshAt: null,
       lastError: null,
     };
   }
-  const needsReconnect = Boolean(
-    connection.last_error && isGoogleCalendarAuthError(connection.last_error)
-  );
+  const needsReconnect = connectionNeedsReconnect(connection);
   return {
     connected: true,
     needsReconnect,
@@ -107,6 +193,7 @@ export async function getGoogleCalendarStatus(): Promise<GoogleCalendarPublicSta
     calendarSummary: connection.calendar_summary,
     connectedAt: connection.connected_at,
     lastSyncAt: connection.last_sync_at,
+    lastTokenRefreshAt: connection.last_token_refresh_at ?? null,
     lastError: needsReconnect ? GCAL_RECONNECT_MESSAGE : connection.last_error,
   };
 }
@@ -120,14 +207,17 @@ export async function saveGoogleCalendarConnection(opts: {
   const supabase = getServiceSupabase();
   const refresh_token_enc = encryptRefreshToken(opts.refreshToken);
   const existing = await getGoogleCalendarConnection();
+  const now = new Date().toISOString();
   const payload = {
     calendar_id: opts.calendarId,
     calendar_summary: opts.calendarSummary,
     refresh_token_enc,
     connected_by_admin_id: opts.adminId,
-    connected_at: new Date().toISOString(),
+    connected_at: now,
     last_error: null,
-    updated_at: new Date().toISOString(),
+    needs_reauth: false,
+    last_token_refresh_at: now,
+    updated_at: now,
   };
 
   if (existing) {
@@ -484,6 +574,13 @@ export async function reconcileFleetCalendar(opts?: {
 }): Promise<ReconcileResult> {
   const result: ReconcileResult = { upserted: 0, deleted: 0, skipped: 0, errors: [] };
   if (!isGoogleCalendarConfigured()) return result;
+  const tokenHealth = await maintainGoogleCalendarTokenHealth({ force: true });
+  if (!tokenHealth.ok) {
+    result.errors.push(
+      tokenHealth.needsReauth ? GCAL_RECONNECT_MESSAGE : tokenHealth.error
+    );
+    return result;
+  }
   const ctx = await createSyncContext();
   if (!ctx) return result;
 
