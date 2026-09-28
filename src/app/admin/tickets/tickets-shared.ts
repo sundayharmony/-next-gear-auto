@@ -1,7 +1,11 @@
+import type { DocumentLineItem } from "@/lib/documents/document-line-items";
+
 export interface TicketRecord {
   id: string;
   bookingId: string | null;
+  blockedDateId: string | null;
   customerId: string | null;
+  lineItems: DocumentLineItem[];
   vehicleId: string | null;
   licensePlate: string;
   ticketType: "traffic" | "parking";

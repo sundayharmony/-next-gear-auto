@@ -1,4 +1,9 @@
 import type { InvoiceLineItem } from "@/lib/invoices/invoice-data";
+import {
+  invoiceLabelFromDocumentLine,
+  lineItemAmount,
+  type DocumentLineItem,
+} from "@/lib/documents/document-line-items";
 
 export const MAX_ADDITIONAL_INVOICE_LINES = 15;
 export const MAX_INVOICE_LINE_LABEL_LENGTH = 120;
@@ -6,8 +11,39 @@ export const MAX_INVOICE_LINE_LABEL_LENGTH = 120;
 export type AdditionalInvoiceLineItemInput = {
   label: string;
   amount: number;
+  title?: string;
+  description?: string;
+  unitPrice?: number;
+  quantity?: number;
   isCredit?: boolean;
 };
+
+function structuredRowToInput(row: Record<string, unknown>): AdditionalInvoiceLineItemInput | null {
+  const title = typeof row.title === "string" ? row.title.trim() : "";
+  if (!title) return null;
+  const unitPrice = Number(row.unitPrice);
+  const quantity = Number(row.quantity ?? 1);
+  if (!Number.isFinite(unitPrice) || unitPrice < 0 || !Number.isFinite(quantity) || quantity <= 0) {
+    return null;
+  }
+  const item: DocumentLineItem = {
+    title,
+    description:
+      typeof row.description === "string" ? row.description.trim() || undefined : undefined,
+    unitPrice,
+    quantity,
+    isCredit: Boolean(row.isCredit) || undefined,
+  };
+  return {
+    title: item.title,
+    description: item.description,
+    unitPrice: item.unitPrice,
+    quantity: item.quantity,
+    label: invoiceLabelFromDocumentLine(item).slice(0, MAX_INVOICE_LINE_LABEL_LENGTH),
+    amount: lineItemAmount(item),
+    isCredit: item.isCredit,
+  };
+}
 
 export function sumInvoiceLineItems(items: InvoiceLineItem[]): number {
   const total = items.reduce((sum, item) => {
@@ -38,11 +74,17 @@ export function validateAdditionalInvoiceLineItems(
     if (!row || typeof row !== "object") {
       return { ok: false, message: `Line item ${i + 1} is invalid` };
     }
+    const structured = structuredRowToInput(row as Record<string, unknown>);
+    if (structured) {
+      items.push(structured);
+      continue;
+    }
+
     const label = typeof (row as { label?: unknown }).label === "string"
       ? (row as { label: string }).label.trim()
       : "";
     if (!label) {
-      return { ok: false, message: `Line item ${i + 1} needs a description` };
+      return { ok: false, message: `Line item ${i + 1} needs a title or description` };
     }
     if (label.length > MAX_INVOICE_LINE_LABEL_LENGTH) {
       return {

@@ -1,12 +1,6 @@
-"use client";
+import { redirect } from "next/navigation";
 
-import { Suspense } from "react";
-import { InvoicesPageClient } from "./InvoicesPageClient";
-
+/** Invoices live under the Tickets & billing hub. */
 export default function AdminInvoicesPage() {
-  return (
-    <Suspense fallback={<p className="p-8 text-center text-sm text-gray-500">Loading invoices…</p>}>
-      <InvoicesPageClient bookingsHref="/admin/bookings" isAdmin />
-    </Suspense>
-  );
+  redirect("/admin/tickets?tab=invoices");
 }
