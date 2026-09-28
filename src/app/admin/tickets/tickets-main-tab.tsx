@@ -66,7 +66,8 @@ export function TicketsMainTab({
 }: {
   panelConfig?: StaffPanelConfig;
 }) {
-const [tickets, setTickets] = useState<TicketRecord[]>([]);
+  const panelBase = panelConfig.panelBase;
+  const [tickets, setTickets] = useState<TicketRecord[]>([]);
 const [vehicles, setVehicles] = useState<Vehicle[]>([]);
 const [bookings, setBookings] = useState<Booking[]>([]);
 const [turoTrips, setTuroTrips] = useState<TuroTripOption[]>([]);
@@ -578,4 +579,7 @@ return (
         />
         </>
       )}
+      </AdminPageBody>
+    </>
+  );
 }
