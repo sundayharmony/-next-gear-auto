@@ -24,6 +24,7 @@ import {
 import { sumDocumentLineItems } from "@/lib/documents/document-line-items";
 import { RecordsHubTabs } from "./records-hub-tabs";
 import { RecordsHubSubnav } from "./records-hub-subnav";
+import { DocumentPdfActions } from "@/components/admin/document-pdf-actions";
 import type { IncidentRecord } from "./incident-reports-panel";
 
 const STATUS_COLORS: Record<string, string> = {
@@ -189,7 +190,12 @@ export function IncidentDetailView({
       </AdminPageHeader>
       <AdminPageBody>
         <RecordsHubSubnav panelBase={panelBase} />
-        <div className="flex flex-wrap gap-2 mb-4">
+        <div className="flex flex-wrap gap-2 mb-4 items-center">
+          <DocumentPdfActions
+            previewUrl={`/api/admin/incident-reports/pdf?id=${encodeURIComponent(incident.id)}`}
+            downloadUrl={`/api/admin/incident-reports/pdf?id=${encodeURIComponent(incident.id)}`}
+            downloadFilename={`incident-${incident.id}`}
+          />
           <Button variant="outline" size="sm" onClick={onBack}>
             <ArrowLeft className="h-4 w-4 mr-1" />
             Back to list
