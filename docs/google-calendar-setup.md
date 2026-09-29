@@ -55,7 +55,7 @@ Run [`supabase-google-calendar.sql`](../supabase-google-calendar.sql) in the Sup
 
 Cancelled bookings, cancelled Turo trips, and deleted blocks remove the matching Google event.
 
-Past-ended Turo trips are not pushed (finance-safe). Real-time hooks sync on booking/block changes. Vercel cron reconciles once daily (`0 10 * * *`) and refreshes the OAuth token twice daily (`0 4,16 * * *`); on Pro you can use `*/15 * * * *` in `vercel.json` for 15-minute reconcile.
+Past-ended Turo trips are not pushed (finance-safe). Real-time hooks sync on booking/block changes. Vercel cron reconciles once daily (`0 10 * * *`), which also refreshes the Google OAuth token (Hobby plans only allow once-per-day cron schedules). On Pro you can use `*/15 * * * *` in `vercel.json` for 15-minute reconcile.
 
 ## Unverified app warning
 
