@@ -125,8 +125,8 @@ export function InvoicePreviewPanel({
   const additionalItems = useMemo(() => parseDraftLines(drafts), [drafts]);
 
   return (
-    <div className="w-full lg:w-[420px] shrink-0">
-      <Card className="sticky top-4">
+    <div className="fixed inset-0 z-40 overflow-y-auto bg-gray-50 p-4 pb-24 lg:static lg:inset-auto lg:z-auto lg:w-[420px] lg:shrink-0 lg:bg-transparent lg:p-0 lg:pb-0 lg:overflow-visible">
+      <Card className="lg:sticky lg:top-4 shadow-lg lg:shadow-sm">
         <CardContent className="p-4 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="font-semibold text-gray-900">Invoice detail</h2>

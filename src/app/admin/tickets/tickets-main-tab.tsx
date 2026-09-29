@@ -32,6 +32,7 @@ import {
   type TicketFormState,
 } from "./ticket-detail-panel";
 import { RecordsHubTabs } from "./records-hub-tabs";
+import { RecordsHubSubnav } from "./records-hub-subnav";
 import type { TuroTripOption } from "@/components/admin/trip-association-select";
 import type { TripAssociation } from "@/lib/documents/trip-association";
 import {
@@ -414,6 +415,7 @@ return (
     </AdminPageHeader>
 
     <AdminPageBody>
+      <RecordsHubSubnav panelBase={panelBase} />
       {success && (
         <div className="mb-6 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
           <Check className="h-4 w-4 shrink-0" />
