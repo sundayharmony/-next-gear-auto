@@ -94,3 +94,105 @@ export const RENTAL_AGREEMENT_SECTION_4A_AUTHORIZED: AgreementTermsSection = {
     "Declined, reversed, or disputed charges do not relieve Renter of the obligation to pay the full amount owed.",
   ],
 };
+
+/** Sections 6–15 rendered on agreement pages 2–3 (single source for inline UI + supplements). */
+export const RENTAL_AGREEMENT_INLINE_SECTIONS: (AgreementTermsSection & {
+  page: 2 | 3;
+  bullets?: string[];
+  emphasis?: string;
+})[] = [
+  {
+    page: 2,
+    title: RENTAL_AGREEMENT_SECTION_5_UNPAID.title,
+    paragraphs: RENTAL_AGREEMENT_SECTION_5_UNPAID.paragraphs,
+  },
+  {
+    page: 2,
+    title: "6. INSURANCE REQUIREMENTS",
+    paragraphs: [
+      "Renter MUST provide proof of active auto insurance meeting New Jersey minimum requirements before or at pickup. False, expired, or incomplete insurance proof voids coverage under this Agreement.",
+      "If proof of insurance is not provided, temporary Non-Owned Auto Coverage will be added at $9/day.",
+    ],
+    emphasis: "Optional Supplemental Liability Protection (SLP): $11.25/day (up to $1M)",
+  },
+  {
+    page: 2,
+    title: "7. LIABILITY & DAMAGE RESPONSIBILITY",
+    paragraphs: [
+      "Renter is fully and completely responsible for ALL vehicle damage regardless of cause, fault, or insurance coverage. This includes but is not limited to: collision damage, theft, vandalism, weather damage, tire/rim/undercarriage damage, windshield damage, interior damage, lost or damaged keys ($350 replacement cost), towing and impound fees, storage charges, diminished vehicle value (up to $5,000), and loss-of-use charges (daily rental rate × days the vehicle is unavailable). Renter remains liable even if a third party or unauthorized driver caused the damage.",
+    ],
+  },
+  {
+    page: 2,
+    title: "8. INDEMNIFICATION & HOLD HARMLESS",
+    paragraphs: [
+      "Renter agrees to indemnify, defend, and hold harmless Next Gear Auto LLC, its owners, employees, and agents from and against any and all claims, demands, losses, liabilities, damages, costs, and expenses (including reasonable attorney fees) arising out of or related to Renter's use, operation, or possession of the vehicle during the rental period. This includes, without limitation, claims by third parties for bodily injury, property damage, or death resulting from any accident, incident, or occurrence involving the rented vehicle, regardless of fault.",
+    ],
+  },
+  {
+    page: 2,
+    title: "9. PROHIBITED USES",
+    paragraphs: [
+      "The following are strictly prohibited ($1,500 penalty + full liability + immediate termination):",
+    ],
+    bullets: [
+      "Operation by unauthorized drivers or while impaired",
+      "Commercial use (Uber, Lyft, DoorDash, delivery, etc.)",
+      "Off-road driving, racing, drifting, or reckless/aggressive driving",
+      "Exceeding passenger or cargo capacity",
+      "Leaving vehicle running and unattended",
+      "Crossing U.S. borders (Canada/Mexico prohibited)",
+      "Subleasing, transferring possession, or using the vehicle for illegal activity",
+    ],
+  },
+  {
+    page: 2,
+    title: "10. GPS / VEHICLE TRACKING DISCLOSURE",
+    paragraphs: [
+      "Renter acknowledges that the vehicle may be equipped with GPS or telematics that record location, speed, mileage, and operational data for recovery, mileage verification, safety, and fleet management. Tampering with, disabling, or removing such equipment is prohibited and may result in penalties and full recovery costs.",
+    ],
+    emphasis: "I acknowledge and consent to GPS/vehicle tracking during the rental period.",
+  },
+  {
+    page: 3,
+    title: "11. PETS & CLEANLINESS",
+    paragraphs: [
+      "Pets are allowed ONLY if the vehicle is returned in completely clean condition with no pet hair, odors, or damage. Pet-related cleaning charges: $150-$350 depending on condition.",
+    ],
+  },
+  {
+    page: 3,
+    title: "12. VEHICLE RETURN CONDITIONS",
+    paragraphs: [
+      "Vehicle must be returned: (1) Clean inside and out (2) Full fuel tank (3) Without any new damage (4) With all original accessories and documentation (5) At or before scheduled return time",
+    ],
+  },
+  {
+    page: 3,
+    title: "13. ACCIDENT & THEFT PROCEDURES",
+    paragraphs: [
+      "In the event of any accident or theft, Renter MUST immediately: (1) Call 911 (2) Contact Next Gear Auto at (551) 429-3472 (3) File a police report the same day. Failure to follow these steps immediately may void all insurance coverage and result in renter liability for full replacement value.",
+    ],
+  },
+  {
+    page: 3,
+    title: "14. FRAUD, CHARGEBACKS & MISREPRESENTATION",
+    paragraphs: [
+      "Providing false identification, fraudulent insurance, invalid payment methods, or initiating a chargeback or payment reversal without a bona fide billing error will result in immediate termination, full liability for all amounts owed (including vehicle value where applicable), and potential civil or criminal prosecution. Disputed charges remain due until resolved in Lessor's favor.",
+    ],
+  },
+  {
+    page: 3,
+    title: "15. GOVERNING LAW & DISPUTE RESOLUTION",
+    paragraphs: [
+      "This Agreement is governed by the laws of the State of New Jersey. Venue for disputes, including collection of unpaid balances, is Hudson County Superior Court or small claims court in Hudson County, unless otherwise required by law. Both parties waive jury trial and class action rights to the extent permitted by law. The prevailing party in any action to enforce this Agreement is entitled to reasonable attorneys' fees and costs.",
+    ],
+  },
+];
+
+export function getInlineSectionsForPage(page: 2 | 3) {
+  return RENTAL_AGREEMENT_INLINE_SECTIONS.filter((s) => s.page === page);
+}
+
+export const AGREEMENT_ESIGN_DISCLOSURE =
+  "By signing electronically, you agree that your electronic signature is the legal equivalent of your manual signature on this Agreement, and that you consent to conduct this transaction electronically.";

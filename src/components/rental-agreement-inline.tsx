@@ -4,10 +4,18 @@
 
 import React from "react";
 import {
+  AGREEMENT_ESIGN_DISCLOSURE,
   RENTAL_AGREEMENT_SECTION_4A_AUTHORIZED,
   RENTAL_AGREEMENT_SECTION_4_PAYMENT_ADDENDUM,
-  RENTAL_AGREEMENT_SECTION_5_UNPAID,
+  getInlineSectionsForPage,
 } from "@/lib/agreement/rental-agreement-terms";
+import { resolveAgreementBalanceDue, resolveAgreementDeposit } from "@/lib/agreement/agreement-deposit";
+import {
+  paymentMethodLabel,
+  type AgreementBookingContext,
+} from "@/lib/agreement/agreement-booking-context";
+import { AGREEMENT_VERSION } from "@/lib/agreement/agreement-version";
+import { AgreementInlineSection } from "@/components/agreement-inline-sections";
 
 interface RentalAgreementInlineProps {
   vehicle?: {
@@ -31,6 +39,7 @@ interface RentalAgreementInlineProps {
   deposit?: number;
   agreementType?: "standard" | "weeklyRecurring";
   weeklyDueDay?: string;
+  bookingContext?: AgreementBookingContext;
   /** Which page to display (1, 2, or 3). If omitted, shows all pages (scrollable). */
   currentPage?: number;
 }
@@ -72,9 +81,25 @@ const Field = ({ value, width = "auto" }: { value?: string | number | null; widt
 );
 
 /* ── PAGE 1 ── */
-function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit, agreementType = "standard", weeklyDueDay }: RentalAgreementInlineProps) {
-  const depositAmount = deposit ?? (totalPrice || 0);
-  const balanceDue = (totalPrice || 0) - depositAmount;
+function Page1({
+  vehicle,
+  customerName,
+  customerEmail,
+  customerPhone,
+  pickupDate,
+  returnDate,
+  pickupTime,
+  returnTime,
+  totalPrice,
+  totalDays,
+  deposit,
+  agreementType = "standard",
+  weeklyDueDay,
+  bookingContext,
+}: RentalAgreementInlineProps) {
+  const depositAmount = resolveAgreementDeposit(deposit, totalPrice);
+  const balanceDue = resolveAgreementBalanceDue(totalPrice, deposit);
+  const paymentLabel = paymentMethodLabel(bookingContext?.paymentMethod);
   const isWeeklyRecurring = agreementType === "weeklyRecurring";
 
   return (
@@ -94,6 +119,7 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
         <p className="text-sm text-gray-600">
           Phone: (551) 429-3472 | Email: contact@rentnextgearauto.com
         </p>
+        <p className="text-[11px] text-gray-400 mt-1">Agreement version {AGREEMENT_VERSION}</p>
       </div>
 
       {/* Vehicle Information */}
@@ -151,6 +177,20 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
             <span className="ml-2 font-semibold">at:</span>{" "}<Field value={formatTime(returnTime)} width="120px" />
           </div>
         </div>
+        {(bookingContext?.pickupLocationName || bookingContext?.returnLocationName) && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-1 mb-2 text-gray-700">
+            {bookingContext.pickupLocationName && (
+              <div>
+                <span className="font-semibold">Pickup location:</span> {bookingContext.pickupLocationName}
+              </div>
+            )}
+            {bookingContext.returnLocationName && (
+              <div>
+                <span className="font-semibold">Return location:</span> {bookingContext.returnLocationName}
+              </div>
+            )}
+          </div>
+        )}
         {isWeeklyRecurring ? (
           <p className="text-gray-700">
             This agreement is structured for recurring 7-day terms. Each weekly rebooking uses the same rate unless updated in writing before renewal.
@@ -204,12 +244,31 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
         )}
         <div className="mb-2">
           <span className="font-semibold">Payment Method:</span>{" "}
-          <span className="inline-flex gap-3 ml-2">
-            <label className="inline-flex items-center gap-1"><span role="img" aria-label="unchecked" className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Cash</label>
-            <label className="inline-flex items-center gap-1"><span role="img" aria-label="unchecked" className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block" /> Zelle</label>
-            <label className="inline-flex items-center gap-1"><span role="img" aria-label="checked" className="w-3.5 h-3.5 border border-gray-400 rounded-sm inline-block bg-purple-600" /> Credit/Debit</label>
-          </span>
+          <span className="text-gray-900 font-medium">{paymentLabel}</span>
         </div>
+        {bookingContext?.extrasSummary && (
+          <p className="text-gray-700 mb-1">
+            <span className="font-semibold">Extras:</span> {bookingContext.extrasSummary}
+          </p>
+        )}
+        {bookingContext?.promoCode && (
+          <p className="text-gray-700 mb-1">
+            <span className="font-semibold">Promo:</span> {bookingContext.promoCode}
+            {bookingContext.discountAmount
+              ? ` (−$${bookingContext.discountAmount.toFixed(2)})`
+              : ""}
+          </p>
+        )}
+        {bookingContext?.insuranceOptedOut && (
+          <p className="text-gray-700 mb-1">
+            <span className="font-semibold">Insurance:</span> Temporary coverage selected ($9/day).
+          </p>
+        )}
+        {bookingContext?.insuranceProofOnFile && !bookingContext.insuranceOptedOut && (
+          <p className="text-gray-700 mb-1">
+            <span className="font-semibold">Insurance:</span> Proof on file for this booking.
+          </p>
+        )}
         <p className="text-gray-700"><strong>Included:</strong> 200 miles per day</p>
         <p className="text-gray-700"><strong>Extra Miles:</strong> $0.39 per mile over 200/day</p>
         {RENTAL_AGREEMENT_SECTION_4_PAYMENT_ADDENDUM.paragraphs.map((p) => (
@@ -231,86 +290,17 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
 function Page2() {
   return (
     <div className="p-6 pt-4 pb-4">
-      {/* Section 5 — unpaid balances */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">
-          {RENTAL_AGREEMENT_SECTION_5_UNPAID.title}
-        </h3>
-        {RENTAL_AGREEMENT_SECTION_5_UNPAID.paragraphs.map((p) => (
-          <p key={p.slice(0, 40)} className="text-gray-700 mb-2 max-w-prose">{p}</p>
-        ))}
-      </div>
-
-      {/* Section 6 */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">6. INSURANCE REQUIREMENTS</h3>
-        <p className="mb-2 text-gray-700 max-w-prose">
-          Renter MUST provide proof of active auto insurance meeting New Jersey minimum requirements before
-          or at pickup. False, expired, or incomplete insurance proof voids coverage under this Agreement.
-        </p>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-2 mb-2">
-          <div><span className="font-semibold">Insurance Provider:</span> <Field width="120px" /></div>
-          <div><span className="font-semibold">Policy #:</span> <Field width="120px" /></div>
-          <div><span className="font-semibold">Phone:</span> <Field width="120px" /></div>
-        </div>
-        <p className="text-gray-700 mb-1">If proof of insurance is not provided, temporary Non-Owned Auto Coverage will be added at $9/day.</p>
-        <p className="text-gray-700"><strong>Optional Supplemental Liability Protection (SLP):</strong> $11.25/day (up to $1M)</p>
-      </div>
-
-      {/* Section 7 */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">7. LIABILITY & DAMAGE RESPONSIBILITY</h3>
-        <p className="text-gray-700 max-w-prose">
-          Renter is fully and completely responsible for ALL vehicle damage regardless of cause, fault, or
-          insurance coverage. This includes but is not limited to: collision damage, theft, vandalism,
-          weather damage, tire/rim/undercarriage damage, windshield damage, interior damage, lost or damaged
-          keys ($350 replacement cost), towing and impound fees, storage charges, diminished vehicle value
-          (up to $5,000), and loss-of-use charges (daily rental rate × days the vehicle is unavailable).
-          Renter remains liable even if a third party or unauthorized driver caused the damage.
-        </p>
-      </div>
-
-      {/* Section 8 */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">8. INDEMNIFICATION & HOLD HARMLESS</h3>
-        <p className="text-gray-700 max-w-prose">
-          Renter agrees to indemnify, defend, and hold harmless Next Gear Auto LLC, its owners, employees,
-          and agents from and against any and all claims, demands, losses, liabilities, damages, costs, and
-          expenses (including reasonable attorney fees) arising out of or related to Renter&apos;s use,
-          operation, or possession of the vehicle during the rental period. This includes, without
-          limitation, claims by third parties for bodily injury, property damage, or death resulting from
-          any accident, incident, or occurrence involving the rented vehicle, regardless of fault.
-        </p>
-      </div>
-
-      {/* Section 9 */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">9. PROHIBITED USES</h3>
-        <p className="mb-2 text-gray-700 max-w-prose">
-          The following are strictly prohibited ($1,500 penalty + full liability + immediate termination):
-        </p>
-        <ul className="list-disc list-inside text-gray-700 space-y-0.5 ml-2 max-w-prose">
-          <li>Operation by unauthorized drivers or while impaired</li>
-          <li>Commercial use (Uber, Lyft, DoorDash, delivery, etc.)</li>
-          <li>Off-road driving, racing, drifting, or reckless/aggressive driving</li>
-          <li>Exceeding passenger or cargo capacity</li>
-          <li>Leaving vehicle running and unattended</li>
-          <li>Crossing U.S. borders (Canada/Mexico prohibited)</li>
-          <li>Subleasing, transferring possession, or using the vehicle for illegal activity</li>
-        </ul>
-      </div>
-
-      {/* Section 10 */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">10. GPS / VEHICLE TRACKING DISCLOSURE</h3>
-        <p className="text-gray-700 mb-2 max-w-prose">
-          Renter acknowledges that the vehicle may be equipped with GPS or telematics that record location,
-          speed, mileage, and operational data for recovery, mileage verification, safety, and fleet
-          management. Tampering with, disabling, or removing such equipment is prohibited and may result in
-          penalties and full recovery costs.
-        </p>
-        <p className="font-semibold text-gray-900 max-w-prose">I acknowledge and consent to GPS/vehicle tracking during the rental period.</p>
-      </div>
+      {getInlineSectionsForPage(2).map((section) => (
+        <AgreementInlineSection key={section.title} section={section}>
+          {section.title.startsWith("6.") && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-x-2 sm:gap-x-4 gap-y-2 mb-2 mt-2">
+              <div><span className="font-semibold">Insurance Provider:</span> <Field width="120px" /></div>
+              <div><span className="font-semibold">Policy #:</span> <Field width="120px" /></div>
+              <div><span className="font-semibold">Phone:</span> <Field width="120px" /></div>
+            </div>
+          )}
+        </AgreementInlineSection>
+      ))}
 
       <div className="border-t border-dashed border-gray-300 my-4" />
       <p className="text-center text-[11px] text-gray-400 italic">Page 2 of 3 — GPS Acknowledgement & Renter Signatures Required</p>
@@ -322,57 +312,9 @@ function Page2() {
 function Page3({ customerName }: { customerName?: string }) {
   return (
     <div className="p-6 pt-4">
-      {/* Section 11 */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">11. PETS & CLEANLINESS</h3>
-        <p className="text-gray-700 max-w-prose">
-          Pets are allowed ONLY if the vehicle is returned in completely clean condition with no pet hair,
-          odors, or damage. Pet-related cleaning charges: $150-$350 depending on condition.
-        </p>
-      </div>
-
-      {/* Section 12 */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">12. VEHICLE RETURN CONDITIONS</h3>
-        <p className="text-gray-700 max-w-prose">
-          Vehicle must be returned: (1) Clean inside and out (2) Full fuel tank (3) Without any new damage
-          (4) With all original accessories and documentation (5) At or before scheduled return time
-        </p>
-      </div>
-
-      {/* Section 13 */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">13. ACCIDENT & THEFT PROCEDURES</h3>
-        <p className="text-gray-700 max-w-prose">
-          In the event of any accident or theft, Renter MUST immediately: (1) Call 911 (2) Contact Next
-          Gear Auto at (551) 429-3472 (3) File a police report the same day. Failure to follow these steps
-          immediately may void all insurance coverage and result in renter liability for full replacement
-          value.
-        </p>
-      </div>
-
-      {/* Section 14 */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">14. FRAUD, CHARGEBACKS & MISREPRESENTATION</h3>
-        <p className="text-gray-700 max-w-prose">
-          Providing false identification, fraudulent insurance, invalid payment methods, or initiating a
-          chargeback or payment reversal without a bona fide billing error will result in immediate
-          termination, full liability for all amounts owed (including vehicle value where applicable), and
-          potential civil or criminal prosecution. Disputed charges remain due until resolved in Lessor&apos;s favor.
-        </p>
-      </div>
-
-      {/* Section 15 */}
-      <div className="mb-5">
-        <h3 className="font-bold text-sm text-gray-900 border-b border-gray-300 pb-1 mb-2">15. GOVERNING LAW & DISPUTE RESOLUTION</h3>
-        <p className="text-gray-700 max-w-prose">
-          This Agreement is governed by the laws of the State of New Jersey. Venue for disputes, including
-          collection of unpaid balances, is Hudson County Superior Court or small claims court in Hudson
-          County, unless otherwise required by law. Both parties waive jury trial and class action rights to
-          the extent permitted by law. The prevailing party in any action to enforce this Agreement is
-          entitled to reasonable attorneys&apos; fees and costs.
-        </p>
-      </div>
+      {getInlineSectionsForPage(3).map((section) => (
+        <AgreementInlineSection key={section.title} section={section} />
+      ))}
 
       {/* Signatures Section */}
       <div className="mb-4">
@@ -403,16 +345,6 @@ function Page3({ customerName }: { customerName?: string }) {
   );
 }
 
-/**
- * Maps agreement signature step (0-4) to page number (1-3).
- * Steps 0,1 → Page 1 | Step 2 → Page 2 | Steps 3,4 → Page 3
- */
-export function getPageForStep(step: number): number {
-  if (step <= 1) return 1;
-  if (step === 2) return 2;
-  return 3;
-}
-
 export function RentalAgreementInline({
   vehicle,
   customerName,
@@ -427,9 +359,25 @@ export function RentalAgreementInline({
   deposit,
   agreementType = "standard",
   weeklyDueDay,
+  bookingContext,
   currentPage,
 }: RentalAgreementInlineProps) {
-  const pageProps = { vehicle, customerName, customerEmail, customerPhone, pickupDate, returnDate, pickupTime, returnTime, totalPrice, totalDays, deposit, agreementType, weeklyDueDay };
+  const pageProps = {
+    vehicle,
+    customerName,
+    customerEmail,
+    customerPhone,
+    pickupDate,
+    returnDate,
+    pickupTime,
+    returnTime,
+    totalPrice,
+    totalDays,
+    deposit,
+    agreementType,
+    weeklyDueDay,
+    bookingContext,
+  };
 
   // If no currentPage specified, show the page-based view with page 1 default
   const page = currentPage || 1;

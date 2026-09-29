@@ -5,8 +5,10 @@ import { CheckCircle2, PenLine, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   AgreementSigningWizard,
+  type AgreementSigningSubmitPayload,
   type AgreementSigningVehicle,
 } from "@/components/agreement-signing-wizard";
+import { buildAgreementBookingContext } from "@/lib/agreement/agreement-booking-context";
 import { vehicleForSigningFromDisplayName } from "@/lib/agreement/vehicle-for-signing";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import type { BookingRow, Vehicle } from "../types";
@@ -46,11 +48,15 @@ export function InPersonAgreementSign({
     [vehicles, booking.vehicle_id, booking.vehicleName],
   );
 
-  const handleSubmit = async (signatures: Record<string, string>) => {
+  const handleSubmit = async (payload: AgreementSigningSubmitPayload) => {
     const res = await adminFetch("/api/admin/bookings/sign-agreement", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ bookingId: booking.id, signatures }),
+      body: JSON.stringify({
+        bookingId: booking.id,
+        signatures: payload.signatures,
+        signedName: payload.signedName,
+      }),
     });
     const data = await res.json();
     if (!res.ok || !data.success) {
@@ -135,8 +141,21 @@ export function InPersonAgreementSign({
               deposit: booking.deposit ?? undefined,
             }}
             vehicle={vehicle}
-            headerNote="Hand device to customer to review and sign each section."
+            headerNote="Hand device to customer to review and sign."
             submitLabel="Complete in-person signature"
+            requireAcknowledgements={false}
+            showLegalName={false}
+            legalName={booking.customer_name}
+            bookingContext={buildAgreementBookingContext({
+              payment_method: booking.payment_method,
+              insurance_opted_out: booking.insurance_opted_out,
+              insurance_proof_url: booking.insurance_proof_url,
+              pickup_location_name: booking.pickup_location_name,
+              return_location_name: booking.return_location_name,
+              extras: booking.extras,
+              promo_code: booking.promo_code,
+              discount_amount: booking.discount_amount,
+            })}
             onCancel={onClose}
             onSubmit={handleSubmit}
           />

@@ -9,6 +9,7 @@ import {
   type CanProceedInput,
   type SearchDatesState,
 } from "../src/lib/booking/wizard-validation";
+import { PRIMARY_AGREEMENT_SIGNATURE_ID } from "../src/data/agreement-fields";
 import type { BookingExtra, Vehicle } from "../src/lib/types";
 
 const baseSearchDates: SearchDatesState = {
@@ -68,9 +69,10 @@ function baseCanProceed(overrides: Partial<CanProceedInput> = {}): CanProceedInp
     details: { name: "Jane Doe", email: "jane@example.com", phone: "5551234567", dob: "1990-01-15" },
     idDocumentUrl: "https://example.com/id.jpg",
     uploadingId: false,
-    agreementSignatures: { sig1: "data:image/png;base64,abc" },
+    agreementSignatures: { [PRIMARY_AGREEMENT_SIGNATURE_ID]: "data:image/png;base64,abc" },
     signedName: "Jane Doe",
-    agreementFieldIds: ["sig1"],
+    agreementAckGps: true,
+    agreementAckPayment: true,
     ...overrides,
   };
 }
@@ -235,10 +237,14 @@ describe("canProceedForStep", () => {
     );
   });
 
-  it("step 6 requires all signatures and legal name", () => {
+  it("step 6 requires primary signature, legal name, and acknowledgements", () => {
     assert.equal(canProceedForStep(baseCanProceed({ step: 6 })), true);
     assert.equal(
       canProceedForStep(baseCanProceed({ step: 6, signedName: "" })),
+      false
+    );
+    assert.equal(
+      canProceedForStep(baseCanProceed({ step: 6, agreementAckGps: false })),
       false
     );
   });

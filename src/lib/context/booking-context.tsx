@@ -25,6 +25,8 @@ interface BookingState {
   };
   signedName: string;
   agreementSignatures: Record<string, string | null>;
+  agreementAckGps: boolean;
+  agreementAckPayment: boolean;
   promoCode: string | null;
   promoDiscount: PromoDiscount | null;
   isSubmitting: boolean;
@@ -49,6 +51,7 @@ type BookingAction =
   | { type: "SET_CUSTOMER_DETAILS"; payload: BookingState["customerDetails"] }
   | { type: "SET_SIGNED_NAME"; payload: string }
   | { type: "SET_AGREEMENT_SIGNATURES"; payload: Record<string, string | null> }
+  | { type: "SET_AGREEMENT_ACKS"; payload: { gps: boolean; payment: boolean } }
   | { type: "SET_STEP"; payload: BookingStep }
   | { type: "NEXT_STEP" }
   | { type: "PREV_STEP" }
@@ -76,6 +79,8 @@ const initialState: BookingState = {
   customerDetails: { name: "", email: "", phone: "", dob: "" },
   signedName: "",
   agreementSignatures: {},
+  agreementAckGps: false,
+  agreementAckPayment: false,
   promoCode: null,
   promoDiscount: null,
   isSubmitting: false,
@@ -119,6 +124,12 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
       return { ...state, signedName: action.payload };
     case "SET_AGREEMENT_SIGNATURES":
       return { ...state, agreementSignatures: action.payload };
+    case "SET_AGREEMENT_ACKS":
+      return {
+        ...state,
+        agreementAckGps: action.payload.gps,
+        agreementAckPayment: action.payload.payment,
+      };
     case "SET_STEP":
       return { ...state, currentStep: action.payload };
     case "NEXT_STEP":
@@ -185,6 +196,7 @@ interface BookingContextType extends BookingState {
   setCustomerDetails: (details: BookingState["customerDetails"]) => void;
   setSignedName: (name: string) => void;
   setAgreementSignatures: (signatures: Record<string, string | null>) => void;
+  setAgreementAcks: (gps: boolean, payment: boolean) => void;
   setStep: (step: BookingStep) => void;
   nextStep: () => void;
   prevStep: () => void;
@@ -250,6 +262,10 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
 
   const setAgreementSignatures = useCallback((signatures: Record<string, string | null>) => {
     dispatch({ type: "SET_AGREEMENT_SIGNATURES", payload: signatures });
+  }, []);
+
+  const setAgreementAcks = useCallback((gps: boolean, payment: boolean) => {
+    dispatch({ type: "SET_AGREEMENT_ACKS", payload: { gps, payment } });
   }, []);
 
   const setStep = useCallback((step: BookingStep) => {
@@ -430,7 +446,12 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           try {
             localStorage.setItem(
               `nga_agreement_sigs_${data.data.bookingId}`,
-              JSON.stringify(state.agreementSignatures)
+              JSON.stringify({
+                signatures: state.agreementSignatures,
+                signedName: state.signedName,
+                ackGpsTracking: state.agreementAckGps,
+                ackPaymentAuthorization: state.agreementAckPayment,
+              }),
             );
           } catch (error: unknown) {
             logger.warn("Failed to save agreement signatures to localStorage:", error);
@@ -479,6 +500,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       setCustomerDetails,
       setSignedName,
       setAgreementSignatures,
+      setAgreementAcks,
       setStep,
       nextStep,
       prevStep,
@@ -501,6 +523,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       setCustomerDetails,
       setSignedName,
       setAgreementSignatures,
+      setAgreementAcks,
       setStep,
       nextStep,
       prevStep,

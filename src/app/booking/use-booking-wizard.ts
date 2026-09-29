@@ -16,7 +16,6 @@ import {
   type SearchDatesState,
   type WizardStep,
 } from "@/lib/booking/wizard-validation";
-import { AGREEMENT_SIGNATURE_FIELDS } from "@/data/agreement-fields";
 import extras from "@/data/extras.json";
 import { logger } from "@/lib/utils/logger";
 import type { BookingExtra } from "@/lib/types";
@@ -185,7 +184,8 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
 
   const [signedName, setSignedName] = useState("");
   const [agreementSignatures, setAgreementSignatures] = useState<Record<string, string | null>>({});
-  const agreementFieldIds = useMemo(() => AGREEMENT_SIGNATURE_FIELDS.map((f) => f.id), []);
+  const [agreementAckGps, setAgreementAckGps] = useState(false);
+  const [agreementAckPayment, setAgreementAckPayment] = useState(false);
 
   const [searchDates, setSearchDates] = useState<SearchDatesState>(() => {
     if (booking.pickupDate && booking.returnDate) {
@@ -377,7 +377,8 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
         uploadingId,
         agreementSignatures,
         signedName,
-        agreementFieldIds,
+        agreementAckGps,
+        agreementAckPayment,
       }),
     [
       booking.currentStep,
@@ -399,7 +400,8 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
       uploadingId,
       agreementSignatures,
       signedName,
-      agreementFieldIds,
+      agreementAckGps,
+      agreementAckPayment,
     ],
   );
 
@@ -475,6 +477,7 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
     if (booking.currentStep === 6) {
       booking.setSignedName(signedName);
       booking.setAgreementSignatures(agreementSignatures);
+      booking.setAgreementAcks(agreementAckGps, agreementAckPayment);
     }
     booking.nextStep();
   };
@@ -526,6 +529,10 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
     setSignedName,
     agreementSignatures,
     setAgreementSignatures,
+    agreementAckGps,
+    setAgreementAckGps,
+    agreementAckPayment,
+    setAgreementAckPayment,
     searchDates,
     setSearchDates,
     showPickupCalendar,

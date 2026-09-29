@@ -6,6 +6,7 @@ import {
   PUBLIC_BOOKING_ADVANCE_ERROR,
   publicPickupMeetsMinimumAdvance,
 } from "@/lib/booking/public-booking-guards";
+import { hasPrimaryAgreementSignature } from "@/data/agreement-fields";
 import type { BookingExtra, Vehicle } from "@/lib/types";
 
 export type WizardStep = 1 | 2 | 3 | 4 | 5 | 6 | 7;
@@ -119,7 +120,8 @@ export interface CanProceedInput {
   uploadingId: boolean;
   agreementSignatures: Record<string, string | null>;
   signedName: string;
-  agreementFieldIds: string[];
+  agreementAckGps: boolean;
+  agreementAckPayment: boolean;
 }
 
 export function isVehicleBookedForSelection(
@@ -184,7 +186,10 @@ export function canProceedForStep(input: CanProceedInput): boolean {
       return !!input.idDocumentUrl && !input.uploadingId;
     case 6:
       return (
-        input.agreementFieldIds.every((id) => input.agreementSignatures[id]) && !!input.signedName
+        hasPrimaryAgreementSignature(input.agreementSignatures) &&
+        !!input.signedName.trim() &&
+        input.agreementAckGps &&
+        input.agreementAckPayment
       );
     case 7:
       return true;

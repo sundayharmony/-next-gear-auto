@@ -1,6 +1,11 @@
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { sendAgreementEmail } from "@/lib/email/mailer";
-import { AGREEMENT_SIGNATURE_FIELDS } from "@/data/agreement-fields";
+import { PRIMARY_AGREEMENT_SIGNATURE_ID } from "@/data/agreement-fields";
+import { expandAgreementSignatures } from "@/lib/agreement/agreement-signature-expand";
+import {
+  AGREEMENT_VERSION,
+  computeAgreementContentHash,
+} from "@/lib/agreement/agreement-version";
 import { logger } from "@/lib/utils/logger";
 import {
   type AgreementSignatureData,
@@ -25,6 +30,31 @@ export class AgreementSigningError extends Error {
   }
 }
 
+function validatePrimarySignaturePng(value: string, fieldId: string): string {
+  const cleaned = value.replace(/^data:image\/png;base64,/, "");
+  if (cleaned.length > 500 * 1024) {
+    throw new AgreementSigningError(
+      `Signature ${fieldId} exceeds maximum size (500KB limit)`,
+      400,
+    );
+  }
+
+  try {
+    const imgBuffer = Buffer.from(cleaned, "base64");
+    if (imgBuffer.length < 8 || !imgBuffer.subarray(0, 8).equals(PNG_MAGIC)) {
+      throw new AgreementSigningError(
+        `Signature ${fieldId} is not a valid PNG image`,
+        400,
+      );
+    }
+  } catch (err) {
+    if (err instanceof AgreementSigningError) throw err;
+    throw new AgreementSigningError(`Invalid signature data for ${fieldId}`, 400);
+  }
+
+  return value;
+}
+
 export function validateAgreementSignatures(
   signatures: Record<string, unknown> | null | undefined,
 ): AgreementSignatureData {
@@ -32,43 +62,44 @@ export function validateAgreementSignatures(
     throw new AgreementSigningError("At least one signature is required", 400);
   }
 
-  const requiredIds = AGREEMENT_SIGNATURE_FIELDS.map((f) => f.id);
-  const sanitized: AgreementSignatureData = {};
-
-  for (const fieldId of requiredIds) {
-    const value = signatures[fieldId];
-    if (typeof value !== "string" || !value.trim()) {
-      throw new AgreementSigningError(
-        `Missing required signature: ${fieldId}`,
-        400,
-      );
-    }
-
-    const cleaned = value.replace(/^data:image\/png;base64,/, "");
-    if (cleaned.length > 500 * 1024) {
-      throw new AgreementSigningError(
-        `Signature ${fieldId} exceeds maximum size (500KB limit)`,
-        400,
-      );
-    }
-
-    try {
-      const imgBuffer = Buffer.from(cleaned, "base64");
-      if (imgBuffer.length < 8 || !imgBuffer.subarray(0, 8).equals(PNG_MAGIC)) {
-        throw new AgreementSigningError(
-          `Signature ${fieldId} is not a valid PNG image`,
-          400,
-        );
-      }
-    } catch (err) {
-      if (err instanceof AgreementSigningError) throw err;
-      throw new AgreementSigningError(`Invalid signature data for ${fieldId}`, 400);
-    }
-
-    sanitized[fieldId as keyof AgreementSignatureData] = value;
+  let expanded: AgreementSignatureData;
+  try {
+    expanded = expandAgreementSignatures(signatures);
+  } catch {
+    throw new AgreementSigningError(
+      `Missing required signature: ${PRIMARY_AGREEMENT_SIGNATURE_ID}`,
+      400,
+    );
   }
 
-  return sanitized;
+  const primary = expanded[PRIMARY_AGREEMENT_SIGNATURE_ID as keyof AgreementSignatureData];
+  if (!primary) {
+    throw new AgreementSigningError(
+      `Missing required signature: ${PRIMARY_AGREEMENT_SIGNATURE_ID}`,
+      400,
+    );
+  }
+
+  validatePrimarySignaturePng(primary, PRIMARY_AGREEMENT_SIGNATURE_ID);
+  return expanded;
+}
+
+export function normalizeSignedLegalName(
+  signedName: string | null | undefined,
+  customerName: string | null | undefined,
+): string {
+  const candidate = (signedName || customerName || "").trim();
+  if (!candidate) {
+    throw new AgreementSigningError("Legal name is required to sign the agreement", 400);
+  }
+  const normalize = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+  if (customerName && normalize(candidate) !== normalize(customerName)) {
+    throw new AgreementSigningError(
+      "Legal name must match the name on the booking",
+      400,
+    );
+  }
+  return candidate;
 }
 
 function assertBookingSignable(booking: {
@@ -91,6 +122,11 @@ export interface CompleteAgreementSigningOptions {
   performedBy: string;
   channel: AgreementSigningChannel;
   skipEmail?: boolean;
+  signedName?: string | null;
+  signedIp?: string | null;
+  signedUserAgent?: string | null;
+  ackGpsTracking?: boolean;
+  ackPaymentAuthorization?: boolean;
 }
 
 export interface CompleteAgreementSigningResult {
@@ -123,6 +159,20 @@ export async function completeAgreementSigning(
 
   assertBookingSignable(booking);
 
+  if (options.channel === "customer") {
+    if (!options.ackGpsTracking || !options.ackPaymentAuthorization) {
+      throw new AgreementSigningError(
+        "You must acknowledge GPS tracking and payment authorization before signing",
+        400,
+      );
+    }
+  }
+
+  const signedName = normalizeSignedLegalName(
+    options.signedName,
+    booking.customer_name,
+  );
+
   let vehicle: {
     make?: string;
     model?: string;
@@ -151,17 +201,46 @@ export async function completeAgreementSigning(
   );
   const agreementUrl = await uploadSignedAgreementPdf(supabase, bookingId, signedPdfBytes);
 
-  const { data: updateResult, error: updateError } = await supabase
+  const agreementContentHash = computeAgreementContentHash();
+  const bookingUpdate: Record<string, unknown> = {
+    rental_agreement_url: agreementUrl,
+    agreement_signed_at: signedAtIso,
+    signed_name: signedName,
+    agreement_version: AGREEMENT_VERSION,
+    agreement_content_hash: agreementContentHash,
+    signed_ip: options.signedIp || null,
+    signed_user_agent: options.signedUserAgent || null,
+  };
+
+  let updateResult: { id: string } | null = null;
+  let updateError = null as { code?: string; message?: string } | null;
+
+  const attempt = await supabase
     .from("bookings")
-    .update({
-      rental_agreement_url: agreementUrl,
-      agreement_signed_at: signedAtIso,
-      signed_name: booking.customer_name,
-    })
+    .update(bookingUpdate)
     .eq("id", bookingId)
     .is("rental_agreement_url", null)
     .select("id")
     .maybeSingle();
+
+  updateResult = attempt.data;
+  updateError = attempt.error;
+
+  if (updateError?.code === "42703") {
+    const fallback = await supabase
+      .from("bookings")
+      .update({
+        rental_agreement_url: agreementUrl,
+        agreement_signed_at: signedAtIso,
+        signed_name: signedName,
+      })
+      .eq("id", bookingId)
+      .is("rental_agreement_url", null)
+      .select("id")
+      .maybeSingle();
+    updateResult = fallback.data;
+    updateError = fallback.error;
+  }
 
   if (updateError || !updateResult) {
     throw new AgreementSigningError(
@@ -177,6 +256,13 @@ export async function completeAgreementSigning(
       channel: options.channel,
       signatures,
       signed_at: signedAtIso,
+      signed_name: signedName,
+      agreement_version: AGREEMENT_VERSION,
+      agreement_content_hash: agreementContentHash,
+      signed_ip: options.signedIp || null,
+      signed_user_agent: options.signedUserAgent || null,
+      ack_gps_tracking: options.ackGpsTracking ?? null,
+      ack_payment_authorization: options.ackPaymentAuthorization ?? null,
     },
     performed_by: options.performedBy,
   });

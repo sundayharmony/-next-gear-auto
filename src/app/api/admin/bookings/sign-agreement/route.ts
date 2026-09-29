@@ -28,9 +28,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { bookingId, signatures } = body as {
+    const { bookingId, signatures, signedName } = body as {
       bookingId?: string;
       signatures?: Record<string, unknown>;
+      signedName?: string;
     };
 
     if (!bookingId) {
@@ -109,6 +110,9 @@ export async function POST(req: NextRequest) {
     const result = await completeAgreementSigning(bookingId, signatures!, {
       performedBy,
       channel: "in_person",
+      signedName: signedName || booking.customer_name,
+      signedIp: req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null,
+      signedUserAgent: req.headers.get("user-agent"),
     });
 
     return NextResponse.json({

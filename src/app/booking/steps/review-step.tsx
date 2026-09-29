@@ -7,6 +7,8 @@ import { Input } from "@/components/ui/input";
 import { AgreementSigningWizard } from "@/components/agreement-signing-wizard";
 import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import type { CustomerDetailsState } from "@/lib/booking/wizard-validation";
+import type { AgreementBookingContext } from "@/lib/agreement/agreement-booking-context";
+import { DEPOSIT_AMOUNT } from "@/lib/constants";
 import type { Vehicle } from "@/lib/types";
 
 const formatTime24To12 = formatTime;
@@ -52,6 +54,12 @@ export interface ReviewStepProps {
   setAgreementSignatures: (signatures: Record<string, string | null>) => void;
   signedName: string;
   setSignedName: (name: string) => void;
+  agreementAckGps: boolean;
+  setAgreementAckGps: (value: boolean) => void;
+  agreementAckPayment: boolean;
+  setAgreementAckPayment: (value: boolean) => void;
+  insuranceOptedOut: boolean;
+  insuranceProofUrl: string | null;
 }
 
 export function ReviewStep({
@@ -86,7 +94,26 @@ export function ReviewStep({
   setAgreementSignatures,
   signedName,
   setSignedName,
+  agreementAckGps,
+  setAgreementAckGps,
+  agreementAckPayment,
+  setAgreementAckPayment,
+  insuranceOptedOut,
+  insuranceProofUrl,
 }: ReviewStepProps) {
+  const agreementBookingContext: AgreementBookingContext = {
+    paymentMethod: "stripe",
+    insuranceOptedOut,
+    insuranceProofOnFile: Boolean(insuranceProofUrl),
+    pickupLocationName,
+    returnLocationName,
+    extrasSummary: pricing?.extras?.length
+      ? pricing.extras.map((e) => e.name).join(", ")
+      : null,
+    promoCode,
+    discountAmount: promoDiscount?.discountAmount ?? 0,
+  };
+
   return (
     <div className="space-y-4">
       <Card>
@@ -309,8 +336,8 @@ export function ReviewStep({
             Rental Agreement
           </h3>
           <p className="text-sm text-gray-500 mb-4">
-            Draw your signature once, then read each page and tap each box to sign. Pages advance
-            automatically when complete.
+            Read each page of the agreement, acknowledge the terms, draw your signature once, and apply
+            it to the contract before continuing to payment.
           </p>
 
           {selectedVehicle ? (
@@ -325,6 +352,7 @@ export function ReviewStep({
                 pickup_time: pickupTime,
                 return_time: returnTime,
                 total_price: pricing?.total || 0,
+                deposit: DEPOSIT_AMOUNT,
               }}
               vehicle={{
                 make: selectedVehicle.make,
@@ -339,7 +367,12 @@ export function ReviewStep({
               onSignaturesChange={setAgreementSignatures}
               legalName={signedName}
               onLegalNameChange={setSignedName}
-              agreementFooterNote="Review the text above, then tap each signature box below."
+              ackGpsTracking={agreementAckGps}
+              onAckGpsTrackingChange={setAgreementAckGps}
+              ackPaymentAuthorization={agreementAckPayment}
+              onAckPaymentAuthorizationChange={setAgreementAckPayment}
+              bookingContext={agreementBookingContext}
+              agreementFooterNote="Review all pages before signing."
             />
           ) : (
             <p className="text-sm text-amber-700">Select a vehicle to view and sign the agreement.</p>
