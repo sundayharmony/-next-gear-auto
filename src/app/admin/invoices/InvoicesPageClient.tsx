@@ -2,7 +2,8 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2, RefreshCw, Search } from "lucide-react";
+import Link from "next/link";
+import { ChevronRight, Loader2, RefreshCw, Search } from "lucide-react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import {
@@ -24,6 +25,7 @@ import { formatDate } from "@/lib/utils/date-helpers";
 import { InvoicePreviewPanel } from "./invoice-preview-panel";
 import { fmt, type InvoiceDetail, type InvoiceListRow } from "./invoice-types";
 import { RecordsHubTabs } from "@/app/admin/tickets/records-hub-tabs";
+import { RecordsHubSubnav } from "@/app/admin/tickets/records-hub-subnav";
 
 interface InvoicesPageClientProps {
   bookingsHref: string;
@@ -134,7 +136,10 @@ export function InvoicesPageClient({
         title={embeddedInRecordsHub ? "Tickets & billing" : "Invoices"}
         subtitle="View sent invoices, edit line items, and track payment status from live booking balances."
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
+            <Button asChild size="sm" className="bg-white text-purple-900 hover:bg-purple-50">
+              <Link href={bookingsHref}>Send from booking</Link>
+            </Button>
             <Button
               variant="outline"
               size="sm"
@@ -145,18 +150,6 @@ export function InvoicesPageClient({
               <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBackfill}
-                disabled={backfilling}
-                className="page-hero-btn-outline"
-              >
-                {backfilling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                Import from history
-              </Button>
-            )}
           </div>
         }
       >
@@ -165,6 +158,7 @@ export function InvoicesPageClient({
         ) : null}
       </AdminPageHeader>
       <AdminPageBody>
+        {embeddedInRecordsHub ? <RecordsHubSubnav panelBase={recordsHubPanelBase} /> : null}
         {error && (
           <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} />
         )}
@@ -202,10 +196,53 @@ export function InvoicesPageClient({
             ) : filtered.length === 0 ? (
               <AdminEmptyState
                 title="No invoices yet"
-                description="Send one from a booking, or use Import from history (admin)."
+                description="Open a booking and use Send invoice to create your first invoice. Admins can backfill older bookings below."
+                action={
+                  <div className="flex flex-col sm:flex-row gap-2 items-center justify-center">
+                    <Button asChild>
+                      <Link href={bookingsHref}>Go to bookings</Link>
+                    </Button>
+                    {isAdmin ? (
+                      <Button variant="outline" onClick={handleBackfill} disabled={backfilling}>
+                        {backfilling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
+                        Import from history
+                      </Button>
+                    ) : null}
+                  </div>
+                }
               />
             ) : (
-              <AdminTableWrap>
+              <>
+              <div className="lg:hidden space-y-2">
+                {filtered.map((inv) => (
+                  <button
+                    key={inv.id}
+                    type="button"
+                    onClick={() => setSelectedId(inv.id)}
+                    className={`w-full text-left rounded-lg border p-4 transition-colors ${
+                      selectedId === inv.id ? "border-purple-400 bg-purple-50" : "border-gray-200 bg-white hover:border-purple-200"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{inv.customer_name || "—"}</p>
+                        <p className="text-xs text-gray-500 truncate">{inv.customer_email}</p>
+                        <p className="text-sm text-gray-600 mt-1">{inv.vehicleName}</p>
+                        <p className="text-xs text-gray-500 mt-1">
+                          Due {formatDate(inv.due_date)} · Balance {fmt(inv.liveBalance)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <Badge className={INVOICE_STATUS_COLORS[inv.paymentStatus]}>
+                          {INVOICE_STATUS_LABELS[inv.paymentStatus]}
+                        </Badge>
+                        <ChevronRight className="h-5 w-5 text-gray-400" aria-hidden />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+              <AdminTableWrap className="hidden lg:block">
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-gray-50 text-left text-xs text-gray-500 uppercase">
@@ -248,6 +285,20 @@ export function InvoicesPageClient({
                   </tbody>
                 </table>
               </AdminTableWrap>
+              {isAdmin ? (
+                <p className="text-xs text-gray-500 pt-2">
+                  Missing older invoices?{" "}
+                  <button
+                    type="button"
+                    className="text-purple-600 hover:underline disabled:opacity-50"
+                    onClick={handleBackfill}
+                    disabled={backfilling}
+                  >
+                    Import from booking history
+                  </button>
+                </p>
+              ) : null}
+              </>
             )}
           </div>
 
