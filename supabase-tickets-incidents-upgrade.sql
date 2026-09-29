@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS incident_reports (
 
 ALTER TABLE incident_reports ENABLE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS "Service role full access on incident_reports" ON incident_reports;
 CREATE POLICY "Service role full access on incident_reports"
   ON incident_reports FOR ALL USING (true);
 
