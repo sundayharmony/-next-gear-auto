@@ -22,9 +22,20 @@ CREATE TABLE IF NOT EXISTS incident_reports (
 
 ALTER TABLE incident_reports ENABLE ROW LEVEL SECURITY;
 
-DROP POLICY IF EXISTS "Service role full access on incident_reports" ON incident_reports;
-CREATE POLICY "Service role full access on incident_reports"
-  ON incident_reports FOR ALL USING (true);
+-- Idempotent: skip if policy already exists (re-runs won't error on mobile SQL editor)
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1
+    FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'incident_reports'
+      AND policyname = 'Service role full access on incident_reports'
+  ) THEN
+    CREATE POLICY "Service role full access on incident_reports"
+      ON public.incident_reports FOR ALL USING (true);
+  END IF;
+END $$;
 
 CREATE INDEX IF NOT EXISTS idx_incident_reports_booking ON incident_reports(booking_id);
 CREATE INDEX IF NOT EXISTS idx_incident_reports_blocked_date ON incident_reports(blocked_date_id);
