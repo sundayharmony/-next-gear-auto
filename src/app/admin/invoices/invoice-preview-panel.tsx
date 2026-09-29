@@ -12,6 +12,7 @@ import {
 } from "@/lib/invoices/invoice-status";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { InvoiceSendModule } from "./invoice-send-module";
+import { DocumentPdfActions } from "@/components/admin/document-pdf-actions";
 import {
   draftsFromAdditional,
   emptyDraft,
@@ -144,6 +145,13 @@ export function InvoicePreviewPanel({
             <p className="text-sm text-gray-500 py-6 text-center">Loading…</p>
           ) : (
             <>
+              <DocumentPdfActions
+                previewUrl={`/api/admin/invoices/${detail.id}/pdf`}
+                downloadUrl={`/api/admin/invoices/${detail.id}/pdf`}
+                downloadFilename={`invoice-${detail.booking_id}`}
+                onError={onError}
+              />
+
               <div className="text-sm space-y-1">
                 <p>
                   <span className="text-gray-500">Booking:</span>{" "}
