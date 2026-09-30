@@ -3,7 +3,6 @@
 import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import {
   lineItemAmount,
   MAX_DOCUMENT_LINE_ITEMS,
@@ -79,7 +78,99 @@ export function DocumentLineItemsEditor({
           Add line
         </Button>
       </div>
-      <div className="space-y-3 max-h-96 overflow-y-auto">
+
+      {/* QuickBooks-style row layout on laptop+ */}
+      <div className="hidden lg:block overflow-x-auto border border-gray-200 rounded-lg">
+        <table className="w-full text-sm min-w-[720px]">
+          <thead>
+            <tr className="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500 border-b">
+              <th className="px-3 py-2 w-[18%]">Title</th>
+              <th className="px-3 py-2 w-[32%]">Description</th>
+              <th className="px-3 py-2 w-[12%]">Rate</th>
+              <th className="px-3 py-2 w-[8%]">Qty</th>
+              <th className="px-3 py-2 w-[12%] text-right">Amount</th>
+              {showCreditToggle ? <th className="px-3 py-2 w-[10%]">Credit</th> : null}
+              <th className="px-2 py-2 w-10" aria-label="Actions" />
+            </tr>
+          </thead>
+          <tbody>
+            {drafts.map((d) => {
+              const amount = lineItemAmount({
+                title: d.title,
+                unitPrice: Number(d.unitPrice) || 0,
+                quantity: Number(d.quantity) || 1,
+                isCredit: d.isCredit,
+              });
+              return (
+                <tr key={d.id} className="border-b last:border-0 align-top">
+                  <td className="px-2 py-2">
+                    <Input
+                      placeholder="Item name"
+                      value={d.title}
+                      onChange={(e) => updateLine(d.id, { title: e.target.value })}
+                      className="text-sm h-9"
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <Input
+                      placeholder="Description"
+                      value={d.description ?? ""}
+                      onChange={(e) => updateLine(d.id, { description: e.target.value })}
+                      className="text-sm h-9"
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={d.unitPrice}
+                      onChange={(e) => updateLine(d.id, { unitPrice: Number(e.target.value) })}
+                      className="text-sm h-9"
+                    />
+                  </td>
+                  <td className="px-2 py-2">
+                    <Input
+                      type="number"
+                      min={1}
+                      step="1"
+                      value={d.quantity}
+                      onChange={(e) => updateLine(d.id, { quantity: Number(e.target.value) })}
+                      className="text-sm h-9"
+                    />
+                  </td>
+                  <td className="px-2 py-2 text-right font-medium text-gray-900 pt-3">
+                    ${amount.toFixed(2)}
+                  </td>
+                  {showCreditToggle ? (
+                    <td className="px-2 py-2 text-center pt-3">
+                      <input
+                        type="checkbox"
+                        checked={!!d.isCredit}
+                        onChange={(e) => updateLine(d.id, { isCredit: e.target.checked })}
+                        aria-label="Credit line"
+                      />
+                    </td>
+                  ) : null}
+                  <td className="px-1 py-2">
+                    <button
+                      type="button"
+                      onClick={() => removeLine(d.id)}
+                      className="p-2 text-gray-400 hover:text-red-600"
+                      aria-label="Remove line"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Stacked layout for phone / tablet */}
+      <div className="lg:hidden space-y-3 max-h-96 overflow-y-auto">
         {drafts.map((d) => {
           const lineTotal = lineItemAmount({
             title: d.title,
@@ -105,16 +196,15 @@ export function DocumentLineItemsEditor({
                   <Trash2 className="h-4 w-4" />
                 </button>
               </div>
-              <Textarea
-                rows={2}
+              <Input
                 placeholder="Description (optional)"
                 value={d.description ?? ""}
                 onChange={(e) => updateLine(d.id, { description: e.target.value })}
                 className="text-sm"
               />
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 items-end">
+              <div className="grid grid-cols-3 gap-2 items-end">
                 <div>
-                  <label className="text-[10px] font-medium text-gray-500 uppercase">Price</label>
+                  <label className="text-[10px] font-medium text-gray-500 uppercase">Rate</label>
                   <Input
                     type="number"
                     min={0}
@@ -135,9 +225,7 @@ export function DocumentLineItemsEditor({
                     className="text-sm"
                   />
                 </div>
-                <p className="text-sm font-medium text-gray-700 pb-2">
-                  Line total: ${lineTotal.toFixed(2)}
-                </p>
+                <p className="text-sm font-medium text-gray-700 pb-2 text-right">${lineTotal.toFixed(2)}</p>
               </div>
               {showCreditToggle ? (
                 <label className="flex items-center gap-2 text-xs text-gray-600">
