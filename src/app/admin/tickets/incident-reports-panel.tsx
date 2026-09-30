@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { AlertTriangle, ChevronRight, Loader2, Plus, RefreshCw } from "lucide-react";
+import { AlertTriangle, Loader2, Plus, RefreshCw } from "lucide-react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import type { BookingDbRow, VehicleListItem } from "@/lib/types";
-import { AdminPageBody, AdminPageHeader, AdminCard } from "@/components/admin/admin-shell";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils/date-helpers";
@@ -23,6 +23,7 @@ import { sumDocumentLineItems } from "@/lib/documents/document-line-items";
 import type { StaffPanelConfig } from "@/lib/admin/staff-panel-config";
 import { RecordsHubTabs } from "./records-hub-tabs";
 import { RecordsHubSubnav } from "./records-hub-subnav";
+import { RecordsHubChip, RecordsHubChipGroup, RecordsHubHeroStats, RecordsHubRecordRow } from "./records-hub-list";
 import { IncidentDetailView, IncidentFormFields } from "./incident-detail-panel";
 import { displayDocumentNumber } from "@/lib/documents/short-document-number";
 
@@ -85,6 +86,7 @@ export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelC
   const [vehicles, setVehicles] = useState<VehicleListItem[]>([]);
   const [turoTrips, setTuroTrips] = useState<TuroTripOption[]>([]);
   const [adding, setAdding] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "in_review" | "resolved" | "closed">("all");
   const [saving, setSaving] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -351,8 +353,31 @@ export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelC
       <AdminPageHeader
         title="Tickets & billing"
         subtitle="Incident reports for damage, accidents, and trip issues"
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => void load()} className="page-hero-btn-outline">
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Button size="sm" className="bg-white text-purple-900 hover:bg-purple-50" onClick={() => { resetForm(); setAdding(true); }}>
+              <Plus className="h-4 w-4 mr-1" />
+              New incident report
+            </Button>
+          </>
+        }
       >
         <RecordsHubTabs panelBase={panelBase} className="mt-4" />
+        <RecordsHubHeroStats
+          stats={[
+            { value: incidents.length, label: "Total Reports" },
+            { value: incidents.filter((i) => i.status === "open").length, label: "Open", valueClassName: "text-red-300" },
+            { value: incidents.filter((i) => i.status === "in_review").length, label: "In Review" },
+            {
+              value: `$${incidents.reduce((sum, i) => sum + sumDocumentLineItems(i.lineItems), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+              label: "Estimated Amount",
+            },
+          ]}
+        />
       </AdminPageHeader>
       <AdminPageBody>
         <RecordsHubSubnav panelBase={panelBase} />
@@ -365,14 +390,13 @@ export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelC
         )}
 
         <div className="flex flex-wrap gap-2 mb-4">
-          <Button variant="outline" size="sm" onClick={() => void load()}>
-            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          <Button size="sm" onClick={() => { resetForm(); setAdding(true); }}>
-            <Plus className="h-4 w-4 mr-1" />
-            New incident report
-          </Button>
+          <RecordsHubChipGroup>
+            {(["all", "open", "in_review", "resolved", "closed"] as const).map((s) => (
+              <RecordsHubChip key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>
+                {s.replace("_", " ")} ({s === "all" ? incidents.length : incidents.filter((i) => i.status === s).length})
+              </RecordsHubChip>
+            ))}
+          </RecordsHubChipGroup>
         </div>
 
         {adding && (
@@ -413,38 +437,43 @@ export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelC
         ) : incidents.length === 0 ? (
           <p className="text-sm text-gray-500 text-center py-12">No incident reports yet.</p>
         ) : (
-          <div className="space-y-3">
-            {incidents.map((inc) => {
+          <div className="space-y-2">
+            {incidents.filter((inc) => statusFilter === "all" || inc.status === statusFilter).length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-12">No incident reports match this filter.</p>
+            ) : null}
+            {incidents
+              .filter((inc) => statusFilter === "all" || inc.status === statusFilter)
+              .map((inc) => {
               const { vehicleLabel, customerLabel } = enrichIncident(inc, bookings, vehicles);
+              const estimate = sumDocumentLineItems(inc.lineItems);
               return (
-                <AdminCard key={inc.id} hover className="!p-0 overflow-hidden">
-                  <button
-                    type="button"
-                    className="w-full text-left p-4 hover:bg-purple-50/30 transition-colors"
-                    onClick={() => setSelectedId(inc.id)}
-                  >
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                        <span className="font-mono text-xs text-purple-700">#{displayDocumentNumber(inc.id)}</span>
-                        <h3 className="font-semibold text-gray-900">{inc.title}</h3>
-                        <Badge className={STATUS_COLORS[inc.status] || STATUS_COLORS.open}>{inc.status}</Badge>
-                      </div>
-                      <p className="text-sm text-gray-600 mt-1 line-clamp-2">{inc.description || "No description"}</p>
-                      <p className="text-xs text-gray-500 mt-2">
-                        {formatDate(inc.occurredAt)}
-                        {customerLabel ? ` · ${customerLabel}` : ""}
-                        {vehicleLabel ? ` · ${vehicleLabel}` : ""}
-                        {inc.lineItems.length > 0
-                          ? ` · Est. $${sumDocumentLineItems(inc.lineItems).toFixed(2)}`
-                          : ""}
-                      </p>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-gray-400 shrink-0 mt-1" aria-hidden />
-                  </div>
-                  </button>
-                </AdminCard>
+                <RecordsHubRecordRow
+                  key={inc.id}
+                  onClick={() => setSelectedId(inc.id)}
+                  icon={<AlertTriangle className="h-5 w-5" />}
+                  iconClassName="bg-amber-100 text-amber-600"
+                  title={inc.title}
+                  badges={
+                    <>
+                      <Badge className="text-xs bg-purple-100 text-purple-700">#{displayDocumentNumber(inc.id)}</Badge>
+                      <Badge className={`text-xs border ${STATUS_COLORS[inc.status] || STATUS_COLORS.open}`}>
+                        {inc.status.replace("_", " ")}
+                      </Badge>
+                    </>
+                  }
+                  meta={
+                    <>
+                      <span>{formatDate(inc.occurredAt)}</span>
+                      {customerLabel ? <span>{customerLabel}</span> : null}
+                      {vehicleLabel ? <span>{vehicleLabel}</span> : null}
+                    </>
+                  }
+                  trailing={
+                    estimate > 0 ? (
+                      <p className="text-lg font-bold text-gray-900">${estimate.toFixed(2)}</p>
+                    ) : null
+                  }
+                />
               );
             })}
           </div>
