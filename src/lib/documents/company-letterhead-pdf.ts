@@ -14,7 +14,7 @@ function loadLogoBytes(): Promise<Uint8Array> {
   return logoBytesPromise;
 }
 
-/** Rental-agreement letterhead: gear logo, then company name, address, and phone. */
+/** Company letterhead: wordmark logo, document title, legal name, address, and phone. */
 export async function drawCompanyLetterhead(
   pdfDoc: PDFDocument,
   page: PDFPage,
@@ -24,17 +24,17 @@ export async function drawCompanyLetterhead(
   startY = 760,
 ): Promise<number> {
   const pageWidth = page.getWidth();
-  const purple = rgb(0.486, 0.227, 0.929);
   const ink = rgb(0.15, 0.15, 0.15);
   const muted = rgb(0.35, 0.35, 0.35);
-  const logoSize = 64;
+  const logoWidth = 220;
 
   const logo = await pdfDoc.embedPng(await loadLogoBytes());
+  const logoHeight = (logo.height / logo.width) * logoWidth;
   page.drawImage(logo, {
-    x: (pageWidth - logoSize) / 2,
-    y: startY - logoSize,
-    width: logoSize,
-    height: logoSize,
+    x: (pageWidth - logoWidth) / 2,
+    y: startY - logoHeight,
+    width: logoWidth,
+    height: logoHeight,
   });
 
   const center = (text: string, y: number, size: number, useBold: boolean, color = ink) => {
@@ -43,9 +43,7 @@ export async function drawCompanyLetterhead(
     page.drawText(text, { x: Math.max(36, (pageWidth - width) / 2), y, size, font: face, color });
   };
 
-  let y = startY - logoSize - 16;
-  center("NEXTGEARAUTO", y, 11, true, purple);
-  y -= 16;
+  let y = startY - logoHeight - 8;
   center(title, y, 13, true, ink);
   y -= 16;
   center("Next Gear Auto LLC", y, 10, false, muted);
