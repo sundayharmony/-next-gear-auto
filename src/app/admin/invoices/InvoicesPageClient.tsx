@@ -26,6 +26,8 @@ import { InvoicePreviewPanel } from "./invoice-preview-panel";
 import { fmt, type InvoiceDetail, type InvoiceListRow } from "./invoice-types";
 import { RecordsHubTabs } from "@/app/admin/tickets/records-hub-tabs";
 import { RecordsHubSubnav } from "@/app/admin/tickets/records-hub-subnav";
+import { displayDocumentNumber } from "@/lib/documents/short-document-number";
+import { InvoiceCreateForm } from "./invoice-create-form";
 
 interface InvoicesPageClientProps {
   bookingsHref: string;
@@ -50,6 +52,7 @@ export function InvoicesPageClient({
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const loadList = useCallback(async () => {
     setLoading(true);
@@ -130,6 +133,87 @@ export function InvoicesPageClient({
 
   const filtered = useMemo(() => invoices, [invoices]);
 
+  if (creating) {
+    return (
+      <>
+        <AdminPageHeader
+          title={embeddedInRecordsHub ? "Tickets & billing" : "Invoices"}
+          subtitle="Create an invoice from a booking"
+          onBack={() => setCreating(false)}
+          backLabel="Back to invoices"
+        >
+          {embeddedInRecordsHub ? (
+            <RecordsHubTabs panelBase={recordsHubPanelBase} className="mt-4" />
+          ) : null}
+        </AdminPageHeader>
+        <AdminPageBody>
+          {embeddedInRecordsHub ? <RecordsHubSubnav panelBase={recordsHubPanelBase} /> : null}
+          {error && (
+            <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} />
+          )}
+          <InvoiceCreateForm
+            onCancel={() => setCreating(false)}
+            onError={setError}
+            onCreated={(invoiceId, existed) => {
+              setCreating(false);
+              setSelectedId(invoiceId);
+              setSuccess(existed ? "Opened the invoice already on this booking" : "Invoice created");
+              void loadList();
+            }}
+          />
+        </AdminPageBody>
+      </>
+    );
+  }
+
+  if (selectedId) {
+    const number = displayDocumentNumber(detail?.id || selectedId);
+    return (
+      <>
+        <AdminPageHeader
+          title={`Invoice ${number}`}
+          subtitle={detail?.customer_name || "Invoice detail"}
+          onBack={() => {
+            setSelectedId(null);
+            setDetail(null);
+          }}
+          backLabel="Back to invoices"
+        >
+          {embeddedInRecordsHub ? (
+            <RecordsHubTabs panelBase={recordsHubPanelBase} className="mt-4" />
+          ) : null}
+        </AdminPageHeader>
+        <AdminPageBody>
+          {embeddedInRecordsHub ? <RecordsHubSubnav panelBase={recordsHubPanelBase} /> : null}
+          {error && (
+            <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} />
+          )}
+          {success && (
+            <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} />
+          )}
+          <InvoicePreviewPanel
+            detailLoading={detailLoading}
+            detail={detail}
+            bookingsHref={bookingsHref}
+            onClose={() => {
+              setSelectedId(null);
+              setDetail(null);
+            }}
+            onSuccess={setSuccess}
+            onError={setError}
+            onRefreshList={loadList}
+            onReloadDetail={loadDetail}
+            onDeleted={() => {
+              setSelectedId(null);
+              setDetail(null);
+              void loadList();
+            }}
+          />
+        </AdminPageBody>
+      </>
+    );
+  }
+
   return (
     <>
       <AdminPageHeader
@@ -137,8 +221,8 @@ export function InvoicesPageClient({
         subtitle="View sent invoices, edit line items, and track payment status from live booking balances."
         actions={
           <div className="flex flex-wrap gap-2">
-            <Button asChild size="sm" className="bg-white text-purple-900 hover:bg-purple-50">
-              <Link href={bookingsHref}>Send from booking</Link>
+            <Button size="sm" className="bg-white text-purple-900 hover:bg-purple-50" onClick={() => setCreating(true)}>
+              New invoice
             </Button>
             <Button
               variant="outline"
@@ -225,6 +309,7 @@ export function InvoicesPageClient({
                   >
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
+                        <p className="font-mono text-xs text-purple-700">#{displayDocumentNumber(inv.id)}</p>
                         <p className="font-medium text-gray-900 truncate">{inv.customer_name || "—"}</p>
                         <p className="text-xs text-gray-500 truncate">{inv.customer_email}</p>
                         <p className="text-sm text-gray-600 mt-1">{inv.vehicleName}</p>
@@ -246,6 +331,7 @@ export function InvoicesPageClient({
                 <table className="w-full text-sm">
                   <thead>
                     <tr className="border-b bg-gray-50 text-left text-xs text-gray-500 uppercase">
+                      <th className="px-4 py-3">Invoice #</th>
                       <th className="px-4 py-3">Customer</th>
                       <th className="px-4 py-3">Vehicle</th>
                       <th className="px-4 py-3">Sent</th>
@@ -264,6 +350,9 @@ export function InvoicesPageClient({
                         }`}
                         onClick={() => setSelectedId(inv.id)}
                       >
+                        <td className="px-4 py-3 font-mono font-semibold text-gray-900">
+                          {displayDocumentNumber(inv.id)}
+                        </td>
                         <td className="px-4 py-3">
                           <div className="font-medium text-gray-900">{inv.customer_name || "—"}</div>
                           <div className="text-xs text-gray-500">{inv.customer_email}</div>

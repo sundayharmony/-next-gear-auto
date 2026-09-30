@@ -11,6 +11,7 @@ import { getVehicleDisplayName } from "@/lib/types";
 import { getBookingBalanceDue } from "@/lib/utils/recurring-booking";
 import { logger } from "@/lib/utils/logger";
 import { generateInvoicePdf } from "@/lib/invoices/invoice-pdf";
+import { displayDocumentNumber, generateShortDocumentCode } from "@/lib/documents/short-document-number";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import { invoiceTableMissingMessage } from "@/lib/invoices/invoice-db-errors";
 
@@ -198,19 +199,30 @@ export async function upsertInvoiceFromBooking(
     return { ok: true, invoice: data as DbInvoiceRow };
   }
 
-  const id = `inv_${crypto.randomUUID().replace(/-/g, "").slice(0, 12)}`;
-  const { data, error } = await supabase
-    .from("invoices")
-    .insert({
-      id,
-      ...row,
-      send_count: options.incrementSend ? 1 : 0,
-      sent_at: options.incrementSend ? now : null,
-      last_sent_by: options.incrementSend ? options.performedBy ?? null : null,
-      created_at: now,
-    })
-    .select("*")
-    .single();
+  let data: DbInvoiceRow | null = null;
+  let error: { message: string } | null = null;
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const id = `inv_${generateShortDocumentCode(6)}`;
+    const inserted = await supabase
+      .from("invoices")
+      .insert({
+        id,
+        ...row,
+        send_count: options.incrementSend ? 1 : 0,
+        sent_at: options.incrementSend ? now : null,
+        last_sent_by: options.incrementSend ? options.performedBy ?? null : null,
+        created_at: now,
+      })
+      .select("*")
+      .single();
+    if (!inserted.error) {
+      data = inserted.data as DbInvoiceRow;
+      error = null;
+      break;
+    }
+    error = inserted.error;
+    if (!/duplicate|unique/i.test(inserted.error.message)) break;
+  }
 
   if (error) {
     logger.error("Invoice insert error:", error);
@@ -284,7 +296,9 @@ export async function sendInvoiceEmail(
 
   let pdfBytes: Uint8Array | undefined;
   try {
-    pdfBytes = await generateInvoicePdf(invoiceData);
+    pdfBytes = await generateInvoicePdf(invoiceData, {
+      documentNumber: displayDocumentNumber(invoice.id),
+    });
     if (pdfBytes.length > 10 * 1024 * 1024) {
       pdfBytes = undefined;
     }
@@ -295,6 +309,7 @@ export async function sendInvoiceEmail(
   try {
     await sendBookingInvoice({
       ...invoiceData,
+      documentNumber: displayDocumentNumber(invoice.id),
       customerEmail,
       pdfBytes,
     });

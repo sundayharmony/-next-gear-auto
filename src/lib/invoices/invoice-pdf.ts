@@ -2,8 +2,9 @@ import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
 import type { BookingInvoiceData } from "./invoice-data";
 import { fmtMoney } from "./invoice-data";
 import { getInvoicePaymentNoticeParagraphs } from "./invoice-payment-notice";
-import { CONTACT_INFO, SITE_NAME } from "@/lib/constants";
+import { CONTACT_INFO } from "@/lib/constants";
 import { fmtDate, fmtTime } from "@/lib/email/templates";
+import { drawCompanyLetterhead } from "@/lib/documents/company-letterhead-pdf";
 
 const PDF_TEXT_WIDTH = 512;
 
@@ -28,24 +29,26 @@ function formatInvoiceDate(isoDate: string): string {
   return fmtDate(isoDate);
 }
 
-export async function generateInvoicePdf(data: BookingInvoiceData): Promise<Uint8Array> {
+export async function generateInvoicePdf(
+  data: BookingInvoiceData,
+  options?: { documentNumber?: string },
+): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([612, 792]);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const purple = rgb(0.49, 0.23, 0.93);
 
-  let y = 740;
+  let y = drawCompanyLetterhead(page, font, bold, "INVOICE");
 
   const draw = (text: string, size: number, useBold = false, color = rgb(0.1, 0.1, 0.1)) => {
     page.drawText(text, { x: 50, y, size, font: useBold ? bold : font, color });
     y -= size + 6;
   };
 
-  page.drawText(SITE_NAME, { x: 50, y, size: 20, font: bold, color: purple });
-  y -= 28;
-  draw("INVOICE", 14, true, purple);
-  y -= 4;
+  if (options?.documentNumber) {
+    draw(`Invoice #: ${options.documentNumber}`, 12, true, purple);
+  }
   draw(`Invoice date: ${formatInvoiceDate(data.invoiceDate)}`, 10);
   draw(`Payment due by: ${formatInvoiceDate(data.dueDate)}`, 10);
   draw(`Booking ID: ${data.bookingId}`, 10);

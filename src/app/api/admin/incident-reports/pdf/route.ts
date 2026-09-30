@@ -3,6 +3,7 @@ import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { getVehicleDisplayName } from "@/lib/types";
 import { generateIncidentPdf } from "@/lib/documents/billing-record-pdf";
+import { displayDocumentNumber } from "@/lib/documents/short-document-number";
 import type { DocumentLineItem } from "@/lib/documents/document-line-items";
 import { logger } from "@/lib/utils/logger";
 
@@ -51,8 +52,10 @@ export async function GET(req: NextRequest) {
     customerName = b?.customer_name || "";
   }
 
+  const documentNumber = displayDocumentNumber(data.id);
   const pdfBytes = await generateIncidentPdf({
     id: data.id,
+    documentNumber,
     title: data.title,
     status: data.status,
     occurredAt: data.occurred_at,
@@ -64,7 +67,7 @@ export async function GET(req: NextRequest) {
     notes: data.notes || "",
   });
 
-  const safeName = data.title.replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 40);
+  const safeName = documentNumber;
   return new NextResponse(Buffer.from(pdfBytes), {
     status: 200,
     headers: {

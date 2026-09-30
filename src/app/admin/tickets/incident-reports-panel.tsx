@@ -24,6 +24,7 @@ import type { StaffPanelConfig } from "@/lib/admin/staff-panel-config";
 import { RecordsHubTabs } from "./records-hub-tabs";
 import { RecordsHubSubnav } from "./records-hub-subnav";
 import { IncidentDetailView, IncidentFormFields } from "./incident-detail-panel";
+import { displayDocumentNumber } from "@/lib/documents/short-document-number";
 
 export type IncidentRecord = {
   id: string;
@@ -426,6 +427,7 @@ export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelC
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                        <span className="font-mono text-xs text-purple-700">#{displayDocumentNumber(inc.id)}</span>
                         <h3 className="font-semibold text-gray-900">{inc.title}</h3>
                         <Badge className={STATUS_COLORS[inc.status] || STATUS_COLORS.open}>{inc.status}</Badge>
                       </div>

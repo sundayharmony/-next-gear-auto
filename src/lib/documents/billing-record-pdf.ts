@@ -1,5 +1,6 @@
 import { PDFDocument, StandardFonts, rgb, type PDFFont } from "pdf-lib";
-import { CONTACT_INFO, SITE_NAME } from "@/lib/constants";
+import { CONTACT_INFO } from "@/lib/constants";
+import { drawCompanyLetterhead } from "@/lib/documents/company-letterhead-pdf";
 import type { DocumentLineItem } from "@/lib/documents/document-line-items";
 import { lineItemAmount } from "@/lib/documents/document-line-items";
 
@@ -122,12 +123,8 @@ export async function generateTicketPdf(data: TicketPdfInput): Promise<Uint8Arra
   const page = pdfDoc.addPage([612, 792]);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const purple = rgb(0.49, 0.23, 0.93);
   const w = createWriter(page, font, bold);
-
-  page.drawText(SITE_NAME, { x: MARGIN, y: w.y, size: 18, font: bold, color: purple });
-  w.y -= 26;
-  w.draw("VIOLATION TICKET RECORD", 13, true);
+  w.y = drawCompanyLetterhead(page, font, bold, "VIOLATION TICKET RECORD");
   w.y -= 4;
   w.draw(`Reference: ${data.ticketLabel}`, 10);
   w.draw(`Record ID: ${data.id}`, 9);
@@ -160,6 +157,7 @@ export async function generateTicketPdf(data: TicketPdfInput): Promise<Uint8Arra
 
 export type IncidentPdfInput = {
   id: string;
+  documentNumber: string;
   title: string;
   status: string;
   occurredAt: string;
@@ -176,15 +174,11 @@ export async function generateIncidentPdf(data: IncidentPdfInput): Promise<Uint8
   const page = pdfDoc.addPage([612, 792]);
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
-  const purple = rgb(0.49, 0.23, 0.93);
   const w = createWriter(page, font, bold);
-
-  page.drawText(SITE_NAME, { x: MARGIN, y: w.y, size: 18, font: bold, color: purple });
-  w.y -= 26;
-  w.draw("INCIDENT REPORT", 13, true);
+  w.y = drawCompanyLetterhead(page, font, bold, "INCIDENT REPORT");
   w.y -= 4;
   w.draw(data.title, 12, true);
-  w.draw(`Report ID: ${data.id}`, 9);
+  w.draw(`Incident #: ${data.documentNumber}`, 12, true);
   w.draw(`Occurred: ${data.occurredAt}`, 10);
   w.draw(`Status: ${data.status}`, 10);
   w.draw(`Vehicle: ${data.vehicleName || "—"}`, 10);
