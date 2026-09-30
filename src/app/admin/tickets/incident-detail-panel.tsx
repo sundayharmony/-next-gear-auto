@@ -222,6 +222,11 @@ export function IncidentDetailView({
         </div>
 
         <AdminCard className="space-y-4">
+          <div className="text-center pb-2 border-b border-gray-200">
+            <img src="/images/logo.png" alt="NextGearAuto" className="mx-auto h-16 w-16 mb-2" />
+            <p className="text-xs font-bold tracking-widest text-purple-700">NEXTGEARAUTO</p>
+            <p className="text-sm text-gray-600">Next Gear Auto LLC</p>
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-semibold text-gray-900">{incident.title}</h2>
             <Badge className="bg-purple-100 text-purple-800 font-mono">#{displayDocumentNumber(incident.id)}</Badge>
