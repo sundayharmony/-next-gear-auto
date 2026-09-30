@@ -789,6 +789,7 @@ export interface BookingInvoiceEmailData {
   returnTime?: string;
   invoiceDate: string;
   dueDate: string;
+  documentNumber?: string;
   lineItems: InvoiceEmailLineItem[];
   chargesTotal: number;
   amountPaid: number;
@@ -822,10 +823,13 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
 
   return wrapEmail(`
     <tr>
-      <td style="padding: 40px 32px 16px; text-align: center;">
-        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
-        <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Invoice</h1>
-        <p style="margin: 0; color: #6b7280; font-size: 13px;">Invoice ${escapeHtml(fmtDate(data.invoiceDate))} &bull; Due ${escapeHtml(fmtDate(data.dueDate))} &bull; Booking ${escapeHtml(data.bookingId)}</p>
+      <td style="padding: 32px 32px 16px; text-align: center;">
+        <p style="margin: 0 0 8px;"><span style="display: inline-block; background: #f3e8ff; color: #6d28d9; font-size: 12px; font-weight: 800; letter-spacing: 2px; padding: 4px 10px; border-radius: 8px;">NEXTGEARAUTO</span></p>
+        <h1 style="margin: 0 0 6px; color: #111827; font-size: 22px; font-weight: 800; letter-spacing: 0.4px;">INVOICE</h1>
+        <p style="margin: 0; color: #4b5563; font-size: 13px;">Next Gear Auto LLC</p>
+        <p style="margin: 2px 0 0; color: #4b5563; font-size: 13px;">92 Forrest Street, Jersey City, NJ 07304</p>
+        <p style="margin: 2px 0 0; color: #4b5563; font-size: 13px;">Phone: (551) 429-3472 | Email: contact@rentnextgearauto.com</p>
+        <p style="margin: 12px 0 0; color: #6b7280; font-size: 13px;">Invoice ${escapeHtml(fmtDate(data.invoiceDate))} &bull; Due ${escapeHtml(fmtDate(data.dueDate))}${data.documentNumber ? ` &bull; #${escapeHtml(data.documentNumber)}` : ""}</p>
       </td>
     </tr>
     <tr>

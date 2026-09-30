@@ -11,7 +11,7 @@ import { generateInvoicePdf } from "@/lib/invoices/invoice-pdf";
 import { normalizeAdditionalLineItems } from "@/lib/invoices/invoice-line-items";
 import { logger } from "@/lib/utils/logger";
 
-const INV_ID_RE = /^inv_[a-z0-9]{8,32}$/i;
+import { displayDocumentNumber, INVOICE_ID_RE } from "@/lib/documents/short-document-number";
 
 type RouteContext = { params: Promise<{ invoiceId: string }> };
 
@@ -21,7 +21,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
   try {
     const { invoiceId } = await context.params;
-    if (!INV_ID_RE.test(invoiceId)) {
+    if (!INVOICE_ID_RE.test(invoiceId)) {
       return NextResponse.json({ success: false, message: "Invalid invoice ID" }, { status: 400 });
     }
 
@@ -58,12 +58,13 @@ export async function GET(req: NextRequest, context: RouteContext) {
       return NextResponse.json({ success: false, message: built.message }, { status: 400 });
     }
 
-    const pdfBytes = await generateInvoicePdf(built.invoiceData);
+    const documentNumber = displayDocumentNumber(row.id);
+    const pdfBytes = await generateInvoicePdf(built.invoiceData, { documentNumber });
     return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,
       headers: {
         "Content-Type": "application/pdf",
-        "Content-Disposition": `inline; filename="invoice-${invoice.booking_id}.pdf"`,
+        "Content-Disposition": `inline; filename="invoice-${documentNumber}.pdf"`,
       },
     });
   } catch (err) {

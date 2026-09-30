@@ -24,6 +24,7 @@ import {
 import { sumDocumentLineItems } from "@/lib/documents/document-line-items";
 import { RecordsHubTabs } from "./records-hub-tabs";
 import { RecordsHubSubnav } from "./records-hub-subnav";
+import { displayDocumentNumber } from "@/lib/documents/short-document-number";
 import { DocumentPdfActions } from "@/components/admin/document-pdf-actions";
 import type { IncidentRecord } from "./incident-reports-panel";
 
@@ -185,7 +186,7 @@ export function IncidentDetailView({
 
   return (
     <>
-      <AdminPageHeader title="Tickets & billing" subtitle={incident.title}>
+      <AdminPageHeader title="Tickets & billing" subtitle={`Incident ${displayDocumentNumber(incident.id)} · ${incident.title}`}>
         <RecordsHubTabs panelBase={panelBase} className="mt-4" />
       </AdminPageHeader>
       <AdminPageBody>
@@ -223,6 +224,7 @@ export function IncidentDetailView({
         <AdminCard className="space-y-4">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="text-lg font-semibold text-gray-900">{incident.title}</h2>
+            <Badge className="bg-purple-100 text-purple-800 font-mono">#{displayDocumentNumber(incident.id)}</Badge>
             <Badge className={STATUS_COLORS[incident.status] || STATUS_COLORS.open}>{incident.status}</Badge>
           </div>
           <p className="text-sm text-gray-600 whitespace-pre-wrap">{incident.description || "No description"}</p>
