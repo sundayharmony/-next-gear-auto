@@ -124,7 +124,7 @@ export async function generateTicketPdf(data: TicketPdfInput): Promise<Uint8Arra
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const w = createWriter(page, font, bold);
-  w.y = drawCompanyLetterhead(page, font, bold, "VIOLATION TICKET RECORD");
+  w.y = await drawCompanyLetterhead(pdfDoc, page, font, bold, "VIOLATION TICKET RECORD");
   w.y -= 4;
   w.draw(`Reference: ${data.ticketLabel}`, 10);
   w.draw(`Record ID: ${data.id}`, 9);
@@ -175,7 +175,7 @@ export async function generateIncidentPdf(data: IncidentPdfInput): Promise<Uint8
   const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const w = createWriter(page, font, bold);
-  w.y = drawCompanyLetterhead(page, font, bold, "INCIDENT REPORT");
+  w.y = await drawCompanyLetterhead(pdfDoc, page, font, bold, "INCIDENT REPORT");
   w.y -= 4;
   w.draw(data.title, 12, true);
   w.draw(`Incident #: ${data.documentNumber}`, 12, true);

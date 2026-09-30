@@ -129,6 +129,11 @@ export function InvoicePreviewPanel({
     <div className="w-full max-w-5xl">
       <Card>
         <CardContent className="p-4 sm:p-6 space-y-4">
+          <div className="text-center pb-2 border-b border-gray-200">
+            <img src="/images/logo.png" alt="NextGearAuto" className="mx-auto h-16 w-16 mb-2" />
+            <p className="text-xs font-bold tracking-widest text-purple-700">NEXTGEARAUTO</p>
+            <p className="text-sm text-gray-600">Next Gear Auto LLC · 92 Forrest Street, Jersey City, NJ 07304</p>
+          </div>
           {detailLoading || !detail ? (
             <p className="text-sm text-gray-500 py-6 text-center">Loading…</p>
           ) : (

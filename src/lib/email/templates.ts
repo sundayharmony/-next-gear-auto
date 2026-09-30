@@ -824,6 +824,7 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
   return wrapEmail(`
     <tr>
       <td style="padding: 32px 32px 16px; text-align: center;">
+        <p style="margin: 0 0 8px;"><img src="${SITE_URL}/images/logo.png" alt="NextGearAuto" width="72" height="72" style="display:block;margin:0 auto 8px;border:0;" /></p>
         <p style="margin: 0 0 8px;"><span style="display: inline-block; background: #f3e8ff; color: #6d28d9; font-size: 12px; font-weight: 800; letter-spacing: 2px; padding: 4px 10px; border-radius: 8px;">NEXTGEARAUTO</span></p>
         <h1 style="margin: 0 0 6px; color: #111827; font-size: 22px; font-weight: 800; letter-spacing: 0.4px;">INVOICE</h1>
         <p style="margin: 0; color: #4b5563; font-size: 13px;">Next Gear Auto LLC</p>

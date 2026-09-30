@@ -81,6 +81,7 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
     <div className="p-6 pb-4">
       {/* Header */}
       <div className="text-center mb-6">
+        <img src="/images/logo.png" alt="NextGearAuto" className="mx-auto mb-2 h-16 w-16" />
         <div className="flex justify-center mb-2">
           <div className="bg-purple-100 rounded-lg px-3 py-1">
             <span className="text-purple-700 font-bold text-sm tracking-wider">NEXTGEARAUTO</span>

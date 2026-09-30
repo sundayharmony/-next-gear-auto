@@ -39,7 +39,7 @@ export async function generateInvoicePdf(
   const bold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const purple = rgb(0.49, 0.23, 0.93);
 
-  let y = drawCompanyLetterhead(page, font, bold, "INVOICE");
+  let y = await drawCompanyLetterhead(pdfDoc, page, font, bold, "INVOICE");
 
   const draw = (text: string, size: number, useBold = false, color = rgb(0.1, 0.1, 0.1)) => {
     page.drawText(text, { x: 50, y, size, font: useBold ? bold : font, color });
