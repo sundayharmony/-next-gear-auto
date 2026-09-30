@@ -223,8 +223,7 @@ export function IncidentDetailView({
 
         <AdminCard className="space-y-4">
           <div className="text-center pb-2 border-b border-gray-200">
-            <img src="/images/logo.png" alt="NextGearAuto" className="mx-auto h-16 w-16 mb-2" />
-            <p className="text-xs font-bold tracking-widest text-purple-700">NEXTGEARAUTO</p>
+            <img src="/images/logo.png" alt="NextGearAuto" className="mx-auto mb-3 h-auto w-56 max-w-full" />
             <p className="text-sm text-gray-600">Next Gear Auto LLC</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">

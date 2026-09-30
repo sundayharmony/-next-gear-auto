@@ -81,12 +81,7 @@ function Page1({ vehicle, customerName, customerEmail, customerPhone, pickupDate
     <div className="p-6 pb-4">
       {/* Header */}
       <div className="text-center mb-6">
-        <img src="/images/logo.png" alt="NextGearAuto" className="mx-auto mb-2 h-16 w-16" />
-        <div className="flex justify-center mb-2">
-          <div className="bg-purple-100 rounded-lg px-3 py-1">
-            <span className="text-purple-700 font-bold text-sm tracking-wider">NEXTGEARAUTO</span>
-          </div>
-        </div>
+        <img src="/images/logo.png" alt="NextGearAuto" className="mx-auto mb-3 h-auto w-56 max-w-full" />
         <h2 className="text-xl font-bold text-gray-900 mb-1">
           {isWeeklyRecurring ? "WEEK-TO-WEEK LONG-TERM RENTAL AGREEMENT" : "VEHICLE RENTAL AGREEMENT"}
         </h2>
