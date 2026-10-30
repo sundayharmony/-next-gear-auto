@@ -6,8 +6,11 @@ import { authorizeBookingInvoiceAccess } from "@/lib/invoices/invoice-auth";
 import {
   backfillInvoicesFromActivity,
   enrichInvoiceWithBooking,
+  loadBookingWithVehicle,
+  upsertInvoiceFromBooking,
   type DbInvoiceRow,
 } from "@/lib/invoices/invoice-service";
+import { validateAdditionalInvoiceLineItems } from "@/lib/invoices/invoice-line-items";
 import { invoiceTableMissingMessage } from "@/lib/invoices/invoice-db-errors";
 import { getVehicleDisplayName } from "@/lib/types";
 import { logger } from "@/lib/utils/logger";
@@ -147,5 +150,62 @@ export async function GET(req: NextRequest) {
       { success: false, message: "Failed to load invoices" },
       { status: 500 },
     );
+  }
+}
+
+/** Create (or open the existing) invoice for a booking from the Invoices tab. */
+export async function POST(req: NextRequest) {
+  const auth = await verifyAdminOrManager(req);
+  if (!auth.authorized) return auth.response;
+
+  try {
+    const body = await req.json();
+    const bookingId = typeof body.bookingId === "string" ? body.bookingId.trim() : "";
+    if (!bookingId) {
+      return NextResponse.json({ success: false, message: "Select a booking" }, { status: 400 });
+    }
+
+    const lineParsed = validateAdditionalInvoiceLineItems(body.additionalLineItems ?? []);
+    if (!lineParsed.ok) {
+      return NextResponse.json({ success: false, message: lineParsed.message }, { status: 400 });
+    }
+
+    const supabase = getServiceSupabase();
+    const ctx = await loadBookingWithVehicle(supabase, bookingId);
+    if ("error" in ctx) {
+      return NextResponse.json({ success: false, message: "Booking not found" }, { status: 404 });
+    }
+
+    const denied = await authorizeBookingInvoiceAccess(
+      auth,
+      ctx.booking as { origin_channel: string | null; created_by_user_id: string | null },
+      "manage",
+    );
+    if (denied) return denied;
+
+    const { data: existing } = await supabase
+      .from("invoices")
+      .select("id")
+      .eq("booking_id", bookingId)
+      .maybeSingle();
+
+    const saved = await upsertInvoiceFromBooking(supabase, bookingId, {
+      additionalLineItems: lineParsed.items,
+      dueDate: typeof body.dueDate === "string" ? body.dueDate : undefined,
+      performedBy: auth.userId,
+      incrementSend: false,
+    });
+    if (!saved.ok) {
+      return NextResponse.json({ success: false, message: saved.message }, { status: 400 });
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: { id: saved.invoice.id },
+      existed: Boolean(existing?.id),
+    });
+  } catch (error) {
+    logger.error("POST invoice error:", error);
+    return NextResponse.json({ success: false, message: "Failed to create invoice" }, { status: 500 });
   }
 }

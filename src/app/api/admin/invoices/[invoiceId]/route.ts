@@ -13,7 +13,7 @@ import { validateAdditionalInvoiceLineItems } from "@/lib/invoices/invoice-line-
 import { validateInvoiceDueDate } from "@/lib/invoices/invoice-due-date";
 import { logger } from "@/lib/utils/logger";
 
-const INV_ID_RE = /^inv_[a-z0-9]{8,32}$/i;
+import { INVOICE_ID_RE } from "@/lib/documents/short-document-number";
 
 type RouteContext = { params: Promise<{ invoiceId: string }> };
 
@@ -23,7 +23,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
 
   try {
     const { invoiceId } = await context.params;
-    if (!INV_ID_RE.test(invoiceId)) {
+    if (!INVOICE_ID_RE.test(invoiceId)) {
       return NextResponse.json(
         { success: false, message: "Invalid invoice ID" },
         { status: 400 },
@@ -100,7 +100,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
 
   try {
     const { invoiceId } = await context.params;
-    if (!INV_ID_RE.test(invoiceId)) {
+    if (!INVOICE_ID_RE.test(invoiceId)) {
       return NextResponse.json(
         { success: false, message: "Invalid invoice ID" },
         { status: 400 },
@@ -205,7 +205,7 @@ export async function DELETE(req: NextRequest, context: RouteContext) {
 
   try {
     const { invoiceId } = await context.params;
-    if (!INV_ID_RE.test(invoiceId)) {
+    if (!INVOICE_ID_RE.test(invoiceId)) {
       return NextResponse.json(
         { success: false, message: "Invalid invoice ID" },
         { status: 400 },

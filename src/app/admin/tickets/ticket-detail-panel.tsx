@@ -27,6 +27,7 @@ import {
   DocumentLineItemsEditor,
   type DocumentLineItemDraft,
 } from "@/components/admin/document-line-items-editor";
+import { DocumentPdfActions } from "@/components/admin/document-pdf-actions";
 
 type Vehicle = VehicleListItem;
 type Booking = BookingDbRow;
@@ -265,7 +266,12 @@ export function TicketDetailView({
         onBack={onBack}
         backLabel="Back to tickets"
         actions={
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2 items-center">
+            <DocumentPdfActions
+              previewUrl={`/api/admin/tickets/pdf?id=${encodeURIComponent(ticket.id)}`}
+              downloadUrl={`/api/admin/tickets/pdf?id=${encodeURIComponent(ticket.id)}`}
+              downloadFilename={`ticket-${ticket.id}`}
+            />
             <Button size="sm" variant="outline" className="page-hero-btn-outline" onClick={onEdit}>
               <Pencil className="h-4 w-4 mr-1" /> Edit
             </Button>

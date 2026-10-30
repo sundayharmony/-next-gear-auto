@@ -1,23 +1,18 @@
 "use client";
 
-import React, { useCallback, useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { AlertTriangle, Loader2, Plus, RefreshCw } from "lucide-react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
 import type { BookingDbRow, VehicleListItem } from "@/lib/types";
-import { AdminPageBody, AdminPageHeader, AdminCard } from "@/components/admin/admin-shell";
+import { AdminPageBody, AdminPageHeader } from "@/components/admin/admin-shell";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Select } from "@/components/ui/select";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { logger } from "@/lib/utils/logger";
 import { TripAssociationSelect, type TuroTripOption } from "@/components/admin/trip-association-select";
 import type { TripAssociation } from "@/lib/documents/trip-association";
 import {
-  DocumentLineItemsEditor,
   draftsFromLineItems,
   draftsToLineItems,
   emptyDocumentLineDraft,
@@ -27,6 +22,10 @@ import type { DocumentLineItem } from "@/lib/documents/document-line-items";
 import { sumDocumentLineItems } from "@/lib/documents/document-line-items";
 import type { StaffPanelConfig } from "@/lib/admin/staff-panel-config";
 import { RecordsHubTabs } from "./records-hub-tabs";
+import { RecordsHubSubnav } from "./records-hub-subnav";
+import { RecordsHubChip, RecordsHubChipGroup, RecordsHubHeroStats, RecordsHubRecordRow } from "./records-hub-list";
+import { IncidentDetailView, IncidentFormFields } from "./incident-detail-panel";
+import { displayDocumentNumber } from "@/lib/documents/short-document-number";
 
 export type IncidentRecord = {
   id: string;
@@ -52,8 +51,34 @@ const STATUS_COLORS: Record<string, string> = {
   closed: "bg-gray-100 text-gray-600",
 };
 
+function enrichIncident(
+  inc: IncidentRecord,
+  bookings: BookingDbRow[],
+  vehicles: VehicleListItem[]
+): { vehicleLabel: string; customerLabel: string } {
+  let vehicleLabel = inc.vehicleName;
+  let customerLabel = inc.customerName;
+  if (!vehicleLabel && inc.vehicleId) {
+    const v = vehicles.find((x) => x.id === inc.vehicleId);
+    if (v) vehicleLabel = `${v.year} ${v.make} ${v.model}`;
+  }
+  if (!customerLabel && inc.bookingId) {
+    const b = bookings.find((x) => x.id === inc.bookingId);
+    if (b) customerLabel = b.customer_name || b.customer_email || "";
+  }
+  if (!vehicleLabel && inc.bookingId) {
+    const b = bookings.find((x) => x.id === inc.bookingId);
+    if (b?.vehicle_id) {
+      const v = vehicles.find((x) => x.id === b.vehicle_id);
+      if (v) vehicleLabel = `${v.year} ${v.make} ${v.model}`;
+    }
+  }
+  return { vehicleLabel, customerLabel };
+}
+
 export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelConfig }) {
   const panelBase = panelConfig.panelBase;
+  const bookingsHref = `${panelBase}/bookings`;
   const { error, setError, success, setSuccess } = useAutoToast();
   const [loading, setLoading] = useState(true);
   const [incidents, setIncidents] = useState<IncidentRecord[]>([]);
@@ -61,7 +86,12 @@ export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelC
   const [vehicles, setVehicles] = useState<VehicleListItem[]>([]);
   const [turoTrips, setTuroTrips] = useState<TuroTripOption[]>([]);
   const [adding, setAdding] = useState(false);
+  const [statusFilter, setStatusFilter] = useState<"all" | "open" | "in_review" | "resolved" | "closed">("all");
   const [saving, setSaving] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [editMode, setEditMode] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -71,6 +101,11 @@ export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelC
   const [vehicleId, setVehicleId] = useState("");
   const [trip, setTrip] = useState<TripAssociation>({ bookingId: null, blockedDateId: null });
   const [lineDrafts, setLineDrafts] = useState<DocumentLineItemDraft[]>([emptyDocumentLineDraft()]);
+
+  const selectedIncident = useMemo(
+    () => incidents.find((i) => i.id === selectedId) ?? null,
+    [incidents, selectedId]
+  );
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -136,6 +171,17 @@ export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelC
     setLineDrafts([emptyDocumentLineDraft()]);
   };
 
+  const populateFormFromIncident = (inc: IncidentRecord) => {
+    setTitle(inc.title);
+    setDescription(inc.description);
+    setOccurredAt(inc.occurredAt);
+    setStatus(inc.status);
+    setNotes(inc.notes);
+    setVehicleId(inc.vehicleId || "");
+    setTrip({ bookingId: inc.bookingId, blockedDateId: inc.blockedDateId });
+    setLineDrafts(draftsFromLineItems(inc.lineItems));
+  };
+
   const handleCreate = async () => {
     if (!title.trim() || !occurredAt) {
       setError("Title and date are required");
@@ -174,93 +220,214 @@ export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelC
     }
   };
 
+  const handleUpdate = async () => {
+    if (!selectedIncident || !title.trim() || !occurredAt) {
+      setError("Title and date are required");
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await adminFetch("/api/admin/incident-reports", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: selectedIncident.id,
+          title,
+          description,
+          occurredAt,
+          status,
+          notes,
+          vehicleId: vehicleId || null,
+          bookingId: trip.bookingId,
+          blockedDateId: trip.blockedDateId,
+          lineItems: draftsToLineItems(lineDrafts),
+        }),
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setError(json.message || "Failed to update incident report");
+        return;
+      }
+      setSuccess("Incident report updated");
+      setEditMode(false);
+      await load();
+    } catch {
+      setError("Failed to update incident report");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!selectedIncident) return;
+    setIsDeleting(true);
+    try {
+      const res = await adminFetch(`/api/admin/incident-reports?id=${encodeURIComponent(selectedIncident.id)}`, {
+        method: "DELETE",
+      });
+      const json = await res.json();
+      if (!res.ok || !json.success) {
+        setError(json.message || "Failed to delete incident report");
+        return;
+      }
+      setSuccess("Incident report deleted");
+      setSelectedId(null);
+      setDeleteConfirm(false);
+      await load();
+    } catch {
+      setError("Failed to delete incident report");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  if (selectedIncident && !editMode) {
+    const { vehicleLabel, customerLabel } = enrichIncident(selectedIncident, bookings, vehicles);
+    return (
+      <IncidentDetailView
+        incident={selectedIncident}
+        panelBase={panelBase}
+        bookingsHref={bookingsHref}
+        vehicleLabel={vehicleLabel}
+        customerLabel={customerLabel}
+        deleteConfirm={deleteConfirm}
+        isDeleting={isDeleting}
+        onBack={() => {
+          setSelectedId(null);
+          setDeleteConfirm(false);
+        }}
+        onEdit={() => {
+          populateFormFromIncident(selectedIncident);
+          setEditMode(true);
+        }}
+        onDeleteConfirm={() => setDeleteConfirm(true)}
+        onDeleteCancel={() => setDeleteConfirm(false)}
+        onDelete={() => void handleDelete()}
+      />
+    );
+  }
+
+  if (selectedIncident && editMode) {
+    return (
+      <>
+        <AdminPageHeader title="Tickets & billing" subtitle="Edit incident report">
+          <RecordsHubTabs panelBase={panelBase} className="mt-4" />
+        </AdminPageHeader>
+        <AdminPageBody>
+          <RecordsHubSubnav panelBase={panelBase} />
+          <IncidentFormFields
+            title={title}
+            setTitle={setTitle}
+            description={description}
+            setDescription={setDescription}
+            occurredAt={occurredAt}
+            setOccurredAt={setOccurredAt}
+            status={status}
+            setStatus={setStatus}
+            notes={notes}
+            setNotes={setNotes}
+            vehicleId={vehicleId}
+            setVehicleId={setVehicleId}
+            trip={trip}
+            onTripChange={setTrip}
+            lineDrafts={lineDrafts}
+            onLineDraftsChange={setLineDrafts}
+            bookings={bookings}
+            vehicles={vehicles}
+            turoTrips={turoTrips}
+            onSubmit={() => void handleUpdate()}
+            onCancel={() => {
+              setEditMode(false);
+              resetForm();
+            }}
+            submitLabel="Save changes"
+            saving={saving}
+          />
+        </AdminPageBody>
+      </>
+    );
+  }
+
   return (
     <>
       <AdminPageHeader
         title="Tickets & billing"
         subtitle="Incident reports for damage, accidents, and trip issues"
+        actions={
+          <>
+            <Button variant="outline" size="sm" onClick={() => void load()} className="page-hero-btn-outline">
+              <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
+              Refresh
+            </Button>
+            <Button size="sm" className="bg-white text-purple-900 hover:bg-purple-50" onClick={() => { resetForm(); setAdding(true); }}>
+              <Plus className="h-4 w-4 mr-1" />
+              New incident report
+            </Button>
+          </>
+        }
       >
         <RecordsHubTabs panelBase={panelBase} className="mt-4" />
+        <RecordsHubHeroStats
+          stats={[
+            { value: incidents.length, label: "Total Reports" },
+            { value: incidents.filter((i) => i.status === "open").length, label: "Open", valueClassName: "text-red-300" },
+            { value: incidents.filter((i) => i.status === "in_review").length, label: "In Review" },
+            {
+              value: `$${incidents.reduce((sum, i) => sum + sumDocumentLineItems(i.lineItems), 0).toLocaleString(undefined, { maximumFractionDigits: 0 })}`,
+              label: "Estimated Amount",
+            },
+          ]}
+        />
       </AdminPageHeader>
       <AdminPageBody>
+        <RecordsHubSubnav panelBase={panelBase} />
+
+        {error && (
+          <p className="mb-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2">{error}</p>
+        )}
+        {success && (
+          <p className="mb-4 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">{success}</p>
+        )}
+
         <div className="flex flex-wrap gap-2 mb-4">
-          <Button variant="outline" size="sm" onClick={() => void load()}>
-            <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
-            Refresh
-          </Button>
-          <Button size="sm" onClick={() => { resetForm(); setAdding(true); }}>
-            <Plus className="h-4 w-4 mr-1" />
-            New incident report
-          </Button>
+          <RecordsHubChipGroup>
+            {(["all", "open", "in_review", "resolved", "closed"] as const).map((s) => (
+              <RecordsHubChip key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>
+                {s.replace("_", " ")} ({s === "all" ? incidents.length : incidents.filter((i) => i.status === s).length})
+              </RecordsHubChip>
+            ))}
+          </RecordsHubChipGroup>
         </div>
 
         {adding && (
-          <AdminCard className="mb-6 space-y-4">
-            <h2 className="text-lg font-semibold text-gray-900">New incident report</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-semibold uppercase text-gray-500 block mb-1">Title *</label>
-                <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Front bumper damage" />
-              </div>
-              <div>
-                <label className="text-xs font-semibold uppercase text-gray-500 block mb-1">Occurred *</label>
-                <DatePicker value={occurredAt} onChange={setOccurredAt} />
-              </div>
-              <div>
-                <label className="text-xs font-semibold uppercase text-gray-500 block mb-1">Status</label>
-                <Select value={status} onChange={(e) => setStatus(e.target.value)}>
-                  <option value="open">Open</option>
-                  <option value="in_review">In review</option>
-                  <option value="resolved">Resolved</option>
-                  <option value="closed">Closed</option>
-                </Select>
-              </div>
-              <div>
-                <label className="text-xs font-semibold uppercase text-gray-500 block mb-1">Vehicle</label>
-                <Select value={vehicleId} onChange={(e) => setVehicleId(e.target.value)}>
-                  <option value="">Select vehicle</option>
-                  {vehicles.map((v) => (
-                    <option key={v.id} value={v.id}>
-                      {v.year} {v.make} {v.model}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="sm:col-span-2">
-                <label className="text-xs font-semibold uppercase text-gray-500 block mb-1">Associated trip</label>
-                <TripAssociationSelect
-                  value={trip}
-                  onChange={(next) => {
-                    setTrip(next);
-                    if (next.bookingId) {
-                      const b = bookings.find((x) => x.id === next.bookingId);
-                      if (b?.vehicle_id) setVehicleId(b.vehicle_id);
-                    }
-                  }}
-                  bookings={bookings}
-                  turoTrips={turoTrips}
-                />
-              </div>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-gray-500 block mb-1">Description</label>
-              <Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-            </div>
-            <DocumentLineItemsEditor drafts={lineDrafts} onChange={setLineDrafts} />
-            <div>
-              <label className="text-xs font-semibold uppercase text-gray-500 block mb-1">Internal notes</label>
-              <Textarea rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={() => void handleCreate()} disabled={saving}>
-                {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                Save report
-              </Button>
-              <Button variant="outline" onClick={() => { setAdding(false); resetForm(); }}>
-                Cancel
-              </Button>
-            </div>
-          </AdminCard>
+          <div className="mb-6">
+            <h2 className="text-lg font-semibold text-gray-900 mb-3">New incident report</h2>
+            <IncidentFormFields
+              title={title}
+              setTitle={setTitle}
+              description={description}
+              setDescription={setDescription}
+              occurredAt={occurredAt}
+              setOccurredAt={setOccurredAt}
+              status={status}
+              setStatus={setStatus}
+              notes={notes}
+              setNotes={setNotes}
+              vehicleId={vehicleId}
+              setVehicleId={setVehicleId}
+              trip={trip}
+              onTripChange={setTrip}
+              lineDrafts={lineDrafts}
+              onLineDraftsChange={setLineDrafts}
+              bookings={bookings}
+              vehicles={vehicles}
+              turoTrips={turoTrips}
+              onSubmit={() => void handleCreate()}
+              onCancel={() => { setAdding(false); resetForm(); }}
+              submitLabel="Save report"
+              saving={saving}
+            />
+          </div>
         )}
 
         {loading ? (
@@ -270,29 +437,45 @@ export function IncidentReportsPanel({ panelConfig }: { panelConfig: StaffPanelC
         ) : incidents.length === 0 ? (
           <p className="text-sm text-gray-500 text-center py-12">No incident reports yet.</p>
         ) : (
-          <div className="space-y-3">
-            {incidents.map((inc) => (
-              <AdminCard key={inc.id} className="p-4">
-                <div className="flex flex-wrap items-start justify-between gap-2">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-600" />
-                      <h3 className="font-semibold text-gray-900">{inc.title}</h3>
-                      <Badge className={STATUS_COLORS[inc.status] || STATUS_COLORS.open}>{inc.status}</Badge>
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{inc.description || "No description"}</p>
-                    <p className="text-xs text-gray-500 mt-2">
-                      {formatDate(inc.occurredAt)}
-                      {inc.customerName ? ` · ${inc.customerName}` : ""}
-                      {inc.vehicleName ? ` · ${inc.vehicleName}` : ""}
-                      {inc.lineItems.length > 0
-                        ? ` · Est. $${sumDocumentLineItems(inc.lineItems).toFixed(2)}`
-                        : ""}
-                    </p>
-                  </div>
-                </div>
-              </AdminCard>
-            ))}
+          <div className="space-y-2">
+            {incidents.filter((inc) => statusFilter === "all" || inc.status === statusFilter).length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-12">No incident reports match this filter.</p>
+            ) : null}
+            {incidents
+              .filter((inc) => statusFilter === "all" || inc.status === statusFilter)
+              .map((inc) => {
+              const { vehicleLabel, customerLabel } = enrichIncident(inc, bookings, vehicles);
+              const estimate = sumDocumentLineItems(inc.lineItems);
+              return (
+                <RecordsHubRecordRow
+                  key={inc.id}
+                  onClick={() => setSelectedId(inc.id)}
+                  icon={<AlertTriangle className="h-5 w-5" />}
+                  iconClassName="bg-amber-100 text-amber-600"
+                  title={inc.title}
+                  badges={
+                    <>
+                      <Badge className="text-xs bg-purple-100 text-purple-700">#{displayDocumentNumber(inc.id)}</Badge>
+                      <Badge className={`text-xs border ${STATUS_COLORS[inc.status] || STATUS_COLORS.open}`}>
+                        {inc.status.replace("_", " ")}
+                      </Badge>
+                    </>
+                  }
+                  meta={
+                    <>
+                      <span>{formatDate(inc.occurredAt)}</span>
+                      {customerLabel ? <span>{customerLabel}</span> : null}
+                      {vehicleLabel ? <span>{vehicleLabel}</span> : null}
+                    </>
+                  }
+                  trailing={
+                    estimate > 0 ? (
+                      <p className="text-lg font-bold text-gray-900">${estimate.toFixed(2)}</p>
+                    ) : null
+                  }
+                />
+              );
+            })}
           </div>
         )}
       </AdminPageBody>

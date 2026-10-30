@@ -1,5 +1,6 @@
 "use client";
 
+import { FileText, AlertTriangle } from "lucide-react";
 import { getAdminNavItems } from "@/lib/admin/panel-navigation";
 import { staffPanelIconMap } from "@/lib/admin/staff-panel-icons";
 import { StaffBottomTabBar } from "@/components/staff/staff-bottom-tab-bar";
@@ -15,13 +16,17 @@ const primaryTabs = adminNavItems
     icon: staffPanelIconMap[item.iconKey],
   }));
 
-const moreItems = adminNavItems
-  .filter((item) => !PRIMARY_TAB_KEYS.has(item.key))
-  .map((item) => ({
-    href: item.href,
-    label: item.label,
-    icon: staffPanelIconMap[item.iconKey],
-  }));
+const moreItems = [
+  ...adminNavItems
+    .filter((item) => !PRIMARY_TAB_KEYS.has(item.key))
+    .map((item) => ({
+      href: item.href,
+      label: item.label,
+      icon: staffPanelIconMap[item.iconKey],
+    })),
+  { href: "/admin/tickets?tab=invoices", label: "Invoices", icon: FileText },
+  { href: "/admin/tickets?tab=incidents", label: "Incidents", icon: AlertTriangle },
+];
 
 export function BottomTabBar() {
   return (
