@@ -7,7 +7,7 @@ const source = fs.readFileSync(registryPath, "utf8");
 const failures = [];
 const now = Date.now();
 
-const disallowedManagerSharedKeys = new Set(["finances", "vehicles"]);
+const disallowedManagerSharedKeys = new Set(["finances"]);
 /** Manager analytics is API-driven and does not re-export an admin page; exempt from shared UI import rule. */
 const managerUiSyncExemptKeys = new Set(["dashboard", "analytics"]);
 

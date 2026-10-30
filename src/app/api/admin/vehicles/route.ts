@@ -76,10 +76,11 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST: Add a new vehicle
+// POST: Add a new vehicle (admin or manager)
 export async function POST(request: NextRequest) {
-  const auth = await verifyAdmin(request);
+  const auth = await verifyAdminOrManager(request);
   if (!auth.authorized) return auth.response;
+  const isManager = auth.role === "manager";
   const supabase = getServiceSupabase();
   try {
     const body = await request.json();
@@ -94,17 +95,19 @@ export async function POST(request: NextRequest) {
     if (body.year !== undefined && (typeof body.year !== "number" || body.year <= 0 || body.year < 1900 || body.year > new Date().getFullYear() + 1)) {
       return NextResponse.json({ success: false, message: "Year must be a positive number between 1900 and next year" }, { status: 400 });
     }
-    if (body.purchasePrice !== undefined && (typeof body.purchasePrice !== "number" || body.purchasePrice < 0 || !Number.isFinite(body.purchasePrice))) {
-      return NextResponse.json({ success: false, message: "Purchase price must be a non-negative number" }, { status: 400 });
+    if (!isManager) {
+      if (body.purchasePrice !== undefined && (typeof body.purchasePrice !== "number" || body.purchasePrice < 0 || !Number.isFinite(body.purchasePrice))) {
+        return NextResponse.json({ success: false, message: "Purchase price must be a non-negative number" }, { status: 400 });
+      }
+      if (body.monthlyPayment !== undefined && (typeof body.monthlyPayment !== "number" || body.monthlyPayment < 0 || !Number.isFinite(body.monthlyPayment))) {
+        return NextResponse.json({ success: false, message: "Monthly payment must be a non-negative number" }, { status: 400 });
+      }
+      if (body.paymentDayOfMonth !== undefined && (typeof body.paymentDayOfMonth !== "number" || body.paymentDayOfMonth < 1 || body.paymentDayOfMonth > 31)) {
+        return NextResponse.json({ success: false, message: "Payment day must be between 1 and 31" }, { status: 400 });
+      }
     }
     if (body.mileage !== undefined && (typeof body.mileage !== "number" || body.mileage < 0 || !Number.isFinite(body.mileage))) {
       return NextResponse.json({ success: false, message: "Mileage must be a non-negative number" }, { status: 400 });
-    }
-    if (body.monthlyPayment !== undefined && (typeof body.monthlyPayment !== "number" || body.monthlyPayment < 0 || !Number.isFinite(body.monthlyPayment))) {
-      return NextResponse.json({ success: false, message: "Monthly payment must be a non-negative number" }, { status: 400 });
-    }
-    if (body.paymentDayOfMonth !== undefined && (typeof body.paymentDayOfMonth !== "number" || body.paymentDayOfMonth < 1 || body.paymentDayOfMonth > 31)) {
-      return NextResponse.json({ success: false, message: "Payment day must be between 1 and 31" }, { status: 400 });
     }
 
     const id = crypto.randomUUID();
@@ -142,15 +145,15 @@ export async function POST(request: NextRequest) {
         description: body.description || "",
         color: body.color || "",
         mileage: body.mileage ?? 0,
-        license_plate: body.licensePlate || "",
-        vin: body.vin || "",
-        insurance_card_urls: body.insuranceCardUrls || [],
+        license_plate: isManager ? "" : (body.licensePlate || ""),
+        vin: isManager ? "" : (body.vin || ""),
+        insurance_card_urls: isManager ? [] : (body.insuranceCardUrls || []),
         maintenance_status: body.maintenanceStatus || "good",
-        purchase_price: body.purchasePrice ?? 0,
-        is_financed: body.isFinanced ?? false,
-        monthly_payment: body.monthlyPayment ?? 0,
-        payment_day_of_month: body.paymentDayOfMonth ?? 1,
-        financing_start_date: body.financingStartDate || null,
+        purchase_price: isManager ? 0 : (body.purchasePrice ?? 0),
+        is_financed: isManager ? false : (body.isFinanced ?? false),
+        monthly_payment: isManager ? 0 : (body.monthlyPayment ?? 0),
+        payment_day_of_month: isManager ? 1 : (body.paymentDayOfMonth ?? 1),
+        financing_start_date: isManager ? null : (body.financingStartDate || null),
       })
       .select()
       .maybeSingle();

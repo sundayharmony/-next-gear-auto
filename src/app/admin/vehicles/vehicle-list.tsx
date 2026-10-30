@@ -51,11 +51,12 @@ export interface VehicleListProps {
   searchQuery: string;
   filterCategory: string;
   onClearFilters: () => void;
-  onShowAddForm: () => void;
-  onStartEdit: (vehicle: Vehicle) => void;
+  onShowAddForm?: () => void;
+  onStartEdit?: (vehicle: Vehicle) => void;
   onCancelEdit: () => void;
   onToggleAvailability: (vehicle: Vehicle) => void;
-  onDelete: (id: string) => void;
+  onDelete?: (id: string) => void;
+  hideSensitiveFields?: boolean;
 }
 
 export function VehicleList({
@@ -75,6 +76,7 @@ export function VehicleList({
   onCancelEdit,
   onToggleAvailability,
   onDelete,
+  hideSensitiveFields = false,
 }: VehicleListProps) {
   return (
     <>
@@ -91,7 +93,7 @@ export function VehicleList({
                 ? "No vehicles yet. Add your first vehicle!"
                 : "No vehicles match your search."}
             </p>
-            {vehicles.length === 0 && (
+            {vehicles.length === 0 && onShowAddForm && (
               <Button
                 onClick={() => {
                   onShowAddForm();
@@ -199,27 +201,29 @@ export function VehicleList({
                   </div>
 
                   {/* Pricing */}
-                  <div className="mb-3 grid grid-cols-2 gap-2">
+                  <div className={`mb-3 grid gap-2 ${hideSensitiveFields ? "grid-cols-1" : "grid-cols-2"}`}>
                     <div className="p-2 bg-purple-50 rounded-lg">
                       <div className="text-lg font-bold text-purple-600">
                         ${vehicle.dailyRate}
                       </div>
                       <div className="text-xs text-gray-600">Daily Rate</div>
                     </div>
-                    <div className="p-2 bg-gray-50 rounded-lg">
-                      <div className="text-lg font-bold text-gray-700">
-                        ${(vehicle.purchasePrice ?? 0).toLocaleString()}
+                    {!hideSensitiveFields && (
+                      <div className="p-2 bg-gray-50 rounded-lg">
+                        <div className="text-lg font-bold text-gray-700">
+                          ${(vehicle.purchasePrice ?? 0).toLocaleString()}
+                        </div>
+                        <div className="text-xs text-gray-600">
+                          {vehicle.isFinanced ? (
+                            <span className="text-purple-600 font-medium">
+                              Financed · ${(vehicle.monthlyPayment ?? 0).toLocaleString()}/mo
+                            </span>
+                          ) : (
+                            "Purchase Price"
+                          )}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-600">
-                        {vehicle.isFinanced ? (
-                          <span className="text-purple-600 font-medium">
-                            Financed · ${(vehicle.monthlyPayment ?? 0).toLocaleString()}/mo
-                          </span>
-                        ) : (
-                          "Purchase Price"
-                        )}
-                      </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Mileage and Specs */}
@@ -296,16 +300,18 @@ export function VehicleList({
                   )}
 
                   {/* License Plate and VIN */}
-                  <div className="mb-4 text-xs text-gray-500 space-y-1">
-                    <div>
-                      <span className="font-medium">License Plate:</span>{" "}
-                      {vehicle.licensePlate || "—"}
+                  {!hideSensitiveFields && (
+                    <div className="mb-4 text-xs text-gray-500 space-y-1">
+                      <div>
+                        <span className="font-medium">License Plate:</span>{" "}
+                        {vehicle.licensePlate || "—"}
+                      </div>
+                      <div title={vehicle.vin || undefined} className="break-all">
+                        <span className="font-medium">VIN:</span>{" "}
+                        {vehicle.vin || "—"}
+                      </div>
                     </div>
-                    <div title={vehicle.vin || undefined} className="break-all">
-                      <span className="font-medium">VIN:</span>{" "}
-                      {vehicle.vin || "—"}
-                    </div>
-                  </div>
+                  )}
 
                   {/* Actions */}
                   <div className="flex gap-2">
@@ -314,14 +320,16 @@ export function VehicleList({
                         View
                       </Button>
                     </Link>
-                    <Button
-                      size="sm"
-                      variant={editingId === vehicle.id ? "default" : "outline"}
-                      className={`flex-1 ${editingId === vehicle.id ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}`}
-                      onClick={() => editingId === vehicle.id ? onCancelEdit() : onStartEdit(vehicle)}
-                    >
-                      <Pencil className="h-3 w-3 mr-1" /> {editingId === vehicle.id ? "Editing" : "Edit"}
-                    </Button>
+                    {onStartEdit && (
+                      <Button
+                        size="sm"
+                        variant={editingId === vehicle.id ? "default" : "outline"}
+                        className={`flex-1 ${editingId === vehicle.id ? "bg-purple-600 hover:bg-purple-700 text-white" : ""}`}
+                        onClick={() => editingId === vehicle.id ? onCancelEdit() : onStartEdit(vehicle)}
+                      >
+                        <Pencil className="h-3 w-3 mr-1" /> {editingId === vehicle.id ? "Editing" : "Edit"}
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -341,20 +349,22 @@ export function VehicleList({
                         <><Check className="h-3 w-3 mr-1" /> Available</>
                       )}
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      onClick={() => onDelete(vehicle.id)}
-                      disabled={deletingId === vehicle.id || saving}
-                      aria-label={`Delete ${getVehicleDisplayName(vehicle)}`}
-                    >
-                      {deletingId === vehicle.id ? (
-                        <Loader2 className="h-3 w-3 animate-spin" />
-                      ) : (
-                        <Trash2 className="h-3 w-3" />
-                      )}
-                    </Button>
+                    {onDelete && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-red-600 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                        onClick={() => onDelete(vehicle.id)}
+                        disabled={deletingId === vehicle.id || saving}
+                        aria-label={`Delete ${getVehicleDisplayName(vehicle)}`}
+                      >
+                        {deletingId === vehicle.id ? (
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                        ) : (
+                          <Trash2 className="h-3 w-3" />
+                        )}
+                      </Button>
+                    )}
                   </div>
                 </CardContent>
               </Card>

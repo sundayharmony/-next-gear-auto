@@ -79,7 +79,7 @@ const STAFF_ROUTES = new Set([
 const METHOD_OVERRIDES = {
   "src/app/api/admin/vehicles/route.ts": {
     GET: "staff",
-    POST: "admin-only",
+    POST: "staff",
     PUT: "admin-only",
     PATCH: "admin-only",
     DELETE: "admin-only",
