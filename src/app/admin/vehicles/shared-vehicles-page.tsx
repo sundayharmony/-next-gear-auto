@@ -1,0 +1,267 @@
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { usePathname } from "next/navigation";
+import { useAutoToast } from "@/lib/hooks/useAutoToast";
+import {
+  Car,
+  Plus,
+  X,
+  DollarSign,
+  AlertTriangle,
+  CheckCircle,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { AdminPageHeader, AdminPageBody, AdminStatCard } from "@/components/admin/admin-shell";
+import { AdminStatusBanner } from "@/components/admin/ui-feedback";
+import { VehicleCategory, getVehicleDisplayName } from "@/lib/types";
+import { VehicleFilters } from "./vehicle-filters";
+import { VehicleList } from "./vehicle-list";
+import { useVehiclesData } from "./use-vehicles-data";
+import { useVehicleActions } from "./use-vehicle-actions";
+import { VehicleForm, emptyVehicle } from "./vehicle-form";
+import type { VehiclesPageConfig } from "./config";
+
+interface SharedVehiclesPageProps {
+  config: VehiclesPageConfig;
+}
+
+export function SharedVehiclesPage({ config }: SharedVehiclesPageProps) {
+  const pathname = usePathname();
+  const { vehicles, setVehicles, loading, refetch, invalidateVehicles } = useVehiclesData();
+  const { error, setError, success, setSuccess } = useAutoToast();
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterCategory, setFilterCategory] = useState<VehicleCategory | "">("");
+
+  const {
+    editingId,
+    setEditingId,
+    editForm,
+    setEditForm,
+    showAddForm,
+    setShowAddForm,
+    newVehicle,
+    setNewVehicle,
+    saving,
+    deletingId,
+    togglingId,
+    editFormRef,
+    cancelAddForm,
+    syncVehicleImagesInList,
+    toggleAvailability,
+    startEdit,
+    saveEdit,
+    addVehicle,
+    deleteVehicle,
+    addFeature,
+    removeFeature,
+  } = useVehicleActions({
+    vehicles,
+    setVehicles,
+    invalidateVehicles,
+    setError,
+    setSuccess,
+  });
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Escape" || saving) return;
+      const tag = (e.target as HTMLElement)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") {
+        (e.target as HTMLElement).blur();
+        return;
+      }
+      if (editingId) {
+        setEditingId(null);
+      } else if (showAddForm) {
+        cancelAddForm();
+      }
+    };
+    document.addEventListener("keydown", handleKeyDown);
+    return () => document.removeEventListener("keydown", handleKeyDown);
+  }, [editingId, showAddForm, saving, newVehicle.images, cancelAddForm, setEditingId]);
+
+  const stats = useMemo(() => ({
+    total: vehicles.length,
+    available: vehicles.filter((v) => v.isAvailable).length,
+    inMaintenance: vehicles.filter((v) => v.maintenanceStatus === "in-maintenance" || v.maintenanceStatus === "needs-service").length,
+    avgRate:
+      vehicles.length > 0
+        ? Math.round(
+            vehicles.reduce((sum, v) => sum + v.dailyRate, 0) / vehicles.length
+          )
+        : 0,
+  }), [vehicles]);
+
+  const filteredVehicles = useMemo(() => vehicles.filter((v) => {
+    const q = searchQuery.toLowerCase();
+    const displayName = getVehicleDisplayName(v).toLowerCase();
+    const matchesSearch =
+      searchQuery === "" ||
+      displayName.includes(q) ||
+      v.make.toLowerCase().includes(q) ||
+      v.model.toLowerCase().includes(q) ||
+      (v.color && v.color.toLowerCase().includes(q)) ||
+      (v.licensePlate && v.licensePlate.toLowerCase().includes(q)) ||
+      (v.vin && v.vin.toLowerCase().includes(q));
+
+    const matchesCategory =
+      filterCategory === "" || v.category === filterCategory;
+
+    return matchesSearch && matchesCategory;
+  }), [vehicles, searchQuery, filterCategory]);
+
+  const hideSensitiveFields = !config.capabilities.canViewSensitiveFields;
+
+  return (
+    <>
+      <AdminPageHeader
+        title={config.title}
+        subtitle={`${config.subtitle}${vehicles.length > 0 ? ` · ${vehicles.length} vehicle${vehicles.length !== 1 ? "s" : ""}` : ""}`}
+        actions={
+          config.capabilities.canAddVehicle && (
+            <Button
+              onClick={() => {
+                if (showAddForm) {
+                  setNewVehicle(emptyVehicle);
+                }
+                setShowAddForm(!showAddForm);
+                setEditingId(null);
+              }}
+              className="bg-white text-purple-900 hover:bg-gray-100"
+            >
+              {showAddForm ? (
+                <><X className="h-4 w-4 mr-2" /> Cancel</>
+              ) : (
+                <><Plus className="h-4 w-4 mr-2" /> Add Vehicle</>
+              )}
+            </Button>
+          )
+        }
+      />
+
+      <AdminPageBody>
+        {success ? (
+          <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} />
+        ) : null}
+
+        {error ? (
+          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 flex items-center justify-between">
+            <span>{error}</span>
+            <div className="flex items-center gap-2">
+              <button onClick={() => void refetch()} className="ml-2 text-red-600 underline text-xs hover:text-red-700">Retry</button>
+              <button
+                onClick={() => setError(null)}
+                aria-label="Dismiss error"
+                className="text-red-400 hover:text-red-600 ml-3"
+              >
+                &times;
+              </button>
+            </div>
+          </div>
+        ) : null}
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+          <AdminStatCard
+            label="Total Vehicles"
+            value={stats.total}
+            icon={Car}
+            iconClassName="text-gray-600"
+            iconBgClassName="bg-gray-100"
+          />
+          <AdminStatCard
+            label="Available"
+            value={stats.available}
+            icon={CheckCircle}
+            iconClassName="text-green-600"
+            iconBgClassName="bg-green-100"
+          />
+          <AdminStatCard
+            label="In Maintenance"
+            value={stats.inMaintenance}
+            icon={AlertTriangle}
+            iconClassName="text-yellow-600"
+            iconBgClassName="bg-yellow-100"
+          />
+          <AdminStatCard
+            label="Avg Daily Rate"
+            value={`$${stats.avgRate}`}
+            icon={DollarSign}
+            iconClassName="text-purple-600"
+            iconBgClassName="bg-purple-100"
+          />
+        </div>
+
+        {showAddForm && config.capabilities.canAddVehicle && (
+          <VehicleForm
+            form={newVehicle}
+            setForm={setNewVehicle}
+            formKey="new"
+            onSave={addVehicle}
+            onCancel={cancelAddForm}
+            isSaving={saving}
+            onAddFeature={addFeature}
+            onRemoveFeature={removeFeature}
+            onError={setError}
+            hideSensitiveFields={hideSensitiveFields}
+          />
+        )}
+
+        <VehicleFilters
+          searchQuery={searchQuery}
+          onSearchChange={setSearchQuery}
+          filterCategory={filterCategory}
+          onCategoryChange={setFilterCategory}
+          onRefresh={() => void refetch()}
+          loading={loading}
+          totalCount={vehicles.length}
+          filteredCount={filteredVehicles.length}
+        />
+
+        {editingId && config.capabilities.canEditVehicle && (
+          <div ref={editFormRef}>
+            <VehicleForm
+              form={editForm}
+              setForm={setEditForm}
+              formKey={editingId}
+              onSave={saveEdit}
+              onCancel={() => setEditingId(null)}
+              isSaving={saving}
+              onAddFeature={addFeature}
+              onRemoveFeature={removeFeature}
+              onSyncImages={syncVehicleImagesInList}
+              onError={setError}
+              hideSensitiveFields={hideSensitiveFields}
+            />
+          </div>
+        )}
+
+        <VehicleList
+          vehicles={vehicles}
+          filteredVehicles={filteredVehicles}
+          loading={loading}
+          pathname={pathname}
+          editingId={editingId}
+          togglingId={togglingId}
+          deletingId={deletingId}
+          saving={saving}
+          searchQuery={searchQuery}
+          filterCategory={filterCategory}
+          onClearFilters={() => {
+            setSearchQuery("");
+            setFilterCategory("");
+          }}
+          onShowAddForm={config.capabilities.canAddVehicle ? () => {
+            setShowAddForm(true);
+            setEditingId(null);
+          } : undefined}
+          onStartEdit={config.capabilities.canEditVehicle ? startEdit : undefined}
+          onCancelEdit={() => setEditingId(null)}
+          onToggleAvailability={toggleAvailability}
+          onDelete={config.capabilities.canDeleteVehicle ? deleteVehicle : undefined}
+          hideSensitiveFields={hideSensitiveFields}
+        />
+      </AdminPageBody>
+    </>
+  );
+}

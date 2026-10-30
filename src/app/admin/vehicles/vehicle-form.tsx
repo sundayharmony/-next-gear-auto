@@ -38,6 +38,7 @@ export interface VehicleFormProps {
   onRemoveFeature: (index: number, formKey: "new" | string) => void;
   onSyncImages?: (vehicleId: string, images: string[]) => void;
   onError: (message: string) => void;
+  hideSensitiveFields?: boolean;
 }
 
 export function VehicleForm({
@@ -51,6 +52,7 @@ export function VehicleForm({
   onRemoveFeature,
   onSyncImages,
   onError,
+  hideSensitiveFields = false,
 }: VehicleFormProps) {
   return (
     <Card className="mb-4 border-purple-200">
@@ -122,7 +124,7 @@ export function VehicleForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+          <div className={`grid grid-cols-2 gap-2 ${hideSensitiveFields ? "sm:grid-cols-3" : "sm:grid-cols-4"}`}>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Daily Rate ($)
@@ -138,21 +140,23 @@ export function VehicleForm({
                 min="0"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
-                Purchase Price ($)
-              </label>
-              <Input
-                type="number"
-                value={form.purchasePrice || 0}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setForm({ ...form, purchasePrice: val === "" ? 0 : Number(val) });
-                }}
-                min="0"
-                step="100"
-              />
-            </div>
+            {!hideSensitiveFields && (
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
+                  Purchase Price ($)
+                </label>
+                <Input
+                  type="number"
+                  value={form.purchasePrice || 0}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setForm({ ...form, purchasePrice: val === "" ? 0 : Number(val) });
+                  }}
+                  min="0"
+                  step="100"
+                />
+              </div>
+            )}
 
             <div>
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
@@ -184,81 +188,83 @@ export function VehicleForm({
             </div>
           </div>
 
-          <div className="border border-purple-200 rounded-lg p-2.5 bg-purple-50/50">
-            <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                Vehicle Financing
-              </label>
-              <button
-                type="button"
-                role="switch"
-                aria-checked={form.isFinanced}
-                aria-label="Toggle vehicle financing"
-                onClick={() => setForm({ ...form, isFinanced: !form.isFinanced })}
-                className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                  form.isFinanced ? "bg-purple-600" : "bg-gray-300"
-                }`}
-              >
-                <span
-                  className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                    form.isFinanced ? "translate-x-5" : "translate-x-0.5"
+          {!hideSensitiveFields && (
+            <div className="border border-purple-200 rounded-lg p-2.5 bg-purple-50/50">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
+                  Vehicle Financing
+                </label>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={form.isFinanced}
+                  aria-label="Toggle vehicle financing"
+                  onClick={() => setForm({ ...form, isFinanced: !form.isFinanced })}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    form.isFinanced ? "bg-purple-600" : "bg-gray-300"
                   }`}
-                />
-              </button>
-            </div>
-            {!form.isFinanced && (
-              <p className="text-xs text-gray-400">Enable to track monthly payments and financing details.</p>
-            )}
-            {form.isFinanced && (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                <div>
-                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
-                    Monthly Payment ($)
-                  </label>
-                  <Input
-                    type="number"
-                    value={form.monthlyPayment || 0}
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      setForm({ ...form, monthlyPayment: val === "" ? 0 : Number(val) });
-                    }}
-                    min="0"
-                    step="0.01"
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                      form.isFinanced ? "translate-x-5" : "translate-x-0.5"
+                    }`}
                   />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
-                    Payment Day (1-31)
-                  </label>
-                  <Input
-                    type="number"
-                    value={form.paymentDayOfMonth ?? 1}
-                    onChange={(e) =>
-                      setForm({
-                        ...form,
-                        paymentDayOfMonth: Math.min(31, Math.max(1, Number(e.target.value))),
-                      })
-                    }
-                    min="1"
-                    max="31"
-                  />
-                </div>
-                <div>
-                  <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
-                    Financing Start
-                  </label>
-                  <DatePicker
-                    value={form.financingStartDate || ""}
-                    onChange={(val) =>
-                      setForm({ ...form, financingStartDate: val })
-                    }
-                  />
-                </div>
+                </button>
               </div>
-            )}
-          </div>
+              {!form.isFinanced && (
+                <p className="text-xs text-gray-400">Enable to track monthly payments and financing details.</p>
+              )}
+              {form.isFinanced && (
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
+                      Monthly Payment ($)
+                    </label>
+                    <Input
+                      type="number"
+                      value={form.monthlyPayment || 0}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setForm({ ...form, monthlyPayment: val === "" ? 0 : Number(val) });
+                      }}
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
+                      Payment Day (1-31)
+                    </label>
+                    <Input
+                      type="number"
+                      value={form.paymentDayOfMonth ?? 1}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          paymentDayOfMonth: Math.min(31, Math.max(1, Number(e.target.value))),
+                        })
+                      }
+                      min="1"
+                      max="31"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
+                      Financing Start
+                    </label>
+                    <DatePicker
+                      value={form.financingStartDate || ""}
+                      onChange={(val) =>
+                        setForm({ ...form, financingStartDate: val })
+                      }
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          <div className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${hideSensitiveFields ? "lg:grid-cols-3" : "lg:grid-cols-5"}`}>
             <div>
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Color
@@ -269,28 +275,32 @@ export function VehicleForm({
                 placeholder="e.g. White"
               />
             </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
-                License Plate
-              </label>
-              <Input
-                value={form.licensePlate || ""}
-                onChange={(e) =>
-                  setForm({ ...form, licensePlate: e.target.value })
-                }
-                placeholder="ABC-1234"
-              />
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
-                VIN
-              </label>
-              <Input
-                value={form.vin || ""}
-                onChange={(e) => setForm({ ...form, vin: e.target.value })}
-                placeholder="Vehicle ID Number"
-              />
-            </div>
+            {!hideSensitiveFields && (
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
+                  License Plate
+                </label>
+                <Input
+                  value={form.licensePlate || ""}
+                  onChange={(e) =>
+                    setForm({ ...form, licensePlate: e.target.value })
+                  }
+                  placeholder="ABC-1234"
+                />
+              </div>
+            )}
+            {!hideSensitiveFields && (
+              <div>
+                <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
+                  VIN
+                </label>
+                <Input
+                  value={form.vin || ""}
+                  onChange={(e) => setForm({ ...form, vin: e.target.value })}
+                  placeholder="Vehicle ID Number"
+                />
+              </div>
+            )}
             <div>
               <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
                 Mileage
@@ -355,13 +365,15 @@ export function VehicleForm({
             disabled={isSaving}
           />
 
-          <InsuranceCardManager
-            vehicleId={formKey}
-            images={form.insuranceCardUrls || []}
-            onImagesChange={(insuranceCardUrls) => setForm({ ...form, insuranceCardUrls })}
-            onError={onError}
-            disabled={isSaving}
-          />
+          {!hideSensitiveFields && (
+            <InsuranceCardManager
+              vehicleId={formKey}
+              images={form.insuranceCardUrls || []}
+              onImagesChange={(insuranceCardUrls) => setForm({ ...form, insuranceCardUrls })}
+              onError={onError}
+              disabled={isSaving}
+            />
+          )}
 
           <div>
             <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-1 block">
