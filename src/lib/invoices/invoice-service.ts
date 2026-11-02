@@ -327,6 +327,7 @@ export async function sendInvoiceEmail(
   try {
     pdfBytes = await generateInvoicePdf(invoiceData, {
       documentNumber: displayDocumentNumber(invoice.id),
+      paymentUrl,
     });
     if (pdfBytes.length > 10 * 1024 * 1024) {
       pdfBytes = undefined;
@@ -352,6 +353,14 @@ export async function sendInvoiceEmail(
     };
   }
 
+  logger.info("Invoice email dispatched", {
+    bookingId: invoice.booking_id,
+    invoiceId,
+    balanceDue: invoiceData.balanceDue,
+    hasPaymentUrl: Boolean(paymentUrl),
+    stripeSessionId: stripeSessionId || null,
+  });
+
   await supabase.from("booking_activity").insert({
     booking_id: invoice.booking_id,
     action: "invoice_sent",
@@ -372,8 +381,10 @@ export async function sendInvoiceEmail(
   return {
     ok: true,
     message: paymentUrl
-      ? `Invoice and Stripe payment link sent to ${customerEmail}`
-      : `Invoice sent to ${customerEmail}`,
+      ? `Invoice + Stripe pay link sent to ${customerEmail} (balance $${invoiceData.balanceDue.toFixed(2)})`
+      : invoiceData.balanceDue > 0
+        ? `Invoice sent to ${customerEmail}, but no Stripe link was attached`
+        : `Invoice sent to ${customerEmail} (balance $0 — no payment link needed)`,
     balanceDue: invoiceData.balanceDue,
     hadPdf: !!pdfBytes,
     paymentUrl,

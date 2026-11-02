@@ -206,6 +206,10 @@ export async function POST(req: NextRequest) {
 
         hadPdf: send.hadPdf,
 
+        paymentUrl: send.paymentUrl,
+
+        stripeSessionId: send.stripeSessionId,
+
       },
 
     });

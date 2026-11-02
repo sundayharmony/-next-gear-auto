@@ -31,7 +31,7 @@ function formatInvoiceDate(isoDate: string): string {
 
 export async function generateInvoicePdf(
   data: BookingInvoiceData,
-  options?: { documentNumber?: string },
+  options?: { documentNumber?: string; paymentUrl?: string },
 ): Promise<Uint8Array> {
   const pdfDoc = await PDFDocument.create();
   const page = pdfDoc.addPage([612, 792]);
@@ -113,6 +113,16 @@ export async function generateInvoicePdf(
       y -= 12;
     }
     y -= 4;
+  }
+
+  if (data.balanceDue > 0 && options?.paymentUrl) {
+    y -= 4;
+    draw("Pay online (Stripe link — expires in 24 hours):", 9, true, rgb(0.15, 0.35, 0.75));
+    for (const line of wrapPdfText(options.paymentUrl, PDF_TEXT_WIDTH, 8, font)) {
+      if (y < 80) break;
+      page.drawText(line, { x: 50, y, size: 8, font, color: rgb(0.15, 0.35, 0.75) });
+      y -= 11;
+    }
   }
 
   y -= 12;

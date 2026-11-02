@@ -28,6 +28,22 @@ test("invoice email template includes Pay balance now CTA when paymentUrl set", 
   );
   assert.ok(source.includes("Pay balance now"));
   assert.ok(source.includes("data.paymentUrl"));
+  assert.ok(source.includes("Or copy this Stripe payment link"));
+});
+
+test("invoice mailer appends Stripe URL to plain-text body", () => {
+  const source = fs.readFileSync(path.join(root, "src/lib/email/mailer.ts"), "utf8");
+  assert.ok(source.includes("Pay online (Stripe)"));
+  assert.ok(source.includes("data.paymentUrl"));
+});
+
+test("invoice PDF can embed paymentUrl", () => {
+  const source = fs.readFileSync(
+    path.join(root, "src/lib/invoices/invoice-pdf.ts"),
+    "utf8",
+  );
+  assert.ok(source.includes("paymentUrl"));
+  assert.ok(source.includes("Pay online (Stripe link"));
 });
 
 test("Stripe webhook treats invoice purpose as balance payment", () => {
