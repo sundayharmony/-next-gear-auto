@@ -2,19 +2,15 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2, RefreshCw, Search } from "lucide-react";
+import { FileText, Plus, RefreshCw, Search } from "lucide-react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { useAutoToast } from "@/lib/hooks/useAutoToast";
-import {
-  AdminPageHeader,
-  AdminPageBody,
-  AdminTableWrap,
-} from "@/components/admin/admin-shell";
+import { AdminPageHeader, AdminPageBody } from "@/components/admin/admin-shell";
 import { AdminStatusBanner, AdminEmptyState } from "@/components/admin/ui-feedback";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/select";
+import { RecordsHubChip, RecordsHubChipGroup, RecordsHubHeroStats, RecordsHubRecordRow } from "@/app/admin/tickets/records-hub-list";
 import {
   INVOICE_STATUS_COLORS,
   INVOICE_STATUS_LABELS,
@@ -24,6 +20,9 @@ import { formatDate } from "@/lib/utils/date-helpers";
 import { InvoicePreviewPanel } from "./invoice-preview-panel";
 import { fmt, type InvoiceDetail, type InvoiceListRow } from "./invoice-types";
 import { RecordsHubTabs } from "@/app/admin/tickets/records-hub-tabs";
+import { RecordsHubSubnav } from "@/app/admin/tickets/records-hub-subnav";
+import { displayDocumentNumber } from "@/lib/documents/short-document-number";
+import { InvoiceCreateForm } from "./invoice-create-form";
 
 interface InvoicesPageClientProps {
   bookingsHref: string;
@@ -48,13 +47,12 @@ export function InvoicesPageClient({
   const [detail, setDetail] = useState<InvoiceDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [backfilling, setBackfilling] = useState(false);
+  const [creating, setCreating] = useState(false);
 
   const loadList = useCallback(async () => {
     setLoading(true);
     try {
       const params = new URLSearchParams({ limit: "100" });
-      if (statusFilter !== "all") params.set("status", statusFilter);
-      if (search.trim()) params.set("q", search.trim());
       const res = await adminFetch(`/api/admin/invoices?${params}`);
       const data = await res.json();
       if (res.ok && data.success) {
@@ -67,7 +65,7 @@ export function InvoicesPageClient({
     } finally {
       setLoading(false);
     }
-  }, [statusFilter, search, setError]);
+  }, [setError]);
 
   useEffect(() => {
     const t = setTimeout(() => loadList(), 200);
@@ -126,7 +124,108 @@ export function InvoicesPageClient({
     }
   };
 
-  const filtered = useMemo(() => invoices, [invoices]);
+  const statusCounts = useMemo(() => {
+    const counts = { all: invoices.length, unpaid: 0, partial: 0, overdue: 0, paid: 0 };
+    for (const inv of invoices) counts[inv.paymentStatus] += 1;
+    return counts;
+  }, [invoices]);
+
+  const filtered = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return invoices.filter((inv) => {
+      if (statusFilter !== "all" && inv.paymentStatus !== statusFilter) return false;
+      if (!q) return true;
+      return `${inv.customer_name || ""} ${inv.customer_email || ""} ${inv.booking_id} ${displayDocumentNumber(inv.id)}`
+        .toLowerCase()
+        .includes(q);
+    });
+  }, [invoices, search, statusFilter]);
+
+  const outstanding = invoices
+    .filter((inv) => inv.paymentStatus !== "paid")
+    .reduce((sum, inv) => sum + (Number(inv.liveBalance) || 0), 0);
+  const chargesTotal = invoices.reduce((sum, inv) => sum + (Number(inv.charges_total) || 0), 0);
+
+  if (creating) {
+    return (
+      <>
+        <AdminPageHeader
+          title={embeddedInRecordsHub ? "Tickets & billing" : "Invoices"}
+          subtitle="Create an invoice from a booking"
+          onBack={() => setCreating(false)}
+          backLabel="Back to invoices"
+        >
+          {embeddedInRecordsHub ? (
+            <RecordsHubTabs panelBase={recordsHubPanelBase} className="mt-4" />
+          ) : null}
+        </AdminPageHeader>
+        <AdminPageBody>
+          {embeddedInRecordsHub ? <RecordsHubSubnav panelBase={recordsHubPanelBase} /> : null}
+          {error && (
+            <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} />
+          )}
+          <InvoiceCreateForm
+            onCancel={() => setCreating(false)}
+            onError={setError}
+            onCreated={(invoiceId, existed) => {
+              setCreating(false);
+              setSelectedId(invoiceId);
+              setSuccess(existed ? "Opened the invoice already on this booking" : "Invoice created");
+              void loadList();
+            }}
+          />
+        </AdminPageBody>
+      </>
+    );
+  }
+
+  if (selectedId) {
+    const number = displayDocumentNumber(detail?.id || selectedId);
+    return (
+      <>
+        <AdminPageHeader
+          title={`Invoice ${number}`}
+          subtitle={detail?.customer_name || "Invoice detail"}
+          onBack={() => {
+            setSelectedId(null);
+            setDetail(null);
+          }}
+          backLabel="Back to invoices"
+        >
+          {embeddedInRecordsHub ? (
+            <RecordsHubTabs panelBase={recordsHubPanelBase} className="mt-4" />
+          ) : null}
+        </AdminPageHeader>
+        <AdminPageBody>
+          {embeddedInRecordsHub ? <RecordsHubSubnav panelBase={recordsHubPanelBase} /> : null}
+          {error && (
+            <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} />
+          )}
+          {success && (
+            <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} />
+          )}
+          <InvoicePreviewPanel
+            detailLoading={detailLoading}
+            detail={detail}
+            bookingsHref={bookingsHref}
+            onClose={() => {
+              setSelectedId(null);
+              setDetail(null);
+            }}
+            onSuccess={setSuccess}
+            onError={setError}
+            onRefreshList={loadList}
+            onReloadDetail={loadDetail}
+            onDeleted={() => {
+              setSelectedId(null);
+              setDetail(null);
+              void loadList();
+            }}
+          />
+        </AdminPageBody>
+      </>
+    );
+  }
 
   return (
     <>
@@ -134,7 +233,7 @@ export function InvoicesPageClient({
         title={embeddedInRecordsHub ? "Tickets & billing" : "Invoices"}
         subtitle="View sent invoices, edit line items, and track payment status from live booking balances."
         actions={
-          <div className="flex gap-2">
+          <>
             <Button
               variant="outline"
               size="sm"
@@ -145,26 +244,27 @@ export function InvoicesPageClient({
               <RefreshCw className={`h-4 w-4 mr-1 ${loading ? "animate-spin" : ""}`} />
               Refresh
             </Button>
-            {isAdmin && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleBackfill}
-                disabled={backfilling}
-                className="page-hero-btn-outline"
-              >
-                {backfilling ? <Loader2 className="h-4 w-4 animate-spin mr-1" /> : null}
-                Import from history
-              </Button>
-            )}
-          </div>
+            <Button size="sm" className="bg-white text-purple-900 hover:bg-purple-50" onClick={() => setCreating(true)}>
+              <Plus className="h-4 w-4 mr-1" />
+              New invoice
+            </Button>
+          </>
         }
       >
         {embeddedInRecordsHub ? (
           <RecordsHubTabs panelBase={recordsHubPanelBase} className="mt-4" />
         ) : null}
+        <RecordsHubHeroStats
+          stats={[
+            { value: invoices.length, label: "Total Invoices" },
+            { value: statusCounts.unpaid + statusCounts.overdue, label: "Unpaid", valueClassName: "text-red-300" },
+            { value: fmt(outstanding), label: "Outstanding Amount" },
+            { value: fmt(chargesTotal), label: "Total Amount" },
+          ]}
+        />
       </AdminPageHeader>
       <AdminPageBody>
+        {embeddedInRecordsHub ? <RecordsHubSubnav panelBase={recordsHubPanelBase} /> : null}
         {error && (
           <AdminStatusBanner type="error" message={error} onDismiss={() => setError(null)} />
         )}
@@ -172,101 +272,88 @@ export function InvoicesPageClient({
           <AdminStatusBanner type="success" message={success} onDismiss={() => setSuccess(null)} />
         )}
 
-        <div className="flex flex-col lg:flex-row gap-6">
-          <div className="flex-1 min-w-0 space-y-4">
-            <div className="flex flex-col sm:flex-row gap-2">
-              <div className="relative flex-1">
+        <div className="space-y-4">
+            <div className="flex flex-wrap gap-2">
+              <RecordsHubChipGroup>
+                {(["all", "unpaid", "partial", "overdue", "paid"] as const).map((s) => (
+                  <RecordsHubChip key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>
+                    {s} ({statusCounts[s]})
+                  </RecordsHubChip>
+                ))}
+              </RecordsHubChipGroup>
+              <div className="relative flex-1 min-w-[200px]">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                 <Input
-                  placeholder="Search customer, email, booking ID…"
+                  placeholder="Search customer, email, invoice #…"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="pl-9"
                 />
               </div>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-                className="sm:w-40"
-              >
-                <option value="all">All statuses</option>
-                <option value="unpaid">Unpaid</option>
-                <option value="partial">Partial</option>
-                <option value="overdue">Overdue</option>
-                <option value="paid">Paid</option>
-              </Select>
             </div>
 
             {loading ? (
               <p className="py-8 text-center text-sm text-gray-500">Loading invoices…</p>
             ) : filtered.length === 0 ? (
               <AdminEmptyState
-                title="No invoices yet"
-                description="Send one from a booking, or use Import from history (admin)."
+                title="No invoices found"
+                description={
+                  invoices.length === 0
+                    ? "Create an invoice from a booking."
+                    : "Try adjusting your filters."
+                }
+                action={
+                  invoices.length === 0 ? (
+                    <Button onClick={() => setCreating(true)}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      New invoice
+                    </Button>
+                  ) : null
+                }
               />
             ) : (
-              <AdminTableWrap>
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b bg-gray-50 text-left text-xs text-gray-500 uppercase">
-                      <th className="px-4 py-3">Customer</th>
-                      <th className="px-4 py-3">Vehicle</th>
-                      <th className="px-4 py-3">Sent</th>
-                      <th className="px-4 py-3">Due</th>
-                      <th className="px-4 py-3 text-right">Total</th>
-                      <th className="px-4 py-3 text-right">Balance</th>
-                      <th className="px-4 py-3">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {filtered.map((inv) => (
-                      <tr
-                        key={inv.id}
-                        className={`border-b cursor-pointer hover:bg-purple-50/50 ${
-                          selectedId === inv.id ? "bg-purple-50" : ""
-                        }`}
-                        onClick={() => setSelectedId(inv.id)}
-                      >
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900">{inv.customer_name || "—"}</div>
-                          <div className="text-xs text-gray-500">{inv.customer_email}</div>
-                        </td>
-                        <td className="px-4 py-3 text-gray-700">{inv.vehicleName}</td>
-                        <td className="px-4 py-3 text-gray-600">
-                          {inv.sent_at ? formatDate(inv.sent_at) : "—"}
-                        </td>
-                        <td className="px-4 py-3 text-gray-600">{formatDate(inv.due_date)}</td>
-                        <td className="px-4 py-3 text-right">{fmt(inv.charges_total)}</td>
-                        <td className="px-4 py-3 text-right font-medium">{fmt(inv.liveBalance)}</td>
-                        <td className="px-4 py-3">
-                          <Badge className={INVOICE_STATUS_COLORS[inv.paymentStatus]}>
-                            {INVOICE_STATUS_LABELS[inv.paymentStatus]}
-                          </Badge>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </AdminTableWrap>
+              <div className="space-y-2">
+                {filtered.map((inv) => (
+                  <RecordsHubRecordRow
+                    key={inv.id}
+                    onClick={() => setSelectedId(inv.id)}
+                    icon={<FileText className="h-5 w-5" />}
+                    iconClassName="bg-purple-100 text-purple-600"
+                    title={`#${displayDocumentNumber(inv.id)}`}
+                    badges={
+                      <Badge className={`text-xs border ${INVOICE_STATUS_COLORS[inv.paymentStatus]}`}>
+                        {INVOICE_STATUS_LABELS[inv.paymentStatus]}
+                      </Badge>
+                    }
+                    meta={
+                      <>
+                        <span>{inv.customer_name || "—"}</span>
+                        {inv.vehicleName ? <span>{inv.vehicleName}</span> : null}
+                        <span>Due {formatDate(inv.due_date)}</span>
+                      </>
+                    }
+                    trailing={
+                      <p className={`text-lg font-bold ${inv.paymentStatus === "paid" ? "text-green-600" : "text-red-600"}`}>
+                        {fmt(inv.liveBalance)}
+                      </p>
+                    }
+                  />
+                ))}
+              </div>
             )}
-          </div>
-
-          {selectedId && (
-            <InvoicePreviewPanel
-              detailLoading={detailLoading}
-              detail={detail}
-              bookingsHref={bookingsHref}
-              onClose={() => setSelectedId(null)}
-              onSuccess={setSuccess}
-              onError={setError}
-              onRefreshList={loadList}
-              onReloadDetail={loadDetail}
-              onDeleted={() => {
-                setSelectedId(null);
-                setDetail(null);
-              }}
-            />
-          )}
+            {isAdmin ? (
+              <p className="text-xs text-gray-500">
+                Missing older invoices?{" "}
+                <button
+                  type="button"
+                  className="text-purple-600 hover:underline disabled:opacity-50"
+                  onClick={handleBackfill}
+                  disabled={backfilling}
+                >
+                  {backfilling ? "Importing…" : "Import from booking history"}
+                </button>
+              </p>
+            ) : null}
         </div>
       </AdminPageBody>
     </>
