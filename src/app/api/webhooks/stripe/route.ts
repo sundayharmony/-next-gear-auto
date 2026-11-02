@@ -48,6 +48,9 @@ export async function POST(request: Request) {
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session;
         const bookingId = session.metadata?.booking_id;
+        const isBalancePayment =
+          session.metadata?.purpose === "invoice" ||
+          session.metadata?.extension === "true";
 
         if (bookingId) {
           // Idempotency: skip if this session was already processed
@@ -58,14 +61,16 @@ export async function POST(request: Request) {
             .maybeSingle();
 
           if (alreadyProcessed) {
-            try {
-              await redeemBookingPromo(supabase, bookingId);
-            } catch (error) {
-              logger.error("Error retrying promo redemption:", error);
-              return NextResponse.json(
-                { error: "Promo redemption failed" },
-                { status: 500 },
-              );
+            if (!isBalancePayment) {
+              try {
+                await redeemBookingPromo(supabase, bookingId);
+              } catch (error) {
+                logger.error("Error retrying promo redemption:", error);
+                return NextResponse.json(
+                  { error: "Promo redemption failed" },
+                  { status: 500 },
+                );
+              }
             }
             logger.info(`Webhook duplicate skipped for session: ${session.id}`);
             return NextResponse.json({ received: true });
@@ -100,33 +105,52 @@ export async function POST(request: Request) {
             .eq("booking_id", bookingId);
           const depositTotal = sumBookingPaymentAmounts(allPayments || []);
 
-          // Atomically confirm booking — only update if not already confirmed.
-          const { error: updateError } = await supabase
+          // Always sync paid total onto the booking (invoice/extension balances included).
+          const { error: depositSyncError } = await supabase
             .from("bookings")
             .update({
-              status: "confirmed",
-              stripe_payment_intent: session.payment_intent as string,
               deposit: depositTotal,
+              ...(session.payment_intent
+                ? { stripe_payment_intent: session.payment_intent as string }
+                : {}),
             })
-            .eq("id", bookingId)
-            .eq("status", "pending");
+            .eq("id", bookingId);
 
-          if (updateError) {
-            logger.error("Error updating booking status:", updateError);
+          if (depositSyncError) {
+            logger.error("Error syncing booking deposit after Stripe payment:", depositSyncError);
             return NextResponse.json(
-              { error: "Booking confirmation failed" },
+              { error: "Booking payment sync failed" },
               { status: 500 },
             );
           }
 
-          try {
-            await redeemBookingPromo(supabase, bookingId);
-          } catch (error) {
-            logger.error("Error recording promo redemption:", error);
-            return NextResponse.json(
-              { error: "Promo redemption failed" },
-              { status: 500 },
-            );
+          if (!isBalancePayment) {
+            // Atomically confirm booking — only update if still pending.
+            const { error: updateError } = await supabase
+              .from("bookings")
+              .update({
+                status: "confirmed",
+              })
+              .eq("id", bookingId)
+              .eq("status", "pending");
+
+            if (updateError) {
+              logger.error("Error updating booking status:", updateError);
+              return NextResponse.json(
+                { error: "Booking confirmation failed" },
+                { status: 500 },
+              );
+            }
+
+            try {
+              await redeemBookingPromo(supabase, bookingId);
+            } catch (error) {
+              logger.error("Error recording promo redemption:", error);
+              return NextResponse.json(
+                { error: "Promo redemption failed" },
+                { status: 500 },
+              );
+            }
           }
 
           const { error: paymentError } = await supabase.from("payment_records").upsert(
@@ -145,57 +169,68 @@ export async function POST(request: Request) {
             logger.error("Error creating payment record:", paymentError);
           }
 
-          // Fetch booking details for email
-          const { data: booking } = await supabase
-            .from("bookings")
-            .select("*")
-            .eq("id", bookingId)
-            .maybeSingle();
+          if (session.metadata?.purpose === "invoice") {
+            await supabase.from("booking_activity").insert({
+              booking_id: bookingId,
+              action: "invoice_paid_stripe",
+              details: {
+                invoice_id: session.metadata.invoice_id || null,
+                stripe_session_id: session.id,
+                amount: amountPaid,
+              },
+              performed_by: "stripe_webhook",
+            });
+          }
 
-          if (booking) {
-            // Only send confirmation emails if customer email exists
-            if (!booking.customer_email) {
-              logger.warn("Booking has no customer email, skipping email notification:", bookingId);
-            } else {
-              // Fetch vehicle name
-              const { data: vehicle } = await supabase
-                .from("vehicles")
-                .select("year, make, model")
-                .eq("id", booking.vehicle_id)
-                .maybeSingle();
+          // Initial checkout only — do not re-send booking confirmation for invoice/extension pays.
+          if (!isBalancePayment) {
+            const { data: booking } = await supabase
+              .from("bookings")
+              .select("*")
+              .eq("id", bookingId)
+              .maybeSingle();
 
-              // Check if customer needs a password
-              let needsPassword = false;
-              if (booking.customer_id) {
-                const { data: cust } = await supabase
-                  .from("customers")
-                  .select("password_hash")
-                  .eq("id", booking.customer_id)
+            if (booking) {
+              if (!booking.customer_email) {
+                logger.warn("Booking has no customer email, skipping email notification:", bookingId);
+              } else {
+                const { data: vehicle } = await supabase
+                  .from("vehicles")
+                  .select("year, make, model")
+                  .eq("id", booking.vehicle_id)
                   .maybeSingle();
-                needsPassword = !cust?.password_hash;
+
+                let needsPassword = false;
+                if (booking.customer_id) {
+                  const { data: cust } = await supabase
+                    .from("customers")
+                    .select("password_hash")
+                    .eq("id", booking.customer_id)
+                    .maybeSingle();
+                  needsPassword = !cust?.password_hash;
+                }
+
+                const emailData = {
+                  bookingId: booking.id,
+                  customerName: booking.customer_name || "Customer",
+                  customerEmail: booking.customer_email,
+                  vehicleName: vehicle ? getVehicleDisplayName(vehicle) : "Vehicle",
+                  pickupDate: booking.pickup_date,
+                  returnDate: booking.return_date,
+                  pickupTime: booking.pickup_time || undefined,
+                  returnTime: booking.return_time || undefined,
+                  totalPrice: booking.total_price,
+                  deposit: booking.deposit,
+                  needsPassword,
+                };
+
+                sendBookingConfirmationWithAgreement(emailData)
+                  .then(() => logger.info("Confirmation email sent via webhook for booking:", bookingId))
+                  .catch((error) => logger.error("Failed to send confirmation email via webhook:", error));
+                sendAdminNewBooking(emailData)
+                  .then(() => logger.info("Admin confirmation email sent via webhook for booking:", bookingId))
+                  .catch((error) => logger.error("Failed to send admin confirmation email via webhook:", error));
               }
-
-              const emailData = {
-                bookingId: booking.id,
-                customerName: booking.customer_name || "Customer",
-                customerEmail: booking.customer_email,
-                vehicleName: vehicle ? getVehicleDisplayName(vehicle) : "Vehicle",
-                pickupDate: booking.pickup_date,
-                returnDate: booking.return_date,
-                pickupTime: booking.pickup_time || undefined,
-                returnTime: booking.return_time || undefined,
-                totalPrice: booking.total_price,
-                deposit: booking.deposit,
-                needsPassword,
-              };
-
-              // Send confirmation emails (don't await - fire and forget)
-              sendBookingConfirmationWithAgreement(emailData)
-                .then(() => logger.info("Confirmation email sent via webhook for booking:", bookingId))
-                .catch((error) => logger.error("Failed to send confirmation email via webhook:", error));
-              sendAdminNewBooking(emailData)
-                .then(() => logger.info("Admin confirmation email sent via webhook for booking:", bookingId))
-                .catch((error) => logger.error("Failed to send admin confirmation email via webhook:", error));
             }
           }
         }
@@ -205,8 +240,11 @@ export async function POST(request: Request) {
       case "checkout.session.expired": {
         const session = event.data.object as Stripe.Checkout.Session;
         const bookingId = session.metadata?.booking_id;
-        if (bookingId) {
-          // Mark booking as cancelled if payment expired
+        const isBalancePayment =
+          session.metadata?.purpose === "invoice" ||
+          session.metadata?.extension === "true";
+        // Only cancel unpaid initial checkout — never cancel for invoice/extension links.
+        if (bookingId && !isBalancePayment) {
           const { error: expireError } = await supabase
             .from("bookings")
             .update({ status: "cancelled" })
