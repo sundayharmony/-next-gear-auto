@@ -1,6 +1,6 @@
 "use client";
 
-import { DollarSign, LayoutDashboard } from "lucide-react";
+import { AlertTriangle, DollarSign, FileText, LayoutDashboard } from "lucide-react";
 import { getManagerNavItems } from "@/lib/admin/panel-navigation";
 import { staffPanelIconMap } from "@/lib/admin/staff-panel-icons";
 import { StaffBottomTabBar } from "@/components/staff/staff-bottom-tab-bar";
@@ -28,9 +28,13 @@ const moreItems = managerNavItems
 
 export function ManagerBottomTabBar() {
   const { user } = useAuth();
+  const billingShortcuts = [
+    { href: "/manager/tickets?tab=invoices", label: "Invoices", icon: FileText },
+    { href: "/manager/tickets?tab=incidents", label: "Incidents", icon: AlertTriangle },
+  ];
   const more = userHasRole(user, "owner")
-    ? [...moreItems, { href: "/owner/finance", label: "Revenue & profit", icon: DollarSign }]
-    : moreItems;
+    ? [...moreItems, ...billingShortcuts, { href: "/owner/finance", label: "Revenue & profit", icon: DollarSign }]
+    : [...moreItems, ...billingShortcuts];
 
   return (
     <StaffBottomTabBar

@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { ExternalLink, X } from "lucide-react";
+import { ExternalLink } from "lucide-react";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,8 @@ import {
 } from "@/lib/invoices/invoice-status";
 import { formatDate } from "@/lib/utils/date-helpers";
 import { InvoiceSendModule } from "./invoice-send-module";
+import { DocumentPdfActions } from "@/components/admin/document-pdf-actions";
+import { displayDocumentNumber } from "@/lib/documents/short-document-number";
 import {
   draftsFromAdditional,
   emptyDraft,
@@ -103,7 +105,6 @@ export function InvoicePreviewPanel({
   detailLoading,
   detail,
   bookingsHref,
-  onClose,
   onSuccess,
   onError,
   onRefreshList,
@@ -125,25 +126,27 @@ export function InvoicePreviewPanel({
   const additionalItems = useMemo(() => parseDraftLines(drafts), [drafts]);
 
   return (
-    <div className="w-full lg:w-[420px] shrink-0">
-      <Card className="sticky top-4">
-        <CardContent className="p-4 space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="font-semibold text-gray-900">Invoice detail</h2>
-            <button
-              type="button"
-              onClick={onClose}
-              className="p-1 rounded hover:bg-gray-100"
-              aria-label="Close detail"
-            >
-              <X className="h-5 w-5 text-gray-500" />
-            </button>
+    <div className="w-full max-w-5xl">
+      <Card>
+        <CardContent className="p-4 sm:p-6 space-y-4">
+          <div className="text-center pb-2 border-b border-gray-200">
+            <img src="/images/logo.png" alt="NextGearAuto" className="mx-auto mb-3 h-auto w-56 max-w-full" />
+            <p className="text-sm text-gray-600">Next Gear Auto LLC · 92 Forrest Street, Jersey City, NJ 07304</p>
           </div>
-
           {detailLoading || !detail ? (
             <p className="text-sm text-gray-500 py-6 text-center">Loading…</p>
           ) : (
             <>
+              <p className="text-sm text-gray-500">
+                Invoice # <span className="font-mono font-semibold text-gray-900">{displayDocumentNumber(detail.id)}</span>
+              </p>
+              <DocumentPdfActions
+                previewUrl={`/api/admin/invoices/${detail.id}/pdf`}
+                downloadUrl={`/api/admin/invoices/${detail.id}/pdf`}
+                downloadFilename={`invoice-${displayDocumentNumber(detail.id)}`}
+                onError={onError}
+              />
+
               <div className="text-sm space-y-1">
                 <p>
                   <span className="text-gray-500">Booking:</span>{" "}

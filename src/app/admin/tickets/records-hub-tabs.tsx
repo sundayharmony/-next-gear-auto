@@ -1,22 +1,19 @@
 "use client";
 
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils/cn";
+import {
+  RECORDS_HUB_TABS,
+  useRecordsHubTabId,
+  type RecordsHubTabId,
+} from "./records-hub-subnav";
 
-export type RecordsHubTab = "tickets" | "invoices" | "incidents";
+const TABS = RECORDS_HUB_TABS;
 
-const TABS: { id: RecordsHubTab; label: string }[] = [
-  { id: "tickets", label: "Tickets" },
-  { id: "invoices", label: "Invoices" },
-  { id: "incidents", label: "Incident reports" },
-];
+export type RecordsHubTab = RecordsHubTabId;
 
 export function useRecordsHubTab(): RecordsHubTab {
-  const searchParams = useSearchParams();
-  const raw = searchParams.get("tab");
-  if (raw === "invoices" || raw === "incidents") return raw;
-  return "tickets";
+  return useRecordsHubTabId();
 }
 
 export function RecordsHubTabs({

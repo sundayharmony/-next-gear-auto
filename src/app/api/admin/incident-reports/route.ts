@@ -4,6 +4,7 @@ import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { validateDocumentLineItems } from "@/lib/documents/document-line-items";
 import { parseTripAssociation } from "@/lib/documents/trip-association";
 import { logger } from "@/lib/utils/logger";
+import { generateShortDocumentCode } from "@/lib/documents/short-document-number";
 
 export async function GET(req: NextRequest) {
   const auth = await verifyAdminOrManager(req);
@@ -83,23 +84,35 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, message: lineParsed.message }, { status: 400 });
     }
 
-    const id = `inc_${crypto.randomUUID()}`;
-    const { data, error } = await supabase
-      .from("incident_reports")
-      .insert({
-        id,
-        booking_id: bookingId,
-        blocked_date_id: blockedDateId,
-        vehicle_id: body.vehicleId || null,
-        title,
-        description: body.description || null,
-        occurred_at: occurredAt,
-        status: body.status || "open",
-        line_items: lineParsed.items,
-        notes: body.notes || null,
-      })
-      .select()
-      .maybeSingle();
+    let id = "";
+    let data = null;
+    let error = null;
+    for (let attempt = 0; attempt < 5; attempt++) {
+      id = `inc_${generateShortDocumentCode(6)}`;
+      const inserted = await supabase
+        .from("incident_reports")
+        .insert({
+          id,
+          booking_id: bookingId,
+          blocked_date_id: blockedDateId,
+          vehicle_id: body.vehicleId || null,
+          title,
+          description: body.description || null,
+          occurred_at: occurredAt,
+          status: body.status || "open",
+          line_items: lineParsed.items,
+          notes: body.notes || null,
+        })
+        .select()
+        .maybeSingle();
+      if (!inserted.error) {
+        data = inserted.data;
+        error = null;
+        break;
+      }
+      error = inserted.error;
+      if (!/duplicate|unique/i.test(inserted.error.message)) break;
+    }
 
     if (error) {
       logger.error("Incident report create error:", error);

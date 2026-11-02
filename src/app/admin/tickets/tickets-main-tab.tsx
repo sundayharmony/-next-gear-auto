@@ -32,6 +32,8 @@ import {
   type TicketFormState,
 } from "./ticket-detail-panel";
 import { RecordsHubTabs } from "./records-hub-tabs";
+import { RecordsHubSubnav } from "./records-hub-subnav";
+import { RecordsHubChip, RecordsHubChipGroup, RecordsHubHeroStats, RecordsHubRecordRow } from "./records-hub-list";
 import type { TuroTripOption } from "@/components/admin/trip-association-select";
 import type { TripAssociation } from "@/lib/documents/trip-association";
 import {
@@ -387,33 +389,24 @@ return (
             className="bg-white text-purple-900 hover:bg-purple-50"
           >
             <Plus className="h-4 w-4 mr-1" />
-            Add Ticket
+            New ticket
           </Button>
         </>
       }
     >
       <RecordsHubTabs panelBase={panelBase} className="mt-4" />
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
-        <div className="bg-white/10 rounded-lg p-3">
-          <p className="text-2xl font-bold">{tickets.length}</p>
-          <p className="text-xs page-hero-subtitle">Total Tickets</p>
-        </div>
-        <div className="bg-white/10 rounded-lg p-3">
-          <p className="text-2xl font-bold text-red-300">{statusCounts.unpaid}</p>
-          <p className="text-xs page-hero-subtitle">Unpaid</p>
-        </div>
-        <div className="bg-white/10 rounded-lg p-3">
-          <p className="text-2xl font-bold">${totalUnpaid.toLocaleString()}</p>
-          <p className="text-xs page-hero-subtitle">Outstanding Amount</p>
-        </div>
-        <div className="bg-white/10 rounded-lg p-3">
-          <p className="text-2xl font-bold">${totalAll.toLocaleString()}</p>
-          <p className="text-xs page-hero-subtitle">Total Amount</p>
-        </div>
-      </div>
+      <RecordsHubHeroStats
+        stats={[
+          { value: tickets.length, label: "Total Tickets" },
+          { value: statusCounts.unpaid, label: "Unpaid", valueClassName: "text-red-300" },
+          { value: `$${totalUnpaid.toLocaleString()}`, label: "Outstanding Amount" },
+          { value: `$${totalAll.toLocaleString()}`, label: "Total Amount" },
+        ]}
+      />
     </AdminPageHeader>
 
     <AdminPageBody>
+      <RecordsHubSubnav panelBase={panelBase} />
       {success && (
         <div className="mb-6 flex items-center gap-2 bg-green-50 border border-green-200 rounded-lg px-4 py-3 text-sm text-green-700">
           <Check className="h-4 w-4 shrink-0" />
@@ -451,36 +444,20 @@ return (
       )}
 
       <div className="flex flex-wrap gap-2 mb-4">
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+        <RecordsHubChipGroup>
           {(["all", "unpaid", "paid", "disputed", "dismissed"] as const).map((s) => (
-            <button
-              key={s}
-              onClick={() => setStatusFilter(s)}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors capitalize ${
-                statusFilter === s
-                  ? "bg-white text-gray-900 font-medium shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
+            <RecordsHubChip key={s} active={statusFilter === s} onClick={() => setStatusFilter(s)}>
               {s} ({statusCounts[s]})
-            </button>
+            </RecordsHubChip>
           ))}
-        </div>
-        <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
+        </RecordsHubChipGroup>
+        <RecordsHubChipGroup>
           {(["all", "traffic", "parking"] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTypeFilter(t)}
-              className={`px-3 py-1.5 text-xs rounded-md transition-colors capitalize ${
-                typeFilter === t
-                  ? "bg-white text-gray-900 font-medium shadow-sm"
-                  : "text-gray-500 hover:text-gray-700"
-              }`}
-            >
+            <RecordsHubChip key={t} active={typeFilter === t} onClick={() => setTypeFilter(t)}>
               {t}
-            </button>
+            </RecordsHubChip>
           ))}
-        </div>
+        </RecordsHubChipGroup>
       </div>
 
       {filtered.length === 0 ? (
@@ -508,66 +485,52 @@ return (
         <>
         <div className="space-y-2">
           {paginateArray(filtered).map((t) => (
-            <Card
+            <RecordsHubRecordRow
               key={t.id}
-              className="cursor-pointer hover:shadow-md hover:border-purple-200 transition-all focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 outline-none"
               onClick={() => setSelectedTicket(t)}
-              tabIndex={0}
-            >
-              <CardContent className="p-4">
-                <div className="flex items-center gap-4">
-                  <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
-                    t.ticketType === "traffic" ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"
-                  }`}>
-                    {t.ticketType === "traffic" ? <Car className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-gray-900">
-                        {t.prefix && t.ticketNumber
-                          ? `${t.prefix}-${t.ticketNumber}`
-                          : t.ticketType === "traffic" ? "Traffic Violation" : "Parking Violation"}
-                      </span>
-                      <Badge className={`text-xs ${TYPE_COLORS[t.ticketType]}`}>
-                        {t.ticketType}
-                      </Badge>
-                      <Badge className={`text-xs border ${STATUS_COLORS[t.status]}`}>
-                        {t.status}
-                      </Badge>
-                    </div>
-                    <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
-                      {t.municipality && <span className="flex items-center gap-0.5"><MapPin className="h-3 w-3" />{t.municipality}{t.state ? `, ${t.state}` : ""}</span>}
-                      <span className="flex items-center gap-0.5"><Calendar className="h-3 w-3" />{formatDate(t.violationDate)}</span>
-                      {t.vehicleName && (
-                        <span className="flex items-center gap-0.5">
-                          <Car className="h-3 w-3" />
-                          {t.vehicleId ? (
-                            <Link
-                              href={getStaffVehicleDetailsHref(t.vehicleId, panelBase)}
-                              className="hover:text-purple-700 hover:underline"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              {t.vehicleName}
-                            </Link>
-                          ) : (
-                            t.vehicleName
-                          )}
-                        </span>
+              icon={t.ticketType === "traffic" ? <Car className="h-5 w-5" /> : <MapPin className="h-5 w-5" />}
+              iconClassName={t.ticketType === "traffic" ? "bg-blue-100 text-blue-600" : "bg-purple-100 text-purple-600"}
+              title={
+                t.prefix && t.ticketNumber
+                  ? `${t.prefix}-${t.ticketNumber}`
+                  : t.ticketType === "traffic" ? "Traffic Violation" : "Parking Violation"
+              }
+              badges={
+                <>
+                  <Badge className={`text-xs ${TYPE_COLORS[t.ticketType]}`}>{t.ticketType}</Badge>
+                  <Badge className={`text-xs border ${STATUS_COLORS[t.status]}`}>{t.status}</Badge>
+                </>
+              }
+              meta={
+                <>
+                  {t.municipality && <span className="flex items-center gap-0.5"><MapPin className="h-3 w-3" />{t.municipality}{t.state ? `, ${t.state}` : ""}</span>}
+                  <span className="flex items-center gap-0.5"><Calendar className="h-3 w-3" />{formatDate(t.violationDate)}</span>
+                  {t.vehicleName && (
+                    <span className="flex items-center gap-0.5">
+                      <Car className="h-3 w-3" />
+                      {t.vehicleId ? (
+                        <Link
+                          href={getStaffVehicleDetailsHref(t.vehicleId, panelBase)}
+                          className="hover:text-purple-700 hover:underline"
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          {t.vehicleName}
+                        </Link>
+                      ) : (
+                        t.vehicleName
                       )}
-                      {t.customerName && <span>Driver: {t.customerName}</span>}
-                      {t.licensePlate && <span className="font-mono">{t.licensePlate}</span>}
-                    </div>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <p className={`text-lg font-bold ${t.status === "unpaid" ? "text-red-600" : t.status === "paid" ? "text-green-600" : "text-gray-600"}`}>
-                      ${t.amountDue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
+                    </span>
+                  )}
+                  {t.customerName && <span>Driver: {t.customerName}</span>}
+                  {t.licensePlate && <span className="font-mono">{t.licensePlate}</span>}
+                </>
+              }
+              trailing={
+                <p className={`text-lg font-bold ${t.status === "unpaid" ? "text-red-600" : t.status === "paid" ? "text-green-600" : "text-gray-600"}`}>
+                  ${t.amountDue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                </p>
+              }
+            />
           ))}
         </div>
         <Pagination
