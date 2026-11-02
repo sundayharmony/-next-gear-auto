@@ -875,7 +875,11 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
         ${
           data.balanceDue > 0 && data.paymentUrl
             ? `${ctaButton("Pay balance now", data.paymentUrl, "#10b981")}
-        <p style="margin: 8px 0 20px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">This secure Stripe payment link expires in 24 hours. Need a new link? Contact us and we can re-send the invoice.</p>`
+        <p style="margin: 12px 0 4px; color: #111827; font-size: 13px; line-height: 1.6; text-align: center; font-weight: 600;">Or copy this Stripe payment link:</p>
+        <p style="margin: 0 0 8px; color: #1d4ed8; font-size: 12px; line-height: 1.5; text-align: center; word-break: break-all;">
+          <a href="${escapeHtml(data.paymentUrl)}" style="color: #1d4ed8; text-decoration: underline;">${escapeHtml(data.paymentUrl)}</a>
+        </p>
+        <p style="margin: 0 0 20px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">This secure Stripe payment link expires in 24 hours. Need a new link? Ask us to re-send the invoice.</p>`
             : ""
         }
         <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">A PDF copy is attached for your records. Questions? Reply to this email or call (551) 429-3472.</p>

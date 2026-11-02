@@ -616,16 +616,25 @@ export async function sendBookingInvoice(
           ]
         : undefined;
 
+    // Plain-text alternative must keep the Stripe URL — stripHtmlTags drops hrefs.
+    const textBody = data.paymentUrl
+      ? `${stripHtmlTags(html)}\n\nPay online (Stripe):\n${data.paymentUrl}\n`
+      : stripHtmlTags(html);
+
     await sendMailWithRetry(transporter, {
       from: FROM_CUSTOMER,
       to: data.customerEmail,
       bcc: ADMIN_EMAIL,
       subject: `Invoice - ${data.bookingId} - ${data.vehicleName}`,
       html,
-      text: stripHtmlTags(html),
+      text: textBody,
       attachments,
     });
-    logger.info("Invoice email sent for booking:", data.bookingId);
+    logger.info("Invoice email sent for booking:", {
+      bookingId: data.bookingId,
+      hasPaymentUrl: Boolean(data.paymentUrl),
+      balanceDue: data.balanceDue,
+    });
   } catch (error) {
     const errorMsg = error instanceof Error ? error.message : String(error);
     logger.error("Failed to send invoice email:", errorMsg);
