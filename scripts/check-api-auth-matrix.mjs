@@ -40,6 +40,7 @@ const PUBLIC_ROUTES = new Set([
   "src/app/api/vehicles/booked-dates/route.ts",
   "src/app/api/vehicles/availability/route.ts",
   "src/app/api/locations/route.ts",
+  "src/app/api/insurance/vehicles/route.ts",
   "src/app/api/promo-codes/validate/route.ts",
   "src/app/api/upload-temp/route.ts",
   "src/app/api/rental-agreement/sign/route.ts",

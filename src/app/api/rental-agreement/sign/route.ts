@@ -26,10 +26,20 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const { bookingId, signatures, customerEmail } = body as {
+    const {
+      bookingId,
+      signatures,
+      customerEmail,
+      signedName,
+      ackGpsTracking,
+      ackPaymentAuthorization,
+    } = body as {
       bookingId?: string;
       signatures?: Record<string, unknown>;
       customerEmail?: string;
+      signedName?: string;
+      ackGpsTracking?: boolean;
+      ackPaymentAuthorization?: boolean;
     };
 
     if (!bookingId) {
@@ -93,6 +103,11 @@ export async function POST(req: NextRequest) {
     const result = await completeAgreementSigning(bookingId, signatures!, {
       performedBy: booking.customer_email || customerEmail,
       channel: "customer",
+      signedName,
+      signedIp: ip,
+      signedUserAgent: req.headers.get("user-agent"),
+      ackGpsTracking: Boolean(ackGpsTracking),
+      ackPaymentAuthorization: Boolean(ackPaymentAuthorization),
     });
 
     return NextResponse.json({

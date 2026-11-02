@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   FileText,
   CheckCircle2,
@@ -8,19 +8,20 @@ import {
   Loader2,
   PenLine,
   X,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { SignaturePad } from "@/components/signature-pad";
 import { RentalAgreementInline } from "@/components/rental-agreement-inline";
-import { AgreementSignatureSlot } from "@/components/agreement-signature-slot";
 import {
   AGREEMENT_PAGE_COUNT,
-  AGREEMENT_SIGNATURE_FIELDS,
-  getFieldsForPage,
-  isPageComplete,
+  PRIMARY_AGREEMENT_SIGNATURE_ID,
 } from "@/data/agreement-fields";
+import { AGREEMENT_ESIGN_DISCLOSURE } from "@/lib/agreement/rental-agreement-terms";
+import type { AgreementBookingContext } from "@/lib/agreement/agreement-booking-context";
 
 export interface AgreementSigningVehicle {
   make: string;
@@ -44,11 +45,18 @@ export interface AgreementSigningBooking {
   deposit?: number;
 }
 
+export interface AgreementSigningSubmitPayload {
+  signatures: Record<string, string>;
+  signedName: string;
+  ackGpsTracking: boolean;
+  ackPaymentAuthorization: boolean;
+}
+
 export interface AgreementSigningWizardProps {
   booking: AgreementSigningBooking;
   vehicle: AgreementSigningVehicle | null;
-  /** Standalone: submit all signatures to API */
-  onSubmit?: (signatures: Record<string, string>) => Promise<void>;
+  /** Standalone: submit signature payload to API */
+  onSubmit?: (payload: AgreementSigningSubmitPayload) => Promise<void>;
   onCancel?: () => void;
   headerNote?: string;
   submitLabel?: string;
@@ -61,6 +69,13 @@ export interface AgreementSigningWizardProps {
   legalName?: string;
   onLegalNameChange?: (name: string) => void;
   showLegalName?: boolean;
+  ackGpsTracking?: boolean;
+  onAckGpsTrackingChange?: (value: boolean) => void;
+  ackPaymentAuthorization?: boolean;
+  onAckPaymentAuthorizationChange?: (value: boolean) => void;
+  /** Customer checkout / standalone recovery — staff in-person skips acks */
+  requireAcknowledgements?: boolean;
+  bookingContext?: AgreementBookingContext;
 }
 
 function calculateTotalDays(pickupDate: string, returnDate: string): number {
@@ -75,7 +90,18 @@ function calculateTotalDays(pickupDate: string, returnDate: string): number {
   }
 }
 
-type WizardPhase = "draw-signature" | "sign-pages";
+export function isAgreementWizardComplete(
+  signatures: Record<string, string | null | undefined>,
+  signedName: string,
+  ackGps: boolean,
+  ackPayment: boolean,
+  requireAcknowledgements: boolean,
+): boolean {
+  if (!signatures[PRIMARY_AGREEMENT_SIGNATURE_ID]) return false;
+  if (!signedName.trim()) return false;
+  if (requireAcknowledgements && (!ackGps || !ackPayment)) return false;
+  return true;
+}
 
 export function AgreementSigningWizard({
   booking,
@@ -92,26 +118,22 @@ export function AgreementSigningWizard({
   legalName = "",
   onLegalNameChange,
   showLegalName = true,
+  ackGpsTracking = false,
+  onAckGpsTrackingChange,
+  ackPaymentAuthorization = false,
+  onAckPaymentAuthorizationChange,
+  requireAcknowledgements = true,
+  bookingContext,
 }: AgreementSigningWizardProps) {
   const [internalSignatures, setInternalSignatures] = useState<Record<string, string | null>>({});
-  const [phase, setPhase] = useState<WizardPhase>("draw-signature");
-  const [masterSignature, setMasterSignature] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [masterSignature, setMasterSignature] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [pageTransition, setPageTransition] = useState(false);
 
   const signatures = embedded && controlledSignatures !== undefined
     ? controlledSignatures
     : internalSignatures;
-
-  useEffect(() => {
-    const saved = AGREEMENT_SIGNATURE_FIELDS.map((f) => signatures[f.id]).find(Boolean);
-    if (saved && !masterSignature) {
-      setMasterSignature(saved);
-      setPhase("sign-pages");
-    }
-  }, [signatures, masterSignature]);
 
   const setSignatures = useCallback(
     (updater: (prev: Record<string, string | null>) => Record<string, string | null>) => {
@@ -131,76 +153,50 @@ export function AgreementSigningWizard({
   );
 
   const totalDays = calculateTotalDays(booking.pickup_date, booking.return_date);
-  const pageFields = useMemo(() => getFieldsForPage(currentPage), [currentPage]);
-  const completedCount = AGREEMENT_SIGNATURE_FIELDS.filter((f) => signatures[f.id]).length;
-  const allSigned = completedCount === AGREEMENT_SIGNATURE_FIELDS.length;
-  const pageComplete = isPageComplete(currentPage, signatures);
+  const primaryApplied = Boolean(signatures[PRIMARY_AGREEMENT_SIGNATURE_ID]);
 
-  const firstUnsignedOnPage = pageFields.find((f) => !signatures[f.id]);
+  const signingComplete = useMemo(
+    () =>
+      isAgreementWizardComplete(
+        signatures,
+        legalName,
+        ackGpsTracking,
+        ackPaymentAuthorization,
+        requireAcknowledgements,
+      ),
+    [signatures, legalName, ackGpsTracking, ackPaymentAuthorization, requireAcknowledgements],
+  );
 
-  useEffect(() => {
-    if (phase !== "sign-pages") return;
-    for (let p = 1; p <= AGREEMENT_PAGE_COUNT; p++) {
-      if (!isPageComplete(p, signatures)) {
-        setCurrentPage(p);
-        return;
-      }
-    }
-    setCurrentPage(AGREEMENT_PAGE_COUNT);
-    // Only when entering sign-pages (e.g. back navigation with saved signatures)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
-
-  useEffect(() => {
-    if (phase !== "sign-pages" || !pageComplete) return;
-    if (currentPage >= AGREEMENT_PAGE_COUNT) return;
-
-    setPageTransition(true);
-    const timer = window.setTimeout(() => {
-      setCurrentPage((p) => Math.min(AGREEMENT_PAGE_COUNT, p + 1));
-      setPageTransition(false);
-    }, 700);
-
-    return () => window.clearTimeout(timer);
-  }, [phase, pageComplete, currentPage]);
-
-  const applyToField = (fieldId: string) => {
+  const applyPrimarySignature = () => {
     if (!masterSignature) {
-      setError("Draw your signature first, then tap each field to apply it.");
-      setPhase("draw-signature");
+      setError("Please draw your signature before applying it to the agreement.");
       return;
     }
     setError(null);
-    setSignatures((prev) => ({ ...prev, [fieldId]: masterSignature }));
-  };
-
-  const handleBeginSigning = () => {
-    if (!masterSignature) {
-      setError("Please draw your signature before continuing.");
-      return;
-    }
-    setError(null);
-    setPhase("sign-pages");
-    setCurrentPage(1);
+    setSignatures((prev) => ({
+      ...prev,
+      [PRIMARY_AGREEMENT_SIGNATURE_ID]: masterSignature,
+    }));
   };
 
   const handleSubmit = async () => {
-    if (!allSigned || !onSubmit) return;
+    if (!signingComplete || !onSubmit) return;
 
-    const payload: Record<string, string> = {};
-    for (const field of AGREEMENT_SIGNATURE_FIELDS) {
-      const val = signatures[field.id];
-      if (!val) {
-        setError("All signature fields are required. Please sign every field on each page.");
-        return;
-      }
-      payload[field.id] = val;
+    const sig = signatures[PRIMARY_AGREEMENT_SIGNATURE_ID];
+    if (!sig) {
+      setError("Please apply your signature to the agreement.");
+      return;
     }
 
     setSubmitting(true);
     setError(null);
     try {
-      await onSubmit(payload);
+      await onSubmit({
+        signatures: { [PRIMARY_AGREEMENT_SIGNATURE_ID]: sig },
+        signedName: legalName.trim(),
+        ackGpsTracking: requireAcknowledgements ? ackGpsTracking : true,
+        ackPaymentAuthorization: requireAcknowledgements ? ackPaymentAuthorization : true,
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to submit signed agreement.");
     } finally {
@@ -234,144 +230,103 @@ export function AgreementSigningWizard({
         </div>
       )}
 
-      {phase === "draw-signature" && (
-        <Card className="border-purple-200">
-          <CardContent className={compact ? "p-4" : "p-6"}>
-            <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
-              <PenLine className="h-5 w-5 text-purple-600" />
-              Create your signature
-            </h3>
-            <p className="text-sm text-gray-500 mb-4">
-              Draw your signature once below. On the next screens you will tap each highlighted box on
-              the contract to apply it — no need to sign again.
-            </p>
-            <div className="flex justify-center">
-              <SignaturePad
-                onSignatureChange={setMasterSignature}
-                label="Draw your signature"
-                width={padWidth}
-                height={150}
-              />
-            </div>
-            <div className="mt-6 flex justify-end">
-              <Button
-                type="button"
-                onClick={handleBeginSigning}
-                disabled={!masterSignature}
-                className="min-h-11"
-              >
-                Continue to agreement <ArrowRight className="h-4 w-4 ml-1" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+      <div className="flex items-center justify-between gap-2">
+        <span className="text-sm font-medium text-gray-700">
+          Agreement page {currentPage} of {AGREEMENT_PAGE_COUNT}
+        </span>
+        <div className="flex items-center gap-1">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+            disabled={currentPage <= 1}
+            onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+            aria-label="Previous page"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 w-8 p-0"
+            disabled={currentPage >= AGREEMENT_PAGE_COUNT}
+            onClick={() => setCurrentPage((p) => Math.min(AGREEMENT_PAGE_COUNT, p + 1))}
+            aria-label="Next page"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
 
-      {phase === "sign-pages" && (
-        <>
-          <div className="flex items-center justify-between gap-2">
-            <span className="text-sm font-medium text-gray-700">
-              Agreement page {currentPage} of {AGREEMENT_PAGE_COUNT}
-            </span>
-            <span className="text-xs text-gray-500">
-              {completedCount} of {AGREEMENT_SIGNATURE_FIELDS.length} signed
-            </span>
+      <Card className={compact ? "border-0 shadow-none overflow-hidden" : "overflow-hidden"}>
+        <CardContent className="p-0">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-gray-50">
+            <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-purple-500" />
+              Rental Agreement
+            </h3>
+            {onCancel && (
+              <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="h-8 px-2">
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
 
-          <Card className={compact ? "border-0 shadow-none overflow-hidden" : "overflow-hidden"}>
-            <CardContent className={compact ? "p-0" : "p-0"}>
-              <div className="flex items-center justify-between px-4 py-2 border-b border-gray-100 bg-gray-50">
-                <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-                  <FileText className="h-4 w-4 text-purple-500" />
-                  Rental Agreement
-                </h3>
-                {onCancel && (
-                  <Button type="button" variant="ghost" size="sm" onClick={onCancel} className="h-8 px-2">
-                    <X className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
+          <div className="max-h-[min(52vh,520px)] overflow-y-auto overscroll-contain border-b border-gray-100">
+            <RentalAgreementInline
+              vehicle={vehicle}
+              customerName={booking.customer_name}
+              customerEmail={booking.customer_email}
+              customerPhone={booking.customer_phone}
+              pickupDate={booking.pickup_date}
+              returnDate={booking.return_date}
+              pickupTime={booking.pickup_time}
+              returnTime={booking.return_time}
+              totalPrice={booking.total_price}
+              totalDays={totalDays}
+              deposit={booking.deposit}
+              bookingContext={bookingContext}
+              currentPage={currentPage}
+            />
+          </div>
 
-              <div
-                className={`transition-opacity duration-300 ${pageTransition ? "opacity-40" : "opacity-100"}`}
-              >
-                <div className="max-h-[min(52vh,520px)] overflow-y-auto overscroll-contain border-b border-gray-100">
-                  <RentalAgreementInline
-                    vehicle={vehicle}
-                    customerName={booking.customer_name}
-                    customerEmail={booking.customer_email}
-                    customerPhone={booking.customer_phone}
-                    pickupDate={booking.pickup_date}
-                    returnDate={booking.return_date}
-                    pickupTime={booking.pickup_time}
-                    returnTime={booking.return_time}
-                    totalPrice={booking.total_price}
-                    totalDays={totalDays}
-                    deposit={booking.deposit}
-                    currentPage={currentPage}
-                  />
-                </div>
-              </div>
+          {agreementFooterNote && (
+            <p className="text-xs text-gray-400 px-4 py-2 border-b border-gray-50">{agreementFooterNote}</p>
+          )}
+        </CardContent>
+      </Card>
 
-              {agreementFooterNote && (
-                <p className="text-xs text-gray-400 px-4 py-2 border-b border-gray-50">{agreementFooterNote}</p>
-              )}
+      <Card className="border-purple-200">
+        <CardContent className={compact ? "p-4 space-y-4" : "p-6 space-y-4"}>
+          <p className="text-xs text-gray-600 leading-relaxed">{AGREEMENT_ESIGN_DISCLOSURE}</p>
 
-              <div className="p-4 bg-purple-50/50 border-t border-purple-100">
-                <p className="text-sm font-medium text-purple-900 mb-1">
-                  {pageComplete && currentPage < AGREEMENT_PAGE_COUNT
-                    ? "Page complete — moving to next page…"
-                    : "Tap each box to apply your signature"}
-                </p>
-                <p className="text-xs text-purple-700/80 mb-3">
-                  {firstUnsignedOnPage
-                    ? `Next: ${firstUnsignedOnPage.label}`
-                    : currentPage < AGREEMENT_PAGE_COUNT
-                      ? "All fields on this page are signed."
-                      : "All pages signed."}
-                </p>
-
-                <div className="flex flex-col gap-3">
-                  {pageFields.map((field) => (
-                    <div
-                      key={field.id}
-                      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4"
-                    >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold text-gray-800">{field.label}</p>
-                        <p className="text-[11px] text-gray-500 line-clamp-2">{field.description}</p>
-                      </div>
-                      <AgreementSignatureSlot
-                        fieldId={field.id}
-                        label={field.label}
-                        isInitials={field.isInitials}
-                        signature={signatures[field.id]}
-                        onClick={applyToField}
-                        disabled={!masterSignature}
-                        highlighted={field.id === firstUnsignedOnPage?.id}
-                      />
-                    </div>
-                  ))}
-                </div>
-
-                {currentPage > 1 && (
-                  <div className="mt-4 pt-3 border-t border-purple-100">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    >
-                      Previous page
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+          {requireAcknowledgements && onAckGpsTrackingChange && onAckPaymentAuthorizationChange && (
+            <div className="space-y-2 rounded-lg border border-gray-200 bg-gray-50/80 p-3">
+              <label className="flex items-start gap-2 text-sm text-gray-800 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  checked={ackGpsTracking}
+                  onChange={(e) => onAckGpsTrackingChange(e.target.checked)}
+                />
+                <span>I agree to GPS/telematics tracking during this rental as described in the agreement.</span>
+              </label>
+              <label className="flex items-start gap-2 text-sm text-gray-800 cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="mt-1 h-4 w-4 rounded border-gray-300 text-purple-600 focus:ring-purple-500"
+                  checked={ackPaymentAuthorization}
+                  onChange={(e) => onAckPaymentAuthorizationChange(e.target.checked)}
+                />
+                <span>I authorize charges to my payment method for rental fees, damages, and other amounts owed under this agreement.</span>
+              </label>
+            </div>
+          )}
 
           {showLegalName && onLegalNameChange && (
-            <div className="rounded-lg border border-gray-200 bg-white p-4">
+            <div>
               <label className="mb-1.5 block text-sm font-medium text-gray-700">
                 Type your full legal name
               </label>
@@ -384,21 +339,55 @@ export function AgreementSigningWizard({
             </div>
           )}
 
-          {embedded && allSigned && legalName.trim() && (
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-1 flex items-center gap-2">
+              <PenLine className="h-5 w-5 text-purple-600" />
+              Your signature
+            </h3>
+            <p className="text-sm text-gray-500 mb-3">
+              Draw once below, then apply it to the agreement. One signature covers all required fields on the PDF.
+            </p>
+            <div className="flex justify-center">
+              <SignaturePad
+                onSignatureChange={setMasterSignature}
+                label="Draw your signature"
+                width={padWidth}
+                height={150}
+              />
+            </div>
+            <div className="mt-4 flex flex-col sm:flex-row gap-2 sm:items-center sm:justify-between">
+              <Button
+                type="button"
+                variant={primaryApplied ? "outline" : "default"}
+                onClick={applyPrimarySignature}
+                disabled={!masterSignature}
+                className="min-h-11"
+              >
+                {primaryApplied ? "Re-apply signature" : "Apply signature to agreement"}
+              </Button>
+              {primaryApplied && (
+                <span className="text-sm text-green-700 flex items-center gap-1">
+                  <CheckCircle2 className="h-4 w-4" /> Signature applied
+                </span>
+              )}
+            </div>
+          </div>
+
+          {embedded && signingComplete && (
             <div className="rounded-lg bg-green-50 border border-green-200 p-3 flex items-center gap-2">
               <CheckCircle2 className="h-4 w-4 text-green-600 shrink-0" />
               <span className="text-sm text-green-700">
-                Agreement fully signed — you may proceed to payment.
+                Agreement signed — you may proceed to payment.
               </span>
             </div>
           )}
 
-          {!embedded && allSigned && (
-            <div className="flex justify-end">
+          {!embedded && (
+            <div className="flex justify-end pt-2">
               <Button
                 type="button"
                 onClick={handleSubmit}
-                disabled={submitting}
+                disabled={submitting || !signingComplete}
                 className="bg-green-600 hover:bg-green-700 min-h-11"
               >
                 {submitting ? (
@@ -413,8 +402,20 @@ export function AgreementSigningWizard({
               </Button>
             </div>
           )}
-        </>
-      )}
+
+          {embedded && currentPage < AGREEMENT_PAGE_COUNT && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="w-full text-purple-700"
+              onClick={() => setCurrentPage((p) => Math.min(AGREEMENT_PAGE_COUNT, p + 1))}
+            >
+              Continue reading page {currentPage + 1} <ArrowRight className="h-4 w-4 ml-1" />
+            </Button>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }

@@ -16,8 +16,10 @@ import { Card, CardContent } from "@/components/ui/card";
 import { PageContainer } from "@/components/layout/page-container";
 import {
   AgreementSigningWizard,
+  type AgreementSigningSubmitPayload,
   type AgreementSigningVehicle,
 } from "@/components/agreement-signing-wizard";
+import { buildAgreementBookingContext } from "@/lib/agreement/agreement-booking-context";
 import { vehicleForSigningFromDisplayName } from "@/lib/agreement/vehicle-for-signing";
 import { csrfFetch } from "@/lib/utils/csrf-fetch";
 
@@ -33,8 +35,17 @@ interface BookingInfo {
   pickup_time?: string;
   return_time?: string;
   total_price: number;
+  deposit?: number | null;
   agreement_signed_at: string | null;
   rental_agreement_url: string | null;
+  payment_method?: string | null;
+  insurance_opted_out?: boolean | null;
+  insurance_proof_url?: string | null;
+  pickup_location_name?: string | null;
+  return_location_name?: string | null;
+  extras?: unknown[] | null;
+  promo_code?: string | null;
+  discount_amount?: number | null;
 }
 
 export default function AgreementSigningPage() {
@@ -48,6 +59,9 @@ export default function AgreementSigningPage() {
   const [error, setError] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState(false);
   const [signedUrl, setSignedUrl] = useState<string | null>(null);
+  const [legalName, setLegalName] = useState("");
+  const [ackGps, setAckGps] = useState(false);
+  const [ackPayment, setAckPayment] = useState(false);
   const [vehicle, setVehicle] = useState<AgreementSigningVehicle | null>(null);
 
   useEffect(() => {
@@ -113,7 +127,7 @@ export default function AgreementSigningPage() {
     };
   }, [bookingId, isValidId]);
 
-  const handleSubmit = async (signatures: Record<string, string>) => {
+  const handleSubmit = async (payload: AgreementSigningSubmitPayload) => {
     if (!booking) return;
 
     const res = await csrfFetch("/api/rental-agreement/sign", {
@@ -121,8 +135,11 @@ export default function AgreementSigningPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         bookingId,
-        signatures,
+        signatures: payload.signatures,
         customerEmail: booking.customer_email,
+        signedName: payload.signedName,
+        ackGpsTracking: payload.ackGpsTracking,
+        ackPaymentAuthorization: payload.ackPaymentAuthorization,
       }),
     });
     const data = await res.json();
@@ -244,8 +261,16 @@ export default function AgreementSigningPage() {
               pickup_time: booking.pickup_time,
               return_time: booking.return_time,
               total_price: booking.total_price,
+              deposit: booking.deposit ?? undefined,
             }}
             vehicle={vehicle}
+            bookingContext={buildAgreementBookingContext(booking)}
+            legalName={legalName}
+            onLegalNameChange={setLegalName}
+            ackGpsTracking={ackGps}
+            onAckGpsTrackingChange={setAckGps}
+            ackPaymentAuthorization={ackPayment}
+            onAckPaymentAuthorizationChange={setAckPayment}
             onSubmit={handleSubmit}
           />
         </div>

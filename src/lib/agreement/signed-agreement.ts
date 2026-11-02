@@ -2,6 +2,13 @@ import { PDFDocument } from "pdf-lib";
 import fs from "fs/promises";
 import path from "path";
 import { appendAgreementSupplementPages } from "@/lib/agreement/append-agreement-supplement-pdf";
+import { appendRentalSummaryPage } from "@/lib/agreement/append-rental-summary-pdf";
+import {
+  buildAgreementBookingContext,
+  paymentMethodLabel,
+  type AgreementBookingContext,
+} from "@/lib/agreement/agreement-booking-context";
+import { resolveAgreementBalanceDue, resolveAgreementDeposit } from "@/lib/agreement/agreement-deposit";
 import { getAgreementSupplementSections } from "@/lib/agreement/rental-agreement-terms";
 import {
   getDisplayReturnDate,
@@ -47,6 +54,14 @@ interface AgreementBooking {
   signed_name?: string | null;
   rental_agreement_url?: string | null;
   admin_notes?: string | null;
+  payment_method?: string | null;
+  insurance_opted_out?: boolean | null;
+  insurance_proof_url?: string | null;
+  pickup_location_name?: string | null;
+  return_location_name?: string | null;
+  extras?: unknown[] | null;
+  promo_code?: string | null;
+  discount_amount?: number | null;
 }
 
 const SIGNATURE_FIELDS: Record<
@@ -93,7 +108,13 @@ async function fetchVehicle(supabase: any, vehicleId: string | null | undefined)
   return data || null;
 }
 
-function fillAgreementForm(form: any, booking: AgreementBooking, vehicle: AgreementVehicle | null, signedAtIso: string) {
+function fillAgreementForm(
+  form: any,
+  booking: AgreementBooking,
+  vehicle: AgreementVehicle | null,
+  signedAtIso: string,
+  context: AgreementBookingContext,
+) {
   const setText = (fieldName: string, value: string | number | null | undefined) => {
     try {
       form.getTextField(fieldName).setText(String(value ?? ""));
@@ -124,9 +145,14 @@ function fillAgreementForm(form: any, booking: AgreementBooking, vehicle: Agreem
     setCheck("c10", false);
   }
 
-  setText("t11", "");
+  const insuranceNote = context.insuranceOptedOut
+    ? "Temporary coverage ($9/day)"
+    : context.insuranceProofOnFile
+      ? "Proof on file"
+      : "Provide at pickup";
+  setText("t11", insuranceNote);
   setText("t12", booking.customer_name || "");
-  setText("t13", "");
+  setText("t13", context.insuranceProofOnFile ? "See booking file" : "");
   setText("t14", "");
   setText("t15", "");
   setText("t16", booking.customer_phone || "");
@@ -149,7 +175,8 @@ function fillAgreementForm(form: any, booking: AgreementBooking, vehicle: Agreem
   setText("t25", "");
 
   const totalPrice = booking.total_price ?? 0;
-  const deposit = booking.deposit ?? 0;
+  const deposit = resolveAgreementDeposit(booking.deposit, totalPrice);
+  const balanceDue = resolveAgreementBalanceDue(totalPrice, booking.deposit);
   const pickupDate = booking.pickup_date ? new Date(`${booking.pickup_date}T00:00:00`) : new Date();
   const returnDate = booking.return_date ? new Date(`${booking.return_date}T00:00:00`) : new Date();
   const totalDays = isRecurringLt
@@ -160,11 +187,12 @@ function fillAgreementForm(form: any, booking: AgreementBooking, vehicle: Agreem
       );
   setText("t26", `$${totalPrice.toFixed(2)}${isRecurringLt ? " (weekly)" : ""}`);
   setText("t27", String(totalDays));
-  setText("t28", `$${(totalPrice - deposit).toFixed(2)}`);
-  setCheck("c29", false);
-  setCheck("c30", false);
-  setCheck("c31", true);
-  setText("t32", "");
+  setText("t28", `$${balanceDue.toFixed(2)}`);
+  const pm = (context.paymentMethod || "stripe").toLowerCase();
+  setCheck("c29", pm === "cash");
+  setCheck("c30", pm === "zelle");
+  setCheck("c31", pm === "stripe" || pm === "card" || !["cash", "zelle", "venmo", "check"].includes(pm));
+  setText("t32", paymentMethodLabel(context.paymentMethod));
   setCheck("c33", false);
   setText("t34", "");
 
@@ -211,13 +239,16 @@ export async function buildSignedAgreementPdfBytes(
   const pdfDoc = await PDFDocument.load(templateBytes);
   const form = pdfDoc.getForm();
 
-  fillAgreementForm(form, booking, vehicle, signedAtIso);
+  const context = buildAgreementBookingContext(booking);
+  fillAgreementForm(form, booking, vehicle, signedAtIso, context);
   form.flatten();
 
   await appendAgreementSupplementPages(
     pdfDoc,
     getAgreementSupplementSections(booking.admin_notes)
   );
+
+  await appendRentalSummaryPage(pdfDoc, booking, vehicle, context);
 
   const pages = pdfDoc.getPages();
   for (const [fieldId, base64Data] of Object.entries(signatures)) {

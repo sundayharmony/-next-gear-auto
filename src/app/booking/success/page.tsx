@@ -69,16 +69,34 @@ function SuccessContent() {
         }
         if (!savedSigs) return;
 
-        let signatures: Record<string, unknown>;
+        let parsed: unknown;
         try {
-          signatures = JSON.parse(savedSigs);
+          parsed = JSON.parse(savedSigs);
         } catch {
-          // Handle corrupted localStorage data
           localStorage.removeItem(storageKey);
           return;
         }
 
-        // Filter out null/empty signatures
+        let signatures: Record<string, unknown> = {};
+        let signedName: string | undefined;
+        let ackGpsTracking = false;
+        let ackPaymentAuthorization = false;
+
+        if (parsed && typeof parsed === "object" && "signatures" in parsed) {
+          const bundle = parsed as {
+            signatures?: Record<string, unknown>;
+            signedName?: string;
+            ackGpsTracking?: boolean;
+            ackPaymentAuthorization?: boolean;
+          };
+          signatures = bundle.signatures || {};
+          signedName = bundle.signedName;
+          ackGpsTracking = Boolean(bundle.ackGpsTracking);
+          ackPaymentAuthorization = Boolean(bundle.ackPaymentAuthorization);
+        } else if (parsed && typeof parsed === "object") {
+          signatures = parsed as Record<string, unknown>;
+        }
+
         const validSigs: Record<string, string> = {};
         for (const [key, val] of Object.entries(signatures)) {
           if (val && typeof val === "string") validSigs[key] = val;
@@ -94,7 +112,14 @@ function SuccessContent() {
         const res = await csrfFetch("/api/rental-agreement/sign", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ bookingId, signatures: validSigs, customerEmail: booking.customer_email }),
+          body: JSON.stringify({
+            bookingId,
+            signatures: validSigs,
+            customerEmail: booking.customer_email,
+            signedName: signedName || booking.customer_name,
+            ackGpsTracking,
+            ackPaymentAuthorization,
+          }),
         });
 
         const data = await res.json();

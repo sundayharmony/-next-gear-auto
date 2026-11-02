@@ -201,6 +201,12 @@ export function BookingPageInner({
               setAgreementSignatures={w.setAgreementSignatures}
               signedName={w.signedName}
               setSignedName={w.setSignedName}
+              agreementAckGps={w.agreementAckGps}
+              setAgreementAckGps={w.setAgreementAckGps}
+              agreementAckPayment={w.agreementAckPayment}
+              setAgreementAckPayment={w.setAgreementAckPayment}
+              insuranceOptedOut={w.booking.insuranceOptedOut}
+              insuranceProofUrl={w.booking.insuranceProofUrl}
             />
           )}
 
