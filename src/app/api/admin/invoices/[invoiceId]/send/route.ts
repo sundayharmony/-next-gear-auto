@@ -71,6 +71,8 @@ export async function POST(req: NextRequest, context: RouteContext) {
       data: {
         balanceDue: result.balanceDue,
         hadPdf: result.hadPdf,
+        paymentUrl: result.paymentUrl,
+        stripeSessionId: result.stripeSessionId,
       },
     });
   } catch (error) {

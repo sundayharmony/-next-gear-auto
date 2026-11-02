@@ -9,6 +9,7 @@ export function getInvoicePaymentNoticeParagraphs(
     const dueLabel = formatInvoiceDisplayDate(dueDateIso);
     return [
       `Payment of the balance due shown above is required by ${dueLabel}.`,
+      "Use the Pay balance now button in this email for a secure Stripe checkout link (valid for 24 hours from send).",
       "If amounts remain unpaid after that date, they may be pursued under your rental agreement, including collection efforts and remedies available under New Jersey law.",
     ];
   }

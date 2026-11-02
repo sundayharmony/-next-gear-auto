@@ -299,7 +299,7 @@ export function SendInvoiceModal({
                   placeholder="Select due date"
                 />
                 <p className="text-xs text-gray-500 mt-1">
-                  Shown on the invoice and in the payment notice sent to the customer.
+                  Shown on the invoice. If a balance is due, the email also includes a Stripe pay link (valid 24 hours).
                 </p>
               </div>
 

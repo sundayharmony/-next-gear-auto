@@ -794,6 +794,8 @@ export interface BookingInvoiceEmailData {
   chargesTotal: number;
   amountPaid: number;
   balanceDue: number;
+  /** Stripe Checkout URL for the balance due (when > 0) */
+  paymentUrl?: string;
 }
 
 function invoiceLineRow(label: string, amount: number, isCredit?: boolean): string {
@@ -870,6 +872,12 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
             </td>
           </tr>
         </table>
+        ${
+          data.balanceDue > 0 && data.paymentUrl
+            ? `${ctaButton("Pay balance now", data.paymentUrl, "#10b981")}
+        <p style="margin: 8px 0 20px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">This secure Stripe payment link expires in 24 hours. Need a new link? Contact us and we can re-send the invoice.</p>`
+            : ""
+        }
         <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">A PDF copy is attached for your records. Questions? Reply to this email or call (551) 429-3472.</p>
       </td>
     </tr>

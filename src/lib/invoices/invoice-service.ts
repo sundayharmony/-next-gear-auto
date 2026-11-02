@@ -14,6 +14,7 @@ import { generateInvoicePdf } from "@/lib/invoices/invoice-pdf";
 import { displayDocumentNumber, generateShortDocumentCode } from "@/lib/documents/short-document-number";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import { invoiceTableMissingMessage } from "@/lib/invoices/invoice-db-errors";
+import { createInvoiceCheckoutSession } from "@/lib/invoices/create-invoice-checkout";
 
 export interface DbInvoiceRow {
   id: string;
@@ -243,7 +244,14 @@ export async function sendInvoiceEmail(
   performedBy: string,
 ): Promise<
   | { ok: false; message: string; code?: "not_found" | "db_error" | "validation" }
-  | { ok: true; message: string; balanceDue: number; hadPdf: boolean }
+  | {
+      ok: true;
+      message: string;
+      balanceDue: number;
+      hadPdf: boolean;
+      paymentUrl?: string;
+      stripeSessionId?: string;
+    }
 > {
   const { data: invoice, error: invErr } = await supabase
     .from("invoices")
@@ -294,6 +302,27 @@ export async function sendInvoiceEmail(
     return { ok: false, message: upsert.message, code: upsert.code };
   }
 
+  let paymentUrl: string | undefined;
+  let stripeSessionId: string | undefined;
+
+  if (invoiceData.balanceDue > 0) {
+    const checkout = await createInvoiceCheckoutSession({
+      invoiceId,
+      bookingId: invoice.booking_id,
+      customerEmail,
+      vehicleName: invoiceData.vehicleName,
+      balanceDue: invoiceData.balanceDue,
+      dueDate: invoiceData.dueDate,
+      customerId: (ctx.booking.customer_id as string | null) || null,
+      vehicleId: (ctx.booking.vehicle_id as string | null) || null,
+    });
+    if (!checkout.ok) {
+      return { ok: false, message: checkout.message, code: "validation" };
+    }
+    paymentUrl = checkout.paymentUrl;
+    stripeSessionId = checkout.stripeSessionId;
+  }
+
   let pdfBytes: Uint8Array | undefined;
   try {
     pdfBytes = await generateInvoicePdf(invoiceData, {
@@ -312,6 +341,7 @@ export async function sendInvoiceEmail(
       documentNumber: displayDocumentNumber(invoice.id),
       customerEmail,
       pdfBytes,
+      paymentUrl,
     });
   } catch (mailErr) {
     logger.error("Invoice email send failed after save:", mailErr);
@@ -333,15 +363,21 @@ export async function sendInvoiceEmail(
       additional_line_items: additional.length > 0 ? additional : undefined,
       due_date: invoiceData.dueDate,
       invoice_id: invoiceId,
+      payment_url: paymentUrl || null,
+      stripe_session_id: stripeSessionId || null,
     },
     performed_by: performedBy,
   });
 
   return {
     ok: true,
-    message: `Invoice sent to ${customerEmail}`,
+    message: paymentUrl
+      ? `Invoice and Stripe payment link sent to ${customerEmail}`
+      : `Invoice sent to ${customerEmail}`,
     balanceDue: invoiceData.balanceDue,
     hadPdf: !!pdfBytes,
+    paymentUrl,
+    stripeSessionId,
   };
 }
 
