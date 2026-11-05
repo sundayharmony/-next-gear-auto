@@ -53,6 +53,7 @@ export async function GET(req: NextRequest, context: RouteContext) {
     const built = buildInvoicePayload(ctx.booking, ctx.vehicleName, ctx.vehicleDailyRate, {
       additionalLineItems: additional,
       dueDate: row.due_date,
+      includeTripCharges: false,
     });
     if (!built.ok) {
       return NextResponse.json({ success: false, message: built.message }, { status: 400 });

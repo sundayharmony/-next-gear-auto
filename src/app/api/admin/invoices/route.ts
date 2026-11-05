@@ -194,6 +194,7 @@ export async function POST(req: NextRequest) {
       dueDate: typeof body.dueDate === "string" ? body.dueDate : undefined,
       performedBy: auth.userId,
       incrementSend: false,
+      includeTripCharges: false,
     });
     if (!saved.ok) {
       return NextResponse.json({ success: false, message: saved.message }, { status: 400 });

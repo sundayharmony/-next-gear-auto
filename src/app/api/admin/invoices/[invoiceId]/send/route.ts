@@ -57,7 +57,10 @@ export async function POST(req: NextRequest, context: RouteContext) {
       .maybeSingle();
 
     const performedBy = staff?.email || auth.userId;
-    const result = await sendInvoiceEmail(supabase, invoiceId, performedBy);
+    // Invoices hub bills only staff-entered lines — never auto-add trip balance.
+    const result = await sendInvoiceEmail(supabase, invoiceId, performedBy, {
+      includeTripCharges: false,
+    });
 
     if (!result.ok) {
       const status =

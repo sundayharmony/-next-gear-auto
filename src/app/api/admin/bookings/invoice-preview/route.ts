@@ -98,7 +98,12 @@ export async function POST(req: NextRequest) {
   if (!auth.authorized) return auth.response;
 
   try {
-    let body: { bookingId?: string; additionalLineItems?: unknown; dueDate?: string };
+    let body: {
+      bookingId?: string;
+      additionalLineItems?: unknown;
+      dueDate?: string;
+      includeTripCharges?: boolean;
+    };
     try {
       body = await req.json();
     } catch {
@@ -137,11 +142,12 @@ export async function POST(req: NextRequest) {
     );
     if (denied) return denied;
 
+    const includeTripCharges = body.includeTripCharges !== false;
     const draftInvoice = buildBookingInvoiceData(
       { ...ctx.booking, vehicleName: ctx.vehicleName } as Parameters<
         typeof buildBookingInvoiceData
       >[0],
-      { vehicleDailyRate: ctx.vehicleDailyRate },
+      { vehicleDailyRate: ctx.vehicleDailyRate, includeTripCharges },
     );
     const dueParsed = validateInvoiceDueDate(body.dueDate, draftInvoice.invoiceDate);
     if (!dueParsed.ok) {
@@ -159,6 +165,7 @@ export async function POST(req: NextRequest) {
         vehicleDailyRate: ctx.vehicleDailyRate,
         additionalLineItems: additionalParsed.items,
         dueDate: dueParsed.dueDate,
+        includeTripCharges,
       },
     );
 

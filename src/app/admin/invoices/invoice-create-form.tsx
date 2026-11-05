@@ -99,7 +99,7 @@ export function InvoiceCreateForm({
       <div>
         <h2 className="text-lg font-semibold text-gray-900">New invoice</h2>
         <p className="text-sm text-gray-500 mt-1">
-          Each booking has one invoice. Creating one for a booking that already has an invoice opens that invoice so you can edit and send it.
+          Each booking has one invoice. Line items you add are what get billed — the trip balance is not included unless you add it as a line. Creating one for a booking that already has an invoice opens that invoice so you can edit and send it.
         </p>
       </div>
       <div>

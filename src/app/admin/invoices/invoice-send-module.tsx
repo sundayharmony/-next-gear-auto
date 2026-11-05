@@ -7,7 +7,7 @@ import { adminFetch } from "@/lib/utils/admin-fetch";
 import { Button } from "@/components/ui/button";
 import { DatePicker } from "@/components/ui/date-picker";
 import { DocumentLineItemsEditor } from "@/components/admin/document-line-items-editor";
-import { parseDraftLines, type DraftLine, type InvoiceDetail } from "./invoice-types";
+import { fmt, parseDraftLines, type DraftLine, type InvoiceDetail } from "./invoice-types";
 
 type InvoiceSendModuleProps = {
   detail: InvoiceDetail;
@@ -124,6 +124,31 @@ export function InvoiceSendModule({
     }
   };
 
+  const addTripBalanceLine = () => {
+    const amount = Math.round(Number(detail.liveBalance) * 100) / 100;
+    if (!(amount > 0)) {
+      onError("This trip has no outstanding balance to add.");
+      return;
+    }
+    setDrafts((prev) => {
+      const next = [...prev];
+      const emptyIdx = next.findIndex((d) => !d.title.trim() && !(Number(d.unitPrice) > 0));
+      const line = {
+        title: "Outstanding trip balance",
+        description: "",
+        unitPrice: amount,
+        quantity: 1,
+        isCredit: false as const,
+      };
+      if (emptyIdx >= 0) {
+        next[emptyIdx] = { ...next[emptyIdx], ...line };
+      } else {
+        next.push({ id: crypto.randomUUID(), ...line });
+      }
+      return next;
+    });
+  };
+
   return (
     <>
       <div>
@@ -131,7 +156,23 @@ export function InvoiceSendModule({
         <DatePicker value={dueDate} onChange={setDueDate} className="mt-1" />
       </div>
 
+      <p className="text-xs text-gray-500">
+        Only the lines below are billed. Trip balance is not added automatically.
+      </p>
+
       <DocumentLineItemsEditor drafts={drafts} onChange={setDrafts} showCreditToggle />
+
+      {detail.liveBalance > 0 && (
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full"
+          onClick={addTripBalanceLine}
+          disabled={saving || deleting}
+        >
+          Add outstanding trip balance ({fmt(detail.liveBalance)})
+        </Button>
+      )}
 
       <Button className="w-full" onClick={handleSaveAndResend} disabled={saving || deleting}>
         {saving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Mail className="h-4 w-4 mr-2" />}
