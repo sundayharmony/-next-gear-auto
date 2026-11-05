@@ -28,7 +28,8 @@ test("invoice email template includes Pay balance now CTA when paymentUrl set", 
   );
   assert.ok(source.includes("Pay balance now"));
   assert.ok(source.includes("data.paymentUrl"));
-  assert.ok(source.includes("Or copy this Stripe payment link"));
+  assert.equal(source.includes("Or copy this Stripe payment link"), false);
+  assert.equal(source.includes("Payment required"), false);
 });
 
 test("invoice mailer appends Stripe URL to plain-text body", () => {

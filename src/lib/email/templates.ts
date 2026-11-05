@@ -1,5 +1,4 @@
 import { escapeHtml } from "@/lib/utils/validation";
-import { getInvoicePaymentNoticeParagraphs } from "@/lib/invoices/invoice-payment-notice";
 
 const COMPANY_ADDRESS = "92 Forrest Street, Jersey City, NJ 07304";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://rentnextgearauto.com";
@@ -812,16 +811,6 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
     .map((item) => invoiceLineRow(item.label, item.amount, item.isCredit))
     .join("");
   const balanceColor = data.balanceDue > 0 ? "#dc2626" : "#059669";
-  const paymentNoticeParagraphs = getInvoicePaymentNoticeParagraphs(data.balanceDue, data.dueDate);
-  const paymentNoticeHtml = paymentNoticeParagraphs
-    .map(
-      (p) =>
-        `<p style="margin: 0 0 8px; color: #4b5563; font-size: 13px; line-height: 1.6;">${escapeHtml(p)}</p>`,
-    )
-    .join("");
-  const paymentNoticeBorder =
-    data.balanceDue > 0 ? "#fecaca" : "#bbf7d0";
-  const paymentNoticeBg = data.balanceDue > 0 ? "#fef2f2" : "#f0fdf4";
 
   return wrapEmail(`
     <tr>
@@ -864,22 +853,10 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
           </tr>
           ${data.balanceDue > 0 ? detailRow("Payment due by", fmtDate(data.dueDate), true) : ""}
         </table>
-        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin: 16px 0 20px;">
-          <tr>
-            <td style="background: ${paymentNoticeBg}; border-radius: 10px; padding: 16px 18px; border: 1px solid ${paymentNoticeBorder};">
-              ${data.balanceDue > 0 ? `<p style="margin: 0 0 10px; color: #991b1b; font-size: 13px; font-weight: 700;">Payment required</p>` : ""}
-              ${paymentNoticeHtml}
-            </td>
-          </tr>
-        </table>
         ${
           data.balanceDue > 0 && data.paymentUrl
             ? `${ctaButton("Pay balance now", data.paymentUrl, "#10b981")}
-        <p style="margin: 12px 0 4px; color: #111827; font-size: 13px; line-height: 1.6; text-align: center; font-weight: 600;">Or copy this Stripe payment link:</p>
-        <p style="margin: 0 0 8px; color: #1d4ed8; font-size: 12px; line-height: 1.5; text-align: center; word-break: break-all;">
-          <a href="${escapeHtml(data.paymentUrl)}" style="color: #1d4ed8; text-decoration: underline;">${escapeHtml(data.paymentUrl)}</a>
-        </p>
-        <p style="margin: 0 0 20px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">This secure Stripe payment link expires in 24 hours. Need a new link? Ask us to re-send the invoice.</p>`
+        <p style="margin: 12px 0 20px; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">This payment link expires in 24 hours. Need a new one? Ask us to re-send the invoice.</p>`
             : ""
         }
         <p style="margin: 0; color: #6b7280; font-size: 13px; line-height: 1.6; text-align: center;">A PDF copy is attached for your records. Questions? Reply to this email or call (551) 429-3472.</p>
