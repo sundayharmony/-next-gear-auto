@@ -86,11 +86,14 @@ export function buildInvoicePayload(
   options?: {
     additionalLineItems?: AdditionalInvoiceLineItemInput[];
     dueDate?: string;
+    /** Defaults to true (booking modal). Invoices hub passes false. */
+    includeTripCharges?: boolean;
   },
 ) {
+  const includeTripCharges = options?.includeTripCharges !== false;
   const draft = buildBookingInvoiceData(
     { ...booking, vehicleName } as Parameters<typeof buildBookingInvoiceData>[0],
-    { vehicleDailyRate },
+    { vehicleDailyRate, includeTripCharges },
   );
   const dueParsed = validateInvoiceDueDate(options?.dueDate, draft.invoiceDate);
   if (!dueParsed.ok) {
@@ -103,6 +106,7 @@ export function buildInvoicePayload(
       vehicleDailyRate,
       additionalLineItems: options?.additionalLineItems ?? [],
       dueDate: dueParsed.dueDate,
+      includeTripCharges,
     },
   );
 
@@ -117,6 +121,8 @@ export async function upsertInvoiceFromBooking(
     dueDate?: string;
     performedBy?: string;
     incrementSend?: boolean;
+    /** Defaults to true (booking modal). Invoices hub passes false. */
+    includeTripCharges?: boolean;
   },
 ): Promise<
   | { ok: false; message: string; code?: "not_found" | "db_error" | "validation" }
@@ -145,6 +151,7 @@ export async function upsertInvoiceFromBooking(
     {
       additionalLineItems: additionalParsed.items,
       dueDate: options.dueDate,
+      includeTripCharges: options.includeTripCharges,
     },
   );
   if (!built.ok) {
@@ -242,6 +249,7 @@ export async function sendInvoiceEmail(
   supabase: SupabaseClient,
   invoiceId: string,
   performedBy: string,
+  options?: { includeTripCharges?: boolean },
 ): Promise<
   | { ok: false; message: string; code?: "not_found" | "db_error" | "validation" }
   | {
@@ -253,6 +261,7 @@ export async function sendInvoiceEmail(
       stripeSessionId?: string;
     }
 > {
+  const includeTripCharges = options?.includeTripCharges !== false;
   const { data: invoice, error: invErr } = await supabase
     .from("invoices")
     .select("*")
@@ -285,6 +294,7 @@ export async function sendInvoiceEmail(
   const built = buildInvoicePayload(ctx.booking, ctx.vehicleName, ctx.vehicleDailyRate, {
     additionalLineItems: additional,
     dueDate: invoice.due_date,
+    includeTripCharges,
   });
   if (!built.ok) {
     return { ok: false, message: built.message, code: "validation" };
@@ -297,6 +307,7 @@ export async function sendInvoiceEmail(
     dueDate: invoice.due_date,
     performedBy,
     incrementSend: true,
+    includeTripCharges,
   });
   if (!upsert.ok) {
     return { ok: false, message: upsert.message, code: upsert.code };

@@ -61,6 +61,7 @@ function InvoiceHtmlPreview({
           bookingId: detail.booking_id,
           additionalLineItems: additionalItems,
           dueDate,
+          includeTripCharges: false,
         }),
       })
         .then(async (res) => {

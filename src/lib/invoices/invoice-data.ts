@@ -90,12 +90,49 @@ export function buildBookingInvoiceData(
     vehicleDailyRate?: number | null;
     additionalLineItems?: AdditionalInvoiceLineItemInput[];
     dueDate?: string;
+    /**
+     * When false (Invoices hub), bill only the specified line items — do not
+     * auto-include outstanding trip/booking balance. When true (booking send
+     * modal), keep trip charges and treat additional items as extras on top.
+     */
+    includeTripCharges?: boolean;
   },
 ): BookingInvoiceData {
+  const includeTripCharges = options?.includeTripCharges !== false;
   const displayTotal = getBookingDisplayTotal(booking);
   const balanceDue = getBookingBalanceDue(booking);
   const amountPaid = Math.max(0, Number(booking.deposit) || 0);
   const recurring = getRecurringBillingSummary(booking);
+  const additional = normalizeAdditionalLineItems(options?.additionalLineItems ?? []);
+
+  // Invoices hub: charge only what staff listed. Trip context stays on the
+  // email header; outstanding trip balance is opt-in via an explicit line.
+  if (!includeTripCharges) {
+    const chargesTotal = sumInvoiceLineItems(additional);
+    const today = new Date();
+    const invoiceDate = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+    const dueDate = options?.dueDate?.trim() || defaultInvoiceDueDate(today);
+    return {
+      bookingId: booking.id,
+      customerName: booking.customer_name || "Valued Customer",
+      customerEmail: booking.customer_email,
+      vehicleName: booking.vehicleName || "Vehicle",
+      pickupDate: booking.pickup_date,
+      returnDate: booking.return_date,
+      pickupTime: booking.pickup_time,
+      returnTime: booking.return_time,
+      pickupLocationName: booking.pickup_location_name,
+      returnLocationName: booking.return_location_name,
+      lineItems: additional,
+      chargesTotal,
+      amountPaid: 0,
+      balanceDue: chargesTotal,
+      invoiceDate,
+      dueDate,
+      promoCode: booking.promo_code || undefined,
+    };
+  }
+
   const lineItems: InvoiceLineItem[] = [];
 
   if (recurring) {
@@ -213,7 +250,6 @@ export function buildBookingInvoiceData(
     }
   }
 
-  const additional = normalizeAdditionalLineItems(options?.additionalLineItems ?? []);
   if (additional.length > 0) {
     lineItems.push(...additional);
   }

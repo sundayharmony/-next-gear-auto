@@ -162,7 +162,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
         { ...ctx.booking, vehicleName: ctx.vehicleName } as Parameters<
           typeof m.buildBookingInvoiceData
         >[0],
-        { vehicleDailyRate: ctx.vehicleDailyRate },
+        { vehicleDailyRate: ctx.vehicleDailyRate, includeTripCharges: false },
       ),
     );
     const dueParsed = validateInvoiceDueDate(dueDate, draft.invoiceDate);
@@ -176,6 +176,7 @@ export async function PATCH(req: NextRequest, context: RouteContext) {
     const result = await upsertInvoiceFromBooking(supabase, invoice.booking_id, {
       additionalLineItems: additionalParsed.items,
       dueDate: dueParsed.dueDate,
+      includeTripCharges: false,
     });
 
     if (!result.ok) {
