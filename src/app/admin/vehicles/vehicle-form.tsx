@@ -4,7 +4,6 @@ import { Plus, Check, X, RefreshCw, Wrench } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { DatePicker } from "@/components/ui/date-picker";
 import { Badge } from "@/components/ui/badge";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +18,7 @@ import {
   TRANSMISSION_OPTIONS,
   type VehicleFormState,
 } from "./vehicle-form-defaults";
+import { VehicleFinanceFields } from "./vehicle-finance-fields";
 
 export {
   CATEGORIES,
@@ -188,81 +188,7 @@ export function VehicleForm({
             </div>
           </div>
 
-          {!hideSensitiveFields && (
-            <div className="border border-purple-200 rounded-lg p-2.5 bg-purple-50/50">
-              <div className="flex items-center justify-between mb-2">
-                <label className="text-xs font-semibold text-purple-700 uppercase tracking-wide">
-                  Vehicle Financing
-                </label>
-                <button
-                  type="button"
-                  role="switch"
-                  aria-checked={form.isFinanced}
-                  aria-label="Toggle vehicle financing"
-                  onClick={() => setForm({ ...form, isFinanced: !form.isFinanced })}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    form.isFinanced ? "bg-purple-600" : "bg-gray-300"
-                  }`}
-                >
-                  <span
-                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
-                      form.isFinanced ? "translate-x-5" : "translate-x-0.5"
-                    }`}
-                  />
-                </button>
-              </div>
-              {!form.isFinanced && (
-                <p className="text-xs text-gray-400">Enable to track monthly payments and financing details.</p>
-              )}
-              {form.isFinanced && (
-                <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-                  <div>
-                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
-                      Monthly Payment ($)
-                    </label>
-                    <Input
-                      type="number"
-                      value={form.monthlyPayment || 0}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        setForm({ ...form, monthlyPayment: val === "" ? 0 : Number(val) });
-                      }}
-                      min="0"
-                      step="0.01"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
-                      Payment Day (1-31)
-                    </label>
-                    <Input
-                      type="number"
-                      value={form.paymentDayOfMonth ?? 1}
-                      onChange={(e) =>
-                        setForm({
-                          ...form,
-                          paymentDayOfMonth: Math.min(31, Math.max(1, Number(e.target.value))),
-                        })
-                      }
-                      min="1"
-                      max="31"
-                    />
-                  </div>
-                  <div>
-                    <label className="text-xs font-semibold uppercase tracking-wide text-gray-500 mb-0.5 block">
-                      Financing Start
-                    </label>
-                    <DatePicker
-                      value={form.financingStartDate || ""}
-                      onChange={(val) =>
-                        setForm({ ...form, financingStartDate: val })
-                      }
-                    />
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
+          {!hideSensitiveFields && <VehicleFinanceFields form={form} setForm={setForm} />}
 
           <div className={`grid grid-cols-1 gap-2 sm:grid-cols-2 ${hideSensitiveFields ? "lg:grid-cols-3" : "lg:grid-cols-5"}`}>
             <div>

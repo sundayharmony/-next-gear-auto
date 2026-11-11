@@ -36,6 +36,7 @@ import { getVehicleDisplayName } from "@/lib/types";
 import type { EnrichedAdminOwner } from "@/lib/admin/owner-enrichment";
 import { SendPasswordEmailButton } from "../components/SendPasswordEmailButton";
 import { OwnerFinancialBreakdownPanel } from "../components/OwnerFinancialBreakdown";
+import { WeeklyOwnerSettlement } from "../components/WeeklyOwnerSettlement";
 import { AdminIconActionButton } from "@/components/admin/admin-card-action-bar";
 import { Badge } from "@/components/ui/badge";
 
@@ -350,6 +351,13 @@ export default function AdminOwnerDetailPage() {
                   </table>
                 </AdminTableWrap>
               )}
+            </AdminSection>
+
+            <AdminSection
+              title="Weekly payout tracker"
+              description="Monday–Sunday net after insurance; platform 25% / owner 75%. Pay manually."
+            >
+              <WeeklyOwnerSettlement ownerId={owner.id} />
             </AdminSection>
 
             {owner.financialBreakdown && owner.allBookings ? (

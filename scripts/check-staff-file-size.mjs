@@ -24,7 +24,7 @@ const SHRINK_CAPS = new Map([
   ["src/app/admin/calendar/timeline-view.tsx", 719],
   ["src/app/admin/messages/shared-messages-page.tsx", 683],
   ["src/app/admin/blocked-dates/blocked-dates-drawer.tsx", 711],
-  ["src/app/admin/vehicles/vehicle-form.tsx", 601],
+  ["src/app/admin/vehicles/vehicle-form.tsx", 514],
 ]);
 
 /** Milestone targets toward hard MAX_LINES — informational warnings only. */

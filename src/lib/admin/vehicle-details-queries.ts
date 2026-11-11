@@ -35,6 +35,7 @@ export interface VehicleDetailsDto {
   purchasePrice?: number;
   isFinanced?: boolean;
   monthlyPayment?: number;
+  monthlyInsurance?: number;
   paymentDayOfMonth?: number;
   financingStartDate?: string | null;
 }
@@ -70,6 +71,9 @@ function mapVehicle(vehicle: Record<string, unknown>, role: StaffRole): VehicleD
     mapped.purchasePrice = Number(vehicle.purchase_price || 0);
     mapped.isFinanced = Boolean(vehicle.is_financed);
     mapped.monthlyPayment = Number(vehicle.monthly_payment || 0);
+    mapped.monthlyInsurance = Number(
+      (vehicle as { monthly_insurance?: number | null }).monthly_insurance || 0,
+    );
     mapped.paymentDayOfMonth = Number(vehicle.payment_day_of_month || 1);
     mapped.financingStartDate = (vehicle.financing_start_date as string | null) ?? null;
   }
@@ -82,6 +86,18 @@ export async function fetchVehicleById(
   vehicleId: string,
   role: StaffRole
 ): Promise<VehicleDetailsDto | null> {
+  const full = await supabase
+    .from("vehicles")
+    .select(
+      "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, monthly_insurance, payment_day_of_month, financing_start_date, is_published, created_at"
+    )
+    .eq("id", vehicleId)
+    .maybeSingle();
+
+  if (!full.error && full.data) {
+    return mapVehicle(full.data as unknown as Record<string, unknown>, role);
+  }
+
   const { data, error } = await supabase
     .from("vehicles")
     .select(

@@ -42,6 +42,7 @@ export const emptyVehicle: Omit<Vehicle, "id"> = {
   maintenanceStatus: "good",
   isFinanced: false,
   monthlyPayment: 0,
+  monthlyInsurance: 0,
   paymentDayOfMonth: 1,
   financingStartDate: "",
 };
