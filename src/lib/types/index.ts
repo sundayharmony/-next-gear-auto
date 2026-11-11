@@ -32,6 +32,8 @@ export interface Vehicle {
   purchasePrice?: number;
   isFinanced?: boolean;
   monthlyPayment?: number;
+  /** Monthly insurance premium; weekly owner settlement prorates this. */
+  monthlyInsurance?: number;
   paymentDayOfMonth?: number;
   financingStartDate?: string;
   createdAt?: string;
@@ -470,6 +472,8 @@ export interface OwnerVehicle {
   isAvailable: boolean;
   isFinanced?: boolean;
   monthlyPayment?: number;
+  /** Monthly insurance premium; weekly owner settlement prorates this. */
+  monthlyInsurance?: number;
   paymentDayOfMonth?: number;
   financingStartDate?: string | null;
   purchasePrice?: number;

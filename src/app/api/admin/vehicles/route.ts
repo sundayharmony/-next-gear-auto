@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdmin, verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import { isMissingColumnError } from "@/lib/utils/supabase-column-errors";
 import {
   migrateTempImagesForVehicle,
   validateVehicleImagesInput,
@@ -25,11 +26,17 @@ export async function GET(req: NextRequest) {
     const managerSelect =
       "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, maintenance_status, description, color, is_published, created_at";
     const adminSelect =
+      "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, insurance_card_urls, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, monthly_insurance, payment_day_of_month, financing_start_date, is_published, created_at";
+    const adminSelectBase =
       "id, year, make, model, category, daily_rate, images, is_available, features, specs, mileage, license_plate, vin, insurance_card_urls, maintenance_status, description, color, purchase_price, is_financed, monthly_payment, payment_day_of_month, financing_start_date, is_published, created_at";
-    const vehiclesQuery = isManager
+    let vehiclesQuery = isManager
       ? supabase.from("vehicles").select(managerSelect)
       : supabase.from("vehicles").select(adminSelect);
-    const { data, error } = await vehiclesQuery.order("created_at", { ascending: true });
+    let { data, error } = await vehiclesQuery.order("created_at", { ascending: true });
+    if (!isManager && error && isMissingColumnError(error)) {
+      vehiclesQuery = supabase.from("vehicles").select(adminSelectBase);
+      ({ data, error } = await vehiclesQuery.order("created_at", { ascending: true }));
+    }
 
     if (error) {
       logger.error("Admin vehicles GET Supabase error:", error);
@@ -59,6 +66,7 @@ export async function GET(req: NextRequest) {
       purchasePrice: isManager ? undefined : (Number(v.purchase_price) || 0),
       isFinanced: isManager ? undefined : Boolean(v.is_financed),
       monthlyPayment: isManager ? undefined : (Number(v.monthly_payment) || 0),
+      monthlyInsurance: isManager ? undefined : (Number(v.monthly_insurance) || 0),
       paymentDayOfMonth: isManager ? undefined : (Number(v.payment_day_of_month) || 1),
       financingStartDate: isManager ? undefined : (String(v.financing_start_date || "") || null),
       isPublished: v.is_published !== false,
@@ -101,6 +109,9 @@ export async function POST(request: NextRequest) {
       }
       if (body.monthlyPayment !== undefined && (typeof body.monthlyPayment !== "number" || body.monthlyPayment < 0 || !Number.isFinite(body.monthlyPayment))) {
         return NextResponse.json({ success: false, message: "Monthly payment must be a non-negative number" }, { status: 400 });
+      }
+      if (body.monthlyInsurance !== undefined && (typeof body.monthlyInsurance !== "number" || body.monthlyInsurance < 0 || !Number.isFinite(body.monthlyInsurance))) {
+        return NextResponse.json({ success: false, message: "Monthly insurance must be a non-negative number" }, { status: 400 });
       }
       if (body.paymentDayOfMonth !== undefined && (typeof body.paymentDayOfMonth !== "number" || body.paymentDayOfMonth < 1 || body.paymentDayOfMonth > 31)) {
         return NextResponse.json({ success: false, message: "Payment day must be between 1 and 31" }, { status: 400 });
@@ -152,6 +163,7 @@ export async function POST(request: NextRequest) {
         purchase_price: isManager ? 0 : (body.purchasePrice ?? 0),
         is_financed: isManager ? false : (body.isFinanced ?? false),
         monthly_payment: isManager ? 0 : (body.monthlyPayment ?? 0),
+        monthly_insurance: isManager ? 0 : (body.monthlyInsurance ?? 0),
         payment_day_of_month: isManager ? 1 : (body.paymentDayOfMonth ?? 1),
         financing_start_date: isManager ? null : (body.financingStartDate || null),
       })
@@ -159,7 +171,44 @@ export async function POST(request: NextRequest) {
       .maybeSingle();
 
     if (error) {
+      if (isMissingColumnError(error) && "monthly_insurance" in (error as object)) {
+        // Column not migrated yet — retry without it.
+      }
       logger.error("Vehicle create error:", error);
+      if (isMissingColumnError(error)) {
+        const retry = await supabase
+          .from("vehicles")
+          .insert({
+            id,
+            year: body.year || 2024,
+            make: body.make || "",
+            model: body.model || "",
+            category: body.category,
+            images,
+            specs: body.specs || { passengers: 5, luggage: 2, transmission: "Automatic", fuelType: "Gasoline", mpg: 30, doors: 4 },
+            daily_rate: body.dailyRate,
+            features: body.features || [],
+            is_available: body.isAvailable !== false,
+            is_published: body.isPublished !== false,
+            description: body.description || "",
+            color: body.color || "",
+            mileage: body.mileage ?? 0,
+            license_plate: isManager ? "" : (body.licensePlate || ""),
+            vin: isManager ? "" : (body.vin || ""),
+            insurance_card_urls: isManager ? [] : (body.insuranceCardUrls || []),
+            maintenance_status: body.maintenanceStatus || "good",
+            purchase_price: isManager ? 0 : (body.purchasePrice ?? 0),
+            is_financed: isManager ? false : (body.isFinanced ?? false),
+            monthly_payment: isManager ? 0 : (body.monthlyPayment ?? 0),
+            payment_day_of_month: isManager ? 1 : (body.paymentDayOfMonth ?? 1),
+            financing_start_date: isManager ? null : (body.financingStartDate || null),
+          })
+          .select()
+          .maybeSingle();
+        if (!retry.error) {
+          return NextResponse.json({ success: true, data: retry.data }, { status: 201 });
+        }
+      }
       return NextResponse.json({ success: false, message: "Failed to create vehicle" }, { status: 500 });
     }
 
@@ -208,6 +257,9 @@ export async function PUT(request: NextRequest) {
     if (updates.monthlyPayment !== undefined && (typeof updates.monthlyPayment !== "number" || updates.monthlyPayment < 0 || !Number.isFinite(updates.monthlyPayment))) {
       return NextResponse.json({ success: false, message: "Monthly payment must be a non-negative number" }, { status: 400 });
     }
+    if (updates.monthlyInsurance !== undefined && (typeof updates.monthlyInsurance !== "number" || updates.monthlyInsurance < 0 || !Number.isFinite(updates.monthlyInsurance))) {
+      return NextResponse.json({ success: false, message: "Monthly insurance must be a non-negative number" }, { status: 400 });
+    }
     if (updates.paymentDayOfMonth !== undefined && (typeof updates.paymentDayOfMonth !== "number" || updates.paymentDayOfMonth < 1 || updates.paymentDayOfMonth > 31)) {
       return NextResponse.json({ success: false, message: "Payment day must be between 1 and 31" }, { status: 400 });
     }
@@ -242,13 +294,19 @@ export async function PUT(request: NextRequest) {
     if (updates.purchasePrice !== undefined) dbUpdates.purchase_price = updates.purchasePrice;
     if (updates.isFinanced !== undefined) dbUpdates.is_financed = updates.isFinanced;
     if (updates.monthlyPayment !== undefined) dbUpdates.monthly_payment = updates.monthlyPayment;
+    if (updates.monthlyInsurance !== undefined) dbUpdates.monthly_insurance = updates.monthlyInsurance;
     if (updates.paymentDayOfMonth !== undefined) dbUpdates.payment_day_of_month = updates.paymentDayOfMonth;
     if (updates.financingStartDate !== undefined) dbUpdates.financing_start_date = updates.financingStartDate;
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from("vehicles")
       .update(dbUpdates)
       .eq("id", id);
+
+    if (error && isMissingColumnError(error) && "monthly_insurance" in dbUpdates) {
+      const { monthly_insurance: _mi, ...withoutInsurance } = dbUpdates;
+      ({ error } = await supabase.from("vehicles").update(withoutInsurance).eq("id", id));
+    }
 
     if (error) {
       logger.error("Vehicle update error:", error);

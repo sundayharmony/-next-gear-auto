@@ -40,6 +40,7 @@ import type { OwnerVehicle } from "@/lib/types";
 import { COMPANY_OWNED_OWNER_ID } from "@/lib/owner/ownership";
 import { EditOwnerModal } from "./components/EditOwnerModal";
 import { SendPasswordEmailButton } from "./components/SendPasswordEmailButton";
+import { WeeklyOwnerSettlement } from "./components/WeeklyOwnerSettlement";
 
 interface AdminOwner {
   id: string;
@@ -64,7 +65,15 @@ export default function AdminOwnersPage() {
   const [owners, setOwners] = useState<AdminOwner[]>([]);
   const [vehicles, setVehicles] = useState<AdminVehicle[]>([]);
   const [vehicleAssignments, setVehicleAssignments] = useState<
-    Record<string, { ownerId: string | null; isCompanyOwned: boolean; ownerPercentage: number }>
+    Record<
+      string,
+      {
+        ownerId: string | null;
+        isCompanyOwned: boolean;
+        ownerPercentage: number;
+        monthlyInsurance: number;
+      }
+    >
   >({});
   const [loading, setLoading] = useState(true);
   const [addOpen, setAddOpen] = useState(false);
@@ -125,12 +134,16 @@ export default function AdminOwnersPage() {
   };
 
   const assignment = useMemo(() => {
-    const map = new Map<string, { ownerId: string; isCompanyOwned: boolean; pct: number }>();
+    const map = new Map<
+      string,
+      { ownerId: string; isCompanyOwned: boolean; pct: number; monthlyInsurance: number }
+    >();
     for (const [vehicleId, a] of Object.entries(vehicleAssignments)) {
       map.set(vehicleId, {
         ownerId: a.isCompanyOwned ? COMPANY_OWNED_OWNER_ID : (a.ownerId ?? ""),
         isCompanyOwned: a.isCompanyOwned,
         pct: a.ownerPercentage,
+        monthlyInsurance: Number(a.monthlyInsurance) || 0,
       });
     }
     return map;
@@ -237,7 +250,14 @@ export default function AdminOwnersPage() {
                 </p>
               </AdminCard>
             )}
-            <AdminSection title="Vehicle assignments" description="Assign vehicles to owners and set each owner's revenue share.">
+            <AdminSection
+              title="Weekly payout tracker"
+              description="Monday–Sunday revenue after insurance, with a fixed 25% platform fee. Pay owners manually using these totals."
+            >
+              <WeeklyOwnerSettlement />
+            </AdminSection>
+
+            <AdminSection title="Vehicle assignments" description="Assign vehicles to owners, set legacy Owner %, and monthly insurance for weekly payouts.">
               <VehicleAssignments
                 vehicles={vehicles}
                 owners={owners}
@@ -269,12 +289,17 @@ function VehicleAssignments({
 }: {
   vehicles: AdminVehicle[];
   owners: AdminOwner[];
-  assignment: Map<string, { ownerId: string; isCompanyOwned: boolean; pct: number }>;
+  assignment: Map<
+    string,
+    { ownerId: string; isCompanyOwned: boolean; pct: number; monthlyInsurance: number }
+  >;
   supportsCompanyOwned: boolean;
   onSaved: () => void;
 }) {
   const { showToast } = useNotification();
-  const [drafts, setDrafts] = useState<Record<string, { ownerId: string; pct: string }>>({});
+  const [drafts, setDrafts] = useState<
+    Record<string, { ownerId: string; pct: string; insurance: string }>
+  >({});
   const [saving, setSaving] = useState(false);
 
   const getDraft = (vId: string) => {
@@ -283,10 +308,14 @@ function VehicleAssignments({
     return {
       ownerId: a?.ownerId ?? "",
       pct: String(a?.isCompanyOwned ? 0 : (a?.pct ?? 70)),
+      insurance: String(a?.monthlyInsurance ?? 0),
     };
   };
 
-  const setDraft = (vId: string, patch: Partial<{ ownerId: string; pct: string }>) => {
+  const setDraft = (
+    vId: string,
+    patch: Partial<{ ownerId: string; pct: string; insurance: string }>,
+  ) => {
     const base = getDraft(vId);
     const next = { ...base, ...patch };
     if (patch.ownerId === COMPANY_OWNED_OWNER_ID) {
@@ -304,6 +333,7 @@ function VehicleAssignments({
     return {
       ownerId: a?.isCompanyOwned ? COMPANY_OWNED_OWNER_ID : (a?.ownerId ?? ""),
       pct: a?.isCompanyOwned ? 0 : (a?.pct ?? 70),
+      insurance: a?.monthlyInsurance ?? 0,
     };
   };
 
@@ -318,6 +348,7 @@ function VehicleAssignments({
     ) {
       return true;
     }
+    if (Number(draft.insurance) !== saved.insurance) return true;
     return false;
   };
 
@@ -357,6 +388,7 @@ function VehicleAssignments({
                 : draft.ownerId || null,
             ownerPercentage:
               draft.ownerId === COMPANY_OWNED_OWNER_ID ? 0 : Number(draft.pct),
+            monthlyInsurance: Number(draft.insurance) || 0,
           }),
         });
         const json = await res.json();
@@ -388,6 +420,7 @@ function VehicleAssignments({
               <th className="px-4 py-3 font-semibold">Vehicle</th>
               <th className="px-4 py-3 font-semibold">Owner</th>
               <th className="px-4 py-3 font-semibold">Owner %</th>
+              <th className="px-4 py-3 font-semibold">Insurance $/mo</th>
             </tr>
           </thead>
           <tbody>
@@ -427,6 +460,17 @@ function VehicleAssignments({
                         disabled={!draft.ownerId || saving}
                       />
                     )}
+                  </td>
+                  <td className="px-4 py-3">
+                    <Input
+                      type="number"
+                      min={0}
+                      step="0.01"
+                      value={draft.insurance}
+                      onChange={(e) => setDraft(v.id, { insurance: e.target.value })}
+                      className="w-28"
+                      disabled={saving}
+                    />
                   </td>
                 </tr>
               );

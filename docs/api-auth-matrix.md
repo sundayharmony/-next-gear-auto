@@ -35,7 +35,7 @@ Features in `src/lib/admin/panel-registry.ts` with `sharedWithManager: false` us
 | `blockedDates` | `/api/admin/blocked-dates` |
 | `finances` | `/api/admin/expenses`, `/api/admin/owner-payouts`, `/api/admin/booking-payments` |
 | `managers` | `/api/admin/managers` |
-| `owners` | `/api/admin/owners` |
+| `owners` | `/api/admin/owners`, `/api/admin/owners/weekly-settlement` |
 | `bookingActivity` | `/api/admin/booking-activity` |
 
 ## High-risk routes

@@ -6,6 +6,7 @@ type VehicleAssignmentRow = {
   owner_id: string | null;
   owner_percentage: number | null;
   is_company_owned?: boolean | null;
+  monthly_insurance?: number | null;
 };
 
 let cachedSupportsCompanyOwned: boolean | null = null;
@@ -35,12 +36,39 @@ export async function fetchVehiclesForOwnerAssignments(
 ): Promise<{ rows: VehicleAssignmentRow[]; supportsCompanyOwned: boolean }> {
   const supportsCompanyOwned = await vehicleSupportsCompanyOwnedFlag(supabase);
   if (supportsCompanyOwned) {
+    const full = await supabase
+      .from("vehicles")
+      .select("id, owner_id, owner_percentage, is_company_owned, monthly_insurance");
+    if (!full.error) {
+      return { rows: (full.data || []) as VehicleAssignmentRow[], supportsCompanyOwned: true };
+    }
+    if (!isMissingColumnError(full.error)) throw full.error;
     const { data, error } = await supabase
       .from("vehicles")
       .select("id, owner_id, owner_percentage, is_company_owned");
     if (error) throw error;
-    return { rows: (data || []) as VehicleAssignmentRow[], supportsCompanyOwned: true };
+    return {
+      rows: ((data || []) as VehicleAssignmentRow[]).map((v) => ({
+        ...v,
+        monthly_insurance: 0,
+      })),
+      supportsCompanyOwned: true,
+    };
   }
+
+  const withInsurance = await supabase
+    .from("vehicles")
+    .select("id, owner_id, owner_percentage, monthly_insurance");
+  if (!withInsurance.error) {
+    return {
+      rows: ((withInsurance.data || []) as VehicleAssignmentRow[]).map((v) => ({
+        ...v,
+        is_company_owned: false,
+      })),
+      supportsCompanyOwned: false,
+    };
+  }
+  if (!isMissingColumnError(withInsurance.error)) throw withInsurance.error;
 
   const { data, error } = await supabase.from("vehicles").select("id, owner_id, owner_percentage");
   if (error) throw error;
@@ -49,6 +77,7 @@ export async function fetchVehiclesForOwnerAssignments(
     rows: ((data || []) as VehicleAssignmentRow[]).map((v) => ({
       ...v,
       is_company_owned: false,
+      monthly_insurance: 0,
     })),
     supportsCompanyOwned: false,
   };
@@ -90,6 +119,30 @@ export async function patchVehicleAssignment(
   const { error } = await supabase.from("vehicles").update(patch).eq("id", vehicleId);
 
   if (!error) return { error: null };
+
+  if (isMissingColumnError(error) && "monthly_insurance" in patch) {
+    const { monthly_insurance: _mi, ...withoutInsurance } = patch;
+    if (Object.keys(withoutInsurance).length === 0) {
+      return {
+        error: {
+          message:
+            "Monthly insurance requires a database update. Run supabase-vehicle-monthly-insurance.sql in Supabase SQL Editor, then try again.",
+        },
+      };
+    }
+    const retryInsurance = await supabase
+      .from("vehicles")
+      .update(withoutInsurance)
+      .eq("id", vehicleId);
+    if (!retryInsurance.error) {
+      return {
+        error: {
+          message:
+            "Other fields saved, but monthly insurance requires supabase-vehicle-monthly-insurance.sql in Supabase.",
+        },
+      };
+    }
+  }
 
   if (isMissingColumnError(error) && "is_company_owned" in updates) {
     const retryPatch = sanitizeVehicleAssignmentPatch(updates, false);

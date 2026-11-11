@@ -67,7 +67,12 @@ export async function GET(req: NextRequest) {
 
     const vehicleAssignments: Record<
       string,
-      { ownerId: string | null; isCompanyOwned: boolean; ownerPercentage: number }
+      {
+        ownerId: string | null;
+        isCompanyOwned: boolean;
+        ownerPercentage: number;
+        monthlyInsurance: number;
+      }
     > = {};
     for (const v of vehicleRows) {
       const isCompanyOwned = v.is_company_owned === true;
@@ -77,6 +82,7 @@ export async function GET(req: NextRequest) {
         ownerPercentage: clampPercentage(
           Number(v.owner_percentage) || DEFAULT_OWNER_PERCENTAGE
         ),
+        monthlyInsurance: Math.max(0, Number(v.monthly_insurance) || 0),
       };
     }
 
@@ -196,7 +202,7 @@ export async function POST(req: NextRequest) {
 /**
  * PATCH /api/admin/owners
  * Assign / unassign a vehicle to an owner and set the owner revenue %.
- * Body: { vehicleId, ownerId | null | "__company__", ownerPercentage? }
+ * Body: { vehicleId, ownerId | null | "__company__", ownerPercentage?, monthlyInsurance? }
  */
 export async function PATCH(req: NextRequest) {
   const auth = await verifyAdmin(req);
@@ -277,6 +283,17 @@ export async function PATCH(req: NextRequest) {
         return NextResponse.json({ success: false, message: "ownerPercentage must be between 0 and 100" }, { status: 400 });
       }
       updates.owner_percentage = clampPercentage(pct);
+    }
+
+    if (body.monthlyInsurance !== undefined) {
+      const insurance = Number(body.monthlyInsurance);
+      if (!Number.isFinite(insurance) || insurance < 0) {
+        return NextResponse.json(
+          { success: false, message: "monthlyInsurance must be a non-negative number" },
+          { status: 400 },
+        );
+      }
+      updates.monthly_insurance = Math.round(insurance * 100) / 100;
     }
 
     if (Object.keys(updates).length === 0) {

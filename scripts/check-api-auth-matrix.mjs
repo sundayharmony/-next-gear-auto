@@ -30,6 +30,7 @@ const ADMIN_ONLY_GET_ROUTES = [
   { feature: "finances", file: "src/app/api/admin/booking-payments/route.ts" },
   { feature: "managers", file: "src/app/api/admin/managers/route.ts" },
   { feature: "owners", file: "src/app/api/admin/owners/route.ts" },
+  { feature: "owners", file: "src/app/api/admin/owners/weekly-settlement/route.ts" },
   { feature: "bookingActivity", file: "src/app/api/admin/booking-activity/route.ts" },
 ];
 
