@@ -78,7 +78,11 @@ export async function loadWeeklyOwnerSettlements(options: {
   const vehiclesByOwner = new Map<string, VehicleWeekSettlement[]>();
   for (const v of vehicles) {
     const ownerId = v.owner_id!;
-    const vehicleName = getVehicleDisplayName(v);
+    const vehicleName = getVehicleDisplayName({
+      year: v.year ?? undefined,
+      make: v.make ?? undefined,
+      model: v.model ?? undefined,
+    });
     const settlement = computeVehicleWeekSettlement({
       vehicleId: v.id,
       vehicleName,
@@ -148,29 +152,40 @@ async function loadOwnersById(
   const map = new Map<string, { name: string; email: string }>();
   if (ownerIds.length === 0) return map;
 
-  let result = await supabase
+  const primary = await supabase
     .from("customers")
     .select("id, name, email, role, owner_portal_enabled")
     .in("id", ownerIds);
 
-  if (result.error && isMissingColumnError(result.error)) {
-    result = await supabase
+  let rows: Array<Record<string, unknown>> = [];
+  if (primary.error && isMissingColumnError(primary.error)) {
+    const fallback = await supabase
       .from("customers")
       .select("id, name, email, role")
       .in("id", ownerIds)
       .eq("role", "owner");
-  }
-
-  if (result.error) {
-    logger.error("Weekly settlement owners query failed", result.error);
+    if (fallback.error) {
+      logger.error("Weekly settlement owners query failed", fallback.error);
+      return map;
+    }
+    rows = (fallback.data || []) as Array<Record<string, unknown>>;
+  } else if (primary.error) {
+    logger.error("Weekly settlement owners query failed", primary.error);
     return map;
+  } else {
+    rows = (primary.data || []) as Array<Record<string, unknown>>;
   }
 
-  for (const row of result.data || []) {
-    if (!hasOwnerPortalAccess(row as { role?: string | null; owner_portal_enabled?: boolean | null })) {
+  for (const row of rows) {
+    if (
+      !hasOwnerPortalAccess({
+        role: (row.role as string | null) ?? null,
+        owner_portal_enabled: (row.owner_portal_enabled as boolean | null) ?? null,
+      })
+    ) {
       continue;
     }
-    map.set(row.id as string, {
+    map.set(String(row.id), {
       name: String(row.name || "Owner"),
       email: String(row.email || ""),
     });
@@ -222,7 +237,7 @@ async function loadTuroTripsForWeek(
 ): Promise<Array<TripInput & { vehicleId: string }>> {
   const fullSelect =
     "id, vehicle_id, start_date, end_date, earnings, reason, cancelled_at, source";
-  let { data, error } = await supabase
+  const primary = await supabase
     .from("blocked_dates")
     .select(fullSelect)
     .in("vehicle_id", vehicleIds)
@@ -232,7 +247,8 @@ async function loadTuroTripsForWeek(
     .gte("end_date", weekStart)
     .limit(5000);
 
-  if (error && isMissingColumnError(error)) {
+  let rows: Array<Record<string, unknown>> = [];
+  if (primary.error && isMissingColumnError(primary.error)) {
     const fb = await supabase
       .from("blocked_dates")
       .select("id, vehicle_id, start_date, end_date, reason, source, cancelled_at")
@@ -242,16 +258,19 @@ async function loadTuroTripsForWeek(
       .lte("start_date", weekEnd)
       .gte("end_date", weekStart)
       .limit(5000);
-    data = fb.data;
-    error = fb.error;
-  }
-
-  if (error) {
-    logger.error("Weekly settlement Turo query failed", error);
+    if (fb.error) {
+      logger.error("Weekly settlement Turo query failed", fb.error);
+      return [];
+    }
+    rows = (fb.data || []) as Array<Record<string, unknown>>;
+  } else if (primary.error) {
+    logger.error("Weekly settlement Turo query failed", primary.error);
     return [];
+  } else {
+    rows = (primary.data || []) as Array<Record<string, unknown>>;
   }
 
-  const active = filterActiveTuroTrips(data || []);
+  const active = filterActiveTuroTrips(rows);
   return active.map((row) => {
     const reason = (row.reason as string | null) ?? null;
     const gross = resolveTuroTripRevenue({
