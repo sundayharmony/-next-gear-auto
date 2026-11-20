@@ -107,7 +107,7 @@ function assertBookingSignable(booking: {
   rental_agreement_url?: string | null;
   status?: string | null;
 }) {
-  if (booking.rental_agreement_url) {
+  if (booking.agreement_signed_at) {
     throw new AgreementSigningError("This agreement has already been signed", 409);
   }
   if (!booking.status || !VALID_SIGNING_STATUSES.includes(booking.status as (typeof VALID_SIGNING_STATUSES)[number])) {
@@ -219,7 +219,7 @@ export async function completeAgreementSigning(
     .from("bookings")
     .update(bookingUpdate)
     .eq("id", bookingId)
-    .is("rental_agreement_url", null)
+    .is("agreement_signed_at", null)
     .select("id")
     .maybeSingle();
 
@@ -235,7 +235,7 @@ export async function completeAgreementSigning(
         signed_name: signedName,
       })
       .eq("id", bookingId)
-      .is("rental_agreement_url", null)
+      .is("agreement_signed_at", null)
       .select("id")
       .maybeSingle();
     updateResult = fallback.data;
