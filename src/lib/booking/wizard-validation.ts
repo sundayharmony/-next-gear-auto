@@ -115,6 +115,7 @@ export interface CanProceedInput {
   returnTime: string;
   localExtras: BookingExtra[];
   insuranceProofUrl: string | null;
+  uninsuredAck: boolean;
   details: CustomerDetailsState;
   idDocumentUrl: string | null;
   uploadingId: boolean;
@@ -169,13 +170,10 @@ export function canProceedForStep(input: CanProceedInput): boolean {
           input.returnTime,
         )
       );
-    case 3: {
-      const insuranceExtra = input.localExtras.find((e) => e.id === "e1");
-      if (insuranceExtra && !insuranceExtra.selected && !input.insuranceProofUrl) {
-        return false;
-      }
-      return true;
-    }
+    case 3:
+      // Renters bring their own insurance. They either upload proof, or acknowledge that without
+      // proof the uninsured driver fee applies and they pay out of pocket for all damage.
+      return Boolean(input.insuranceProofUrl) || input.uninsuredAck;
     case 4:
       if (!input.details.name || !input.details.email || !input.details.phone || !input.details.dob) {
         return false;

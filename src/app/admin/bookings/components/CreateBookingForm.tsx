@@ -9,6 +9,7 @@ import { DatePicker } from "@/components/ui/date-picker";
 import { Select } from "@/components/ui/select";
 import { adminFetch } from "@/lib/utils/admin-fetch";
 import { logger } from "@/lib/utils/logger";
+import { isSellableExtra } from "@/lib/extras-policy";
 import { isValidEmailFormat } from "@/lib/utils/validation";
 import {
   Vehicle,
@@ -678,10 +679,10 @@ export default function CreateBookingForm({
 
         {/* ═══ SECTION 4: Extras ═══ */}
         <section className="space-y-4">
-          <BookingFormSectionHeader icon={Package} title="Extras & Insurance" subtitle="Optional add-ons for this booking" />
+          <BookingFormSectionHeader icon={Package} title="Extras" subtitle="Optional add-ons for this booking. Renters bring their own insurance." />
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {AVAILABLE_EXTRAS.map((extra) => {
+            {AVAILABLE_EXTRAS.filter(isSellableExtra).map((extra) => {
               const isSelected = form.selectedExtras.includes(extra.id);
               return (
                 <button
@@ -705,9 +706,6 @@ export default function CreateBookingForm({
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-sm text-gray-900">
                         {extra.name}
-                        {extra.id === "e1" && (
-                          <span className="ml-1.5 inline-flex items-center px-1.5 py-0.5 rounded-md bg-green-100 text-green-700 text-[10px] font-semibold uppercase">Recommended</span>
-                        )}
                       </div>
                       <div className="text-xs text-gray-500 mt-0.5">{extra.description}</div>
                       <div className="text-xs font-semibold text-purple-600 mt-1">

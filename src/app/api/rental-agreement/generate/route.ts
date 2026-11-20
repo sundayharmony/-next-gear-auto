@@ -12,6 +12,7 @@ import path from "path";
 import fs from "fs/promises";
 import { logger } from "@/lib/utils/logger";
 import { validateAgreementAccessToken } from "@/lib/agreement/agreement-access-token";
+import { patchRentalAgreementTemplate } from "@/lib/agreement/patch-agreement-template";
 
 // GET: Generate a pre-filled rental agreement PDF
 // Supports two modes:
@@ -200,6 +201,7 @@ export async function GET(req: NextRequest) {
       );
     }
     const pdfDoc = await PDFDocument.load(templateBytes);
+    await patchRentalAgreementTemplate(pdfDoc);
 
     // Get the form
     const form = pdfDoc.getForm();
@@ -317,7 +319,6 @@ export async function GET(req: NextRequest) {
     setText("t37", ""); // Insurance Provider — customer fills
     setText("t38", ""); // Policy #
     setText("t39", ""); // Insurance Phone
-    setCheck("c40", false); // Accept SLP
     setCheck("c41", false); // GPS consent
     setText("t42", ""); // GPS Acknowledgement Signature — SIGNATURE FIELD
     setText("t43", ""); // Renter Signature — SIGNATURE FIELD

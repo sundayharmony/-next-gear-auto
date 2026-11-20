@@ -17,6 +17,7 @@ import {
   type WizardStep,
 } from "@/lib/booking/wizard-validation";
 import extras from "@/data/extras.json";
+import { isSellableExtra } from "@/lib/extras-policy";
 import { logger } from "@/lib/utils/logger";
 import type { BookingExtra } from "@/lib/types";
 import type { PublicVehicleJson } from "@/lib/vehicles/public-vehicle-fields";
@@ -53,11 +54,12 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
 
   const [localExtras, setLocalExtras] = useState<BookingExtra[]>(() => {
     if (booking.extras && booking.extras.length > 0) {
-      return booking.extras;
+      // A session saved before the coverage add-on was retired may still contain it.
+      return booking.extras.filter(isSellableExtra);
     }
-    return extras.map((e) => ({
+    return extras.filter(isSellableExtra).map((e) => ({
       ...e,
-      selected: e.id === "e1" ? true : false,
+      selected: false,
       billingType: e.billingType as BookingExtra["billingType"],
     }));
   });
@@ -66,7 +68,8 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
   const [insuranceProofUrl, setInsuranceProofUrl] = useState<string | null>(null);
   const [uploadingInsuranceProof, setUploadingInsuranceProof] = useState(false);
   const [insuranceUploadError, setInsuranceUploadError] = useState("");
-  const [showInsuranceWarning, setShowInsuranceWarning] = useState(false);
+  // Renter has no insurance proof and has acknowledged the uninsured fee and full damage liability.
+  const [uninsuredAck, setUninsuredAck] = useState(false);
 
   const {
     vehicles: hookVehicles,
@@ -263,8 +266,7 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
       showReturnCalendar ||
       showPickupTimePicker ||
       showReturnTimePicker ||
-      showDobCalendar ||
-      showInsuranceWarning;
+      showDobCalendar;
     if (anyOverlayOpen) {
       document.body.style.overflow = "hidden";
       return () => {
@@ -277,7 +279,6 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
     showPickupTimePicker,
     showReturnTimePicker,
     showDobCalendar,
-    showInsuranceWarning,
   ]);
 
   const isVehicleBooked = useCallback(
@@ -372,6 +373,7 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
         returnTime: booking.returnTime,
         localExtras,
         insuranceProofUrl,
+        uninsuredAck,
         details,
         idDocumentUrl,
         uploadingId,
@@ -395,6 +397,7 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
       booking.returnTime,
       localExtras,
       insuranceProofUrl,
+      uninsuredAck,
       details,
       idDocumentUrl,
       uploadingId,
@@ -406,13 +409,6 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
   );
 
   const handleToggleExtra = (id: string) => {
-    if (id === "e1") {
-      const currentExtra = localExtras.find((e) => e.id === "e1");
-      if (currentExtra?.selected && !insuranceProofUrl) {
-        setShowInsuranceWarning(true);
-        return;
-      }
-    }
     setLocalExtras((prev) => prev.map((e) => (e.id === id ? { ...e, selected: !e.selected } : e)));
   };
 
@@ -469,9 +465,8 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
     if (booking.currentStep === 3) {
       booking.setExtras(localExtras);
       booking.recalculatePrice();
-      const insuranceExtra = localExtras.find((e) => e.id === "e1");
-      const insuranceOptedOut = !insuranceExtra?.selected && !insuranceProofUrl;
-      booking.setInsuranceProof(insuranceProofUrl, insuranceOptedOut);
+      // "Opted out" now means: no proof of insurance (uninsured fee and full damage liability apply).
+      booking.setInsuranceProof(insuranceProofUrl, !insuranceProofUrl);
     }
     if (booking.currentStep === 5) booking.setIdDocumentUrl(idDocumentUrl);
     if (booking.currentStep === 6) {
@@ -513,8 +508,8 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
     setUploadingInsuranceProof,
     insuranceUploadError,
     setInsuranceUploadError,
-    showInsuranceWarning,
-    setShowInsuranceWarning,
+    uninsuredAck,
+    setUninsuredAck,
     locations,
     locationsLoading,
     selectedPickupLocation,

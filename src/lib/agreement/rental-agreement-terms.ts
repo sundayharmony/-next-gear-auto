@@ -4,6 +4,7 @@ import {
   parseRecurringBookingMeta,
   type WeeklyDueDay,
 } from "@/lib/utils/recurring-booking";
+import { UNINSURED_DRIVER_FEE_USD } from "@/lib/agreement/agreement-policy";
 
 export type AgreementTermsSection = {
   title: string;
@@ -115,7 +116,7 @@ export const RENTAL_AGREEMENT_SUPPLEMENT_SECTIONS: AgreementTermsSection[] = [
   {
     title: "4A. AUTHORIZED CHARGES & PAYMENT OBLIGATIONS",
     paragraphs: [
-      "In addition to the rental rate and security deposit shown above, Renter authorizes Lessor to charge the payment method on file for all amounts owed under this Agreement, including extensions, late fees, mileage overage ($0.39/mile over 200/day), fuel charges, cleaning fees, tolls, parking or traffic violations, towing and impound fees, damage repairs, loss-of-use, key replacement, GPS recovery costs, and any other fees disclosed at booking or return.",
+      "In addition to the rental rate and security deposit shown above, Renter authorizes Lessor to charge the payment method on file for all amounts owed under this Agreement, including extensions, late fees, mileage overage ($0.39/mile over 200/day), fuel charges, cleaning fees, tolls, parking or traffic violations, towing and impound fees, damage repairs, loss-of-use, key replacement, GPS recovery costs, the Uninsured Driver Fee (if Renter does not provide proof of insurance), and any other fees disclosed at booking or return.",
       "Renter must maintain a valid payment method for the entire rental period. Declined, reversed, or disputed charges do not relieve Renter of the underlying obligation to pay.",
     ],
   },
@@ -132,7 +133,7 @@ export const RENTAL_AGREEMENT_SUPPLEMENT_SECTIONS: AgreementTermsSection[] = [
   {
     title: "SECURITY & USE (SUPPLEMENTAL)",
     paragraphs: [
-      "Insurance coverage is void if Renter provides false or expired insurance proof, permits unauthorized drivers, or uses the vehicle in violation of the Prohibited Uses section. Renter remains fully liable for all damage and third-party claims regardless of insurance.",
+      `False, expired, or altered insurance proof is treated as no insurance: the $${UNINSURED_DRIVER_FEE_USD} Uninsured Driver Fee applies and Renter is fully liable for all damage and third-party claims. Permitting unauthorized drivers or using the vehicle in violation of the Prohibited Uses section may also void Renter's own insurance, and Renter remains fully liable regardless of insurance.`,
       "Tampering with, disabling, or removing GPS/telematics equipment is prohibited and may result in immediate termination, a penalty, and full liability for recovery costs.",
       "Initiating a payment chargeback or reversal without a bona fide billing error constitutes fraud; the disputed amount plus associated fees remain immediately due, and Lessor may terminate the rental and pursue legal remedies.",
     ],
@@ -191,7 +192,7 @@ export function getAgreementSupplementSections(
 export const RENTAL_AGREEMENT_SECTION_4A_AUTHORIZED: AgreementTermsSection = {
   title: "4A. AUTHORIZED CHARGES",
   paragraphs: [
-    "Renter authorizes Lessor to charge the payment method on file for all amounts owed under this Agreement, including extensions, late fees, mileage overage ($0.39/mile over 200/day), fuel, cleaning, tolls, parking or traffic violations, towing and impound fees, damage repairs, loss-of-use, key replacement ($350), GPS recovery costs, and fees disclosed at booking or return.",
+    "Renter authorizes Lessor to charge the payment method on file for all amounts owed under this Agreement, including extensions, late fees, mileage overage ($0.39/mile over 200/day), fuel, cleaning, tolls, parking or traffic violations, towing and impound fees, damage repairs, loss-of-use, key replacement ($350), GPS recovery costs, the Uninsured Driver Fee (if Renter does not provide proof of insurance), and fees disclosed at booking or return.",
     "Declined, reversed, or disputed charges do not relieve Renter of the obligation to pay the full amount owed.",
   ],
 };
@@ -211,10 +212,11 @@ export const RENTAL_AGREEMENT_INLINE_SECTIONS: (AgreementTermsSection & {
     page: 2,
     title: "6. INSURANCE REQUIREMENTS",
     paragraphs: [
-      "Renter MUST provide proof of active auto insurance meeting New Jersey minimum requirements before or at pickup. False, expired, or incomplete insurance proof voids coverage under this Agreement.",
-      "If proof of insurance is not provided, temporary Non-Owned Auto Coverage will be added at $9/day.",
+      "Renter MUST carry their own valid, active auto insurance policy that covers the rented vehicle and meets at least New Jersey minimum requirements, and MUST provide proof of that coverage (insurance card or declarations page) before or at pickup. Next Gear Auto does not sell or provide insurance, collision damage waivers, or supplemental liability protection.",
+      `If Renter does not provide valid, current proof of insurance, or the proof is false, expired, altered, or does not cover the vehicle, then (a) Renter owes a flat Uninsured Driver Fee of $${UNINSURED_DRIVER_FEE_USD} per rental, which is non-refundable and may be charged to the payment method on file, and (b) Renter is personally responsible, out of pocket, for any and all damage to or loss of the vehicle and all related costs and third-party claims, without limit and regardless of fault.`,
+      "Even when Renter has insurance, Renter remains responsible for any deductible and for any damage, loss, or cost that Renter's insurer does not pay or denies. Renter must pay Lessor's damage charges when due and seek reimbursement from Renter's own insurer.",
     ],
-    emphasis: "Optional Supplemental Liability Protection (SLP): $11.25/day (up to $1M)",
+    emphasis: `Uninsured Driver Fee: $${UNINSURED_DRIVER_FEE_USD} per rental, plus full out-of-pocket responsibility for all damage.`,
   },
   {
     page: 2,

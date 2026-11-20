@@ -10,6 +10,7 @@ import {
 } from "@/lib/agreement/agreement-booking-context";
 import { resolveAgreementBalanceDue, resolveAgreementDeposit } from "@/lib/agreement/agreement-deposit";
 import { getAgreementSupplementSections } from "@/lib/agreement/rental-agreement-terms";
+import { patchRentalAgreementTemplate } from "@/lib/agreement/patch-agreement-template";
 import {
   getDisplayReturnDate,
   parseRecurringBookingMeta,
@@ -262,7 +263,6 @@ function fillAgreementForm(
   setText("t37", "");
   setText("t38", "");
   setText("t39", "");
-  setCheck("c40", false);
   setCheck("c41", false);
 
   setText("t45", booking.customer_name || "");
@@ -301,6 +301,7 @@ export async function buildSignedAgreementPdfBytes(
   const templatePath = path.join(process.cwd(), "public", "templates", "rental-agreement.pdf");
   const templateBytes = await fs.readFile(templatePath);
   const pdfDoc = await PDFDocument.load(templateBytes);
+  await patchRentalAgreementTemplate(pdfDoc);
   const form = pdfDoc.getForm();
 
   const context = buildAgreementBookingContext(booking);

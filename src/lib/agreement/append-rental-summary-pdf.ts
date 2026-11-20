@@ -3,6 +3,7 @@ import { getVehicleDisplayName } from "@/lib/types";
 import { resolveAgreementBalanceDue, resolveAgreementDeposit } from "@/lib/agreement/agreement-deposit";
 import { paymentMethodLabel, type AgreementBookingContext } from "@/lib/agreement/agreement-booking-context";
 import { AGREEMENT_VERSION } from "@/lib/agreement/agreement-version";
+import { UNINSURED_DRIVER_FEE_USD } from "@/lib/agreement/agreement-policy";
 
 const MARGIN = 50;
 const FONT_SIZE = 9;
@@ -75,11 +76,12 @@ export async function appendRentalSummaryPage(
     );
   }
 
-  if (context.insuranceOptedOut) {
-    draw("Insurance: Renter opted for temporary coverage ($9/day) — proof required at pickup.");
-  } else if (context.insuranceProofOnFile) {
-    draw("Insurance: Proof of insurance on file for this booking.");
+  if (context.insuranceProofOnFile) {
+    draw("Insurance: Renter's own policy - proof of insurance on file for this booking.");
   } else {
-    draw("Insurance: Renter to provide proof at pickup.");
+    draw("Insurance: No proof of insurance on file. Unless proof is provided before or at pickup,");
+    draw(
+      `the $${UNINSURED_DRIVER_FEE_USD} Uninsured Driver Fee applies and Renter pays out of pocket for any and all damage.`,
+    );
   }
 }

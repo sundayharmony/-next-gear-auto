@@ -31,6 +31,7 @@ import {
   getCustomerCreditBalance,
 } from "@/lib/referrals/customer-credits";
 import extrasData from "@/data/extras.json";
+import { LEGACY_COVERAGE_EXTRA_ID } from "@/lib/extras-policy";
 import type { BookingExtra } from "@/lib/types";
 
 export async function POST(request: NextRequest) {
@@ -277,6 +278,12 @@ export async function POST(request: NextRequest) {
     // Map client extras to server-validated extras with correct prices
     const safeExtras = Array.isArray(extras) ? extras : [];
     const validatedExtras: BookingExtra[] = safeExtras.map((clientExtra: { id: string; selected?: boolean }) => {
+      if (clientExtra.id === LEGACY_COVERAGE_EXTRA_ID) {
+        // The coverage add-on is no longer sold (renters bring their own insurance). A stale
+        // browser tab may still send it; never charge for it.
+        logger.warn(`Checkout: retired coverage extra dropped (vehicle ${vehicleId})`);
+        return null;
+      }
       const serverExtra = availableExtras.find((e) => e.id === clientExtra.id);
       if (!serverExtra) {
         logger.warn(`Checkout: unknown extra ID "${clientExtra.id}" dropped (vehicle ${vehicleId})`);
