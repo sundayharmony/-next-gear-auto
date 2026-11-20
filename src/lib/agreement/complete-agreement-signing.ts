@@ -213,7 +213,7 @@ export async function completeAgreementSigning(
   };
 
   let updateResult: { id: string } | null = null;
-  let updateError = null as { code?: string; message?: string } | null;
+  let updateError = null as { code?: string; message?: string; details?: string; hint?: string } | null;
 
   const attempt = await supabase
     .from("bookings")
@@ -242,10 +242,55 @@ export async function completeAgreementSigning(
     updateError = fallback.error;
   }
 
-  if (updateError || !updateResult) {
+  if (updateError) {
+    logger.error("Agreement signing database update failed:", {
+      bookingId,
+      code: updateError.code,
+      message: updateError.message,
+      details: updateError.details,
+      hint: updateError.hint,
+    });
     throw new AgreementSigningError(
-      "This agreement was already signed by another request",
-      409,
+      "We couldn't save your signature. Please try again or contact NextGear Auto.",
+      500,
+    );
+  }
+
+  if (!updateResult) {
+    // A conditional update returning no row is only a duplicate-signature
+    // conflict if the database now confirms a signed timestamp.
+    const { data: currentBooking, error: verifyError } = await supabase
+      .from("bookings")
+      .select("id, agreement_signed_at")
+      .eq("id", bookingId)
+      .maybeSingle();
+
+    if (verifyError) {
+      logger.error("Agreement signing post-update verification failed:", {
+        bookingId,
+        code: verifyError.code,
+        message: verifyError.message,
+      });
+      throw new AgreementSigningError(
+        "We couldn't verify whether your signature was saved. Please contact NextGear Auto before trying again.",
+        500,
+      );
+    }
+
+    if (currentBooking?.agreement_signed_at) {
+      throw new AgreementSigningError(
+        "This agreement has already been signed",
+        409,
+      );
+    }
+
+    logger.error("Agreement signing update affected no row, but booking is not signed:", {
+      bookingId,
+      bookingFound: Boolean(currentBooking),
+    });
+    throw new AgreementSigningError(
+      "We couldn't save your signature. Please contact NextGear Auto.",
+      currentBooking ? 500 : 404,
     );
   }
 
