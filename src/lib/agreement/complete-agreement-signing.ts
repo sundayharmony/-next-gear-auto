@@ -30,6 +30,19 @@ export class AgreementSigningError extends Error {
   }
 }
 
+/**
+ * True when a Supabase/PostgREST error means a column doesn't exist.
+ * Postgres reports 42703; PostgREST reports PGRST204 ("Could not find the
+ * '<col>' column of '<table>' in the schema cache") for unknown columns.
+ */
+function isMissingColumnError(
+  err: { code?: string; message?: string } | null | undefined,
+): boolean {
+  if (!err) return false;
+  if (err.code === "42703" || err.code === "PGRST204") return true;
+  return /could not find the '.+' column|column .+ does not exist/i.test(err.message || "");
+}
+
 function validatePrimarySignaturePng(value: string, fieldId: string): string {
   const cleaned = value.replace(/^data:image\/png;base64,/, "");
   if (cleaned.length > 500 * 1024) {
@@ -212,10 +225,7 @@ export async function completeAgreementSigning(
     signed_user_agent: options.signedUserAgent || null,
   };
 
-  let updateResult: { id: string } | null = null;
-  let updateError = null as { code?: string; message?: string } | null;
-
-  const attempt = await supabase
+  let attempt = await supabase
     .from("bookings")
     .update(bookingUpdate)
     .eq("id", bookingId)
@@ -223,11 +233,16 @@ export async function completeAgreementSigning(
     .select("id")
     .maybeSingle();
 
-  updateResult = attempt.data;
-  updateError = attempt.error;
-
-  if (updateError?.code === "42703") {
-    const fallback = await supabase
+  // The audit columns (agreement_version, signed_ip, ...) are optional. If the
+  // database doesn't have them yet, retry with only the core columns. The audit
+  // details are still stored in booking_activity below.
+  if (isMissingColumnError(attempt.error)) {
+    logger.warn(
+      "Agreement audit columns missing on bookings; saving core signing fields only. " +
+        "Run supabase-agreement-audit.sql to enable them.",
+      attempt.error,
+    );
+    attempt = await supabase
       .from("bookings")
       .update({
         rental_agreement_url: agreementUrl,
@@ -238,11 +253,18 @@ export async function completeAgreementSigning(
       .is("rental_agreement_url", null)
       .select("id")
       .maybeSingle();
-    updateResult = fallback.data;
-    updateError = fallback.error;
   }
 
-  if (updateError || !updateResult) {
+  if (attempt.error) {
+    logger.error("Agreement signing booking update error:", attempt.error);
+    throw new AgreementSigningError(
+      "We couldn't save your signature. Please try again, or contact us if it keeps happening.",
+      500,
+    );
+  }
+
+  if (!attempt.data) {
+    // No error and no row updated: another request signed it first.
     throw new AgreementSigningError(
       "This agreement was already signed by another request",
       409,
