@@ -103,9 +103,11 @@ export default function AgreementSigningPage() {
             resolvedVehicle = vehicleForSigningFromDisplayName(data.data.vehicle_name);
           }
           if (isMounted) setVehicle(resolvedVehicle);
-          if (data.data.rental_agreement_url) {
+          // Only the signed timestamp proves the customer has completed signing.
+          // A stored agreement URL can exist before a customer signs.
+          if (data.data.agreement_signed_at) {
             setSubmitted(true);
-            setSignedUrl(data.data.rental_agreement_url);
+            setSignedUrl(data.data.rental_agreement_url || null);
           }
         } else {
           setError("Booking not found. Please check your booking ID.");
