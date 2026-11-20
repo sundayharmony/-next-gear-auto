@@ -9,6 +9,8 @@ const FONT_SIZE = 8;
 const LINE_HEIGHT = 11;
 const TITLE_SIZE = 9;
 const SECTION_GAP = 14;
+/** Lowest y a line of body text may be drawn at; leaves room for the footer. */
+const BOTTOM_LIMIT = MARGIN + 20;
 
 function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: number): string[] {
   const words = text.split(/\s+/);
@@ -27,47 +29,6 @@ function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: numbe
   return lines;
 }
 
-function drawSection(
-  page: ReturnType<PDFDocument["addPage"]>,
-  font: PDFFont,
-  boldFont: PDFFont,
-  section: AgreementTermsSection,
-  startY: number,
-  contentWidth: number,
-): number {
-  let y = startY;
-  page.drawText(section.title, {
-    x: MARGIN,
-    y,
-    size: TITLE_SIZE,
-    font: boldFont,
-    color: rgb(0.1, 0.1, 0.1),
-  });
-  y -= LINE_HEIGHT + 2;
-
-  for (const paragraph of section.paragraphs) {
-    const lines = wrapText(paragraph, font, FONT_SIZE, contentWidth);
-    for (const line of lines) {
-      page.drawText(line, { x: MARGIN, y, size: FONT_SIZE, font, color: rgb(0.15, 0.15, 0.15) });
-      y -= LINE_HEIGHT;
-    }
-    y -= 4;
-  }
-
-  if (section.bullets?.length) {
-    for (const bullet of section.bullets) {
-      const lines = wrapText(`• ${bullet}`, font, FONT_SIZE, contentWidth - 8);
-      for (const line of lines) {
-        page.drawText(line, { x: MARGIN + 4, y, size: FONT_SIZE, font, color: rgb(0.15, 0.15, 0.15) });
-        y -= LINE_HEIGHT;
-      }
-    }
-    y -= 4;
-  }
-
-  return y - SECTION_GAP;
-}
-
 /** Appends supplemental legal sections so signed PDFs match inline agreement updates. */
 export async function appendAgreementSupplementPages(
   pdfDoc: PDFDocument,
@@ -77,9 +38,31 @@ export async function appendAgreementSupplementPages(
   const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
   const pageSize: [number, number] = [612, 792];
   const contentWidth = pageSize[0] - MARGIN * 2;
+  const ink = rgb(0.15, 0.15, 0.15);
 
+  const supplementPages: ReturnType<PDFDocument["addPage"]>[] = [];
   let page = pdfDoc.addPage(pageSize);
+  supplementPages.push(page);
   let y = pageSize[1] - MARGIN;
+
+  const newPage = () => {
+    page = pdfDoc.addPage(pageSize);
+    supplementPages.push(page);
+    y = pageSize[1] - MARGIN;
+  };
+
+  /** Starts a new page when `neededHeight` would not fit above the bottom limit. */
+  const ensureSpace = (neededHeight: number) => {
+    if (y - neededHeight < BOTTOM_LIMIT) newPage();
+  };
+
+  const drawLines = (lines: string[], x: number) => {
+    for (const line of lines) {
+      ensureSpace(LINE_HEIGHT);
+      page.drawText(line, { x, y, size: FONT_SIZE, font, color: ink });
+      y -= LINE_HEIGHT;
+    }
+  };
 
   page.drawText("SUPPLEMENTAL RENTAL TERMS", {
     x: MARGIN,
@@ -102,24 +85,44 @@ export async function appendAgreementSupplementPages(
   y -= LINE_HEIGHT + 10;
 
   for (const section of sections) {
-    const estimatedHeight =
-      LINE_HEIGHT * 3 +
-      section.paragraphs.reduce(
-        (sum, p) => sum + Math.ceil(p.length / 90) * LINE_HEIGHT + 4,
-        0,
-      );
-    if (y - estimatedHeight < MARGIN + 40) {
-      page = pdfDoc.addPage(pageSize);
-      y = pageSize[1] - MARGIN;
+    const firstParagraphLines = section.paragraphs[0]
+      ? wrapText(section.paragraphs[0], font, FONT_SIZE, contentWidth)
+      : [];
+    // Keep the title together with at least the first two lines of its text.
+    ensureSpace(LINE_HEIGHT + 2 + Math.min(firstParagraphLines.length, 2) * LINE_HEIGHT);
+
+    page.drawText(section.title, {
+      x: MARGIN,
+      y,
+      size: TITLE_SIZE,
+      font: boldFont,
+      color: rgb(0.1, 0.1, 0.1),
+    });
+    y -= LINE_HEIGHT + 2;
+
+    for (const paragraph of section.paragraphs) {
+      drawLines(wrapText(paragraph, font, FONT_SIZE, contentWidth), MARGIN);
+      y -= 4;
     }
-    y = drawSection(page, font, boldFont, section, y, contentWidth);
+
+    if (section.bullets?.length) {
+      for (const bullet of section.bullets) {
+        drawLines(wrapText(`- ${bullet}`, font, FONT_SIZE, contentWidth - 8), MARGIN + 4);
+      }
+      y -= 4;
+    }
+
+    y -= SECTION_GAP;
   }
 
-  page.drawText("Next Gear Auto LLC — Jersey City, NJ", {
-    x: MARGIN,
-    y: MARGIN - 10,
-    size: 7,
-    font,
-    color: rgb(0.4, 0.4, 0.4),
+  const total = supplementPages.length;
+  supplementPages.forEach((p, index) => {
+    p.drawText(`Next Gear Auto LLC — Jersey City, NJ   |   Supplemental Terms, page ${index + 1} of ${total}`, {
+      x: MARGIN,
+      y: MARGIN - 10,
+      size: 7,
+      font,
+      color: rgb(0.4, 0.4, 0.4),
+    });
   });
 }

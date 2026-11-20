@@ -206,7 +206,7 @@ function Page1({
         </div>
         <p className="text-gray-700 max-w-prose">
           Only these two drivers are authorized to operate this vehicle. Any operation by an unauthorized
-          driver voids insurance protections, triggers a $750 penalty, makes Renter fully liable for all
+          driver voids insurance protections, triggers $750 in liquidated damages, makes Renter fully liable for all
           damage and third-party claims, and authorizes immediate termination and lawful vehicle recovery.
         </p>
       </div>

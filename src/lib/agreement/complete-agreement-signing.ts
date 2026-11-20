@@ -10,6 +10,7 @@ import { logger } from "@/lib/utils/logger";
 import {
   type AgreementSignatureData,
   buildSignedAgreementPdfBytes,
+  fetchRenterIdentity,
   uploadSignedAgreementPdf,
   vehicleNameForAgreement,
 } from "@/lib/agreement/signed-agreement";
@@ -205,12 +206,15 @@ export async function completeAgreementSigning(
     vehicle = v;
   }
 
+  const renter = await fetchRenterIdentity(supabase, booking.customer_id);
+
   const signedAtIso = new Date().toISOString();
   const signedPdfBytes = await buildSignedAgreementPdfBytes(
     booking,
     vehicle,
     signatures,
     signedAtIso,
+    renter,
   );
   const agreementUrl = await uploadSignedAgreementPdf(supabase, bookingId, signedPdfBytes);
 

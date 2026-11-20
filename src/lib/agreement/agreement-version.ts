@@ -5,7 +5,7 @@ import {
 } from "@/lib/agreement/rental-agreement-terms";
 
 /** Bump when legal/business terms change; stored on signed bookings. */
-export const AGREEMENT_VERSION = "2026-03-29";
+export const AGREEMENT_VERSION = "2026-11-19";
 
 export function computeAgreementContentHash(): string {
   const payload = JSON.stringify({

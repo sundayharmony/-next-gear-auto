@@ -43,6 +43,7 @@ interface AgreementBooking {
   customer_name?: string | null;
   customer_email?: string | null;
   customer_phone?: string | null;
+  customer_id?: string | null;
   pickup_date?: string | null;
   return_date?: string | null;
   pickup_time?: string | null;
@@ -90,6 +91,70 @@ function pdfDate(value: string | null | undefined): string {
   });
 }
 
+/**
+ * Identity details printed on the agreement form. Comes from the customer record:
+ * `customers.dob` plus the optional `customers.driver_license` JSON, shaped as
+ * { number, state, expires, address: { line1, city, state, zip } }.
+ */
+export interface AgreementRenterIdentity {
+  dob?: string | null;
+  licenseNumber?: string | null;
+  licenseState?: string | null;
+  addressLine?: string | null;
+  cityStateZip?: string | null;
+}
+
+function formatRenterDob(dob: string | null | undefined): string {
+  if (!dob) return "";
+  const trimmed = dob.trim();
+  const iso = /^(\d{4}-\d{2}-\d{2})/.exec(trimmed);
+  if (iso) return pdfDate(iso[1]);
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}$/.test(trimmed)) return trimmed;
+  return "";
+}
+
+/**
+ * Prints only the last four characters of the license number. The signed PDF is emailed and
+ * linked from the renter's account, so the full number stays in the database, not on the PDF.
+ */
+function maskedLicenseDisplay(renter: AgreementRenterIdentity | null | undefined): string {
+  const raw = renter?.licenseNumber?.replace(/\s+/g, "");
+  if (!raw) return "";
+  const masked = raw.length <= 4 ? raw : `${"*".repeat(raw.length - 4)}${raw.slice(-4)}`;
+  return renter?.licenseState ? `${renter.licenseState} ${masked}` : masked;
+}
+
+export async function fetchRenterIdentity(
+  supabase: any,
+  customerId: string | null | undefined,
+): Promise<AgreementRenterIdentity | null> {
+  if (!customerId) return null;
+  const { data } = await supabase
+    .from("customers")
+    .select("dob, driver_license")
+    .eq("id", customerId)
+    .maybeSingle();
+  if (!data) return null;
+
+  const str = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  const license = (
+    data.driver_license && typeof data.driver_license === "object" ? data.driver_license : {}
+  ) as Record<string, unknown>;
+  const address = (
+    license.address && typeof license.address === "object" ? license.address : {}
+  ) as Record<string, unknown>;
+  const stateZip = [str(address.state), str(address.zip)].filter(Boolean).join(" ");
+  const cityStateZip = [str(address.city), stateZip].filter(Boolean).join(", ");
+
+  return {
+    dob: str(data.dob),
+    licenseNumber: str(license.number),
+    licenseState: str(license.state),
+    addressLine: str(address.line1),
+    cityStateZip: cityStateZip || null,
+  };
+}
+
 function sanitizeSignatures(signatures: Record<string, unknown>): AgreementSignatureData {
   const out: AgreementSignatureData = {};
   for (const [k, v] of Object.entries(signatures)) {
@@ -114,6 +179,7 @@ function fillAgreementForm(
   vehicle: AgreementVehicle | null,
   signedAtIso: string,
   context: AgreementBookingContext,
+  renter?: AgreementRenterIdentity | null,
 ) {
   const setText = (fieldName: string, value: string | number | null | undefined) => {
     try {
@@ -145,16 +211,13 @@ function fillAgreementForm(
     setCheck("c10", false);
   }
 
-  const insuranceNote = context.insuranceOptedOut
-    ? "Temporary coverage ($9/day)"
-    : context.insuranceProofOnFile
-      ? "Proof on file"
-      : "Provide at pickup";
-  setText("t11", insuranceNote);
+  // t11 is "Damage Notes". Pre-existing damage is documented in the pickup inspection records
+  // (see Vehicle Condition & Inspection Records); insurance status is on the Rental Summary page.
+  setText("t11", "");
   setText("t12", booking.customer_name || "");
-  setText("t13", context.insuranceProofOnFile ? "See booking file" : "");
-  setText("t14", "");
-  setText("t15", "");
+  setText("t13", formatRenterDob(renter?.dob)); // Date of Birth
+  setText("t14", renter?.addressLine ?? ""); // Address
+  setText("t15", renter?.cityStateZip ?? ""); // City/State/Zip
   setText("t16", booking.customer_phone || "");
   setText("t17", booking.customer_email || "");
   const recurringMeta = parseRecurringBookingMeta(booking.admin_notes);
@@ -170,7 +233,7 @@ function fillAgreementForm(
   setText("t20", pdfDate(displayReturnDate));
   setText("t21", fmtTime(booking.return_time || null));
   setText("t22", booking.customer_name || "");
-  setText("t23", "");
+  setText("t23", maskedLicenseDisplay(renter)); // Primary renter's driver's license
   setText("t24", "");
   setText("t25", "");
 
@@ -233,6 +296,7 @@ export async function buildSignedAgreementPdfBytes(
   vehicle: AgreementVehicle | null,
   signatures: AgreementSignatureData,
   signedAtIso: string,
+  renter?: AgreementRenterIdentity | null,
 ): Promise<Uint8Array> {
   const templatePath = path.join(process.cwd(), "public", "templates", "rental-agreement.pdf");
   const templateBytes = await fs.readFile(templatePath);
@@ -240,7 +304,7 @@ export async function buildSignedAgreementPdfBytes(
   const form = pdfDoc.getForm();
 
   const context = buildAgreementBookingContext(booking);
-  fillAgreementForm(form, booking, vehicle, signedAtIso, context);
+  fillAgreementForm(form, booking, vehicle, signedAtIso, context, renter);
   form.flatten();
 
   await appendAgreementSupplementPages(
@@ -340,11 +404,13 @@ export async function regenerateSignedAgreementForBooking(
   }
 
   const vehicle = await fetchVehicle(supabase, booking.vehicle_id);
+  const renter = await fetchRenterIdentity(supabase, booking.customer_id);
   const pdfBytes = await buildSignedAgreementPdfBytes(
     booking,
     vehicle,
     signatures,
     booking.agreement_signed_at ?? new Date().toISOString(),
+    renter,
   );
   const agreementUrl = await uploadSignedAgreementPdf(supabase, booking.id, pdfBytes);
 
