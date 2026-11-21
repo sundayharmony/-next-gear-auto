@@ -29,7 +29,14 @@ function wrapText(text: string, font: PDFFont, fontSize: number, maxWidth: numbe
   return lines;
 }
 
-/** Appends supplemental legal sections so signed PDFs match inline agreement updates. */
+/**
+ * Adds the supplemental legal sections so signed PDFs match the on-screen agreement.
+ *
+ * Call this right after loading the form template. The pages are inserted BEFORE the template's
+ * last page (the one with the signatures and acknowledgment), so every term comes before the
+ * renter signs and the signature page is the last page of the agreement. Anything appended later
+ * (such as the rental summary) lands after the signature page.
+ */
 export async function appendAgreementSupplementPages(
   pdfDoc: PDFDocument,
   sections: AgreementTermsSection[] = RENTAL_AGREEMENT_SUPPLEMENT_SECTIONS
@@ -41,12 +48,14 @@ export async function appendAgreementSupplementPages(
   const ink = rgb(0.15, 0.15, 0.15);
 
   const supplementPages: ReturnType<PDFDocument["addPage"]>[] = [];
-  let page = pdfDoc.addPage(pageSize);
+  // The template's final page holds the signature block; keep it last by inserting before it.
+  let insertAt = Math.max(0, pdfDoc.getPageCount() - 1);
+  let page = pdfDoc.insertPage(insertAt++, pageSize);
   supplementPages.push(page);
   let y = pageSize[1] - MARGIN;
 
   const newPage = () => {
-    page = pdfDoc.addPage(pageSize);
+    page = pdfDoc.insertPage(insertAt++, pageSize);
     supplementPages.push(page);
     y = pageSize[1] - MARGIN;
   };
@@ -72,15 +81,14 @@ export async function appendAgreementSupplementPages(
     color: rgb(0.1, 0.1, 0.1),
   });
   y -= LINE_HEIGHT + 6;
-  page.drawText(
-    "The following terms supplement and are incorporated into the Vehicle Rental Agreement signed by Renter.",
-    {
-      x: MARGIN,
-      y,
-      size: FONT_SIZE,
+  drawLines(
+    wrapText(
+      "These terms continue Sections 4 through 7 and add further terms. They are part of the Vehicle Rental Agreement signed by Renter. Sections 10 through 14 and the signature page follow.",
       font,
-      color: rgb(0.2, 0.2, 0.2),
-    },
+      FONT_SIZE,
+      contentWidth,
+    ),
+    MARGIN,
   );
   y -= LINE_HEIGHT + 10;
 

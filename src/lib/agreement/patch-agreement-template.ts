@@ -138,16 +138,27 @@ export async function patchRentalAgreementTemplate(pdfDoc: PDFDocument): Promise
     writePageContent(pdfDoc, page2, content);
   }
 
-  // ── Page 3: accident procedure phone number ──
+  // ── Page 3: accident procedure phone number, and the acknowledgment above the signatures ──
   const page3 = pages[2];
   if (page3) {
-    const content = readPageContent(page3);
+    let content = readPageContent(page3);
     if (content.includes(OLD_PHONE)) {
-      writePageContent(pdfDoc, page3, content.split(OLD_PHONE).join(AGREEMENT_CONTACT_PHONE));
+      content = content.split(OLD_PHONE).join(AGREEMENT_CONTACT_PHONE);
     } else {
       logger.warn("Agreement template patch: old phone number not found on page 3; skipped.");
       allApplied = false;
     }
+    // The signature page now follows all of the terms, including the supplemental pages.
+    content = replaceOp(
+      content,
+      "54",
+      "415",
+      `BT 1 0 0 1 54 415 Tm (${pdfEscape(
+        "By signing below, Renter acknowledges and agrees to all terms of this Agreement, including the Supplemental Terms.",
+      )}) Tj T* ET`,
+      "page 3 signature acknowledgment",
+    );
+    writePageContent(pdfDoc, page3, content);
   }
 
   // The checkbox for the optional coverage that no longer exists.

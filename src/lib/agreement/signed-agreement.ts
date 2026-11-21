@@ -308,6 +308,10 @@ export async function buildSignedAgreementPdfBytes(
   fillAgreementForm(form, booking, vehicle, signedAtIso, context, renter);
   form.flatten();
 
+  // The three form pages, captured before supplement pages are inserted ahead of the signature
+  // page. Signature positions are defined per form page, so they must not shift with the insert.
+  const formPages = pdfDoc.getPages();
+
   await appendAgreementSupplementPages(
     pdfDoc,
     getAgreementSupplementSections(booking.admin_notes)
@@ -315,7 +319,6 @@ export async function buildSignedAgreementPdfBytes(
 
   await appendRentalSummaryPage(pdfDoc, booking, vehicle, context);
 
-  const pages = pdfDoc.getPages();
   for (const [fieldId, base64Data] of Object.entries(signatures)) {
     if (!base64Data || !SIGNATURE_FIELDS[fieldId]) continue;
     const pos = SIGNATURE_FIELDS[fieldId];
@@ -323,7 +326,7 @@ export async function buildSignedAgreementPdfBytes(
       const pngData = base64Data.replace(/^data:image\/png;base64,/, "");
       const imgBytes = Buffer.from(pngData, "base64");
       const png = await pdfDoc.embedPng(imgBytes);
-      const page = pages[pos.page];
+      const page = formPages[pos.page];
       if (!page) continue;
       const dims = png.scale(1);
       const scale = Math.min(pos.width / dims.width, pos.height / dims.height);

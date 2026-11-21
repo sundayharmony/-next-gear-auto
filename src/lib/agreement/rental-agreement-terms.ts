@@ -111,6 +111,33 @@ export const RENTAL_AGREEMENT_ADDITIONAL_SECTIONS: AgreementTermsSection[] = [
   },
 ];
 
+/**
+ * Long-form continuation of the insurance, liability, and indemnification sections.
+ * The printed form carries a short version of each (its Sections 5, 6 and 7); these paragraphs
+ * continue them. Shown on screen inside the matching sections and in the PDF's Additional Terms.
+ */
+export const RENTAL_AGREEMENT_EXTENDED_TERMS = {
+  insurance: [
+    "Qualifying coverage. Renter's policy must (a) be in force for the entire rental period, (b) apply to this vehicle as primary coverage, (c) cover Renter's use of the vehicle as a rental vehicle, with liability limits of at least the New Jersey minimums, and (d) cover Renter and any additional driver. Many personal auto policies and credit-card programs exclude or limit rental, peer-to-peer, or long-term rentals. Renter is solely responsible for confirming with Renter's insurer, before pickup, that the policy applies to this rental. Credit-card rental coverage alone is not accepted as insurance under this Agreement unless Lessor agrees in writing.",
+    "Proof of insurance. Proof must be a legible, current insurance card, declarations page, or insurer-issued temporary ID that shows the named insured, policy number, policy dates, and the insurer's contact information, and that matches the name of Renter or an authorized driver. Lessor may keep a copy, may contact the insurer to verify coverage, and may reject proof it reasonably believes is invalid or insufficient. Lessor's acceptance of proof is not a statement that the coverage is adequate or that it applies to this rental.",
+    `Changes during the rental. Renter must tell Lessor immediately if the policy is cancelled, lapses, is rescinded, or no longer covers the vehicle. From that moment the $${UNINSURED_DRIVER_FEE_USD} Uninsured Driver Fee applies, Renter is responsible for all damage as stated in this Agreement, and Lessor may terminate the rental and recover the vehicle. Proof provided after the rental begins does not waive the Uninsured Driver Fee unless Lessor agrees in writing.`,
+    "Claims and denied coverage. If Renter's insurer pays less than the full amount, delays payment, or denies a claim for any reason, including because the policy excludes rental vehicles, Renter must pay the difference. Renter must pay Lessor's damage charges when due and seek reimbursement from Renter's own insurer afterward. Deductibles, loss of use, diminished value, towing, storage, and administrative costs that Renter's insurer does not pay remain Renter's responsibility. Lessor is not required to submit a claim to Renter's insurer, and may do so at Renter's expense.",
+  ],
+  liability: [
+    "Period of responsibility. Renter is responsible for the vehicle from the moment Renter or any authorized driver takes possession or control of the vehicle or its keys until Lessor has received the vehicle and completed its return inspection. This includes any time the vehicle is parked, unattended, or stored, and any time after the scheduled return time.",
+    "What is covered. Renter is responsible for loss of or damage to the vehicle, its keys and key fob, tires, wheels, glass, GPS/telematics equipment, interior, accessories, and documents, from any cause, including collision, rollover, theft or attempted theft (including when the vehicle is left unlocked or the keys are inside), vandalism, fire, flood, hail, falling objects, animals, road hazards, potholes, curb damage, smoke or odor, stains, burns, and unauthorized use by any person. This applies whether or not Renter or an authorized driver was at fault, and whether or not Renter was in the vehicle.",
+    "How damages are measured. Repair costs are the actual or estimated cost to restore the vehicle to its pre-rental condition at a repair facility chosen by Lessor, including parts, labor, paint, taxes, towing, storage, and reasonable administrative costs, plus loss of use (the daily rental rate multiplied by the days the vehicle is unavailable for rental while it is repaired or replaced) and diminished value as stated in this Agreement. If the vehicle is stolen and not recovered, or is a total loss, Renter owes its fair market value immediately before the loss, plus towing, storage, administrative costs, and loss of use for the time reasonably needed to replace it.",
+    "Payment and records. Damage charges are due when assessed. Lessor may apply the Security Deposit and charge the payment method on file for any amount owed; the Security Deposit does not limit Renter's liability. Lessor's inspection records, photographs, repair estimates, invoices, and telematics data are evidence of the vehicle's condition and the cost of repair. On written request, Lessor will give Renter a copy of the estimate or invoice supporting a damage charge.",
+    "Other drivers, passengers, and belongings. Renter is responsible for the acts and omissions of every driver and passenger who is in or uses the vehicle with Renter's permission, express or implied, and for damage they cause. Lessor is not responsible for personal property left in or stolen from the vehicle.",
+  ],
+  indemnification: [
+    "Who is protected. Renter's indemnity runs to Next Gear Auto LLC; its members, owners, managers, employees, contractors, and agents; the owner of the vehicle, if different from Lessor; and their insurers, successors, and assigns.",
+    "What it covers. It covers claims, suits, judgments, settlements, fines, penalties, fees, costs, and expenses (including reasonable attorneys' fees and expert costs) arising from or related to: the use, operation, or possession of the vehicle by Renter or any driver or passenger; any breach of this Agreement; any violation of law; any ticket, toll, tow, impound, seizure, or forfeiture; and any bodily injury, death, or property damage to anyone, including Renter, passengers, and third parties.",
+    "Defense and settlement. If a claim is made against a protected party, Renter must, at Renter's own expense, defend it with counsel reasonably acceptable to Lessor, or reimburse Lessor's defense costs as they are incurred. Renter may not settle any claim that names or affects a protected party without Lessor's written consent. Renter must notify Lessor immediately of any claim, demand, summons, or lawsuit concerning the vehicle and send Lessor a copy of all papers received.",
+    "Limits and survival. This indemnity applies to the fullest extent permitted by New Jersey law. It does not apply to the extent a court finally determines that a claim resulted from the gross negligence or willful misconduct of a protected party. It continues after the vehicle is returned and after this Agreement ends.",
+  ],
+};
+
 /** Sections added or materially expanded — appended to signed/preview PDFs for parity with inline agreement. */
 export const RENTAL_AGREEMENT_SUPPLEMENT_SECTIONS: AgreementTermsSection[] = [
   {
@@ -121,6 +148,10 @@ export const RENTAL_AGREEMENT_SUPPLEMENT_SECTIONS: AgreementTermsSection[] = [
     ],
   },
   {
+    title: "5. INSURANCE REQUIREMENTS (CONTINUED)",
+    paragraphs: RENTAL_AGREEMENT_EXTENDED_TERMS.insurance,
+  },
+  {
     // "5A" (not "5") because the printed PDF form already has its own Section 5 (Insurance).
     title: "5A. UNPAID BALANCES, DEFAULT & LEGAL REMEDIES",
     paragraphs: [
@@ -129,6 +160,14 @@ export const RENTAL_AGREEMENT_SUPPLEMENT_SECTIONS: AgreementTermsSection[] = [
       "If any balance remains unpaid, Lessor may pursue any remedies available under New Jersey law, including but not limited to: civil collection actions; filing in small claims or Superior Court in Hudson County; offset against the security deposit; reporting delinquent accounts to consumer reporting agencies where permitted by law; and recovery or repossession of the vehicle where lawfully permitted, without breach of the peace.",
       "Renter agrees that this Agreement is governed by the laws of the State of New Jersey. Venue for disputes arising from unpaid balances or breach lies in Hudson County, New Jersey, unless otherwise required by law.",
     ],
+  },
+  {
+    title: "6. LIABILITY & DAMAGE RESPONSIBILITY (CONTINUED)",
+    paragraphs: RENTAL_AGREEMENT_EXTENDED_TERMS.liability,
+  },
+  {
+    title: "7. INDEMNIFICATION & HOLD HARMLESS (CONTINUED)",
+    paragraphs: RENTAL_AGREEMENT_EXTENDED_TERMS.indemnification,
   },
   {
     title: "SECURITY & USE (SUPPLEMENTAL)",
@@ -214,7 +253,7 @@ export const RENTAL_AGREEMENT_INLINE_SECTIONS: (AgreementTermsSection & {
     paragraphs: [
       "Renter MUST carry their own valid, active auto insurance policy that covers the rented vehicle and meets at least New Jersey minimum requirements, and MUST provide proof of that coverage (insurance card or declarations page) before or at pickup. Next Gear Auto does not sell or provide insurance, collision damage waivers, or supplemental liability protection.",
       `If Renter does not provide valid, current proof of insurance, or the proof is false, expired, altered, or does not cover the vehicle, then (a) Renter owes a flat Uninsured Driver Fee of $${UNINSURED_DRIVER_FEE_USD} per rental, which is non-refundable and may be charged to the payment method on file, and (b) Renter is personally responsible, out of pocket, for any and all damage to or loss of the vehicle and all related costs and third-party claims, without limit and regardless of fault.`,
-      "Even when Renter has insurance, Renter remains responsible for any deductible and for any damage, loss, or cost that Renter's insurer does not pay or denies. Renter must pay Lessor's damage charges when due and seek reimbursement from Renter's own insurer.",
+      ...RENTAL_AGREEMENT_EXTENDED_TERMS.insurance,
     ],
     emphasis: `Uninsured Driver Fee: $${UNINSURED_DRIVER_FEE_USD} per rental, plus full out-of-pocket responsibility for all damage.`,
   },
@@ -223,6 +262,7 @@ export const RENTAL_AGREEMENT_INLINE_SECTIONS: (AgreementTermsSection & {
     title: "7. LIABILITY & DAMAGE RESPONSIBILITY",
     paragraphs: [
       "Renter is fully and completely responsible for ALL vehicle damage regardless of cause, fault, or insurance coverage. This includes but is not limited to: collision damage, theft, vandalism, weather damage, tire/rim/undercarriage damage, windshield damage, interior damage, lost or damaged keys ($350 replacement cost), towing and impound fees, storage charges, diminished vehicle value (up to $5,000), and loss-of-use charges (daily rental rate × days the vehicle is unavailable). Renter remains liable even if a third party or unauthorized driver caused the damage.",
+      ...RENTAL_AGREEMENT_EXTENDED_TERMS.liability,
     ],
   },
   {
@@ -230,6 +270,7 @@ export const RENTAL_AGREEMENT_INLINE_SECTIONS: (AgreementTermsSection & {
     title: "8. INDEMNIFICATION & HOLD HARMLESS",
     paragraphs: [
       "Renter agrees to indemnify, defend, and hold harmless Next Gear Auto LLC, its owners, employees, and agents from and against any and all claims, demands, losses, liabilities, damages, costs, and expenses (including reasonable attorney fees) arising out of or related to Renter's use, operation, or possession of the vehicle during the rental period. This includes, without limitation, claims by third parties for bodily injury, property damage, or death resulting from any accident, incident, or occurrence involving the rented vehicle, regardless of fault.",
+      ...RENTAL_AGREEMENT_EXTENDED_TERMS.indemnification,
     ],
   },
   {
