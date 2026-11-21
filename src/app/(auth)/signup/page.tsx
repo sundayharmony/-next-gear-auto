@@ -3,7 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Car, Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, Check, Loader2 } from "lucide-react";
+import { Mail, Lock, User, Phone, Eye, EyeOff, ArrowRight, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -74,11 +74,8 @@ export default function SignupPage() {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <Car className="h-10 w-10 text-purple-600" />
-            <span className="text-2xl font-bold text-gray-900">
-              Next<span className="text-purple-600">Gear</span>Auto
-            </span>
+          <Link href="/" className="inline-block" aria-label="Next Gear Auto home">
+            <img src="/images/logo.png" alt="Next Gear Auto" className="mx-auto h-20 w-auto" />
           </Link>
           <p className="mt-2 text-gray-500">Create your account to start booking</p>
         </div>

@@ -202,7 +202,7 @@ export const RECURRING_WEEKLY_SUPPLEMENT_SECTIONS: AgreementTermsSection[] = [
     title: "WEEK-TO-WEEK LONG-TERM RENTAL TERMS",
     paragraphs: [
       "This rental is structured as a recurring week-to-week long-term agreement. Each renewal period is seven (7) calendar days unless otherwise agreed in writing.",
-      "The weekly recurring rate shown on the agreement form is due at the start of each new seven-day term. Failure to pay the weekly amount when due may result in default under Section 5 and suspension or termination of the rental.",
+      "The weekly recurring rate shown on the agreement form is due at the start of each new seven-day term. Failure to pay the weekly amount when due may result in default under the Unpaid Balances, Default & Legal Remedies section and suspension or termination of the rental.",
       "The return date on the form reflects the end of the current billing period and will roll forward while the rental remains active.",
     ],
   },

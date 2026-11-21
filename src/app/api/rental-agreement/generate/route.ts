@@ -1,18 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { PDFDocument } from "pdf-lib";
-import { appendAgreementSupplementPages } from "@/lib/agreement/append-agreement-supplement-pdf";
-import { getAgreementSupplementSections } from "@/lib/agreement/rental-agreement-terms";
-import {
-  getDisplayReturnDate,
-  parseRecurringBookingMeta,
-} from "@/lib/utils/recurring-booking";
+import { buildAgreementPdf, type AgreementPdfBooking } from "@/lib/agreement/agreement-pdf";
+import { buildAgreementBookingContext, type AgreementBookingRow } from "@/lib/agreement/agreement-booking-context";
+import { fetchRenterIdentity } from "@/lib/agreement/signed-agreement";
 import { getServiceSupabase } from "@/lib/db/supabase";
-import { fmtTime } from "@/lib/email/templates";
-import path from "path";
-import fs from "fs/promises";
 import { logger } from "@/lib/utils/logger";
 import { validateAgreementAccessToken } from "@/lib/agreement/agreement-access-token";
-import { patchRentalAgreementTemplate } from "@/lib/agreement/patch-agreement-template";
 
 // GET: Generate a pre-filled rental agreement PDF
 // Supports two modes:
@@ -188,164 +180,19 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    // Load the blank PDF template
-    const templatePath = path.join(process.cwd(), "public", "templates", "rental-agreement.pdf");
-    let templateBytes: Buffer;
-    try {
-      templateBytes = await fs.readFile(templatePath);
-    } catch (fileError) {
-      logger.error("PDF template file not found:", templatePath);
-      return NextResponse.json(
-        { success: false, error: "Rental agreement template not found. Please contact support." },
-        { status: 500 }
-      );
-    }
-    const pdfDoc = await PDFDocument.load(templateBytes);
-    await patchRentalAgreementTemplate(pdfDoc);
+    // Renter identity (date of birth, address, license) comes from the customer record.
+    const customerId = (booking as { customer_id?: string | null }).customer_id;
+    const renter = await fetchRenterIdentity(supabase, customerId);
 
-    // Get the form
-    const form = pdfDoc.getForm();
-
-    // Helper to safely set text field
-    const setText = (fieldName: string, value: string | number | null | undefined) => {
-      try {
-        const field = form.getTextField(fieldName);
-        field.setText(String(value ?? ""));
-      } catch {
-        logger.warn(`Field ${fieldName} not found in PDF`);
-      }
-    };
-
-    // Helper to safely check a checkbox
-    const setCheck = (fieldName: string, checked: boolean) => {
-      try {
-        const field = form.getCheckBox(fieldName);
-        if (checked) field.check();
-        else field.uncheck();
-      } catch {
-        logger.warn(`Checkbox ${fieldName} not found in PDF`);
-      }
-    };
-
-    // === PAGE 1: Vehicle Information ===
-    if (vehicle) {
-      setText("t1", `${vehicle.make || ""} ${vehicle.model || ""}`.trim()); // Make & Model
-      setText("t2", vehicle.year ?? ""); // Year
-      setText("t3", vehicle.license_plate ?? ""); // License Plate
-      setText("t4", vehicle.vin ?? ""); // VIN
-      setText("t5", vehicle.color ?? ""); // Color
-      setText("t6", vehicle.mileage ? `${Number(vehicle.mileage).toLocaleString()} mi` : ""); // Mileage
-
-      // Condition checkboxes — default to "Good"
-      setCheck("c7", false); // Excellent
-      setCheck("c8", true);  // Good
-      setCheck("c9", false); // Fair
-      setCheck("c10", false); // Poor
-    }
-
-    // t11: Damage notes (leave blank for inspection at pickup)
-    setText("t11", "");
-
-    // === Customer Information ===
-    setText("t12", booking.customer_name || ""); // Full Name
-    // t13: DOB — we don't store this on the booking, leave blank for customer
-    setText("t13", "");
-    // t14-t15: Address — not stored on booking
-    setText("t14", "");
-    setText("t15", "");
-    setText("t16", booking.customer_phone || ""); // Phone
-    setText("t17", booking.customer_email || ""); // Email
-
-    // === Rental Dates & Times ===
-    const pdfDate = (d: string) => {
-      if (!d) return "";
-      const parts = d.split("-");
-      if (parts.length !== 3) return "";
-      const [y, m, day] = parts.map(Number);
-      if (isNaN(y) || isNaN(m) || isNaN(day)) return "";
-      const date = new Date(y, m - 1, day);
-      if (isNaN(date.getTime())) return "";
-      return date.toLocaleDateString("en-US", { month: "2-digit", day: "2-digit", year: "numeric" });
-    };
-
-    const recurringMeta = parseRecurringBookingMeta(booking.admin_notes);
-    const isRecurringLt =
-      recurringMeta.isRecurringLongTerm && !!recurringMeta.weeklyDueDay;
-    const displayReturnDate =
-      isRecurringLt && booking.return_date
-        ? getDisplayReturnDate(booking.return_date, booking.admin_notes)
-        : booking.return_date;
-
-    setText("t18", pdfDate(booking.pickup_date)); // Pickup Date
-    setText("t19", fmtTime(booking.pickup_time)); // Pickup Time
-    setText("t20", pdfDate(displayReturnDate)); // Return Date
-    setText("t21", fmtTime(booking.return_time)); // Return Time
-
-    // === Driver Info ===
-    setText("t22", booking.customer_name || ""); // Primary Renter
-    setText("t23", ""); // Driver's License # — to be filled by customer
-    setText("t24", ""); // Additional Driver
-    setText("t25", ""); // Additional Driver License
-
-    // === Pricing ===
-    const totalPrice = booking.total_price ?? 0;
-    const deposit = booking.deposit ?? 0;
-    const pickupDate = booking.pickup_date ? new Date(booking.pickup_date + "T00:00:00") : new Date();
-    const returnDate = booking.return_date ? new Date(booking.return_date + "T00:00:00") : new Date();
-    const daysDiff = (returnDate.getTime() - pickupDate.getTime()) / (1000 * 60 * 60 * 24);
-    const totalDays = isRecurringLt
-      ? 7
-      : Math.max(1, Math.ceil(Number.isFinite(daysDiff) ? daysDiff : 1));
-
-    setText("t26", `$${totalPrice.toFixed(2)}${isRecurringLt ? " (weekly)" : ""}`);
-    setText("t27", String(totalDays)); // Total Days
-    setText("t28", `$${(totalPrice - deposit).toFixed(2)}`); // Balance Due
-
-    // === Payment Method ===
-    // Since payment is via Stripe (credit/debit), check c31
-    setCheck("c29", false); // Cash
-    setCheck("c30", false); // Zelle
-    setCheck("c31", true);  // Credit/Debit
-    setText("t32", ""); // Last 4 — we can fill from Stripe if available
-    setCheck("c33", false); // Other
-    setText("t34", ""); // Other text
-
-    // t35: Renter Signature — SIGNATURE FIELD (leave for digital signing)
-    setText("t35", "");
-    // t36: Date (will be filled at signing time)
-    setText("t36", "");
-
-    // === PAGE 2: Insurance & GPS ===
-    setText("t37", ""); // Insurance Provider — customer fills
-    setText("t38", ""); // Policy #
-    setText("t39", ""); // Insurance Phone
-    setCheck("c41", false); // GPS consent
-    setText("t42", ""); // GPS Acknowledgement Signature — SIGNATURE FIELD
-    setText("t43", ""); // Renter Signature — SIGNATURE FIELD
-    setText("t44", ""); // Date
-
-    // === PAGE 3: Signatures ===
-    setText("t45", booking.customer_name || ""); // Renter Name (Print)
-    setText("t46", ""); // Date — filled at signing
-    setText("t47", ""); // Renter Signature — SIGNATURE FIELD
-    setText("t48", ""); // Time
-    setText("t49", ""); // Additional Driver (Print)
-    setText("t50", ""); // Date
-    setText("t51", ""); // Additional Driver Signature — SIGNATURE FIELD
-    setText("t52", ""); // Time
-    setText("t53", "NextGear Auto"); // NGA Representative
-    setText("t54", ""); // Date
-    setText("t55", ""); // Rep Signature — SIGNATURE FIELD
-    setText("t56", ""); // Time
-    setText("t57", ""); // Renter Signature — SIGNATURE FIELD
-    setText("t58", ""); // Date
-
-    await appendAgreementSupplementPages(
-      pdfDoc,
-      getAgreementSupplementSections(booking.admin_notes)
-    );
-
-    const pdfBytes = await pdfDoc.save();
+    // Unsigned copy: the same builder the signed agreement uses, without signatures.
+    const pdfBytes = await buildAgreementPdf({
+      booking: booking as AgreementPdfBooking & { id?: string },
+      vehicle,
+      renter,
+      context: buildAgreementBookingContext(booking as AgreementBookingRow),
+      signatures: {},
+      signedAtIso: null,
+    });
 
     return new NextResponse(Buffer.from(pdfBytes), {
       status: 200,

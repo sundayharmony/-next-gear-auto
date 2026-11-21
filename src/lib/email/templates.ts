@@ -84,7 +84,7 @@ function wrapEmail(content: string): string {
           <!-- Footer -->
           <tr>
             <td style="padding: 24px 32px; background: #1f2937; text-align: center;">
-              <p style="margin: 0 0 8px; color: #ffffff; font-size: 15px; font-weight: 700; letter-spacing: 0.5px;">Next<span style="color: #a78bfa;">Gear</span>Auto</p>
+              <p style="margin: 0 0 12px;"><img src="${SITE_URL}/images/logo.png" alt="Next Gear Auto" width="150" style="display:inline-block;border:0;width:150px;max-width:100%;height:auto;background:#ffffff;border-radius:10px;padding:8px 12px;" /></p>
               <p style="margin: 0 0 4px; color: #9ca3af; font-size: 12px;">${COMPANY_ADDRESS}</p>
               <p style="margin: 0 0 12px; color: #9ca3af; font-size: 12px;">(551) 429-3472 &bull; contact@rentnextgearauto.com</p>
               <p style="margin: 0; color: #6b7280; font-size: 11px;">Mon-Fri 8:00 AM - 6:00 PM</p>
@@ -104,7 +104,7 @@ function headerBlock(title: string, subtitle: string, bgColor = '#7C3AED', bgEnd
   return `
   <tr>
     <td style="background: linear-gradient(135deg, ${safeCssColor(bgColor)}, ${safeCssColor(bgEnd)}); padding: 40px 32px; text-align: center;">
-      <p style="margin: 0 0 12px; color: rgba(255,255,255,0.9); font-size: 13px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
+      <p style="margin: 0 0 14px;"><img src="${SITE_URL}/images/logo.png" alt="Next Gear Auto" width="160" style="display:inline-block;border:0;width:160px;max-width:100%;height:auto;background:#ffffff;border-radius:10px;padding:8px 12px;" /></p>
       <h1 style="margin: 0 0 8px; color: #ffffff; font-size: 26px; font-weight: 800; line-height: 1.2;">${escapeHtml(title)}</h1>
       <p style="margin: 0; color: rgba(255,255,255,0.75); font-size: 14px;">${escapeHtml(subtitle)}</p>
     </td>
@@ -239,7 +239,7 @@ function bookingEmailTemplate(
   const html = wrapEmail(`
     <tr>
       <td style="padding: 40px 32px 24px; text-align: center;">
-        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
+        <p style="margin: 0 0 10px;"><img src="${SITE_URL}/images/logo.png" alt="Next Gear Auto" width="150" style="display:block;margin:0 auto;border:0;width:150px;max-width:100%;height:auto;" /></p>
         <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">${opts.heading}</h1>
       </td>
     </tr>
@@ -621,7 +621,7 @@ export function bookingSignAgreementTemplate(data: EmailData): string {
   return wrapEmail(`
     <tr>
       <td style="padding: 40px 32px 24px; text-align: center;">
-        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
+        <p style="margin: 0 0 10px;"><img src="${SITE_URL}/images/logo.png" alt="Next Gear Auto" width="150" style="display:block;margin:0 auto;border:0;width:150px;max-width:100%;height:auto;" /></p>
         <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Your Booking Details</h1>
       </td>
     </tr>
@@ -671,7 +671,7 @@ export function passwordResetTemplate(data: { customerName: string; customerEmai
   return wrapEmail(`
     <tr>
       <td style="padding: 40px 32px 24px; text-align: center;">
-        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
+        <p style="margin: 0 0 10px;"><img src="${SITE_URL}/images/logo.png" alt="Next Gear Auto" width="150" style="display:block;margin:0 auto;border:0;width:150px;max-width:100%;height:auto;" /></p>
         <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Set Your Password</h1>
       </td>
     </tr>
@@ -701,7 +701,7 @@ export function accountPasswordResetTemplate(data: { customerName: string; custo
   return wrapEmail(`
     <tr>
       <td style="padding: 40px 32px 24px; text-align: center;">
-        <p style="margin: 0 0 6px; color: #6b7280; font-size: 12px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">NextGearAuto</p>
+        <p style="margin: 0 0 10px;"><img src="${SITE_URL}/images/logo.png" alt="Next Gear Auto" width="150" style="display:block;margin:0 auto;border:0;width:150px;max-width:100%;height:auto;" /></p>
         <h1 style="margin: 0 0 8px; color: #111827; font-size: 24px; font-weight: 700;">Reset Your Password</h1>
       </td>
     </tr>
@@ -815,7 +815,7 @@ export function bookingInvoiceTemplate(data: BookingInvoiceEmailData): string {
   return wrapEmail(`
     <tr>
       <td style="padding: 32px 32px 16px; text-align: center;">
-        <p style="margin: 0 0 12px;"><img src="${SITE_URL}/images/logo.png" alt="NextGearAuto" width="220" height="110" style="display:block;margin:0 auto;border:0;width:220px;max-width:100%;height:auto;" /></p>
+        <p style="margin: 0 0 12px;"><img src="${SITE_URL}/images/logo.png" alt="NextGearAuto" width="220" style="display:block;margin:0 auto;border:0;width:220px;max-width:100%;height:auto;" /></p>
         <h1 style="margin: 0 0 6px; color: #111827; font-size: 22px; font-weight: 800; letter-spacing: 0.4px;">INVOICE</h1>
         <p style="margin: 0; color: #4b5563; font-size: 13px;">Next Gear Auto LLC</p>
         <p style="margin: 2px 0 0; color: #4b5563; font-size: 13px;">92 Forrest Street, Jersey City, NJ 07304</p>
