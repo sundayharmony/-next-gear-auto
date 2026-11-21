@@ -25,6 +25,7 @@ import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { isAllowedExternalHref } from "@/lib/utils/safe-url";
+import { LicenseReaderPanel } from "./LicenseReaderPanel";
 import { isAgreementComplete } from "@/lib/agreement/agreement-complete";
 import { UNINSURED_DRIVER_FEE_USD } from "@/lib/agreement/agreement-policy";
 import { hadLegacyCoverageExtra } from "@/lib/extras-policy";
@@ -277,6 +278,34 @@ export function DetailStatusSection({ ctx }: DetailStatusSectionProps) {
           </label>
         )}
       </div>
+
+      {/* Back of license */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <FileText className="w-4 h-4" />
+          Back of License
+        </h3>
+        <label className="block">
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            onChange={(e) => handleDocumentUpload(e, "id_document_back")}
+            disabled={saving}
+            className="hidden"
+          />
+          <span className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1">
+            <Upload className="w-3 h-3" />
+            {booking.id_document_back_url ? "Replace back photo" : "Upload back photo"}
+          </span>
+        </label>
+      </div>
+
+      <LicenseReaderPanel
+        bookingId={booking.id}
+        frontUrl={booking.id_document_url}
+        backUrl={booking.id_document_back_url}
+        agreementSigned={Boolean(booking.rental_agreement_url)}
+      />
 
       {/* Vehicle */}
       <div className="space-y-3">

@@ -159,6 +159,8 @@ export function BookingPageInner({
               setUploadedFile={w.setUploadedFile}
               idDocumentUrl={w.idDocumentUrl}
               setIdDocumentUrl={w.setIdDocumentUrl}
+              idDocumentBackUrl={w.idDocumentBackUrl}
+              setIdDocumentBackUrl={w.setIdDocumentBackUrl}
               uploadingId={w.uploadingId}
               setUploadingId={w.setUploadingId}
               uploadError={w.uploadError}

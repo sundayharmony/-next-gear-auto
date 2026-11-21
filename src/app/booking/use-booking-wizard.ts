@@ -219,6 +219,7 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
   const [uploadError, setUploadError] = useState("");
   const [idDocumentUrl, setIdDocumentUrl] = useState<string | null>(booking.idDocumentUrl);
+  const [idDocumentBackUrl, setIdDocumentBackUrl] = useState<string | null>(booking.idDocumentBackUrl);
   const [idRequiredError, setIdRequiredError] = useState("");
   const [uploadingId, setUploadingId] = useState(false);
   const [dateValidationError, setDateValidationError] = useState("");
@@ -226,6 +227,10 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
   useEffect(() => {
     if (booking.idDocumentUrl) setIdDocumentUrl(booking.idDocumentUrl);
   }, [booking.idDocumentUrl]);
+
+  useEffect(() => {
+    if (booking.idDocumentBackUrl) setIdDocumentBackUrl(booking.idDocumentBackUrl);
+  }, [booking.idDocumentBackUrl]);
 
   useEffect(() => {
     if (booking.selectedVehicle && booking.pickupDate && booking.returnDate) {
@@ -468,7 +473,10 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
       // "Opted out" now means: no proof of insurance (uninsured fee and full damage liability apply).
       booking.setInsuranceProof(insuranceProofUrl, !insuranceProofUrl);
     }
-    if (booking.currentStep === 5) booking.setIdDocumentUrl(idDocumentUrl);
+    if (booking.currentStep === 5) {
+      booking.setIdDocumentUrl(idDocumentUrl);
+      booking.setIdDocumentBackUrl(idDocumentBackUrl);
+    }
     if (booking.currentStep === 6) {
       booking.setSignedName(signedName);
       booking.setAgreementSignatures(agreementSignatures);
@@ -563,6 +571,8 @@ export function useBookingWizard(options?: UseBookingWizardOptions) {
     setUploadError,
     idDocumentUrl,
     setIdDocumentUrl,
+    idDocumentBackUrl,
+    setIdDocumentBackUrl,
     idRequiredError,
     setIdRequiredError,
     uploadingId,

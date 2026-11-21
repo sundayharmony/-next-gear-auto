@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import { verifyAdminOrManager } from "@/lib/auth/admin-check";
 import { logger } from "@/lib/utils/logger";
+import { documentUrlColumn } from "@/lib/bookings/upload-limits";
 
 /**
  * POST /api/admin/customer-documents
@@ -11,7 +12,7 @@ import { logger } from "@/lib/utils/logger";
  * FormData fields:
  *  - file: Image (JPG/PNG/WebP) or PDF, max 5 MB
  *  - customerId: customer ID
- *  - type: "id_document" | "insurance_proof" (defaults to "id_document")
+ *  - type: "id_document" | "id_document_back" | "insurance_proof" (defaults to "id_document")
  */
 export async function POST(request: NextRequest) {
   const auth = await verifyAdminOrManager(request);
@@ -31,7 +32,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!["id_document", "insurance_proof"].includes(docType)) {
+    if (!["id_document", "id_document_back", "insurance_proof"].includes(docType)) {
       return NextResponse.json(
         { success: false, error: "Invalid document type" },
         { status: 400 }
@@ -101,7 +102,7 @@ export async function POST(request: NextRequest) {
     const publicUrl = urlData.publicUrl;
 
     // Update the customer record with the document URL
-    const columnName = docType === "id_document" ? "id_document_url" : "insurance_proof_url";
+    const columnName = documentUrlColumn(docType);
     const { error: updateError } = await supabase
       .from("customers")
       .update({ [columnName]: publicUrl })

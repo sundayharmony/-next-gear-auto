@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Check, Upload, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -12,6 +12,8 @@ export interface VerifyStepProps {
   setUploadedFile: (file: File | null) => void;
   idDocumentUrl: string | null;
   setIdDocumentUrl: (url: string | null) => void;
+  idDocumentBackUrl: string | null;
+  setIdDocumentBackUrl: (url: string | null) => void;
   uploadingId: boolean;
   setUploadingId: (uploading: boolean) => void;
   uploadError: string;
@@ -25,6 +27,8 @@ export function VerifyStep({
   setUploadedFile,
   idDocumentUrl,
   setIdDocumentUrl,
+  idDocumentBackUrl,
+  setIdDocumentBackUrl,
   uploadingId,
   setUploadingId,
   uploadError,
@@ -33,6 +37,10 @@ export function VerifyStep({
   setIdRequiredError,
 }: VerifyStepProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const backInputRef = useRef<HTMLInputElement>(null);
+  const [backFile, setBackFile] = useState<File | null>(null);
+  const [backUploading, setBackUploading] = useState(false);
+  const [backError, setBackError] = useState("");
 
   const hasValidIdUpload = !!idDocumentUrl && !uploadingId;
 
@@ -59,11 +67,34 @@ export function VerifyStep({
     setUploadingId(false);
   };
 
+  const handleBackUpload = async (file: File) => {
+    setBackError("");
+    setBackFile(file);
+    setBackUploading(true);
+    setUploadingId(true); // keeps "Continue" disabled until the photo is saved
+    try {
+      const result = await uploadBookingDocumentTemp(file);
+      if (result.ok) {
+        setIdDocumentBackUrl(result.url);
+      } else {
+        setBackError(result.error);
+        setBackFile(null);
+      }
+    } catch (err) {
+      logger.error("ID back upload error:", err);
+      setBackError("Failed to upload the back of your license. Please try again.");
+      setBackFile(null);
+    }
+    setBackUploading(false);
+    setUploadingId(false);
+  };
+
   return (
     <Card>
       <CardContent className="p-6">
         <h2 className="text-xl font-semibold text-gray-900 mb-1">ID Verification</h2>
-        <p className="text-sm text-gray-500 mb-6">Upload your driver&apos;s license for verification.</p>
+        <p className="text-sm text-gray-500 mb-6">Upload the front of your driver&apos;s license for verification, then the back (it has a barcode that lets us confirm your details quickly).</p>
+        <h3 className="text-sm font-semibold text-gray-800 mb-2">Front of license</h3>
 
         <input
           ref={fileInputRef}
@@ -149,6 +180,70 @@ export function VerifyStep({
             {idRequiredError || "Please upload a photo of your ID to continue"}
           </p>
         )}
+
+        <h3 className="mt-8 mb-2 text-sm font-semibold text-gray-800">
+          Back of license <span className="font-normal text-gray-400">(recommended)</span>
+        </h3>
+        <input
+          ref={backInputRef}
+          type="file"
+          accept=".jpg,.jpeg,.png,.webp,.pdf,image/jpeg,image/png,image/webp,application/pdf"
+          className="hidden"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            if (file) handleBackUpload(file);
+          }}
+        />
+        {idDocumentBackUrl || backUploading ? (
+          <div className="rounded-xl border-2 border-green-300 bg-green-50 p-5 text-center">
+            <Check className="mx-auto h-8 w-8 text-green-500 mb-2" />
+            <p className="text-sm font-medium text-green-700">
+              {backUploading ? "Uploading..." : "Back of license uploaded"}
+            </p>
+            {backFile && (
+              <p className="mt-1 text-xs text-gray-500">
+                {backFile.name} ({(backFile.size / 1024).toFixed(0)} KB)
+              </p>
+            )}
+            <div className="mt-3 flex justify-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setBackFile(null);
+                  setIdDocumentBackUrl(null);
+                  if (backInputRef.current) backInputRef.current.value = "";
+                }}
+              >
+                <X className="h-3.5 w-3.5 mr-1" /> Remove
+              </Button>
+              <Button variant="outline" size="sm" onClick={() => backInputRef.current?.click()}>
+                Replace File
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div
+            className="rounded-xl border-2 border-dashed border-gray-300 p-6 text-center transition-colors hover:border-purple-400 cursor-pointer"
+            onClick={() => backInputRef.current?.click()}
+          >
+            <Upload className="mx-auto h-10 w-10 text-gray-300 mb-2" />
+            <p className="text-sm font-medium text-gray-700">Upload back of license</p>
+            <p className="mt-1 text-xs text-gray-400">JPG, PNG, WebP, or PDF. Make sure the barcode is in focus.</p>
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-3"
+              onClick={(e) => {
+                e.stopPropagation();
+                backInputRef.current?.click();
+              }}
+            >
+              Choose File
+            </Button>
+          </div>
+        )}
+        {backError && <p className="mt-3 text-sm text-red-600">{backError}</p>}
 
         <p className="mt-4 text-xs text-gray-400">Your ID will be verified before or at pickup.</p>
       </CardContent>

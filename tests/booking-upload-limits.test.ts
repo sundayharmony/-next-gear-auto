@@ -12,7 +12,7 @@ const root = process.cwd();
 
 test("upload limits are stable contract for mobile and API", () => {
   assert.equal(BOOKING_UPLOAD_MAX_BYTES, 5 * 1024 * 1024);
-  assert.deepEqual([...BOOKING_UPLOAD_DOC_TYPES], ["id_document", "insurance_proof"]);
+  assert.deepEqual([...BOOKING_UPLOAD_DOC_TYPES], ["id_document", "id_document_back", "insurance_proof"]);
   assert.ok(BOOKING_UPLOAD_ALLOWED_MIME_TYPES.includes("application/pdf"));
 });
 
