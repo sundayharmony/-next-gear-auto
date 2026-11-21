@@ -102,7 +102,8 @@ export function parseAamvaBarcode(text: string): ParsedLicense | null {
   for (const rawLine of lines) {
     // The header line ("ANSI 636036090002DL00410278ZN03290015DL") runs straight into the first
     // element ("DLDCSHOPSON"), so strip the header before reading the element.
-    const line = rawLine.replace(/^.*?ANSI\s*\d{12}(?:[A-Z]{2}\d{8})+(?:DL|ID)?/s, "").trim();
+    // [\s\S] is the ES2017 stand-in for the dotAll (/s) flag, which this tsconfig target rejects.
+    const line = rawLine.replace(/^[\s\S]*?ANSI\s*\d{12}(?:[A-Z]{2}\d{8})+(?:DL|ID)?/, "").trim();
     const m = /^(D[A-Z]{2})(.*)$/.exec(line);
     if (m && !fields.has(m[1])) fields.set(m[1], m[2]);
   }
