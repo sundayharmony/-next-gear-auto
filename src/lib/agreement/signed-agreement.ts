@@ -96,6 +96,7 @@ export async function buildSignedAgreementPdfBytes(
   signatures: AgreementSignatureData,
   signedAtIso: string,
   renter?: AgreementRenterIdentity | null,
+  reissuedAtIso?: string | null,
 ): Promise<Uint8Array> {
   return buildAgreementPdf({
     booking,
@@ -104,6 +105,7 @@ export async function buildSignedAgreementPdfBytes(
     context: buildAgreementBookingContext(booking),
     signatures,
     signedAtIso,
+    reissuedAtIso,
   });
 }
 
@@ -158,15 +160,47 @@ export async function getLatestAgreementSignatures(
   return Object.keys(sigs).length ? sigs : null;
 }
 
+/**
+ * Saves the currently stored signed PDF under `<booking>/original/` before it is replaced.
+ * Returns false (and the caller must NOT overwrite) when the original cannot be preserved.
+ */
+async function archiveOriginalSignedPdf(supabase: any, bookingId: string): Promise<boolean> {
+  const { data: existing } = await supabase.storage
+    .from("booking-documents")
+    .list(`${bookingId}/original`, { limit: 1 });
+  if (existing && existing.length > 0) return true; // already archived by an earlier run
+
+  const { data: blob, error: downloadError } = await supabase.storage
+    .from("booking-documents")
+    .download(`${bookingId}/rental-agreement-signed.pdf`);
+  if (downloadError || !blob) return false;
+
+  const bytes = Buffer.from(await blob.arrayBuffer());
+  const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+  const { error: uploadError } = await supabase.storage
+    .from("booking-documents")
+    .upload(`${bookingId}/original/rental-agreement-signed-${stamp}.pdf`, bytes, {
+      contentType: "application/pdf",
+      upsert: false,
+    });
+  return !uploadError;
+}
+
 export async function regenerateSignedAgreementForBooking(
   supabase: any,
   booking: AgreementBooking,
+  options: { reissue?: boolean } = {},
 ): Promise<boolean> {
   if (!booking.rental_agreement_url) return false;
 
   const signatures = await getLatestAgreementSignatures(supabase, booking.id);
   if (!signatures) {
     logger.warn(`No stored signatures found for signed booking ${booking.id}; skipping agreement refresh.`);
+    return false;
+  }
+
+  if (options.reissue && !(await archiveOriginalSignedPdf(supabase, booking.id))) {
+    logger.warn(`Could not preserve the original signed PDF for ${booking.id}; leaving it untouched.`);
     return false;
   }
 
@@ -178,6 +212,7 @@ export async function regenerateSignedAgreementForBooking(
     signatures,
     booking.agreement_signed_at ?? new Date().toISOString(),
     renter,
+    options.reissue ? new Date().toISOString() : null,
   );
   const agreementUrl = await uploadSignedAgreementPdf(supabase, booking.id, pdfBytes);
 
@@ -195,9 +230,9 @@ export async function regenerateSignedAgreementForBooking(
 
   await supabase.from("booking_activity").insert({
     booking_id: booking.id,
-    action: "agreement_regenerated",
+    action: options.reissue ? "agreement_reissued" : "agreement_regenerated",
     details: {
-      reason: "booking_dates_or_times_updated",
+      reason: options.reissue ? "reissued_in_current_format" : "booking_dates_or_times_updated",
       pickup_date: booking.pickup_date,
       return_date: booking.return_date,
       pickup_time: booking.pickup_time,

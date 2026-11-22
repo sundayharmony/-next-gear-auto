@@ -93,6 +93,8 @@ export interface AgreementPdfInput {
   signatures?: AgreementSignatureData;
   /** ISO timestamp of signing; null/undefined renders an unsigned copy (preview). */
   signedAtIso?: string | null;
+  /** Set when an older signed agreement is re-issued in the current format. */
+  reissuedAtIso?: string | null;
 }
 
 // ── Layout constants ─────────────────────────────────────────────────────────
@@ -838,6 +840,12 @@ export async function buildAgreementPdf(input: AgreementPdfInput): Promise<Uint8
       ? `Signed electronically on ${signDate} at ${signTime} (Eastern Time). ${AGREEMENT_ESIGN_DISCLOSURE}`
       : "This copy has not been signed.",
   );
+  if (input.reissuedAtIso) {
+    const re = signingParts(input.reissuedAtIso);
+    b.paragraph(
+      `Re-issued copy: this document was re-issued on ${re.date} in the current agreement format using the signature originally provided on ${signDate}. The original signed copy is retained by Lessor and is available on request.`,
+    );
+  }
   b.paragraph(`Agreement version: ${AGREEMENT_VERSION}`, { size: 8, color: MUTED });
 
   // ── Footers: page numbers and renter initials ──
