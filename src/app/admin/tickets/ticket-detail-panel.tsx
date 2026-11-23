@@ -28,6 +28,7 @@ import {
   type DocumentLineItemDraft,
 } from "@/components/admin/document-line-items-editor";
 import { DocumentPdfActions } from "@/components/admin/document-pdf-actions";
+import { TicketDisputePanel } from "./ticket-dispute-panel";
 
 type Vehicle = VehicleListItem;
 type Booking = BookingDbRow;
@@ -409,6 +410,8 @@ export function TicketDetailView({
               </div>
           </AdminCard>
         </div>
+
+        <TicketDisputePanel ticket={ticket} />
 
         {ticket.notes && (
           <AdminCard>

@@ -1,0 +1,774 @@
+[
+  {
+    "id": "jersey-city",
+    "municipality": "Jersey City",
+    "aliases": [
+      "jersey city",
+      "jc",
+      "jersey city nj"
+    ],
+    "court": {
+      "name": "Jersey City Municipal Court (0906)",
+      "address": "Lewis S. McRae Justice Complex, 365 Summit Ave, Jersey City, NJ 07306",
+      "phone": "201-209-6700",
+      "email": "unverified (several addresses on page are obfuscated; read on page)",
+      "hours": "Court Mon-Thu 8:30-7:30, Fri 8:30-4:30; Violations Bureau Mon-Fri 8:30-3:00 (page gives conflicting times)"
+    },
+    "authority_note": "Parking tickets issued by JC Parking Enforcement/JCPD; adjudicated by the Municipal Court; Parking Division, 356 MLK Dr, 2nd Fl, 201-547-5538. Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "camera",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "NJ Courts Plea by Mail form (general, no lessee section confirmed)",
+        "url": "https://judiciary.state.nj.us/sites/default/files/forms/10715_plea_mail.pdf"
+      },
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "JC Municipal Court",
+        "url": "https://www.jerseycitynj.gov/municipalcourt"
+      },
+      {
+        "label": "JC Parking Division",
+        "url": "https://www.jerseycitynj.gov/parking"
+      },
+      {
+        "label": "JC camera enforcement pilot announcement",
+        "url": "https://jerseycity.hosted.civiclive.com/news/parking_enforcement_pilot_program"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "Court page says each missed notice adds at least $10. Camera pilot (double parking, bike lanes, loading zones): citation mailed after JCPD review; launch status and contest process UNVERIFIED. Court page does not address lessee statements.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Address, phone, payment/contest methods VERIFIED at jerseycitynj.gov/municipalcourt. Court email, camera status UNVERIFIED."
+  },
+  {
+    "id": "hoboken",
+    "municipality": "Hoboken",
+    "aliases": [
+      "hoboken",
+      "hoboken parking utility",
+      "hpu",
+      "hoboken nj"
+    ],
+    "court": {
+      "name": "Hoboken Municipal Court (0905)",
+      "address": "100 Newark St, Hoboken, NJ 07030 (in-person payments; mailing per city FAQ)",
+      "phone": "201-420-2141 (Judiciary list); city page says 201-420-2000 ext. 1130 (conflict: confirm)",
+      "email": "hmc@hobokennj.gov",
+      "hours": "Mon, Wed, Thu, Fri 8:00-3:30; Tue 8:00-9:00 pm (payment window per city FAQ)"
+    },
+    "authority_note": "Hoboken Parking Utility (HPU) enforces; Municipal Court adjudicates. HPU dispatch 201-420-2000 ext. 1465, dispatch@hobokennj.gov; City Hall 94 Washington St. Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "camera",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "Hoboken pay a parking ticket FAQ",
+        "url": "https://www.hobokennj.gov/faqs/how-can-i-pay-for-a-parking-ticket"
+      },
+      {
+        "label": "Hoboken court contact FAQ",
+        "url": "https://www.hobokennj.gov/faqs/how-can-i-pay-my-for-my-parking-ticket-online"
+      },
+      {
+        "label": "Hoboken automated enforcement (CLEAR)",
+        "url": "https://hobokennj.gov/resources/automated-enforcement"
+      },
+      {
+        "label": "Hoboken parking enforcement",
+        "url": "https://hobokennj.gov/resources/parking-enforcement"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "CLEAR camera citations mailed to registered owner (Washington St); page states the program ran 2025-10-01 to 2025-12-31 so current status UNVERIFIED; rental not addressed. External info site njaggregation.us/hoboken could not be fetched (UNVERIFIED). Court page conflicts on phone numbers.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Payment hours/address and email VERIFIED on hobokennj.gov FAQs; phone conflicting."
+  },
+  {
+    "id": "bayonne",
+    "municipality": "Bayonne",
+    "aliases": [
+      "bayonne",
+      "bayonne nj",
+      "bayonne parking utility"
+    ],
+    "court": {
+      "name": "Bayonne Municipal Court (0901)",
+      "address": "unverified; City Hall is 630 Avenue C, Bayonne, NJ 07002 (court street address not stated on page)",
+      "phone": "201-858-6990 (Judiciary list)",
+      "email": "unverified",
+      "hours": "unverified; Mon/Tue/Thu sessions per Judiciary list"
+    },
+    "authority_note": "Bayonne Parking Utility (City Hall Room 13) enforces, $65 per infraction per its page; Municipal Court adjudicates. Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "Bayonne Municipal Court",
+        "url": "https://www.bayonnenj.org/471/Municipal-Court"
+      },
+      {
+        "label": "Bayonne Parking Utility",
+        "url": "https://www.bayonnenj.org/Departments/parking-utility"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "Online plea/dispute via NJMCdirect for eligible offenses. No camera program found. Confirm court address/email by phone.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Court phone VERIFIED via Judiciary list; address, email, hours UNVERIFIED."
+  },
+  {
+    "id": "union-city",
+    "municipality": "Union City",
+    "aliases": [
+      "union city",
+      "union city nj"
+    ],
+    "court": {
+      "name": "Union City Municipal Court (0910)",
+      "address": "3715 Palisade Ave, Union City, NJ 07087",
+      "phone": "201-348-5763 (Judiciary list)",
+      "email": "unverified",
+      "hours": "unverified; sessions Mon-Thu per Judiciary list"
+    },
+    "authority_note": "Municipal Court adjudicates parking and moving tickets; parking enforcement authority UNVERIFIED (not stated on court page). Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "Union City Municipal Court",
+        "url": "https://www.ucnj.com/Page/municipal-court"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "Court page lists no phone/email/hours; sessions in person or Zoom per notice. No camera program found.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Address VERIFIED at ucnj.com; phone via Judiciary list; email/hours UNVERIFIED."
+  },
+  {
+    "id": "north-bergen",
+    "municipality": "North Bergen",
+    "aliases": [
+      "north bergen",
+      "north bergen nj"
+    ],
+    "court": {
+      "name": "North Bergen Municipal Court (0908)",
+      "address": "unverified (Town Hall is 4233 Kennedy Blvd, North Bergen, NJ 07047)",
+      "phone": "201-875-9100 (Judiciary list); town page lists 201-392-2088 for scheduling",
+      "email": "unverified",
+      "hours": "unverified; Mon-Thu sessions per Judiciary list"
+    },
+    "authority_note": "Municipal Court adjudicates; town page is partly stale (references older special parking sessions). Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "North Bergen courts and violations",
+        "url": "https://www.northbergen.org/departments/courts-violations"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "Page notes unpaid parking tickets under three years old may trigger state suspension notices. No camera program found.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Phones VERIFIED; court address/email/hours UNVERIFIED."
+  },
+  {
+    "id": "west-new-york",
+    "municipality": "West New York",
+    "aliases": [
+      "west new york",
+      "wny",
+      "west new york nj"
+    ],
+    "court": {
+      "name": "West New York Municipal Court (0912)",
+      "address": "428 60th St, West New York, NJ 07093",
+      "phone": "201-295-5195 (town page); 201-295-5187 (Judiciary list)",
+      "email": "unverified",
+      "hours": "Mon-Fri 9:00-4:30; walk-in Mon, Wed, Fri 9:00-4:30 and Tue to 7:00 pm (per town pages)"
+    },
+    "authority_note": "Parking Utility issues tickets (201-295-1575) but cannot dismiss or excuse them; only the Municipal Court hears disputes. Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "WNY Pay/Dispute a Ticket 2025",
+        "url": "https://www.westnewyorknj.org/wp-content/uploads/2025/06/Pay-Dispute-a-Ticket-2025.pdf"
+      },
+      {
+        "label": "WNY Parking Services",
+        "url": "https://www.westnewyorknj.org/pages/parking-services/"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "Pay by date on ticket; late payment adds a state-ordered time-payment fee and possible suspension or warrant. Checks payable to The Town of West New York. Parking Services page is dated 2022. No camera program found.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Address, phone, hours, payment methods VERIFIED; email UNVERIFIED."
+  },
+  {
+    "id": "secaucus",
+    "municipality": "Secaucus",
+    "aliases": [
+      "secaucus",
+      "secaucus nj"
+    ],
+    "court": {
+      "name": "Secaucus Municipal Court (0909)",
+      "address": "1203 Paterson Plank Rd, Secaucus, NJ 07094",
+      "phone": "201-330-2056 (Judiciary list)",
+      "email": "secaucus.mc@njcourts.gov",
+      "hours": "unverified (court page blocked automated fetch)"
+    },
+    "authority_note": "Municipal Court adjudicates; town court page could not be read. Plea by Mail form posted. Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Secaucus Plea by Mail form",
+        "url": "https://secaucusnj.gov/government/documents/department-documents/court/259-plea-by-mail/file"
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "Secaucus Municipal Court",
+        "url": "https://secaucusnj.gov/departments/court"
+      },
+      {
+        "label": "Secaucus Plea by Mail",
+        "url": "https://secaucusnj.gov/government/documents/department-documents/court/259-plea-by-mail/file"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "Plea form: not guilty by email with attachments; guilty with payment ($283 stated for the handicap-placard offense on this form; not general). No lessee section described.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Address and email VERIFIED on the plea form; hours and general instructions UNVERIFIED."
+  },
+  {
+    "id": "kearny",
+    "municipality": "Kearny",
+    "aliases": [
+      "kearny",
+      "kearny nj"
+    ],
+    "court": {
+      "name": "Kearny Municipal Court (0907)",
+      "address": "404 Kearny Ave, Kearny, NJ 07032",
+      "phone": "201-955-7410 or 201-955-7411; fax 201-997-1980",
+      "email": "Kearny.mc@njcourts.gov",
+      "hours": "Office Mon-Fri 8:00-4:00; parking court monthly 5 pm; sessions Thu 9 am"
+    },
+    "authority_note": "Municipal Court adjudicates; Court Administrator Ana Maria D. Matos per town page. Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Defense by Certification in Traffic Cases / Plea by Mail (no owner or rental language)",
+        "url": "https://www.kearnynj.org/wp-content/uploads/2018/10/Defense-by-Certification-in-Traffic-Cases.pdf"
+      },
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "Kearny Municipal Court",
+        "url": "https://www.kearnynj.org/municipal-court/"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "Suspension notice resumption since 2024-10-01 noted; AOC Municipal Court Services 609-815-2900 ext. 54850. No camera program found.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Address, phone, email, hours VERIFIED on kearnynj.org."
+  },
+  {
+    "id": "harrison",
+    "municipality": "Harrison",
+    "aliases": [
+      "harrison",
+      "harrison nj"
+    ],
+    "court": {
+      "name": "Harrison Municipal Court (0904)",
+      "address": "318 Harrison Ave, Harrison, NJ 07029",
+      "phone": "973-268-2453",
+      "email": "Harrison.mc@njcourts.gov",
+      "hours": "Violations office Mon-Fri 9:00-4:00; sessions Mon and Wed"
+    },
+    "authority_note": "Municipal Court adjudicates; also hosting East Newark court temporarily. Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "Harrison Municipal Court",
+        "url": "https://www.townofharrison.com/164/Municipal-Court"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "To contest, contact the court at least 7 days before the scheduled date. Pay in person, NJMCdirect, or by mail payable to Harrison Municipal Court. No camera program found.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Address, phone, email, hours VERIFIED. Note: Judiciary list shows 201-482-4182, page shows 973-268-2453; confirm."
+  },
+  {
+    "id": "weehawken",
+    "municipality": "Weehawken",
+    "aliases": [
+      "weehawken",
+      "weehawken township",
+      "weehawken nj"
+    ],
+    "court": {
+      "name": "Weehawken Municipal Court (0911)",
+      "address": "unverified (township site could not be fetched)",
+      "phone": "201-319-6030 (Judiciary list)",
+      "email": "unverified",
+      "hours": "unverified; Tue, Wed, Thu sessions per Judiciary list"
+    },
+    "authority_note": "Municipal Court adjudicates; no official township court page read. Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "Weehawken Township",
+        "url": "https://www.weehawken-nj.us/"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "Confirm address, email, hours by phone or on the Judiciary municipal directory.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Only the phone is VERIFIED (Judiciary list); everything else UNVERIFIED."
+  },
+  {
+    "id": "guttenberg",
+    "municipality": "Guttenberg",
+    "aliases": [
+      "guttenberg",
+      "guttenberg nj"
+    ],
+    "court": {
+      "name": "Guttenberg Municipal Court (0903)",
+      "address": "6808 Park Ave, Guttenberg, NJ 07093",
+      "phone": "201-868-2923 (Judiciary list)",
+      "email": "unverified",
+      "hours": "Payment window Mon-Fri 9:00-3:30; sessions Tue 1:00 pm, Thu 5:00 pm"
+    },
+    "authority_note": "Municipal Court adjudicates; Court Administrator named on town page. Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "Guttenberg Municipal Court",
+        "url": "https://www.guttenbergnj.org/departments/court"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "Pay in person, mail (payable to Guttenberg Municipal Court), or NJMCdirect. No parking/moving instructions or camera program found.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Address, hours VERIFIED; phone via Judiciary list; email UNVERIFIED."
+  },
+  {
+    "id": "east-newark",
+    "municipality": "East Newark",
+    "aliases": [
+      "east newark",
+      "east newark nj"
+    ],
+    "court": {
+      "name": "East Newark Municipal Court (0902)",
+      "address": "34 Sherman Ave, East Newark, NJ 07029; temporarily operating from 318 Harrison Ave, Harrison, NJ 07029 (notice 2025-05-27, end date not stated)",
+      "phone": "973-481-2902 ext. 221; temporary 973-268-2457",
+      "email": "eastnewark.mc@njcourts.gov",
+      "hours": "Mon-Fri 8:00-5:00"
+    },
+    "authority_note": "Municipal Court adjudicates; temporarily housed in Harrison courthouse but remains a separate court (0902). Each town has its own municipal court; Judiciary sessions list shows 12 separate Hudson courts, none joint.",
+    "ticket_categories": [
+      "parking",
+      "moving"
+    ],
+    "forms": [
+      {
+        "name": "Lessor statement under 39:4-139.5 (court form not published)",
+        "url": null
+      }
+    ],
+    "supporting_documents": [
+      "Notarized lessor statement naming lessee name and address (required by statute)",
+      "Copy of rental agreement (customary; not required by statute, UNVERIFIED whether court requests it)",
+      "Copy of the ticket/notice",
+      "Copy of lessee driver license (customary, UNVERIFIED)"
+    ],
+    "notarization": "required",
+    "deadlines": "Statute sets no day count; lessor must give statement after notice of the offense. Follow pay-by/court date on the ticket. Court-specific deadline UNVERIFIED: ask clerk.",
+    "instructions": [
+      "Call or email the court clerk on receipt of a parking notice to confirm the accepted lessee form and where to send it (no municipal lessee guidance published).",
+      "Send a notarized lessor statement (lessee name and address) to the clerk handling the case before the court date; keep proof of delivery.",
+      "Do not let the pay-by or court date lapse: late notices add fees and can lead to license/registration suspension."
+    ],
+    "links": [
+      {
+        "label": "East Newark Municipal Court",
+        "url": "https://www.boroughofeastnewark.com/Departments/municipal-court"
+      },
+      {
+        "label": "Temporary location notice",
+        "url": "https://www.boroughofeastnewark.com/News/View/2408/municipal-court-temporarily-operating-from-harrison-municipal-court-house"
+      },
+      {
+        "label": "N.J.S.A. 39:4-139.5 (Justia)",
+        "url": "https://law.justia.com/codes/new-jersey/title-39/section-39-4-139-5/"
+      },
+      {
+        "label": "NJ Courts: Hudson court sessions list (phones)",
+        "url": "https://www.njcourts.gov/sites/default/files/courtsessionsbycty.pdf"
+      },
+      {
+        "label": "NJ Courts: parking suspension resumption notice",
+        "url": "https://www.njcourts.gov/notices/notice-municipal-courts-resumption-of-drivers-license-and-registration-suspensions-parking"
+      }
+    ],
+    "contact_notes": "Pay in person, mail payable to East Newark Municipal Court, or NJMCdirect. Whether the temporary location still applies is UNVERIFIED. No camera program found.",
+    "last_verified": "2026-11-22",
+    "verified_fields_note": "Notarization is required by statute (VERIFIED via Justia) for the parking lessor statement; no municipality states its own rule. No court-published lessor form or town lessee guidance found (UNVERIFIED: ask clerk or AOC 609-815-2900 ext. 54850). Contacts VERIFIED on borough page; current location UNVERIFIED."
+  }
+]
