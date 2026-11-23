@@ -1,6 +1,6 @@
 import React from "react";
 import Link from "next/link";
-import { Car, Phone, Mail, MapPin } from "lucide-react";
+import { Phone, Mail, MapPin } from "lucide-react";
 import { CONTACT_INFO, SITE_NAME, NAV_ITEMS } from "@/lib/constants";
 
 export function Footer() {
@@ -12,11 +12,8 @@ export function Footer() {
         <div className="grid grid-cols-1 gap-8 md:grid-cols-4">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Link href="/" className="flex items-center gap-2">
-              <Car className="h-7 w-7 text-purple-400" />
-              <span className="text-lg font-bold text-white">
-                Next<span className="text-purple-400">Gear</span>Auto
-              </span>
+            <Link href="/" className="inline-block rounded-lg bg-white px-3 py-2" aria-label="Next Gear Auto home">
+              <img src="/images/logo.png" alt="Next Gear Auto" className="h-12 w-auto" />
             </Link>
             <p className="mt-3 text-sm leading-relaxed text-gray-400">
               Premium car rentals at competitive prices. Your journey starts here.

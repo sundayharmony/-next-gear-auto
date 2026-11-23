@@ -97,8 +97,9 @@ export function CustomerDocumentsCard({
           <div className="mt-4 pt-4 border-t border-gray-100 space-y-2">
             <p className="text-xs font-semibold text-gray-600">Upload to booking</p>
             <div className="flex gap-2 flex-wrap">
-              <Select value={detail.uploadDocType} onChange={(e) => detail.setUploadDocType(e.target.value as "id_document" | "insurance_proof")}>
-                <option value="id_document">ID document</option>
+              <Select value={detail.uploadDocType} onChange={(e) => detail.setUploadDocType(e.target.value as "id_document" | "id_document_back" | "insurance_proof")}>
+                <option value="id_document">ID document (front)</option>
+                <option value="id_document_back">Back of license</option>
                 <option value="insurance_proof">Insurance proof</option>
               </Select>
               <Select

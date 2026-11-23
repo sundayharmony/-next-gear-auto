@@ -302,6 +302,7 @@ export interface BookingDbRow {
   status: string;
   created_at: string;
   id_document_url?: string;
+  id_document_back_url?: string;
   insurance_proof_url?: string;
   insurance_opted_out?: boolean;
   signed_name?: string;

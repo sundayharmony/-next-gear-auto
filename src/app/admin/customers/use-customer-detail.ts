@@ -49,7 +49,7 @@ export function useCustomerDetail({
   const [uploadingDoc, setUploadingDoc] = useState(false);
   const [uploadingCustomerDoc, setUploadingCustomerDoc] = useState(false);
   const [selectedBookingForUpload, setSelectedBookingForUpload] = useState<string | null>(null);
-  const [uploadDocType, setUploadDocType] = useState<"id_document" | "insurance_proof">("id_document");
+  const [uploadDocType, setUploadDocType] = useState<"id_document" | "id_document_back" | "insurance_proof">("id_document");
   const [deletingCustomer, setDeletingCustomer] = useState(false);
   const [sendingPasswordLink, setSendingPasswordLink] = useState(false);
   const openCustomerRequestIdRef = useRef<number | null>(null);

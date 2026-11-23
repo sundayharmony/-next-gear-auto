@@ -8,6 +8,7 @@ import type { Metadata } from "next";
 import { FAQAccordion } from "@/components/sections/faq-accordion";
 import { generateFAQSchema } from "@/lib/utils/schema-generators";
 import { SITE_URL } from "@/lib/constants";
+import { UNINSURED_DRIVER_FEE_USD } from "@/lib/agreement/agreement-policy";
 
 export const metadata: Metadata = {
   title: "FAQ & Policies",
@@ -60,7 +61,7 @@ const generalFaqs = [
 const pricingFaqs = [
   {
     question: "How is the rental price calculated?",
-    answer: "Our pricing is straightforward — you pay a simple daily rate multiplied by the number of rental days. Extras (insurance, child seat, roadside assistance, fuel pre-pay), taxes (8%), and any applicable fees are added to the base rate. Your total is shown clearly before you confirm.",
+    answer: "Our pricing is straightforward — you pay a simple daily rate multiplied by the number of rental days. Extras (child seat, roadside assistance, fuel pre-pay), taxes (8%), and any applicable fees are added to the base rate. Your total is shown clearly before you confirm.",
   },
   {
     question: "What payment is required at booking?",
@@ -94,15 +95,15 @@ const cancellationFaqs = [
 const insuranceFaqs = [
   {
     question: "Do I need insurance to rent?",
-    answer: "Your personal auto insurance or credit card rental coverage may provide coverage. We also offer optional insurance coverage ($11.25/day) that includes basic collision damage waiver for added peace of mind.",
+    answer: `Yes. You must bring your own valid auto insurance policy that covers the rental and provide proof before or at pickup. We do not sell insurance. If you don't have proof of insurance, a flat $${UNINSURED_DRIVER_FEE_USD} uninsured driver fee applies and you pay out of pocket for any and all damage to the vehicle.`,
   },
   {
     question: "What add-ons are available?",
-    answer: "We offer insurance coverage ($11.25/day), child seats ($10/day, max $50), roadside assistance ($8/day for 24/7 towing, lockout, and tire service), and fuel pre-pay (market rate + $10 fee to return the vehicle empty).",
+    answer: "We offer child seats ($10/day, max $50), roadside assistance ($8/day for 24/7 towing, lockout, and tire service), and fuel pre-pay (market rate + $10 fee to return the vehicle empty). Insurance is not an add-on: renters bring their own policy.",
   },
   {
     question: "What happens if the vehicle is damaged?",
-    answer: "Damage is assessed upon vehicle return. The damage deposit held on your card may be partially or fully captured to cover repair costs. If you purchased our insurance coverage, the damage waiver may apply depending on the type and extent of damage.",
+    answer: "Damage is assessed upon vehicle return. The damage deposit held on your card may be partially or fully captured to cover repair costs. You are responsible for all damage; if you have your own insurance you remain responsible for any deductible and anything your insurer does not pay, and if you have no insurance you pay for all of it out of pocket.",
   },
 ];
 

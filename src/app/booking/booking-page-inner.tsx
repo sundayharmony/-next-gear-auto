@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { Shield } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { PageContainer } from "@/components/layout/page-container";
 import { WizardProgress } from "@/app/booking/components/wizard-progress";
@@ -138,7 +137,8 @@ export function BookingPageInner({
               setUploadingInsuranceProof={w.setUploadingInsuranceProof}
               insuranceUploadError={w.insuranceUploadError}
               setInsuranceUploadError={w.setInsuranceUploadError}
-              setLocalExtras={w.setLocalExtras}
+              uninsuredAck={w.uninsuredAck}
+              setUninsuredAck={w.setUninsuredAck}
             />
           )}
 
@@ -159,6 +159,8 @@ export function BookingPageInner({
               setUploadedFile={w.setUploadedFile}
               idDocumentUrl={w.idDocumentUrl}
               setIdDocumentUrl={w.setIdDocumentUrl}
+              idDocumentBackUrl={w.idDocumentBackUrl}
+              setIdDocumentBackUrl={w.setIdDocumentBackUrl}
               uploadingId={w.uploadingId}
               setUploadingId={w.setUploadingId}
               uploadError={w.uploadError}
@@ -219,28 +221,6 @@ export function BookingPageInner({
               isSubmitting={w.booking.isSubmitting}
               onSubmit={w.booking.submitBooking}
             />
-          )}
-
-          {w.showInsuranceWarning && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-              <div className="bg-white rounded-xl shadow-xl max-w-sm mx-4 p-6">
-                <div className="flex items-center gap-3 mb-4">
-                  <Shield className="h-8 w-8 text-purple-600" />
-                  <h3 className="text-lg font-semibold">Insurance Required</h3>
-                </div>
-                <p className="text-sm text-gray-600 mb-6">
-                  Insurance coverage is required for all rentals. To opt out, please upload proof of your own valid auto insurance policy.
-                </p>
-                <div className="flex gap-3">
-                  <Button variant="outline" className="flex-1" onClick={() => w.setShowInsuranceWarning(false)}>
-                    Keep Insurance
-                  </Button>
-                  <Button className="flex-1" onClick={() => w.setShowInsuranceWarning(false)}>
-                    Upload Proof
-                  </Button>
-                </div>
-              </div>
-            </div>
           )}
 
           <WizardNav

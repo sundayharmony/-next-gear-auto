@@ -25,7 +25,10 @@ import { formatDate, formatTime } from "@/lib/utils/date-helpers";
 import { statusColors } from "@/lib/utils/status-colors";
 import { getStaffVehicleDetailsHref } from "@/lib/admin/staff-vehicle-links";
 import { isAllowedExternalHref } from "@/lib/utils/safe-url";
+import { LicenseReaderPanel } from "./LicenseReaderPanel";
 import { isAgreementComplete } from "@/lib/agreement/agreement-complete";
+import { UNINSURED_DRIVER_FEE_USD } from "@/lib/agreement/agreement-policy";
+import { hadLegacyCoverageExtra } from "@/lib/extras-policy";
 import type { BookingDetailContext } from "./booking-detail-context";
 
 interface DetailStatusSectionProps {
@@ -276,6 +279,34 @@ export function DetailStatusSection({ ctx }: DetailStatusSectionProps) {
         )}
       </div>
 
+      {/* Back of license */}
+      <div className="space-y-3">
+        <h3 className="text-sm font-semibold flex items-center gap-2">
+          <FileText className="w-4 h-4" />
+          Back of License
+        </h3>
+        <label className="block">
+          <input
+            type="file"
+            accept="image/*,.pdf"
+            onChange={(e) => handleDocumentUpload(e, "id_document_back")}
+            disabled={saving}
+            className="hidden"
+          />
+          <span className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1">
+            <Upload className="w-3 h-3" />
+            {booking.id_document_back_url ? "Replace back photo" : "Upload back photo"}
+          </span>
+        </label>
+      </div>
+
+      <LicenseReaderPanel
+        bookingId={booking.id}
+        frontUrl={booking.id_document_url}
+        backUrl={booking.id_document_back_url}
+        agreementSigned={Boolean(booking.rental_agreement_url)}
+      />
+
       {/* Vehicle */}
       <div className="space-y-3">
         <h3 className="text-sm font-semibold">Vehicle</h3>
@@ -490,41 +521,42 @@ export function DetailStatusSection({ ctx }: DetailStatusSectionProps) {
           <Shield className="w-4 h-4" />
           Insurance
         </h3>
-        {booking.insurance_opted_out ? (
+        {booking.insurance_proof_url ? (
+          <div className="space-y-2">
+            <Badge className="bg-green-100 text-green-700">Own policy - proof on file</Badge>
+            <a
+              href={isAllowedExternalHref(booking.insurance_proof_url) || "#"}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
+            >
+              <Link2 className="w-3 h-3" />
+              View Proof
+            </a>
+          </div>
+        ) : hadLegacyCoverageExtra(booking.extras) ? (
+          <Badge className="bg-gray-100 text-gray-700">
+            NextGearAuto coverage purchased (older booking; no longer offered)
+          </Badge>
+        ) : (
           <div className="space-y-2">
             <Badge className="bg-yellow-100 text-yellow-700">
-              Opted Out (Own Coverage)
+              No proof of insurance - ${UNINSURED_DRIVER_FEE_USD} uninsured fee + all damage applies
             </Badge>
-            {booking.insurance_proof_url ? (
-              <a
-                href={isAllowedExternalHref(booking.insurance_proof_url) || "#"}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-blue-600 hover:text-blue-700 text-sm flex items-center gap-1"
-              >
-                <Link2 className="w-3 h-3" />
-                View Proof
-              </a>
-            ) : (
-              <label className="block">
-                <input
-                  type="file"
-                  accept="image/*,.pdf"
-                  onChange={(e) => handleDocumentUpload(e, "insurance_proof")}
-                  disabled={saving}
-                  className="hidden"
-                />
-                <span className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1">
-                  <Upload className="w-3 h-3" />
-                  Upload Proof
-                </span>
-              </label>
-            )}
+            <label className="block">
+              <input
+                type="file"
+                accept="image/*,.pdf"
+                onChange={(e) => handleDocumentUpload(e, "insurance_proof")}
+                disabled={saving}
+                className="hidden"
+              />
+              <span className="text-xs text-blue-600 hover:text-blue-700 cursor-pointer flex items-center gap-1">
+                <Upload className="w-3 h-3" />
+                Upload Proof
+              </span>
+            </label>
           </div>
-        ) : (
-          <Badge className="bg-green-100 text-green-700">
-            NextGearAuto Insurance Included
-          </Badge>
         )}
       </div>
     </>

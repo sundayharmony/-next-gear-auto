@@ -142,7 +142,7 @@ export interface BookingDetailContext {
   handleDeletePayment: (paymentId: string) => Promise<void>;
   handleDocumentUpload: (
     e: React.ChangeEvent<HTMLInputElement>,
-    docType: "id_document" | "insurance_proof"
+    docType: "id_document" | "id_document_back" | "insurance_proof"
   ) => Promise<void>;
   handleDuplicateBooking: () => void;
   handleRecalculatePrice: () => void;

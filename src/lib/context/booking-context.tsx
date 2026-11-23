@@ -35,6 +35,7 @@ interface BookingState {
   insuranceProofUrl: string | null;
   insuranceOptedOut: boolean;
   idDocumentUrl: string | null;
+  idDocumentBackUrl: string | null;
   pickupLocationId: string | null;
   returnLocationId: string | null;
   pickupLocationName: string | null;
@@ -63,6 +64,7 @@ type BookingAction =
   | { type: "CLEAR_PROMO" }
   | { type: "SET_INSURANCE_PROOF"; payload: { url: string | null; optedOut: boolean } }
   | { type: "SET_ID_DOCUMENT_URL"; payload: string | null }
+  | { type: "SET_ID_DOCUMENT_BACK_URL"; payload: string | null }
   | { type: "SET_LOCATIONS"; payload: { pickupLocationId: string | null; returnLocationId: string | null; pickupLocationName: string | null; returnLocationName: string | null; surcharge: number } }
   | { type: "SET_CREDIT_TO_APPLY"; payload: number }
   | { type: "RESET" };
@@ -89,6 +91,7 @@ const initialState: BookingState = {
   insuranceProofUrl: null,
   insuranceOptedOut: false,
   idDocumentUrl: null,
+  idDocumentBackUrl: null,
   pickupLocationId: null,
   returnLocationId: null,
   pickupLocationName: null,
@@ -164,6 +167,8 @@ function bookingReducer(state: BookingState, action: BookingAction): BookingStat
       return { ...state, insuranceProofUrl: action.payload.url, insuranceOptedOut: action.payload.optedOut };
     case "SET_ID_DOCUMENT_URL":
       return { ...state, idDocumentUrl: action.payload };
+    case "SET_ID_DOCUMENT_BACK_URL":
+      return { ...state, idDocumentBackUrl: action.payload };
     case "SET_LOCATIONS":
       return {
         ...state,
@@ -205,6 +210,7 @@ interface BookingContextType extends BookingState {
   clearPromoCode: () => void;
   setInsuranceProof: (url: string | null, optedOut: boolean) => void;
   setIdDocumentUrl: (url: string | null) => void;
+  setIdDocumentBackUrl: (url: string | null) => void;
   setLocations: (pickupLocationId: string | null, returnLocationId: string | null, pickupLocationName: string | null, returnLocationName: string | null, surcharge: number) => void;
   setCreditToApply: (amount: number) => void;
   submitBooking: () => Promise<void>;
@@ -313,6 +319,10 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
     dispatch({ type: "SET_INSURANCE_PROOF", payload: { url, optedOut } });
   }, []);
 
+  const setIdDocumentBackUrl = useCallback((url: string | null) => {
+    dispatch({ type: "SET_ID_DOCUMENT_BACK_URL", payload: url });
+  }, []);
+
   const setIdDocumentUrl = useCallback((url: string | null) => {
     dispatch({ type: "SET_ID_DOCUMENT_URL", payload: url });
   }, []);
@@ -383,6 +393,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
           insuranceProofUrl: state.insuranceProofUrl,
           insuranceOptedOut: state.insuranceOptedOut,
           idDocumentUrl: state.idDocumentUrl,
+          idDocumentBackUrl: state.idDocumentBackUrl,
           pickupLocationId: state.pickupLocationId,
           returnLocationId: state.returnLocationId,
           pickupLocationName: state.pickupLocationName,
@@ -509,6 +520,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       clearPromoCode,
       setInsuranceProof,
       setIdDocumentUrl,
+      setIdDocumentBackUrl,
       setLocations,
       setCreditToApply,
       submitBooking,
@@ -532,6 +544,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
       clearPromoCode,
       setInsuranceProof,
       setIdDocumentUrl,
+      setIdDocumentBackUrl,
       setLocations,
       setCreditToApply,
       submitBooking,

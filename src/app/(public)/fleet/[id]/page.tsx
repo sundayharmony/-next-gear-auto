@@ -15,6 +15,7 @@ import { generateProductSchema } from "@/lib/utils/schema-generators";
 import { SITE_URL } from "@/lib/constants";
 import { getServiceSupabase } from "@/lib/db/supabase";
 import extras from "@/data/extras.json";
+import { isSellableExtra } from "@/lib/extras-policy";
 import { VehicleImageGallery } from "@/components/vehicle-image-gallery";
 
 interface PageProps {
@@ -377,7 +378,7 @@ export default async function VehicleDetailPage({ params }: PageProps) {
               <CardContent className="p-6">
                 <h2 className="text-lg font-semibold text-gray-900 mb-4">Available Add-Ons</h2>
                 <div className="space-y-3">
-                  {extras.map((extra) => (
+                  {extras.filter(isSellableExtra).map((extra) => (
                     <div key={extra.id} className="flex items-start justify-between">
                       <div className="flex items-start gap-2">
                         <Shield className="h-4 w-4 mt-0.5 text-purple-500" />

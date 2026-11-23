@@ -819,7 +819,7 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
   const handleDocumentUpload = useCallback(
     async (
       e: React.ChangeEvent<HTMLInputElement>,
-      docType: "id_document" | "insurance_proof"
+      docType: "id_document" | "id_document_back" | "insurance_proof"
     ) => {
       const file = e.target.files?.[0];
       if (!file) return;
@@ -844,16 +844,22 @@ export function useBookingDetailActions(options: UseBookingDetailActionsOptions)
         }
         const result = await response.json();
         const fieldName =
-          docType === "id_document" ? "id_document_url" : "insurance_proof_url";
+          docType === "id_document"
+            ? "id_document_url"
+            : docType === "id_document_back"
+              ? "id_document_back_url"
+              : "insurance_proof_url";
+        const docLabel =
+          docType === "id_document"
+            ? "ID document"
+            : docType === "id_document_back"
+              ? "Back of license"
+              : "Insurance proof";
         onUpdateBooking({ ...booking, [fieldName]: result.url });
-        onSuccess(
-          `${docType === "id_document" ? "ID document" : "Insurance proof"} uploaded`
-        );
+        onSuccess(`${docLabel} uploaded`);
       } catch (err) {
         logger.error(`${docType} upload failed`, err);
-        onError(
-          `Failed to upload ${docType === "id_document" ? "ID document" : "insurance proof"}`
-        );
+        onError(`Failed to upload ${docType === "id_document" ? "ID document" : docType === "id_document_back" ? "back of license" : "insurance proof"}`);
       } finally {
         setSaving(false);
       }

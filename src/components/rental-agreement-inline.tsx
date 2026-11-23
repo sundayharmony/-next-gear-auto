@@ -15,6 +15,7 @@ import {
   type AgreementBookingContext,
 } from "@/lib/agreement/agreement-booking-context";
 import { AGREEMENT_VERSION } from "@/lib/agreement/agreement-version";
+import { UNINSURED_DRIVER_FEE_USD } from "@/lib/agreement/agreement-policy";
 import { AgreementInlineSection } from "@/components/agreement-inline-sections";
 
 interface RentalAgreementInlineProps {
@@ -206,7 +207,7 @@ function Page1({
         </div>
         <p className="text-gray-700 max-w-prose">
           Only these two drivers are authorized to operate this vehicle. Any operation by an unauthorized
-          driver voids insurance protections, triggers a $750 penalty, makes Renter fully liable for all
+          driver voids insurance protections, triggers $750 in liquidated damages, makes Renter fully liable for all
           damage and third-party claims, and authorizes immediate termination and lawful vehicle recovery.
         </p>
       </div>
@@ -255,14 +256,15 @@ function Page1({
               : ""}
           </p>
         )}
-        {bookingContext?.insuranceOptedOut && (
+        {bookingContext?.insuranceProofOnFile ? (
           <p className="text-gray-700 mb-1">
-            <span className="font-semibold">Insurance:</span> Temporary coverage selected ($9/day).
+            <span className="font-semibold">Insurance:</span> Renter&apos;s own policy — proof on file for this booking.
           </p>
-        )}
-        {bookingContext?.insuranceProofOnFile && !bookingContext.insuranceOptedOut && (
+        ) : (
           <p className="text-gray-700 mb-1">
-            <span className="font-semibold">Insurance:</span> Proof on file for this booking.
+            <span className="font-semibold">Insurance:</span> No proof of insurance on file. Unless proof is provided
+            before or at pickup, the ${UNINSURED_DRIVER_FEE_USD} Uninsured Driver Fee applies and Renter pays out of pocket for any
+            and all damage.
           </p>
         )}
         <p className="text-gray-700"><strong>Included:</strong> 200 miles per day</p>

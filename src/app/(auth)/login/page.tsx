@@ -3,7 +3,7 @@
 import React, { Suspense, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Car, Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, ArrowRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -111,11 +111,8 @@ function LoginFormInner() {
     <div className="flex min-h-[80vh] items-center justify-center bg-gray-50 px-4 py-12">
       <div className="w-full max-w-md">
         <div className="mb-8 text-center">
-          <Link href="/" className="inline-flex items-center gap-2">
-            <Car className="h-10 w-10 text-purple-600" />
-            <span className="text-2xl font-bold text-gray-900">
-              Next<span className="text-purple-600">Gear</span>Auto
-            </span>
+          <Link href="/" className="inline-block" aria-label="Next Gear Auto home">
+            <img src="/images/logo.png" alt="Next Gear Auto" className="mx-auto h-20 w-auto" />
           </Link>
           <p className="mt-2 text-gray-500">
             {staffOnly ? "Staff sign in (admin or manager)" : "Sign in to manage your rentals"}

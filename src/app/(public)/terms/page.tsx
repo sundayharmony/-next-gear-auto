@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import type { Metadata } from "next";
 import { PageContainer } from "@/components/layout/page-container";
 import { SITE_URL } from "@/lib/constants";
+import { UNINSURED_DRIVER_FEE_USD } from "@/lib/agreement/agreement-policy";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -238,14 +239,14 @@ export default function TermsPage() {
               <div>
                 <h3 className="font-semibold text-gray-900 mb-2">Your Insurance Responsibility</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  You are responsible for maintaining appropriate insurance coverage during your rental period. Your personal auto insurance policy or credit card rental coverage may provide collision and comprehensive coverage. We recommend verifying your coverage with your insurance provider before renting.
+                  You must carry your own valid, active auto insurance policy that covers the rented vehicle and meets at least New Jersey minimum requirements, and you must provide proof of that coverage before or at pickup. NextGearAuto does not sell or provide insurance, collision damage waivers, or supplemental liability protection.
                 </p>
               </div>
 
               <div>
-                <h3 className="font-semibold text-gray-900 mb-2">Optional Insurance</h3>
+                <h3 className="font-semibold text-gray-900 mb-2">If You Do Not Have Insurance</h3>
                 <p className="text-gray-600 leading-relaxed">
-                  NextGearAuto offers optional insurance coverage for $11.25/day that includes a collision damage waiver and comprehensive coverage. This coverage is optional and can be added during the booking process.
+                  If you do not provide valid proof of insurance, a flat ${UNINSURED_DRIVER_FEE_USD} uninsured driver fee applies to your rental, and you are personally responsible, out of pocket, for any and all damage to or loss of the vehicle, regardless of fault. Even with insurance, you remain responsible for any deductible and for anything your insurer does not pay.
                 </p>
               </div>
 

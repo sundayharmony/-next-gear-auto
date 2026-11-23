@@ -10,6 +10,7 @@ import { logger } from "@/lib/utils/logger";
 import {
   type AgreementSignatureData,
   buildSignedAgreementPdfBytes,
+  fetchRenterIdentity,
   uploadSignedAgreementPdf,
   vehicleNameForAgreement,
 } from "@/lib/agreement/signed-agreement";
@@ -28,6 +29,15 @@ export class AgreementSigningError extends Error {
     super(message);
     this.name = "AgreementSigningError";
   }
+}
+
+/** True when a Supabase/PostgREST error means a column doesn't exist (Postgres 42703, PostgREST PGRST204). */
+function isMissingColumnError(
+  err: { code?: string; message?: string } | null | undefined,
+): boolean {
+  if (!err) return false;
+  if (err.code === "42703" || err.code === "PGRST204") return true;
+  return /could not find the '.+' column|column .+ does not exist/i.test(err.message || "");
 }
 
 function validatePrimarySignaturePng(value: string, fieldId: string): string {
@@ -192,12 +202,15 @@ export async function completeAgreementSigning(
     vehicle = v;
   }
 
+  const renter = await fetchRenterIdentity(supabase, booking.customer_id);
+
   const signedAtIso = new Date().toISOString();
   const signedPdfBytes = await buildSignedAgreementPdfBytes(
     booking,
     vehicle,
     signatures,
     signedAtIso,
+    renter,
   );
   const agreementUrl = await uploadSignedAgreementPdf(supabase, bookingId, signedPdfBytes);
 
@@ -226,7 +239,8 @@ export async function completeAgreementSigning(
   updateResult = attempt.data;
   updateError = attempt.error;
 
-  if (updateError?.code === "42703") {
+  if (isMissingColumnError(updateError)) {
+    logger.warn("Agreement audit columns missing on bookings; saving core signing fields only.", updateError);
     const fallback = await supabase
       .from("bookings")
       .update({

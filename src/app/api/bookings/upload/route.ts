@@ -8,6 +8,7 @@ import {
   BOOKING_UPLOAD_ALLOWED_MIME_TYPES,
   BOOKING_UPLOAD_DOC_TYPES,
   BOOKING_UPLOAD_MAX_BYTES,
+  documentUrlColumn,
 } from "@/lib/bookings/upload-limits";
 
 export async function POST(request: NextRequest) {
@@ -30,7 +31,7 @@ export async function POST(request: NextRequest) {
     const formData = await request.formData();
     const file = formData.get("file") as File | null;
     const bookingId = formData.get("bookingId") as string | null;
-    const docType = formData.get("type") as string | null; // "id_document" or "insurance_proof"
+    const docType = formData.get("type") as string | null; // "id_document", "id_document_back" or "insurance_proof"
 
     if (!file || !bookingId || !docType) {
       return NextResponse.json(
@@ -167,8 +168,7 @@ export async function POST(request: NextRequest) {
 }
 
 async function updateBookingAndRespond(supabase: ReturnType<typeof import("@/lib/db/supabase").getServiceSupabase>, bookingId: string, docType: string, publicUrl: string) {
-  const columnName =
-    docType === "id_document" ? "id_document_url" : "insurance_proof_url";
+  const columnName = documentUrlColumn(docType);
   const updateData: Record<string, unknown> = { [columnName]: publicUrl };
   if (docType === "insurance_proof") {
     updateData.insurance_opted_out = false;

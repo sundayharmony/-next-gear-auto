@@ -85,7 +85,7 @@ function wrapMarketingEmail(inner: string): string {
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.06);">
           <tr>
             <td style="background:linear-gradient(135deg,#7c3aed,#5b21b6);padding:32px;text-align:center;">
-              <p style="margin:0 0 8px;color:rgba(255,255,255,0.9);font-size:12px;font-weight:600;letter-spacing:2px;text-transform:uppercase;">NextGearAuto</p>
+              <p style="margin:0 0 12px;"><img src="${SITE_URL}/images/logo.png" alt="Next Gear Auto" width="150" style="display:inline-block;border:0;width:150px;max-width:100%;height:auto;background:#ffffff;border-radius:10px;padding:8px 12px;" /></p>
               <p style="margin:0;color:#ffffff;font-size:15px;font-weight:600;">Vehicle availability update</p>
             </td>
           </tr>
@@ -96,7 +96,7 @@ function wrapMarketingEmail(inner: string): string {
           </tr>
           <tr>
             <td style="padding:24px 32px;background:#1f2937;text-align:center;">
-              <p style="margin:0 0 8px;color:#ffffff;font-size:15px;font-weight:700;">Next<span style="color:#a78bfa;">Gear</span>Auto</p>
+              <p style="margin:0 0 12px;"><img src="${SITE_URL}/images/logo.png" alt="Next Gear Auto" width="130" style="display:inline-block;border:0;width:130px;max-width:100%;height:auto;background:#ffffff;border-radius:10px;padding:8px 12px;" /></p>
               <p style="margin:0 0 4px;color:#9ca3af;font-size:12px;">${COMPANY_ADDRESS}</p>
               <p style="margin:0 0 12px;color:#9ca3af;font-size:12px;">(551) 429-3472 &bull; contact@rentnextgearauto.com</p>
               <p style="margin:0;color:#6b7280;font-size:11px;">You received this email because you are a NextGearAuto customer.</p>

@@ -66,6 +66,7 @@ function baseCanProceed(overrides: Partial<CanProceedInput> = {}): CanProceedInp
     returnTime: baseSearchDates.returnTime,
     localExtras: mockExtras,
     insuranceProofUrl: null,
+    uninsuredAck: false,
     details: { name: "Jane Doe", email: "jane@example.com", phone: "5551234567", dob: "1990-01-15" },
     idDocumentUrl: "https://example.com/id.jpg",
     uploadingId: false,
@@ -192,25 +193,12 @@ describe("canProceedForStep", () => {
     );
   });
 
-  it("step 3 requires insurance or proof", () => {
-    assert.equal(canProceedForStep(baseCanProceed({ step: 3 })), true);
+  it("step 3 requires proof of insurance or the uninsured acknowledgment", () => {
+    assert.equal(canProceedForStep(baseCanProceed({ step: 3 })), false);
+    assert.equal(canProceedForStep(baseCanProceed({ step: 3, uninsuredAck: true })), true);
     assert.equal(
       canProceedForStep(
-        baseCanProceed({
-          step: 3,
-          localExtras: [{ ...mockExtras[0], selected: false }],
-          insuranceProofUrl: null,
-        })
-      ),
-      false
-    );
-    assert.equal(
-      canProceedForStep(
-        baseCanProceed({
-          step: 3,
-          localExtras: [{ ...mockExtras[0], selected: false }],
-          insuranceProofUrl: "https://example.com/proof.pdf",
-        })
+        baseCanProceed({ step: 3, insuranceProofUrl: "https://example.com/proof.pdf" })
       ),
       true
     );

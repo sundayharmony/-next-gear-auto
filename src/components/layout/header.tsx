@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Menu, X, Phone, Car, User, LogOut, Shield } from "lucide-react";
+import { Menu, X, Phone, User, LogOut, Shield } from "lucide-react";
 import { cn } from "@/lib/utils/cn";
 import { NAV_ITEMS, CONTACT_INFO } from "@/lib/constants";
 import { Button } from "@/components/ui/button";
@@ -80,11 +80,8 @@ export function Header() {
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="flex h-16 items-center justify-between">
-          <Link href="/" className="site-logo flex items-center gap-2">
-            <Car className="h-8 w-8 text-purple-600 flex-shrink-0 drop-shadow-sm" />
-            <span className="text-xl font-bold">
-              Next<span className="site-logo-accent">Gear</span>Auto
-            </span>
+          <Link href="/" className="site-logo flex items-center" aria-label="Next Gear Auto home">
+            <img src="/images/logo.png" alt="Next Gear Auto" className="h-12 w-auto" />
           </Link>
 
           <nav className="hidden md:flex md:items-center md:gap-1">
