@@ -165,7 +165,21 @@ export function CustomerListPanel({
                       <p className="text-xs text-gray-500 truncate" title={c.email}>
                         {c.email}
                       </p>
-                      <p className="text-[11px] text-gray-400 mt-0.5">{formatDate(c.createdAt)}</p>
+                      <p className="text-[11px] text-gray-400 mt-0.5 flex items-center gap-2">
+                        <span>{formatDate(c.createdAt)}</span>
+                        {c.role !== "admin" && c.role !== "manager" && (
+                          <span
+                            className={cn(
+                              "rounded-full border px-1.5 leading-4 font-medium",
+                              c.idDocumentUrl
+                                ? "bg-green-50 border-green-200 text-green-700"
+                                : "bg-amber-50 border-amber-200 text-amber-700"
+                            )}
+                          >
+                            {c.idDocumentUrl ? "ID on file" : "No ID"}
+                          </span>
+                        )}
+                      </p>
                     </div>
                     {(c.role === "admin" || c.role === "manager") && (
                       <Badge variant="secondary" className="text-[10px] shrink-0 capitalize">
