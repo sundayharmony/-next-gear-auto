@@ -31,11 +31,7 @@ export class AgreementSigningError extends Error {
   }
 }
 
-/**
- * True when a Supabase/PostgREST error means a column doesn't exist.
- * Postgres reports 42703; PostgREST reports PGRST204 ("Could not find the
- * '<col>' column of '<table>' in the schema cache") for unknown columns.
- */
+/** True when a Supabase/PostgREST error means a column doesn't exist (Postgres 42703, PostgREST PGRST204). */
 function isMissingColumnError(
   err: { code?: string; message?: string } | null | undefined,
 ): boolean {
@@ -121,7 +117,7 @@ function assertBookingSignable(booking: {
   rental_agreement_url?: string | null;
   status?: string | null;
 }) {
-  if (booking.rental_agreement_url) {
+  if (booking.agreement_signed_at) {
     throw new AgreementSigningError("This agreement has already been signed", 409);
   }
   if (!booking.status || !VALID_SIGNING_STATUSES.includes(booking.status as (typeof VALID_SIGNING_STATUSES)[number])) {
@@ -229,24 +225,23 @@ export async function completeAgreementSigning(
     signed_user_agent: options.signedUserAgent || null,
   };
 
-  let attempt = await supabase
+  let updateResult: { id: string } | null = null;
+  let updateError = null as { code?: string; message?: string; details?: string; hint?: string } | null;
+
+  const attempt = await supabase
     .from("bookings")
     .update(bookingUpdate)
     .eq("id", bookingId)
-    .is("rental_agreement_url", null)
+    .is("agreement_signed_at", null)
     .select("id")
     .maybeSingle();
 
-  // The audit columns (agreement_version, signed_ip, ...) are optional. If the
-  // database doesn't have them yet, retry with only the core columns. The audit
-  // details are still stored in booking_activity below.
-  if (isMissingColumnError(attempt.error)) {
-    logger.warn(
-      "Agreement audit columns missing on bookings; saving core signing fields only. " +
-        "Run supabase-agreement-audit.sql to enable them.",
-      attempt.error,
-    );
-    attempt = await supabase
+  updateResult = attempt.data;
+  updateError = attempt.error;
+
+  if (isMissingColumnError(updateError)) {
+    logger.warn("Agreement audit columns missing on bookings; saving core signing fields only.", updateError);
+    const fallback = await supabase
       .from("bookings")
       .update({
         rental_agreement_url: agreementUrl,
@@ -254,24 +249,62 @@ export async function completeAgreementSigning(
         signed_name: signedName,
       })
       .eq("id", bookingId)
-      .is("rental_agreement_url", null)
+      .is("agreement_signed_at", null)
       .select("id")
       .maybeSingle();
+    updateResult = fallback.data;
+    updateError = fallback.error;
   }
 
-  if (attempt.error) {
-    logger.error("Agreement signing booking update error:", attempt.error);
+  if (updateError) {
+    logger.error("Agreement signing database update failed:", {
+      bookingId,
+      code: updateError.code,
+      message: updateError.message,
+      details: updateError.details,
+      hint: updateError.hint,
+    });
     throw new AgreementSigningError(
-      "We couldn't save your signature. Please try again, or contact us if it keeps happening.",
+      "We couldn't save your signature. Please try again or contact NextGear Auto.",
       500,
     );
   }
 
-  if (!attempt.data) {
-    // No error and no row updated: another request signed it first.
+  if (!updateResult) {
+    // A conditional update returning no row is only a duplicate-signature
+    // conflict if the database now confirms a signed timestamp.
+    const { data: currentBooking, error: verifyError } = await supabase
+      .from("bookings")
+      .select("id, agreement_signed_at")
+      .eq("id", bookingId)
+      .maybeSingle();
+
+    if (verifyError) {
+      logger.error("Agreement signing post-update verification failed:", {
+        bookingId,
+        code: verifyError.code,
+        message: verifyError.message,
+      });
+      throw new AgreementSigningError(
+        "We couldn't verify whether your signature was saved. Please contact NextGear Auto before trying again.",
+        500,
+      );
+    }
+
+    if (currentBooking?.agreement_signed_at) {
+      throw new AgreementSigningError(
+        "This agreement has already been signed",
+        409,
+      );
+    }
+
+    logger.error("Agreement signing update affected no row, but booking is not signed:", {
+      bookingId,
+      bookingFound: Boolean(currentBooking),
+    });
     throw new AgreementSigningError(
-      "This agreement was already signed by another request",
-      409,
+      "We couldn't save your signature. Please contact NextGear Auto.",
+      currentBooking ? 500 : 404,
     );
   }
 
