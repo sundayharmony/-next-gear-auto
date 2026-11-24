@@ -33,8 +33,7 @@ export const metadata: Metadata = {
   },
   icons: {
     icon: [
-      { url: "/images/icons/icon-192.png", sizes: "192x192", type: "image/png" },
-      { url: "/images/icons/icon-512.png", sizes: "512x512", type: "image/png" },
+      { url: "/images/icons/favicon-rounded.svg", sizes: "any", type: "image/svg+xml" },
     ],
     apple: [
       { url: "/images/icons/apple-touch-icon.png", sizes: "180x180", type: "image/png" },
